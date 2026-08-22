@@ -55,8 +55,10 @@ export function resolveNight(state: GameState): GameState {
   }))
 
   const afterDeaths = applyEvents(state, deathEvents)
-  const attackRoll = randomInt(afterDeaths.rngState, 0, 20)
-  const attackStrength = 45 + afterDeaths.day * 5 + attackRoll.value
+  const attackRoll = randomInt(afterDeaths.rngState, 0, 16)
+  // Temporary progression curve until the historical attack-strength model is implemented.
+  // Day 1 is now survivable with the prototype's 40 base defense when the gate is closed.
+  const attackStrength = 20 + afterDeaths.day * 4 + attackRoll.value
   const effectiveDefense = afterDeaths.town.gateOpen ? 0 : afterDeaths.town.defense
   const report: NightReport = {
     day: afterDeaths.day,
