@@ -7,6 +7,14 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - React + Vite + TypeScript
 - 40 citizen slots: 1 human, 39 basic bots
 - temporary per-citizen **Control** switcher for testing simulated citizens directly
+- persistent town clock; playable days run from 1:00 AM to midnight
+- forward-only time controls for +1 hour, noon, 11 PM, and midnight
+- every skipped hour is simulated rather than teleported over
+- autonomous citizens finish the current hour before the clock advances
+- AP remains the action budget: hourly AI planning does **not** limit citizens to one movement or one action per hour
+- 23:00 is the final normal planning window, allowing late rescues and full AP-dump returns before midnight
+- 00:00–01:00 is a visible attack phase; normal actions lock until the attack resolves at 1:00 AM
+- timestamped Chronicle events
 - verified 6 AP ordinary-citizen baseline
 - Camp Bed home for every citizen with 4-slot private chest storage
 - documented 2 AP Camp Bed -> Tent upgrade with +1 personal defense
@@ -33,8 +41,8 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - Watchtower project with a post-construction horde-estimate screen
 - facility-based Home / Well / Bank / Construction / Workshop / Watchtower / World Beyond / Citizens / Chronicle UI
 - nightly breaches distribute zombies across surviving citizens; personal home defense decides who survives
-- outside citizens still die at nightly resolution while camping is not yet implemented
-- bots use the same legal actions for scavenging, rescue, construction, Workshop work, home upgrades, and carried-weapon combat
+- outside citizens still die when the midnight attack resolves while camping is not yet implemented
+- bots use the same legal actions for scavenging, rescue, construction, Workshop work, home upgrades, combat, and late-day returns
 - command/event-driven game core
 - legal-action API shared by humans and bots
 - seeded deterministic simulation
@@ -43,6 +51,8 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - Vitest simulation tests
 
 Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). The first ten nightly attack ranges are anchored to surviving English Die2Nite sample data. Exact horde RNG, Watchtower error distribution, later-day attack progression, procedural map generation, exact loot frequency, special zones, the full construction tree, thirst/statuses, higher home upgrades, the broader weapon catalog, durability/reloads/ammunition, wounds, and other advanced combat interactions remain explicit reconstruction/deferred areas.
+
+The clock/fast-forward system is a **Live2Nite single-player simulation interface**, not a claim that the original browser game advanced through player-controlled hourly ticks. It exists so autonomous citizens can evolve over a day while preserving the original-style AP economy: actions do not themselves consume clock hours.
 
 The citizen-control switcher is a development aid rather than a permanent game mechanic. It is kept out of authoritative save state and is expected to be removed once direct multi-citizen testing is no longer useful.
 
