@@ -17,7 +17,7 @@ export type ItemType =
 
 export type ConstructionId = 'workshop' | 'watchtower'
 export type WorkshopRecipeId = 'logs_to_planks' | 'scrap_to_iron'
-export type HomeLevel = 'camp_bed'
+export type HomeLevel = 'camp_bed' | 'tent'
 export type ItemStorage = 'inventory' | 'home'
 export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
@@ -96,6 +96,13 @@ export interface TownState {
   well: TownWellState
 }
 
+export interface HomeAttackOutcome {
+  citizenId: string
+  zombies: number
+  defense: number
+  survived: boolean
+}
+
 export interface NightReport {
   day: number
   attackStrength: number
@@ -104,6 +111,9 @@ export interface NightReport {
   gateOpen: boolean
   breached: boolean
   outsideDeaths: number
+  zombiesInside?: number
+  homeDeaths?: number
+  homeAttacks?: HomeAttackOutcome[]
 }
 
 export interface GameState {
@@ -138,10 +148,11 @@ export type GameCommand =
   | { type: 'TAKE_WATER'; citizenId: string }
   | { type: 'EAT_ITEM'; citizenId: string; itemId: string }
   | { type: 'DRINK_ITEM'; citizenId: string; itemId: string }
+  | { type: 'UPGRADE_HOME'; citizenId: string }
   | { type: 'CONTRIBUTE_CONSTRUCTION'; citizenId: string; projectId: ConstructionId }
   | { type: 'WORKSHOP_CONVERT'; citizenId: string; recipeId: WorkshopRecipeId }
 
-export type DeathReason = 'outside_at_night'
+export type DeathReason = 'outside_at_night' | 'home_breach'
 
 export type GameEvent =
   | { type: 'AP_SPENT'; day: number; citizenId: string; amount: number }
@@ -181,6 +192,7 @@ export type GameEvent =
       source: ItemStorage
       kind: ConsumableKind
     }
+  | { type: 'HOME_UPGRADED'; day: number; citizenId: string; from: HomeLevel; to: HomeLevel; defenseAfter: number }
   | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }
   | {
       type: 'CONSTRUCTION_COMPLETED'

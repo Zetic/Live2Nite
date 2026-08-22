@@ -1,4 +1,6 @@
 import { CONSTRUCTIONS } from '../core/construction'
+import { totalTownDefense } from '../core/defense'
+import { watchtowerEstimate } from '../core/night'
 import type { Citizen, GameCommand, GameState } from '../core/types'
 
 function constructionAction(actions: GameCommand[], projectId: 'workshop' | 'watchtower'): GameCommand | null {
@@ -6,6 +8,9 @@ function constructionAction(actions: GameCommand[], projectId: 'workshop' | 'wat
 }
 function recipeAction(actions: GameCommand[], recipeId: 'logs_to_planks' | 'scrap_to_iron'): GameCommand | null {
   return actions.find((action) => action.type === 'WORKSHOP_CONVERT' && action.recipeId === recipeId) ?? null
+}
+function homeUpgradeAction(actions: GameCommand[]): GameCommand | null {
+  return actions.find((action) => action.type === 'UPGRADE_HOME') ?? null
 }
 
 export function chooseTownWork(state: GameState, citizen: Citizen, actions: GameCommand[]): GameCommand | null {
@@ -17,9 +22,7 @@ export function chooseTownWork(state: GameState, citizen: Citizen, actions: Game
     if (buildWorkshop) return buildWorkshop
     const buildWatchtower = constructionAction(actions, 'watchtower')
     if (buildWatchtower) return buildWatchtower
-    return null
-  }
-  if (!watchtower.completed) {
+  } else if (!watchtower.completed) {
     const buildWatchtower = constructionAction(actions, 'watchtower')
     if (buildWatchtower) return buildWatchtower
     const target = CONSTRUCTIONS.watchtower.resources
@@ -28,5 +31,12 @@ export function chooseTownWork(state: GameState, citizen: Citizen, actions: Game
     if (plankNeed > 0) { const action = recipeAction(actions, 'logs_to_planks'); if (action) return action }
     if (ironNeed > 0) { const action = recipeAction(actions, 'scrap_to_iron'); if (action) return action }
   }
+
+  const estimate = watchtowerEstimate(state)
+  if (estimate && estimate.min > totalTownDefense(state)) {
+    const reinforceHome = homeUpgradeAction(actions)
+    if (reinforceHome) return reinforceHome
+  }
+
   return null
 }

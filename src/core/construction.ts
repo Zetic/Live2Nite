@@ -11,7 +11,7 @@ export interface ConstructionDefinition {
 
 export const CONSTRUCTIONS: Record<ConstructionId, ConstructionDefinition> = {
   workshop: { id: 'workshop', name: 'Workshop', description: 'Processes common scavenged material into the basic resources needed for advanced construction.', apCost: 25, resources: { twisted_plank: 10, wrought_iron: 8, unshaped_concrete_block: 1 }, defenseBonus: 0 },
-  watchtower: { id: 'watchtower', name: 'Watchtower', description: 'A town landmark used to estimate incoming attacks. The full estimation mechanic is deferred.', apCost: 12, resources: { twisted_plank: 3, wrought_iron: 2 }, defenseBonus: 3 },
+  watchtower: { id: 'watchtower', name: 'Watchtower', description: 'Estimates the incoming nightly horde so the town can judge how much defense it needs.', apCost: 12, resources: { twisted_plank: 3, wrought_iron: 2 }, defenseBonus: 3 },
 }
 
 export const CONSTRUCTION_ORDER: ConstructionId[] = ['workshop', 'watchtower']
