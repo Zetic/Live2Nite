@@ -18,6 +18,18 @@ function atHome(citizen:Citizen,type:ItemType):ItemInstance|undefined{return cit
 function desiredByPlan(type:ItemType,plan:ReturnType<typeof planExpedition>):boolean{if(!plan)return false;return(type==='water_ration'&&plan.loadout.water)||(type==='food'&&plan.loadout.food)||type===plan.loadout.weaponType}
 function stepTowardTown(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{if(citizen.location.type!=='world')return null;if(citizen.location.x===0&&citizen.location.y===0)return pick(actions,'ENTER_TOWN');const direction=nextDirectionToward(state,{x:citizen.location.x,y:citizen.location.y},{x:0,y:0});return direction?actions.find((action)=>action.type==='MOVE'&&action.direction===direction)??null:null}
 
+function hydrationAction(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
+  if(citizen.status.hydration==='normal')return null
+  const drink=actions.find((action)=>action.type==='DRINK_ITEM')??null
+  if(drink)return drink
+  if(citizen.location.type==='world')return null
+  const bank=bankAction(actions,'water_ration')
+  if(bank)return bank
+  const take=pick(actions,'TAKE_WATER')
+  if(take&&state.town.well.water>0)return take
+  return null
+}
+
 function unloadAction(citizen:Citizen,actions:GameCommand[],plan:ReturnType<typeof planExpedition>,forceUnload=false):GameCommand|null{
   const kit=citizen.inventory.find((item)=>item.type==='construction_kit')
   if(kit){const open=itemAction(actions,'OPEN_CONTAINER',kit.id);if(open)return open}
@@ -32,8 +44,6 @@ function unloadAction(citizen:Citizen,actions:GameCommand[],plan:ReturnType<type
       if(disposition!=='hoarder'){const deposit=itemAction(actions,'DEPOSIT_ITEM',item.id);if(deposit)return deposit}
     }
   }
-  // If a kit is the only item left and cannot be opened because storage is somehow
-  // still constrained, preserve progress by banking it rather than deadlocking unload.
   if(kit){const deposit=itemAction(actions,'DEPOSIT_ITEM',kit.id);if(deposit)return deposit}
   return null
 }
@@ -53,6 +63,8 @@ export class BasicBotController implements AgentController{
     if(!actions.length)return null
     const mission=game.botMissions[citizenId]??null
     const plan=planExpedition(game,citizenId)
+    const hydration=hydrationAction(game,citizen,actions)
+    if(hydration)return hydration
     if(citizen.location.type==='town'){
       const unload=unloadAction(citizen,actions,plan,mission?.phase==='unload');if(unload)return unload
       if(mission?.phase==='unload')return null
@@ -65,6 +77,7 @@ export class BasicBotController implements AgentController{
     }
     const control=zoneControl(game,citizen.location.x,citizen.location.y)
     if(control.trapped){const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon;if(game.clock.hour>=22){const fists=pick(actions,'ATTACK_BAREHANDED');if(fists)return fists}return null}
+    if(citizen.status.hydration!=='normal'&&!carried(citizen,'water_ration'))return stepTowardTown(game,citizen,actions)
     if(!mission)return stepTowardTown(game,citizen,actions)
     if(mission.phase==='return'){const safety=missionSafety(game,citizenId);const refill=refillAction(citizen,actions,safety.returnAp);if(refill)return refill;return stepTowardTown(game,citizen,actions)}
     if(!plan)return stepTowardTown(game,citizen,actions)
