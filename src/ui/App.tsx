@@ -7,15 +7,20 @@ import { createInitialGame, resolveNight } from '../core/game'
 import type { Direction, GameCommand, GameEvent, GameState } from '../core/types'
 import { getZone, zoneControl } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
+import { BankView } from './components/BankView'
 import { CitizenRoster } from './components/CitizenRoster'
+import { ConstructionView } from './components/ConstructionView'
 import { EventLog } from './components/EventLog'
-import { GameNavigation, type GameScreen } from './components/GameNavigation'
+import { GameNavigation } from './components/GameNavigation'
+import { isTownOnlyScreen, type GameScreen } from './navigation'
 import { HomeView } from './components/HomeView'
-import { TownView } from './components/TownView'
+import { WellView } from './components/WellView'
+import { WorkshopView } from './components/WorkshopView'
 import { WorldMap } from './components/WorldMap'
 import { WorldView } from './components/WorldView'
 import { citizenName } from './eventText'
 import './app.css'
+import './facility.css'
 
 const repository = new IndexedDbGameRepository()
 const botController = new BasicBotController()
@@ -25,7 +30,7 @@ export function App() {
   const [game, setGame] = useState<GameState>(() => createInitialGame(1))
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [screen, setScreen] = useState<GameScreen>('town')
+  const [screen, setScreen] = useState<GameScreen>('home')
   useEffect(() => { repository.load().then((saved) => setGame(saved ?? createInitialGame(newSeed()))).catch(() => setGame(createInitialGame(newSeed()))).finally(() => setLoaded(true)) }, [])
   useEffect(() => { if (loaded) void repository.save(game) }, [game, loaded])
 
@@ -41,22 +46,19 @@ export function App() {
   }, [game])
 
   useEffect(() => {
-    if (player.location.type === 'world' && (screen === 'town' || screen === 'home')) setScreen('world')
-  }, [player.location.type, screen])
+    if (player.location.type === 'world' && isTownOnlyScreen(screen)) setScreen('world')
+    if (screen === 'workshop' && !game.town.construction.workshop.completed) setScreen('construction')
+  }, [player.location.type, screen, game.town.construction.workshop.completed])
 
   const act = (command: GameCommand | undefined) => {
     if (!command) return
     try { setGame((current) => executeCommand(current, command).state); setError(null) }
     catch (caught) { setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.') }
   }
-  const actAndNavigate = (command: GameCommand, target: GameScreen) => {
-    try { setGame((current) => executeCommand(current, command).state); setScreen(target); setError(null) }
-    catch (caught) { setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.') }
-  }
   const move = (direction: Direction) => act(legalActions.find((action): action is Extract<GameCommand,{type:'MOVE'}> => action.type === 'MOVE' && action.direction === direction))
   const runCitizens = () => { setGame((current) => runBotPhase(current, botController)); setError(null) }
   const endDay = () => { if (!player.alive) return; setGame((current) => resolveNight(runBotPhase(current, botController))); setError(null) }
-  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setScreen('town'); setError(null) }
+  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setScreen('home'); setError(null) }
 
   if (!loaded) return <main className="shell loading-shell"><p>Opening the town gates…</p></main>
 
@@ -78,12 +80,15 @@ export function App() {
     {game.lastNight && <section className={`night-report ${game.lastNight.breached ? 'danger' : 'safe'}`}><div className="night-icon" aria-hidden="true">☾</div><div><span>Night {game.lastNight.day} report</span><strong>{game.lastNight.breached ? 'The defenses were breached.' : 'The town held.'}</strong><p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}{lastNightDeathNames.length > 0 && ` Died outside: ${lastNightDeathNames.join(', ')}.`}</p></div></section>}
     {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Your run has ended</span><strong>You died outside during the nightly attack.</strong><p>Start a new town to continue.</p></div></section>}
 
-    <GameNavigation screen={screen} outside={player.location.type === 'world'} onChange={setScreen}/>
+    <GameNavigation game={game} screen={screen} outside={player.location.type === 'world'} onChange={setScreen}/>
 
     <div className="screen-stage">
-      {screen === 'town' && <TownView game={game} legalActions={legalActions} act={act} onEnterWorld={(command) => actAndNavigate(command,'world')}/>} 
       {screen === 'home' && <HomeView game={game} legalActions={legalActions} act={act}/>} 
-      {screen === 'world' && <div className="world-screen-layout"><WorldView game={game} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move} onReturnTown={(command) => actAndNavigate(command,'town')}/><section className="panel map-panel"><div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div><WorldMap game={game}/><p className="map-key"><span>?</span> unknown <span>0–9</span> observed zombies <span>T</span> town <span>@</span> you</p></section></div>}
+      {screen === 'well' && <WellView game={game} legalActions={legalActions} act={act}/>} 
+      {screen === 'bank' && <BankView game={game} legalActions={legalActions} act={act}/>} 
+      {screen === 'construction' && <ConstructionView game={game} legalActions={legalActions} act={act}/>} 
+      {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
+      {screen === 'world' && <div className="world-screen-layout"><WorldView game={game} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move}/><section className="panel map-panel"><div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div><WorldMap game={game}/><p className="map-key"><span>?</span> unknown <span>0–9</span> observed zombies <span>T</span> town <span>@</span> you</p></section></div>}
       {screen === 'citizens' && <CitizenRoster game={game}/>} 
       {screen === 'chronicle' && <EventLog game={game}/>} 
     </div>

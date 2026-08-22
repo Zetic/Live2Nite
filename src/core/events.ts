@@ -32,22 +32,25 @@ function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
     case 'ZONE_SEARCHED': {
       const zone = state.world.zones[event.zoneKey]
       if (!zone) return state
+      const depleted = event.mode === 'depleted'
+      const updatedZone = depleted
+        ? {
+            ...zone,
+            depletedSearchedBy: [...(zone.depletedSearchedBy ?? []), event.citizenId],
+            groundItems: event.item ? [...zone.groundItems, event.item] : zone.groundItems,
+          }
+        : {
+            ...zone,
+            searchesRemaining: Math.max(0, zone.searchesRemaining - 1),
+            searchedBy: [...zone.searchedBy, event.citizenId],
+            hiddenLoot: zone.hiddenLoot.slice(1),
+            groundItems: event.item ? [...zone.groundItems, event.item] : zone.groundItems,
+          }
       return {
         ...state,
+        rngState: event.rngStateAfter ?? state.rngState,
         nextItemId: event.item ? state.nextItemId + 1 : state.nextItemId,
-        world: {
-          ...state.world,
-          zones: {
-            ...state.world.zones,
-            [event.zoneKey]: {
-              ...zone,
-              searchesRemaining: Math.max(0, zone.searchesRemaining - 1),
-              searchedBy: [...zone.searchedBy, event.citizenId],
-              hiddenLoot: zone.hiddenLoot.slice(1),
-              groundItems: event.item ? [...zone.groundItems, event.item] : zone.groundItems,
-            },
-          },
-        },
+        world: { ...state.world, zones: { ...state.world.zones, [event.zoneKey]: updatedZone } },
       }
     }
     case 'ITEM_PICKED_UP': {

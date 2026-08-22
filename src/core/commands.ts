@@ -1,9 +1,9 @@
 import { CONSTRUCTION_AP_COST, GATE_AP_COST, MOVE_AP_COST, getLegalActions } from './actions'
 import { CONSTRUCTIONS } from './construction'
 import { applyEvents } from './events'
-import { containerPool } from './items'
+import { containerPool, DEPLETED_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
-import type { GameCommand, GameEvent, GameState, ItemInstance, ItemStorage } from './types'
+import type { GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, SearchMode } from './types'
 import { getZone, moveCoordinates, zoneKey } from './world'
 import { WORKSHOP_RECIPES } from './workshop'
 
@@ -32,9 +32,17 @@ function requireLegal(state: GameState, command: GameCommand): void {
   }
 }
 
-function itemForSearch(state: GameState, zoneX: number, zoneY: number): ItemInstance | null {
+function normalSearchItem(state: GameState, zoneX: number, zoneY: number): ItemInstance | null {
   const type = getZone(state.world, zoneX, zoneY)?.hiddenLoot[0]
   return type ? { id: `i${String(state.nextItemId).padStart(6, '0')}`, type } : null
+}
+
+function depletedSearchOutcome(state: GameState): { item: ItemInstance; rngStateAfter: number } {
+  const roll = randomInt(state.rngState, 0, DEPLETED_SCAVENGE_LOOT_POOL.length - 1)
+  return {
+    item: { id: `i${String(state.nextItemId).padStart(6, '0')}`, type: DEPLETED_SCAVENGE_LOOT_POOL[roll.value] },
+    rngStateAfter: roll.state,
+  }
 }
 
 function locateItem(state: GameState, citizenId: string, itemId: string): { item: ItemInstance; source: ItemStorage } {
@@ -88,7 +96,29 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
     case 'SEARCH_ZONE': {
       if (citizen.location.type !== 'world') throw new InvalidCommandError('Citizen is not outside')
       const key = zoneKey(citizen.location.x, citizen.location.y)
-      events.push({ type: 'ZONE_SEARCHED', day: state.day, zoneKey: key, citizenId: command.citizenId, item: itemForSearch(state, citizen.location.x, citizen.location.y) })
+      const zone = state.world.zones[key]
+      const mode: SearchMode = zone.searchesRemaining > 0 ? 'normal' : 'depleted'
+      if (mode === 'normal') {
+        events.push({
+          type: 'ZONE_SEARCHED',
+          day: state.day,
+          zoneKey: key,
+          citizenId: command.citizenId,
+          mode,
+          item: normalSearchItem(state, citizen.location.x, citizen.location.y),
+        })
+      } else {
+        const outcome = depletedSearchOutcome(state)
+        events.push({
+          type: 'ZONE_SEARCHED',
+          day: state.day,
+          zoneKey: key,
+          citizenId: command.citizenId,
+          mode,
+          item: outcome.item,
+          rngStateAfter: outcome.rngStateAfter,
+        })
+      }
       break
     }
     case 'PICK_UP_ITEM': {

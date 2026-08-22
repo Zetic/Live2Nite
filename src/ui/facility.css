@@ -1,0 +1,14 @@
+/* PR #6 facility-screen refinements. Kept separate from the established visual system. */
+.game-nav { grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); }
+.facility-hero-card { margin-bottom: 18px; }
+.well-status-grid { margin-top: 12px; margin-bottom: 0; }
+.bank-screen-grid { border-top: 0; padding-top: 0; }
+.completed-facilities { margin-top: 18px; }
+.raw-material-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.expedition-primer { display: grid; gap: 4px; margin-top: 12px; padding: 12px 14px; border: 1px solid #314047; border-radius: 8px; background: #0e161a; }
+.expedition-primer strong { color: #d8c0ae; font-size: .78rem; }
+.expedition-primer span { color: var(--muted); font-size: .72rem; line-height: 1.45; }
+.world-heading-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.depleted-chip { color: var(--amber); border-color: #6f572c; background: #201a0f; }
+.depleted-search { border-color: #66512b; background: #18160f; }
+@media(max-width:760px){.raw-material-summary{grid-template-columns:1fr}.game-nav{grid-template-columns:repeat(2,minmax(0,1fr))}}

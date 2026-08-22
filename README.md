@@ -12,19 +12,22 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - seeded town well with original-English-style 80–140 starting rations
 - one well ration per citizen per day
 - separate once-per-day food and water AP refreshes
-- open/close town gate for 1 AP
+- open/close town gate for 1 AP from the World Beyond screen
 - seeded 14 × 13 World Beyond prototype map
 - 1 AP cardinal movement
 - original-style 2 human CP vs. 1 zombie CP zone control
 - zero-AP manual searches
+- separate undepleted and depleted scavenging phases
+- depleted-zone Rotting Log / Scrap Metal feedstock
+- construction-ready Workshop materials available from undepleted scavenging
 - 4-slot ordinary rucksack
-- shared town bank deposits and withdrawals, including defensive bank objects
+- shared Bank deposits and withdrawals, including defensive bank objects
 - shared Construction Sites with persistent AP progress
-- Workshop project and raw-material processing
-- Watchtower project
+- Workshop project with post-construction facility navigation and material processing
+- Watchtower construction project
+- facility-based Home / Well / Bank / Construction / World Beyond / Citizens / Chronicle UI
 - bots use the same legal actions for scavenging, rescue, construction, and Workshop work
 - citizens outside at nightly resolution die while camping is not yet implemented
-- screen-based Town / Home / World Beyond / Citizens / Chronicle UI
 - command/event-driven game core
 - legal-action API shared by humans and bots
 - seeded deterministic simulation
@@ -32,7 +35,7 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - GitHub Pages deployment workflow
 - Vitest simulation tests
 
-Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). Procedural map generation, exact loot frequency, base defense, nightly attack progression, complete starter-package distributions, thirst, and home upgrades remain explicit deferred areas until their original behavior is researched and encoded.
+Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). Procedural map generation, exact loot frequency, special zones, base defense, nightly attack progression, complete starter-package distributions, thirst, and home upgrades remain explicit deferred areas until their original behavior is researched and encoded.
 
 ## Development
 

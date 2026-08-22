@@ -20,6 +20,7 @@ export type WorkshopRecipeId = 'logs_to_planks' | 'scrap_to_iron'
 export type HomeLevel = 'camp_bed'
 export type ItemStorage = 'inventory' | 'home'
 export type ConsumableKind = 'food' | 'water'
+export type SearchMode = 'normal' | 'depleted'
 
 export interface ItemInstance {
   id: string
@@ -64,6 +65,7 @@ export interface WorldZone {
   zombies: number
   searchesRemaining: number
   searchedBy: string[]
+  depletedSearchedBy: string[]
   hiddenLoot: ItemType[]
   groundItems: ItemInstance[]
 }
@@ -105,7 +107,7 @@ export interface NightReport {
 }
 
 export interface GameState {
-  schemaVersion: 4
+  schemaVersion: 5
   gameId: string
   seed: number
   rngState: number
@@ -146,7 +148,15 @@ export type GameEvent =
   | { type: 'GATE_SET'; day: number; open: boolean; citizenId: string }
   | { type: 'CITIZEN_LOCATION_CHANGED'; day: number; citizenId: string; location: CitizenLocation }
   | { type: 'ZONE_DISCOVERED'; day: number; zoneKey: string }
-  | { type: 'ZONE_SEARCHED'; day: number; zoneKey: string; citizenId: string; item: ItemInstance | null }
+  | {
+      type: 'ZONE_SEARCHED'
+      day: number
+      zoneKey: string
+      citizenId: string
+      mode: SearchMode
+      item: ItemInstance | null
+      rngStateAfter?: number
+    }
   | { type: 'ITEM_PICKED_UP'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
   | { type: 'ITEM_DEPOSITED'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_WITHDRAWN'; day: number; citizenId: string; item: ItemInstance }

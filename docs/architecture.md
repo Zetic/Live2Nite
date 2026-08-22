@@ -15,8 +15,8 @@ Live2Nite starts as a single-player browser game but keeps the simulation indepe
 - `commands.ts`: command validation and event production.
 - `events.ts`: authoritative event reduction into game state.
 - `game.ts`: game creation and day/night lifecycle.
-- `world.ts`: map generation, coordinates, and zone control.
-- `items.ts`: item definitions, starter packages, consumable metadata, and scavenging pool.
+- `world.ts`: map generation, coordinates, zone control, and normal/depleted search state.
+- `items.ts`: item definitions, starter packages, consumable metadata, and normal/depleted scavenging pools.
 - `home.ts`: base Camp Bed storage and daily citizen-use state.
 - `well.ts`: deterministic starting-well generation.
 - `construction.ts`: construction catalog and material requirements.
@@ -27,7 +27,7 @@ Live2Nite starts as a single-player browser game but keeps the simulation indepe
 
 `getLegalActions(gameState, citizenId)` is the common action surface for every controller. React, traditional bots, future LLM-assisted bots, and future remote humans all operate through the same legal commands. No controller directly mutates AP, inventory, homes, the well, map, bank, construction, gate, or other simulation state.
 
-The current legal surface includes personal storage transfers, container opening, bank deposits/withdrawals, well withdrawal, food/water consumption, gate operations, movement, search, pickup, construction labor, and Workshop processing.
+The current legal surface includes personal storage transfers, container opening, bank deposits/withdrawals, well withdrawal, food/water consumption, gate operations, movement, normal/depleted search, pickup, construction labor, and Workshop processing.
 
 ## Command and event flow
 
@@ -36,7 +36,7 @@ The current legal surface includes personal storage transfers, container opening
 3. A valid command emits `GameEvent` records.
 4. Events reduce into the next `GameState` and append to event history.
 
-Container contents and other random outcomes are selected by the command layer from stored RNG state, then recorded in the event so the reducer remains deterministic and replayable.
+Container contents and depleted-search outcomes are selected by the command layer from stored RNG state, then recorded in events so the reducer remains deterministic and replayable.
 
 ## Personal vs shared storage
 
@@ -48,31 +48,38 @@ The simulation distinguishes three storage contexts:
 
 Bank entries are currently represented as counts rather than individual instances. Withdrawing one bank item creates a new deterministic item instance and removes any bank-defense contribution that item provided.
 
+## Facility navigation
+
+The generic Town screen has been removed. The persistent shell exposes distinct destinations for Home, The Well, The Bank, Construction Sites, World Beyond, Citizens, and Chronicle.
+
+Operational built sites register additional destinations from game state. The Workshop is the first dynamic facility: its navigation entry appears only after `town.construction.workshop.completed` becomes true. Future operational buildings such as the Watchtower can follow the same pattern without expanding a generic Town dashboard.
+
+The gate belongs to the World Beyond travel flow. Returning to town leaves the player on the World Beyond screen so the open gate remains visible and can be closed before night.
+
+## Search phases
+
+World zones distinguish normal search history from depleted search history:
+
+- normal search consumes the zone's finite `searchesRemaining` and pre-generated useful loot;
+- once `searchesRemaining` reaches zero, the zone is depleted;
+- depleted searching uses the stored simulation RNG and a separate low-grade pool (currently Rotting Logs / Scrap Metal);
+- each citizen currently gets one depleted search per zone, tracked separately from normal searching.
+
+The exact depleted-search cadence and loot weights remain placeholder rules pending deeper historical reconstruction.
+
 ## Agent organization
 
-`BasicBotController` handles high-level sequencing while town-specific work is delegated to `townWork.ts`. The initial traditional bots deliberately do not automatically consume starter food or drain the well. Those actions are legal through the same command surface and can be added later as part of utility/needs planning rather than as hidden bot privileges.
-
-## UI organization
-
-The persistent shell contains global status plus five screens:
-
-- Town: well, gate, construction, Workshop, town bank;
-- Home: Camp Bed, private chest, starter packages, rucksack, daily food/water state;
-- World Beyond: expedition controls, map, ground loot, field supplies;
-- Citizens: complete population roster and status summary;
-- Chronicle: filtered or complete event history.
-
-The turn controls remain persistent so running citizen activity or resolving the night does not depend on which informational screen is open.
+`BasicBotController` handles high-level sequencing while town-specific work is delegated to `townWork.ts`. Bots use the same search, Bank, construction, Workshop, gate, movement, and rescue commands as the human player.
 
 ## Determinism
 
 Simulation randomness is generated from stored seed/RNG state. `Math.random()` should not be used inside the game core. A seed plus the same ordered commands should reproduce the same simulation result.
 
-Starting well water uses an isolated deterministic seed derived from the town seed so adding the well does not perturb the existing World Beyond generation sequence.
+Starting well water uses an isolated deterministic seed derived from the town seed so the well does not perturb initial World Beyond generation. Runtime depleted searches advance the main RNG state through recorded events.
 
 ## Persistence versions
 
-Save data is schema-versioned. Schema version 4 adds citizen homes, daily food/water/well flags, and town-well state. The IndexedDB adapter migrates schema-2 and schema-3 saves forward by preserving existing citizen/town/world state, adding construction where necessary, assigning the base Camp Bed + starter packages, and generating the deterministic starting well.
+Save data is schema-versioned. Schema version 5 adds depleted-search history to zones and search-mode metadata to new search events. The IndexedDB adapter migrates schema-2 through schema-4 saves forward, preserves existing world/town/citizen progress, adds depleted-search tracking, and normalizes undiscovered legacy normal-loot entries so low-grade Workshop feedstock no longer appears as new undepleted loot.
 
 ## Event history
 

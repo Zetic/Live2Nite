@@ -11,7 +11,10 @@ export function describeEvent(event: GameEvent, game: GameState): string {
     case 'GATE_SET': return `${citizenName(game,event.citizenId)} ${event.open?'opened':'closed'} the gate.`
     case 'CITIZEN_LOCATION_CHANGED': return event.location.type==='town' ? `${citizenName(game,event.citizenId)} returned to town.` : `${citizenName(game,event.citizenId)} moved to [${event.location.x},${event.location.y}].`
     case 'ZONE_DISCOVERED': return `Zone [${event.zoneKey}] was discovered.`
-    case 'ZONE_SEARCHED': return event.item ? `${citizenName(game,event.citizenId)} searched [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.` : `${citizenName(game,event.citizenId)} searched [${event.zoneKey}] and found nothing.`
+    case 'ZONE_SEARCHED': {
+      const searchLabel = event.mode === 'depleted' ? 'combed depleted ground' : 'searched'
+      return event.item ? `${citizenName(game,event.citizenId)} ${searchLabel} at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.` : `${citizenName(game,event.citizenId)} ${searchLabel} at [${event.zoneKey}] and found nothing.`
+    }
     case 'ITEM_PICKED_UP': return `${citizenName(game,event.citizenId)} picked up ${itemName(event.item.type)}.`
     case 'ITEM_DEPOSITED': return `${citizenName(game,event.citizenId)} deposited ${itemName(event.item.type)} in the town bank.`
     case 'ITEM_WITHDRAWN': return `${citizenName(game,event.citizenId)} took ${itemName(event.item.type)} from the town bank.`
