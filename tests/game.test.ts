@@ -31,9 +31,9 @@ function withInventory(game: GameState, types: ItemType[]): GameState {
 }
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v8 citizens at 1 AM with a Camp Bed, four chest slots, and both starter packages', () => {
+  it('starts schema v9 citizens at 1 AM with a Camp Bed, four chest slots, and both starter packages', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(8)
+    expect(game.schemaVersion).toBe(9)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
@@ -212,19 +212,19 @@ describe('Town construction and Workshop', () => {
     expect(game.town.bank).toEqual(before)
   })
 
-  it('consumes materials only on Workshop completion', () => {
+  it('consumes only the Workshop materials on completion', () => {
     let game = withWorkshopResources(createInitialGame(321, 2))
     game = { ...game, town: { ...game.town, construction: { ...game.town.construction, workshop: { ...game.town.construction.workshop, apContributed: 24 } } } }
     game = executeCommand(game, command(game, 'c01', 'CONTRIBUTE_CONSTRUCTION')).state
     expect(game.town.construction.workshop.completed).toBe(true)
     expect(game.town.bank.twisted_plank).toBe(0)
     expect(game.town.bank.wrought_iron).toBe(0)
-    expect(game.town.bank.unshaped_concrete_block).toBe(0)
+    expect(game.town.bank.unshaped_concrete_block).toBe(1)
   })
 
-  it('converts 2 raw resources into 1 refined resource for 3 AP', () => {
+  it('converts 1 raw resource into 1 refined resource for 3 AP', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: { rotten_log: 2 }, construction: { ...game.town.construction, workshop: { id: 'workshop', apContributed: 25, completed: true } } } }
+    game = { ...game, town: { ...game.town, bank: { rotten_log: 1 }, construction: { ...game.town.construction, workshop: { id: 'workshop', apContributed: 25, completed: true } } } }
     const action = getLegalActions(game, 'c01').find((a) => a.type === 'WORKSHOP_CONVERT' && a.recipeId === 'logs_to_planks')!
     game = executeCommand(game, action).state
     expect(game.citizens[0].ap).toBe(3)
