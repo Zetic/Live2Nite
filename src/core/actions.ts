@@ -9,6 +9,7 @@ import { WORKSHOP_RECIPE_ORDER, WORKSHOP_RECIPES, canRunWorkshopRecipe } from '.
 export const GATE_AP_COST = 1
 export const MOVE_AP_COST = 1
 export const CONSTRUCTION_AP_COST = 1
+export const SPECIAL_EXCAVATION_AP_COST = 1
 
 function addConsumableActions(actions: GameCommand[], citizen: Citizen, items: ItemInstance[]): void {
   for (const item of items) {
@@ -23,7 +24,6 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || !citizen.alive || state.clock.phase !== 'day') return []
   const actions: GameCommand[] = []
-
   addConsumableActions(actions, citizen, citizen.inventory)
 
   if (citizen.location.type === 'town') {
@@ -65,6 +65,14 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
     if (zone.searchesRemaining > 0 && !zone.searchedBy.includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
     else if (zone.searchesRemaining === 0 && !(zone.depletedSearchedBy ?? []).includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
   }
+
+  const control = zoneControl(state, x, y)
+  const site = zone.specialSite
+  if (site && !control.trapped) {
+    if (site.status === 'buried' && citizen.ap >= SPECIAL_EXCAVATION_AP_COST) actions.push({ type: 'EXCAVATE_SPECIAL_SITE', citizenId })
+    if (site.status === 'accessible' && site.hiddenLoot.length > 0 && !site.searchedBy.includes(citizenId)) actions.push({ type: 'SEARCH_SPECIAL_SITE', citizenId })
+  }
+
   if (citizen.inventory.length < citizen.inventoryCapacity) for (const item of zone.groundItems) actions.push({ type: 'PICK_UP_ITEM', citizenId, itemId: item.id })
   if (zone.zombies > 0 && citizen.ap > 0) {
     for (const item of citizen.inventory) {
@@ -73,7 +81,6 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
     }
     if (citizen.ap >= BAREHANDED_AP_COST) actions.push({ type: 'ATTACK_BAREHANDED', citizenId })
   }
-  const control = zoneControl(state, x, y)
   if (!control.trapped && citizen.ap >= MOVE_AP_COST) {
     for (const direction of ['NORTH', 'SOUTH', 'EAST', 'WEST'] as const) {
       const target = moveCoordinates(x, y, direction)

@@ -5,10 +5,11 @@ Live2Nite starts as a single-player browser game but keeps the simulation indepe
 ## Boundaries
 
 - `src/core`: authoritative game rules. No React, DOM, network, or browser persistence dependencies.
-- `src/agents`: citizen controllers and hourly objective/planning helpers. Controllers select normal game commands and never mutate state directly.
+- `src/agents`: citizen controllers and planning helpers. Controllers select normal game commands and never mutate state directly.
+- `src/agents/planning`: town-needs, route, expedition, loadout, water, and storage-policy evaluation.
 - `src/simulation`: orchestration that advances simulation time while invoking controllers through ordinary commands.
 - `src/persistence`: save/load adapters. IndexedDB is the first implementation.
-- `src/ui`: React presentation and human input only. Top-level gameplay domains are presented as separate screens rather than one continuously growing dashboard.
+- `src/ui`: React presentation and human input only.
 
 ## Core domains
 
@@ -17,11 +18,12 @@ Live2Nite starts as a single-player browser game but keeps the simulation indepe
 - `events.ts`: authoritative event reduction into game state.
 - `clock.ts`: persistent hour/phase definitions and forward-time helpers.
 - `game.ts`: initial game creation.
-- `night.ts`: isolated horde-strength generation, Watchtower estimates, breach distribution, home survival, and attack-hour conclusion.
-- `defense.ts`: shared town-defense aggregation, including defensive objects stored in living citizens' homes.
+- `night.ts`: horde strength, Watchtower estimates, breaches, home survival, and attack-hour conclusion.
+- `defense.ts`: shared town-defense aggregation.
 - `combat.ts`: deterministic zombie-combat rules and weapon definitions.
-- `world.ts`: map generation, coordinates, zone control, and normal/depleted search state.
-- `items.ts`: item definitions, starter packages, consumable/defense metadata, weapon catalog entries, and normal/depleted scavenging pools.
+- `world.ts`: map generation, coordinates, zone control, ordinary/depleted scavenging, and deterministic special-site placement.
+- `specialSites.ts`: special-site identities, map codes, descriptions, and location-specific loot pools.
+- `items.ts`: item definitions, starter packages, consumable/defense metadata, weapon catalog entries, and ordinary scavenging pools.
 - `home.ts`: home levels, personal defense, storage, and daily citizen-use state.
 - `well.ts`: deterministic starting-well generation.
 - `construction.ts`: construction catalog and material requirements.
@@ -45,17 +47,103 @@ The central ordering invariant is:
 
 Therefore `23:00 -> 00:00` gives bots their full final 23:00 opportunity before midnight. A citizen four tiles from town with four AP can legally spend all four AP moving home in that one hourly tick. The clock is a planning cadence, **not another action-point system**.
 
-`advanceToHour` repeatedly performs this exact single-hour operation for every intermediate hour. A jump from 09:00 to 12:00 runs 09:00, 10:00, and 11:00 autonomous ticks before arriving at noon. It never teleports over simulation time.
+`advanceToHour` repeats this operation for every intermediate hour. Time shortcuts are forward-only and fast-forward stops at midnight so the attack phase is visible.
 
-Time shortcuts are forward-only within the current town day. A past target is rejected instead of being interpreted as tomorrow. Fast-forward deliberately stops at midnight so the attack phase is visible.
+During `clock.phase === 'attack'`, `getLegalActions` returns no normal citizen commands. Advancing 00:00 by one hour resolves the attack, records casualties, increments the day, resets AP/daily-use flags, and starts the next day at 01:00.
 
-During `clock.phase === 'attack'`, `getLegalActions` returns no normal citizen commands. Advancing 00:00 by one hour resolves the attack through `night.ts`, records casualties, increments the day, resets AP/daily-use flags, and starts the new day at 01:00.
+## World Beyond search layers
 
-## Hourly bot planning
+A World Beyond zone can now expose three independent resource channels:
 
-`BasicBotController` still chooses concrete legal commands, while `runBotHour.ts` gives each citizen a short-lived hourly objective such as:
+1. **ordinary search** — finite useful finds represented by `searchesRemaining` and `searchedBy`;
+2. **depleted search** — low-grade Rotting Log / Scrap Metal feedstock, tracked separately per citizen;
+3. **special-site search** — a location-specific ruin loot source, independent from the ordinary zone searches.
 
-- `scavenge`
+Special sites begin `buried`. Citizens with zone control can spend 1 AP per excavation action. Progress is shared by all citizens in that zone. Once `excavationProgress >= excavationRequired`, the site becomes `accessible`; once its generated special loot is exhausted, it becomes `depleted`.
+
+The current map receives 12 special sites from an **isolated deterministic seed** derived from the town seed. This placement does not advance the ordinary world-generation RNG or runtime RNG. Schema-v6 saves gain the same sites during v7 migration without rerolling already-generated ordinary zones.
+
+The six initial site types are Construction Site, Wrecked Cars, Pharmacy, Supermarket, Dark Woods, and Police Station. Exact site count, excavation requirements, and current loot weights are Live2Nite adaptations; see `docs/die2nite-reference/world-beyond-2.md`.
+
+## Expedition planning
+
+PR #10 changes the bot model from “pick the next useful command” toward “choose a purpose, target and resource budget, then execute legal commands toward it.”
+
+The planning stack is deliberately separated from `BasicBotController`:
+
+- `TownNeeds.ts` identifies the first incomplete project, missing construction resources, Bank food/weapon pressure, survivor count, and well water per survivor.
+- `ExpeditionPlanner.ts` derives a purpose, target, AP requirement, expected task cost, return cost, target risk, loadout, water policy and approximate return hour.
+- `RoutePlanner.ts` supplies lightweight deterministic route selection across the small map. Known dangerous zones receive higher costs; unknown zones remain traversable without revealing their hidden contents.
+- `SupplyPolicy.ts` decides whether water/food/weapon capacity is justified and reserves rucksack slots for loot.
+- `BasicBotController.ts` executes the derived plan exclusively through legal `GameCommand`s.
+
+Expedition plans are **derived rather than persisted**. This keeps authoritative save state limited to facts about the world/citizens while allowing the same planner to power both AI decisions and the temporary Citizens-screen diagnostics.
+
+### Town-driven purposes
+
+Current expedition purposes are:
+
+- `gather_construction`
+- `gather_food`
+- `gather_medical`
+- `gather_weapons`
+- `explore`
+- `rescue`
+
+Rescue overrides normal planning. Otherwise missing construction materials are currently the strongest town need, followed by low shared food, low shared weapons, then general exploration.
+
+A known discovered special site matching the need is preferred. If no matching site is known, the citizen chooses a deeper fresh/undepleted target and pushes the frontier. This is intentional: before the Workshop exists, bots should not endlessly comb depleted near-town tiles for Rotting Logs/Scrap Metal that cannot solve the Workshop bootstrap shortage.
+
+### Long-range targets and path continuity
+
+Citizens receive deterministic preferred exploration radii and broad directional biases derived from citizen id. Congestion around other citizens penalizes a candidate, spreading expeditions instead of sending all bots down the same corridor.
+
+A target may be several unknown tiles away. Moving through an unknown tile reveals only that tile; it does not reveal future contents. Intermediate newly discovered undepleted zones do not automatically replace the deeper target. The destination remains attractive until the citizen reaches/searches it or a higher-priority need overrides the plan.
+
+### AP budgets and refills
+
+AP remains the only ordinary action budget. The planner estimates:
+
+`travel out + expected task AP + return travel + gate cost`
+
+and compares that with current AP plus eligible once-per-day AP refills. Food/water still refill to the citizen's normal maximum; they do not add clock hours.
+
+Bots delay consumption until near exhaustion so a ration is not wasted at 5/6 AP. A long expedition may therefore spend the base AP bar, drink near 0 AP, continue, later eat near 0 AP, and still return during the same game day.
+
+### Well conservation
+
+The current Live2Nite water policy uses well rations per living citizen:
+
+- `normal`: more than 2.0
+- `cautious`: 1.0–2.0
+- `critical`: below 1.0
+
+This policy controls **new Well withdrawals for expeditions**, not thirst survival (thirst/status consequences are still deferred). Existing private/Bank water can still be considered. Critical Well water is reserved for rescue-level use; cautious water is restricted to rescues and selected high-value construction expeditions.
+
+These bands are gameplay heuristics, not recovered Die2Nite rules, and are isolated in `SupplyPolicy.ts` for later replacement.
+
+### Rucksack/loadout tradeoffs
+
+The planner considers Food, Water Ration and Water Bomb as possible expedition supplies while reserving at least one ordinary rucksack slot for findings. A dangerous target can justify a weapon; a long target can justify a refill; a short safe trip remains light.
+
+The Bank is therefore both an unloading destination and an expedition outfitter. Bots can withdraw shared food/water/weapons when a plan justifies them instead of carrying everything available.
+
+## Starter packages and storage behavior
+
+Starter packages now participate in autonomous preparation rather than remaining inert at Home.
+
+- A Doggy Bag may stay unopened, be opened because a long expedition needs food, or be opened/shared by a community-oriented bot.
+- A Welcome Pack may remain private or be opened by a community-oriented bot so its component can be moved toward the shared Bank.
+- Unused construction/raw/misc/defense finds are normally shared through the Bank.
+- Consumables/weapons can be returned to Home or Bank depending on a deterministic temporary `community` / `balanced` / `hoarder` policy.
+
+These storage dispositions are intentionally simple deterministic heuristics, not permanent personality design. They create observable differences now and provide a replaceable seam for richer personalities/LLM cognition later.
+
+## Hourly bot execution
+
+`runBotHour.ts` currently classifies each autonomous citizen into one short-lived objective:
+
+- `expedition`
 - `rescue`
 - `return_home`
 - `town_work`
@@ -64,124 +152,81 @@ During `clock.phase === 'attack'`, `getLegalActions` returns no normal citizen c
 
 An objective may execute multiple commands in one hour. The internal iteration cap is only an infinite-loop safeguard and has no gameplay meaning.
 
-Return pressure is currently a deterministic Live2Nite policy rather than a recovered original rule: basic bots begin favoring home between roughly 18:00 and 21:00, staggered by citizen id. By 23:00, remaining outside bots prioritize returning and may spend their full remaining AP. Feasible rescues can still happen late when the rescuer has enough AP to help and return.
-
-This objective layer is intentionally a stepping stone toward richer personality/utility/LLM planning later. It already separates the question “what is my goal this hour?” from “which legal command advances that goal?”
+Return pressure remains a deterministic Live2Nite policy: basic bots begin favoring home between roughly 18:00 and 21:00, staggered by citizen id. By 23:00, outside bots prioritize returning and may spend their full remaining AP. Feasible rescues can still happen late when AP/refill capacity permits.
 
 ## Legal-action boundary
 
-`getLegalActions(gameState, citizenId)` is the common action surface for every controller. React, traditional bots, future LLM-assisted bots, and future remote humans all operate through the same legal commands. No controller directly mutates AP, inventory, homes, the well, map, bank, construction, gate, zombie counts, clock time, or other simulation state.
+`getLegalActions(gameState, citizenId)` is the common action surface for React, traditional bots, future LLM-assisted bots, and future remote humans. No controller directly mutates AP, inventory, homes, the Well, map, Bank, construction, gate, zombies, special-site state, clock time, or other authoritative simulation state.
 
-The current legal surface includes personal storage transfers, container opening, bank deposits/withdrawals, well withdrawal, food/water consumption, the Camp Bed -> Tent home upgrade, gate operations, movement, normal/depleted search, pickup, bare-handed combat, carried-weapon combat, construction labor, and Workshop processing.
+The legal surface includes storage transfers, container opening, Bank deposits/withdrawals, Well withdrawal, food/water consumption, home upgrade, gate operations, movement, ordinary/depleted search, special-site excavation/search, pickup, combat, construction labor, and Workshop processing.
 
 ## Command and event flow
 
-1. A human or bot requests a `GameCommand` returned by the legal-action layer.
-2. The core validates the command against authoritative state.
-3. A valid command emits timestamped `GameEvent` records using the current game hour.
+1. A human or bot requests a legal `GameCommand`.
+2. The core validates it against authoritative state.
+3. A valid command emits timestamped `GameEvent` records using the current hour.
 4. Events reduce into the next `GameState` and append to event history.
 
-Random outcomes are selected from stored deterministic RNG state and recorded in events. Container contents, depleted-search outcomes, bare-handed attacks, and weapon kill counts therefore replay from the recorded event instead of being rerolled by the reducer.
-
-`TIME_ADVANCED` is also an event, so clock movement remains explicit in the simulation trace. Legacy events without an hour remain readable after save migration.
+Special-site excavation/search use the same event pipeline as every other gameplay action. Random outcomes are selected outside reducers and stored in events/state so replay remains deterministic.
 
 ## Zombie combat
 
 Combat is a first-class World Beyond domain rather than a UI-side zombie decrement.
 
-- combat commands are exposed only for living citizens outside in a zone containing zombies;
-- ordinary implemented weapons require positive AP but do not spend AP themselves;
+- combat commands are exposed only for living citizens outside in zones containing zombies;
+- ordinary implemented weapons require positive AP but do not themselves spend AP;
 - bare-handed combat spends 1 AP;
-- weapon definitions and kill ranges live in `combat.ts`;
 - the first fully implemented weapon is the single-use Water Bomb;
-- `COMBAT_RESOLVED` records citizen, zone, method, kills, item consumption, and post-roll RNG state;
-- the reducer removes killed zombies and consumed weapons;
-- zone control then updates naturally from the new zombie count, so combat can immediately make movement legal.
+- combat reduces zone zombies, so control/movement legality updates naturally.
 
-Stateful breakable/reloadable weapons are deferred until item instances can represent ammunition, charges, or durability cleanly.
+Stateful breakable/reloadable weapons remain deferred until item instances can represent ammunition, charges, or durability cleanly.
 
 ## Night resolution
 
-Night resolution is isolated in `night.ts`.
+Night resolution remains isolated in `night.ts`.
 
-1. The normal day reaches midnight only after the full 23:00 autonomous window completes.
-2. 00:00 is represented as an explicit attack phase; normal actions are locked during that phase.
-3. Advancing to 01:00 resolves citizens still outside, the horde, shared defense, and home-defense outcomes.
-4. Citizens still outside die before the town attack while camping is deferred.
-5. Closed-gate town defense blocks zombies one-for-one. An open gate nullifies shared town defense.
-6. Any zombies that get through are assigned uniformly at random across surviving citizens in town.
-7. A citizen survives when zombies assigned to their home are less than or equal to personal defense; otherwise they die from a home breach.
-8. `DAY_STARTED` then moves the simulation to 01:00 of the next day and refreshes daily AP/use state.
+1. 23:00 autonomous activity finishes before midnight.
+2. 00:00 is an explicit attack phase.
+3. Advancing to 01:00 resolves outside deaths, horde strength, shared defense, and home-defense outcomes.
+4. Citizens still outside die while camping remains deferred.
+5. A closed gate applies shared defense; an open gate nullifies it.
+6. Breaching zombies are distributed across surviving citizens in town.
+7. Personal home defense determines survival.
+8. `DAY_STARTED` resets daily state at 01:00.
 
-The first ten horde ranges are anchored to surviving English Die2Nite sample data. Later-day growth and the exact Watchtower uncertainty envelope remain isolated adaptations until the original algorithms are reconstructed more precisely.
+The first ten horde ranges are anchored to surviving English Die2Nite sample data. Later-day growth and exact Watchtower uncertainty remain isolated adaptations.
 
-## Personal vs shared defense
+## Temporary testing tools
 
-The existing `town.defense` value remains the shared defense accumulated by the current bootstrap town, Bank defensive objects, and defensive construction bonuses. Defensive items stored at Home contribute their documented reduced home value to both personal protection and the attack-time shared defense calculation.
+The React-local `controlledCitizenId` lets the Citizens screen temporarily operate any living citizen. It is not persisted and does not change `Citizen.controller`.
 
-Structural home defense is currently personal only. The exact original contribution of housing levels to the shared town-defense display is not treated as settled in this slice.
+PR #10 also shows the **derived AI plan** on each basic-bot citizen card: purpose, reason, target, AP budget, potential refill capacity, loadout, reserved loot slots, water policy, storage disposition, and return hour. This diagnostic readout calls the same planner used by the bot; it is not a second AI state store.
 
-## Facility navigation
-
-The generic Town screen is removed. The persistent shell exposes Home, The Well, The Bank, Construction Sites, World Beyond, Citizens, and Chronicle.
-
-Operational built sites register additional destinations from game state. Workshop and Watchtower both follow this pattern: their navigation entries appear only after their respective construction projects are complete.
-
-The gate belongs to the World Beyond travel flow. Returning to town leaves the player on the World Beyond screen so the open gate remains visible and can be closed before midnight.
-
-## Search phases
-
-World zones distinguish normal search history from depleted search history:
-
-- normal search consumes the zone's finite `searchesRemaining` and pre-generated useful loot;
-- once `searchesRemaining` reaches zero, the zone is depleted;
-- depleted searching uses the stored simulation RNG and a separate low-grade pool (currently Rotting Logs / Scrap Metal);
-- each citizen currently gets one depleted search per zone, tracked separately from normal searching.
-
-The exact depleted-search cadence and loot weights remain placeholder rules pending deeper historical reconstruction. Water Bomb is currently an uncommon normal-pool result so combat can be exercised before special-zone/item-table reconstruction; its exact frequency is not claimed as historical.
-
-## Temporary citizen-control testing hook
-
-The React-local `controlledCitizenId` lets the Citizens screen temporarily operate any living citizen during development.
-
-This is intentionally **not** authoritative game state and is not a permanent gameplay/controller model:
-
-- selecting another citizen does not change `Citizen.controller`;
-- selection is not persisted into the save schema;
-- all actions still go through `getLegalActions` and `executeCommand` for the selected citizen;
-- Home, Well, Bank, World Beyond, inventory, AP, and map presentation are rendered for the selected citizen;
-- `runBotHour` receives the selected id and excludes that citizen from autonomous activity;
-- selecting another survivor after the controlled citizen dies lets testing continue without changing actual death state.
-
-This hook should remain removable without altering core citizen/controller state.
-
-## Agent organization
-
-`BasicBotController` chooses concrete actions, `runBotHour.ts` owns hourly objective execution, and town-specific work is delegated to `townWork.ts`. Bots use the same search, Bank, construction, Workshop, home-upgrade, gate, movement, rescue, and combat commands as the controlled citizen.
-
-The former all-at-once `runBotPhase` lifecycle has been removed. Autonomous activity now occurs only through clock advancement.
+Both the control switcher and plan readout are development tools intended to remain removable without changing core citizen/controller state.
 
 ## Determinism
 
-Simulation randomness is generated from stored seed/RNG state. `Math.random()` should not be used inside the game core. A seed plus the same ordered commands and time advances should reproduce the same simulation result.
+`Math.random()` should not be used inside the game core. A seed plus the same ordered commands and time advances should reproduce the same simulation result.
 
-Starting well water and nightly horde resolution use isolated deterministic seeds derived from the town seed. Runtime depleted searches, container outcomes, and combat outcomes advance the main RNG state through recorded events.
+Starting well water, special-site placement/loot, and nightly horde resolution use isolated deterministic seeds where independence matters. Runtime depleted searches, container outcomes, and combat outcomes advance recorded RNG state.
 
 ## Persistence versions
 
-Save data is schema version **6**. The new required persisted field is `clock`. Schema 2–5 saves migrate forward at 01:00 of their existing current day while preserving citizen, town, world, construction, Well, and event progress. Existing historical events are allowed to lack an hour; new command/time/night events are timestamped.
+Save data is schema version **7**. Schema 2–6 saves migrate forward while preserving citizen, town, clock, ordinary world, construction, Well and event progress. V6 worlds receive deterministic special-site state derived from their existing town seed.
 
-The temporary `controlledCitizenId` remains React state and is not persisted.
+Historical events are allowed to lack an hour; new command/time/night events remain timestamped. The temporary controlled citizen and derived expedition plans are not persisted.
 
 ## Event history
 
-The Chronicle displays day + hour for timestamped events. Highlights suppress repetitive clock/movement/AP bookkeeping while All Events preserves the complete trace, including `TIME_ADVANCED` records. Long term, current state, recent UI events, and persistent historical events should be separated so long-running towns do not carry an indefinitely growing array in every save.
+The Chronicle displays day + hour for timestamped events. Special-site discovery/excavation/search are World Beyond events. Highlights suppress repetitive clock/movement/AP bookkeeping while All Events preserves the complete simulation trace.
+
+Long term, current state, recent UI events, and persistent historical events should be separated so long-running towns do not carry an indefinitely growing array in every save.
 
 ## Future LLM integration
 
-LLM providers will sit behind an agent adapter. The model will receive curated state, relevant memories, personality context, current time, and legal candidate actions, then return an intent/command. The game core validates that command normally. API keys must never be shipped in the GitHub Pages client.
+LLM providers will sit behind an agent adapter. The model will receive curated state, relevant memories, personality context, current time, town needs, derived world knowledge, and legal candidate actions, then return an intent/command. The game core validates that command normally. API keys must never be shipped in the GitHub Pages client.
 
-The hourly objective layer provides a natural future boundary for expensive cognition: a model can reconsider goals at selected clock ticks without being invoked for every primitive movement command.
+The expedition planner creates a useful future boundary: expensive cognition can influence **purpose, target, risk tolerance, supply use and sharing behavior** without being invoked for every primitive movement command.
 
 ## Multiplayer migration
 

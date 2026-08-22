@@ -31,9 +31,9 @@ function withInventory(game: GameState, types: ItemType[]): GameState {
 }
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v6 citizens at 1 AM with a Camp Bed, four chest slots, and both starter packages', () => {
+  it('starts schema v7 citizens at 1 AM with a Camp Bed, four chest slots, and both starter packages', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(6)
+    expect(game.schemaVersion).toBe(7)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 4)).toBe(true)
@@ -239,14 +239,15 @@ describe('Town construction and Workshop', () => {
     expect(game.town.defense).toBe(43)
   })
 
-  it('spreads bot construction work across hourly planning ticks', () => {
+  it('spreads bot construction work across hourly planning ticks before transitioning idle workers into expedition prep', () => {
     const initial = withWorkshopResources(createInitialGame(321, 8))
     const waterBefore = initial.town.well.water
     const game = advanceToHour(initial,5,bots,'c01')
     expect(game.town.construction.workshop.completed).toBe(true)
     expect(game.events.some((e) => e.type === 'CONSTRUCTION_COMPLETED' && e.projectId === 'workshop')).toBe(true)
-    expect(game.town.well.water).toBe(waterBefore)
-    expect(game.citizens.slice(1).every((citizen) => citizen.home.storage.length === 2)).toBe(true)
+    const rationEvents = game.events.filter((event) => event.type === 'WATER_TAKEN' && event.citizenId !== 'c01')
+    expect(waterBefore - game.town.well.water).toBe(rationEvents.length)
+    expect(rationEvents.length).toBeLessThanOrEqual(7)
   })
 })
 

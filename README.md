@@ -23,8 +23,18 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - seeded town well with original-English-style 80–140 starting rations
 - one well ration per citizen per day
 - separate once-per-day food and water AP refreshes
+- bot water-conservation policy reacts to rations available per living citizen
+- bots can open starter packages, keep supplies at Home, share them through the Bank, and withdraw expedition gear
+- expedition loadouts budget food/water/weapon slots against space reserved for loot
+- bots can use food/water refills to plan expeditions beyond the range of a single 6 AP bar
+- town construction shortages drive targeted frontier/resource expeditions
+- route planning spreads citizens across longer-range targets instead of repeatedly hugging the gate
 - open/close town gate for 1 AP from the World Beyond screen
 - seeded 14 × 13 World Beyond prototype map
+- 12 deterministic special sites per generated map
+- six initial site identities: Construction Site, Wrecked Cars, Pharmacy, Supermarket, Dark Woods, and Police Station
+- buried special sites accept shared excavation AP before their location-specific loot can be searched
+- special-site search remains independent from ordinary undepleted/depleted zone scavenging
 - 1 AP cardinal movement
 - original-style 2 human CP vs. 1 zombie CP zone control
 - zombie combat can reduce control and free a trapped citizen immediately
@@ -35,14 +45,15 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - depleted-zone Rotting Log / Scrap Metal feedstock
 - construction-ready Workshop materials and occasional Water Bombs available from undepleted scavenging
 - 4-slot ordinary rucksack
-- shared Bank deposits and withdrawals, including defensive bank objects and weapons
+- shared Bank deposits and withdrawals, including defensive bank objects, weapons, food, and expedition supplies
 - shared Construction Sites with persistent AP progress
 - Workshop project with post-construction facility navigation and material processing
 - Watchtower project with a post-construction horde-estimate screen
 - facility-based Home / Well / Bank / Construction / Workshop / Watchtower / World Beyond / Citizens / Chronicle UI
 - nightly breaches distribute zombies across surviving citizens; personal home defense decides who survives
 - outside citizens still die when the midnight attack resolves while camping is not yet implemented
-- bots use the same legal actions for scavenging, rescue, construction, Workshop work, home upgrades, combat, and late-day returns
+- bots use the same legal actions for scavenging, special-site excavation/search, supply preparation, rescue, construction, Workshop work, home upgrades, combat, and late-day returns
+- Citizens testing screen exposes each bot's derived expedition purpose, target, AP budget, loadout, water policy, and return window
 - command/event-driven game core
 - legal-action API shared by humans and bots
 - seeded deterministic simulation
@@ -50,11 +61,11 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - GitHub Pages deployment workflow
 - Vitest simulation tests
 
-Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). The first ten nightly attack ranges are anchored to surviving English Die2Nite sample data. Exact horde RNG, Watchtower error distribution, later-day attack progression, procedural map generation, exact loot frequency, special zones, the full construction tree, thirst/statuses, higher home upgrades, the broader weapon catalog, durability/reloads/ammunition, wounds, and other advanced combat interactions remain explicit reconstruction/deferred areas.
+Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). The first ten nightly attack ranges are anchored to surviving English Die2Nite sample data. Special-zone identities and their narrow location-oriented loot roles are historically grounded, while Live2Nite's exact site count, current excavation requirements, loot weights, and single-player expedition-planning heuristics remain explicit adaptations. Exact horde RNG, Watchtower error distribution, later-day attack progression, broader special-zone catalog, the full construction tree, thirst/statuses, higher home upgrades, broader weapon catalog, durability/reloads/ammunition, wounds, and other advanced combat interactions remain reconstruction/deferred areas.
 
-The clock/fast-forward system is a **Live2Nite single-player simulation interface**, not a claim that the original browser game advanced through player-controlled hourly ticks. It exists so autonomous citizens can evolve over a day while preserving the original-style AP economy: actions do not themselves consume clock hours.
+The clock/fast-forward and autonomous expedition-planning systems are **Live2Nite single-player simulation interfaces**, not claims that the original browser game used player-controlled hourly ticks or these AI heuristics. They exist so autonomous citizens can evolve over a day while preserving the original-style AP economy: actions do not themselves consume clock hours.
 
-The citizen-control switcher is a development aid rather than a permanent game mechanic. It is kept out of authoritative save state and is expected to be removed once direct multi-citizen testing is no longer useful.
+The citizen-control switcher and AI-plan readout are development aids rather than permanent game mechanics. They are kept out of authoritative save state and are expected to be removed once direct multi-citizen testing is no longer useful.
 
 ## Development
 
