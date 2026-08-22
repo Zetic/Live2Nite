@@ -1,4 +1,4 @@
-import { SCAVENGE_LOOT_POOL } from './items'
+import { NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
 import type { Direction, GameState, ItemType, WorldState, WorldZone } from './types'
 
@@ -17,7 +17,7 @@ export function createWorld(seed: number): { world: WorldState; rngState: number
     for (let x = WORLD_MIN_X; x <= WORLD_MAX_X; x += 1) {
       const key = zoneKey(x, y)
       if (isTownGateZone(x, y)) {
-        zones[key] = { x, y, discovered: true, zombies: 0, searchesRemaining: 0, searchedBy: [], hiddenLoot: [], groundItems: [] }
+        zones[key] = { x, y, discovered: true, zombies: 0, searchesRemaining: 0, searchedBy: [], depletedSearchedBy: [], hiddenLoot: [], groundItems: [] }
         continue
       }
       const distance = Math.abs(x) + Math.abs(y)
@@ -27,11 +27,21 @@ export function createWorld(seed: number): { world: WorldState; rngState: number
       rngState = searchRoll.state
       const hiddenLoot: ItemType[] = []
       for (let i = 0; i < searchRoll.value; i += 1) {
-        const lootRoll = randomInt(rngState, 0, SCAVENGE_LOOT_POOL.length - 1)
+        const lootRoll = randomInt(rngState, 0, NORMAL_SCAVENGE_LOOT_POOL.length - 1)
         rngState = lootRoll.state
-        hiddenLoot.push(SCAVENGE_LOOT_POOL[lootRoll.value])
+        hiddenLoot.push(NORMAL_SCAVENGE_LOOT_POOL[lootRoll.value])
       }
-      zones[key] = { x, y, discovered: false, zombies: zombieRoll.value, searchesRemaining: searchRoll.value, searchedBy: [], hiddenLoot, groundItems: [] }
+      zones[key] = {
+        x,
+        y,
+        discovered: false,
+        zombies: zombieRoll.value,
+        searchesRemaining: searchRoll.value,
+        searchedBy: [],
+        depletedSearchedBy: [],
+        hiddenLoot,
+        groundItems: [],
+      }
     }
   }
   return { world: { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minY: WORLD_MIN_Y, maxY: WORLD_MAX_Y, zones }, rngState }

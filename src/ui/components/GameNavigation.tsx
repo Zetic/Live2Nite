@@ -1,21 +1,15 @@
-export type GameScreen = 'town' | 'home' | 'world' | 'citizens' | 'chronicle'
+import type { GameState } from '../../core/types'
+import { availableScreens, type GameScreen } from '../navigation'
 
-const SCREENS: Array<{ id: GameScreen; label: string; short: string }> = [
-  { id: 'town', label: 'Town', short: 'Shared operations' },
-  { id: 'home', label: 'Home', short: 'Private storage' },
-  { id: 'world', label: 'World Beyond', short: 'Expeditions' },
-  { id: 'citizens', label: 'Citizens', short: 'Population' },
-  { id: 'chronicle', label: 'Chronicle', short: 'Town history' },
-]
-
-export function GameNavigation({ screen, outside, onChange }: {
+export function GameNavigation({ game, screen, outside, onChange }: {
+  game: GameState
   screen: GameScreen
   outside: boolean
   onChange: (screen: GameScreen) => void
 }) {
   return <nav className="game-nav" aria-label="Game screens">
-    {SCREENS.map((entry) => {
-      const disabled = outside && (entry.id === 'town' || entry.id === 'home')
+    {availableScreens(game).map((entry) => {
+      const disabled = outside && entry.townOnly
       return <button
         type="button"
         key={entry.id}

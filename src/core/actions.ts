@@ -62,7 +62,13 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
   const zone = getZone(state.world, x, y)
   if (!zone) return actions
   if (isTownGateZone(x, y) && state.town.gateOpen) actions.push({ type: 'ENTER_TOWN', citizenId })
-  if (!zone.searchedBy.includes(citizenId) && zone.searchesRemaining > 0 && !isTownGateZone(x, y)) actions.push({ type: 'SEARCH_ZONE', citizenId })
+  if (!isTownGateZone(x, y)) {
+    if (zone.searchesRemaining > 0 && !zone.searchedBy.includes(citizenId)) {
+      actions.push({ type: 'SEARCH_ZONE', citizenId })
+    } else if (zone.searchesRemaining === 0 && !(zone.depletedSearchedBy ?? []).includes(citizenId)) {
+      actions.push({ type: 'SEARCH_ZONE', citizenId })
+    }
+  }
   if (citizen.inventory.length < citizen.inventoryCapacity) {
     for (const item of zone.groundItems) actions.push({ type: 'PICK_UP_ITEM', citizenId, itemId: item.id })
   }

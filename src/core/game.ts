@@ -33,7 +33,7 @@ export function createInitialGame(seed: number, citizenCount = 40): GameState {
   const normalizedSeed = seed >>> 0 || 1
   const generated = createWorld(normalizedSeed)
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     gameId: `local-${normalizedSeed}`,
     seed: normalizedSeed,
     rngState: generated.rngState,
