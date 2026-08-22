@@ -8,6 +8,8 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - 40 citizen slots: 1 human, 39 basic bots
 - verified 6 AP ordinary-citizen baseline
 - Camp Bed home for every citizen with 4-slot private chest storage
+- documented 2 AP Camp Bed -> Tent upgrade with +1 personal defense
+- defensive objects can protect the Bank or be kept at Home for reduced personal/town defense value
 - Citizen's Welcome Pack + Doggy Bag starter supplies
 - seeded town well with original-English-style 80–140 starting rations
 - one well ration per citizen per day
@@ -24,10 +26,11 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - shared Bank deposits and withdrawals, including defensive bank objects
 - shared Construction Sites with persistent AP progress
 - Workshop project with post-construction facility navigation and material processing
-- Watchtower construction project
-- facility-based Home / Well / Bank / Construction / World Beyond / Citizens / Chronicle UI
-- bots use the same legal actions for scavenging, rescue, construction, and Workshop work
-- citizens outside at nightly resolution die while camping is not yet implemented
+- Watchtower project with a post-construction horde-estimate screen
+- facility-based Home / Well / Bank / Construction / Workshop / Watchtower / World Beyond / Citizens / Chronicle UI
+- nightly breaches distribute zombies across surviving citizens; personal home defense decides who survives
+- outside citizens still die at nightly resolution while camping is not yet implemented
+- bots use the same legal actions for scavenging, rescue, construction, Workshop work, and home upgrades
 - command/event-driven game core
 - legal-action API shared by humans and bots
 - seeded deterministic simulation
@@ -35,7 +38,7 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - GitHub Pages deployment workflow
 - Vitest simulation tests
 
-Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). Procedural map generation, exact loot frequency, special zones, base defense, nightly attack progression, complete starter-package distributions, thirst, and home upgrades remain explicit deferred areas until their original behavior is researched and encoded.
+Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). The first ten nightly attack ranges are anchored to surviving English Die2Nite sample data, while exact horde RNG, Watchtower error distribution, later-day attack progression, procedural map generation, exact loot frequency, special zones, the full construction tree, thirst, and higher home upgrades remain explicit reconstruction/deferred areas.
 
 ## Development
 
