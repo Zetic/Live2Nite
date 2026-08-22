@@ -31,15 +31,16 @@ function withInventory(game: GameState, types: ItemType[]): GameState {
 }
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v10 citizens at 1 AM with a Camp Bed, four chest slots, both starter packages, and hydrated status', () => {
+  it('starts schema v11 citizens at 1 AM with starter home, packages, hydration, and camping state', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(10)
+    expect(game.schemaVersion).toBe(11)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.storage.map((item) => item.type).sort().join(',') === 'citizen_welcome_pack,doggy_bag')).toBe(true)
     expect(game.citizens.every((citizen) => citizen.status.hydration === 'normal' && citizen.status.desertStepsToday === 0)).toBe(true)
+    expect(game.citizens.every((citizen) => citizen.camping.hidden === false && citizen.camping.nightsSurvived === 0)).toBe(true)
   })
 
   it('creates deterministic starting well water in the verified 80–140 range', () => {
