@@ -1,10 +1,12 @@
 import { randomInt } from './rng'
-import type { Citizen, CampingOutlook, GameState, SpecialSiteType, WorldZone } from './types'
+import type { Citizen, CitizenCampingState, CampingOutlook, GameState, SpecialSiteType, WorldZone } from './types'
 import { distanceToTown, isTownGateZone, zoneKey } from './world'
 
 export const CAMP_IMPROVEMENT_AP_COST = 1
 export const CAMP_IMPROVEMENT_CAP = 10
 export const ORDINARY_CAMPING_CAP_PERCENT = 90
+
+export function createCitizenCampingState():CitizenCampingState{return{hidden:false,survivalChance:null,hiddenDay:null,nightsSurvived:0,lastSurvivedDay:null}}
 
 const SITE_TOPOLOGY_BONUS: Record<SpecialSiteType, number> = {
   construction_site: 15,
