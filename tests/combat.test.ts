@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BasicBotController } from '../src/agents/BasicBotController'
-import { runBotPhase } from '../src/agents/runBotPhase'
+import { runBotHour } from '../src/agents/runBotHour'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
@@ -90,10 +90,10 @@ describe('World Beyond combat', () => {
 })
 
 describe('Temporary citizen control testing hook', () => {
-  it('excludes the controlled basic-bot citizen from autonomous activity', () => {
+  it('excludes the controlled basic-bot citizen from autonomous hourly activity', () => {
     const initial = createInitialGame(789,4)
     const controlledBefore = initial.citizens.find((citizen)=>citizen.id==='c02')!
-    const game = runBotPhase(initial,bots,'c02')
+    const game = runBotHour(initial,bots,'c02')
     const controlledAfter = game.citizens.find((citizen)=>citizen.id==='c02')!
     expect(controlledAfter.ap).toBe(controlledBefore.ap)
     expect(controlledAfter.location).toEqual(controlledBefore.location)
