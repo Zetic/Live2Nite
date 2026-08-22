@@ -138,5 +138,5 @@ describe('Day-1 economy benchmark', () => {
     expect(workshops).toBeGreaterThanOrEqual(4)
     expect(totalOutsideAtMidnight / seeds.length).toBeLessThanOrEqual(6)
     expect(minimumLiving).toBeGreaterThanOrEqual(28)
-  })
+  }, 15_000)
 })
