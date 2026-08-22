@@ -19,7 +19,7 @@ function addConsumableActions(actions: GameCommand[], citizen: Citizen, items: I
   for (const item of items) {
     const kind = consumableKind(item.type)
     if (kind === 'food' && !citizen.daily.ate) actions.push({ type: 'EAT_ITEM', citizenId: citizen.id, itemId: item.id })
-    if (kind === 'water' && !citizen.daily.drank) actions.push({ type: 'DRINK_ITEM', citizenId: citizen.id, itemId: item.id })
+    if (kind === 'water' && (!citizen.daily.drank || citizen.status.hydration !== 'normal')) actions.push({ type: 'DRINK_ITEM', citizenId: citizen.id, itemId: item.id })
     if (isContainer(item.type)&&canOpenContainer(citizen,item,source)) actions.push({ type: 'OPEN_CONTAINER', citizenId: citizen.id, itemId: item.id })
   }
 }
