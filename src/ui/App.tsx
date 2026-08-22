@@ -11,6 +11,7 @@ import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
 import { advanceOneHour, advanceToHour, InvalidTimeAdvanceError } from '../simulation/advanceTime'
 import { BankView } from './components/BankView'
 import { CitizenRoster } from './components/CitizenRoster'
+import { CitizenStatusBar } from './components/CitizenStatusBar'
 import { ConstructionView } from './components/ConstructionView'
 import { EventLog } from './components/EventLog'
 import { GameNavigation } from './components/GameNavigation'
@@ -27,6 +28,7 @@ import './app.css'
 import './facility.css'
 import './night.css'
 import './clock.css'
+import './status.css'
 
 const repository = new IndexedDbGameRepository()
 const botController = new BasicBotController()
@@ -54,6 +56,7 @@ export function App() {
   }, [game])
   const outsideDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'outside_at_night').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const homeDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'home_breach').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
+  const dehydrationDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'dehydration').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const controlledDeathReason = useMemo(() => [...game.events].reverse().find((event): event is Extract<GameEvent,{type:'CITIZEN_DIED'}> => event.type === 'CITIZEN_DIED' && event.citizenId === player.id)?.reason ?? null, [game.events, player.id])
 
   useEffect(() => {
@@ -93,18 +96,19 @@ export function App() {
       <div className="header-actions"><span className="save-state">● Local save active</span><button className="secondary" onClick={() => void reset()}>Start a new town</button></div>
     </header>
 
+    <CitizenStatusBar citizen={player}/>
+
     <section className="status-strip" aria-label="Town status">
       <article><span>Population</span><strong>{alive}<small>/ {game.citizens.length}</small></strong></article>
       <article><span>Outside</span><strong className={outsideCitizens.length ? 'warning-value' : ''}>{outsideCitizens.length}</strong></article>
       <article><span>Well water</span><strong>{game.town.well.water}</strong></article>
       <article><span>Town defense</span><strong>{townDefense}</strong></article>
       <article><span>Gate</span><strong className={game.town.gateOpen ? 'danger-value' : 'safe-value'}>{game.town.gateOpen ? 'OPEN' : 'SEALED'}</strong></article>
-      <article><span>{player.name} AP</span><strong>{player.ap}<small>/ {player.maxAp}</small></strong></article>
     </section>
 
     {attackPhase && <section className="night-report danger attack-hour-banner">
       <div className="night-icon" aria-hidden="true">☾</div>
-      <div className="night-report-copy"><span>00:00–01:00 · attack hour</span><strong>The horde is attacking.</strong><p>Normal actions are locked. Advance one hour to resolve the attack, casualties, home-defense checks, and the start of Day {game.day + 1} at 1:00 AM.</p></div>
+      <div className="night-report-copy"><span>00:00–01:00 · attack hour</span><strong>The horde is attacking.</strong><p>Normal actions are locked. Advance one hour to resolve the attack, casualties, status progression, and the start of Day {game.day + 1} at 1:00 AM.</p></div>
     </section>}
 
     {!attackPhase && game.lastNight && <section className={`night-report ${game.lastNight.breached ? 'danger' : 'safe'}`}>
@@ -113,13 +117,14 @@ export function App() {
         <span>Night {game.lastNight.day} report</span>
         <strong>{game.lastNight.breached ? `${zombiesInside} zombie${zombiesInside === 1 ? '' : 's'} got inside.` : 'The town held.'}</strong>
         <p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}</p>
-        {(outsideDeathNames.length > 0 || homeDeathNames.length > 0) && <div className="night-casualties">
+        {(outsideDeathNames.length > 0 || homeDeathNames.length > 0 || dehydrationDeathNames.length > 0) && <div className="night-casualties">
           {outsideDeathNames.length > 0 && <span>Outside: {outsideDeathNames.join(', ')}</span>}
           {homeDeathNames.length > 0 && <span>Homes breached: {homeDeathNames.join(', ')}</span>}
+          {dehydrationDeathNames.length > 0 && <span>Dehydration: {dehydrationDeathNames.join(', ')}</span>}
         </div>}
       </div>
     </section>}
-    {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Controlled citizen is dead</span><strong>{controlledDeathReason === 'home_breach' ? `${player.name}'s home was overwhelmed.` : `${player.name} died outside during the nightly attack.`}</strong><p>Open Citizens and take control of another living citizen to continue testing this town.</p></div></section>}
+    {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Controlled citizen is dead</span><strong>{controlledDeathReason === 'home_breach' ? `${player.name}'s home was overwhelmed.` : controlledDeathReason === 'dehydration' ? `${player.name} died of dehydration.` : `${player.name} died outside during the nightly attack.`}</strong><p>Open Citizens and take control of another living citizen to continue testing this town.</p></div></section>}
 
     <GameNavigation game={game} screen={screen} outside={player.location.type === 'world'} onChange={setScreen}/>
 

@@ -27,6 +27,7 @@ export function dedicatedRescueCitizenIds(state:GameState):string[]{
     .slice(0,DEDICATED_RESCUE_RESERVE)
     .map((citizen)=>citizen.id)
 }
+export function nightGateReserveCitizenId(state:GameState):string|null{return dedicatedRescueCitizenIds(state)[0]??null}
 export function isDedicatedRescueReserve(state:GameState,citizenId:string):boolean{return dedicatedRescueCitizenIds(state).includes(citizenId)}
 export function minimumTownReserve(state:GameState):number{const livingBots=state.citizens.filter((citizen)=>citizen.alive&&citizen.controller==='basic-bot').length;return Math.max(DEDICATED_RESCUE_RESERVE,Math.ceil(livingBots*MINIMUM_RESERVE_FRACTION))}
 
@@ -80,7 +81,8 @@ export function planTownMissionAssignments(state:GameState,controlledCitizenId?:
   if(state.clock.phase!=='day'||state.clock.hour>=22)return[]
   const opportunities=knownOpportunities(state);const events:GameEvent[]=[];const used=new Set<string>()
   const dedicated=new Set(dedicatedRescueCitizenIds(state))
-  const rescueCandidates=allTownCandidates(state,controlledCitizenId).sort((a,b)=>Number(dedicated.has(b.id))-Number(dedicated.has(a.id)))
+  const gateReserve=nightGateReserveCitizenId(state)
+  const rescueCandidates=allTownCandidates(state,controlledCitizenId).filter((citizen)=>citizen.id!==gateReserve).sort((a,b)=>Number(dedicated.has(b.id))-Number(dedicated.has(a.id)))
   let rescueBudget=Math.min(DEDICATED_RESCUE_RESERVE,rescueCandidates.length)
   for(const opportunity of opportunities.filter((item)=>item.emergency)){
     let remaining=Math.max(0,opportunity.desiredCitizens-existingForMission(state,opportunity.missionId))

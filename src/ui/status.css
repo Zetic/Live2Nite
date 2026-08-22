@@ -1,0 +1,16 @@
+.status-strip{grid-template-columns:repeat(5,1fr)}
+.citizen-status-hud{display:flex;align-items:stretch;gap:0;margin:0 0 12px;border:1px solid #2c3b40;border-radius:10px;background:linear-gradient(180deg,#111c1f 0%,#0b1417 100%);overflow:hidden;min-height:54px;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+.citizen-status-identity,.citizen-status-ap,.citizen-status-label{display:flex;flex-direction:column;justify-content:center;padding:8px 14px;border-right:1px solid #2c3b40;text-transform:uppercase;letter-spacing:.08em}
+.citizen-status-identity span,.citizen-status-ap span,.citizen-status-label{font-size:9px;color:#7fa0a8}
+.citizen-status-identity strong{font-size:13px;color:#eee4d6;letter-spacing:.03em;text-transform:none}
+.citizen-status-ap{min-width:78px;align-items:center}
+.citizen-status-ap strong{font-size:20px;color:#f2c16c;line-height:1}.citizen-status-ap small{font-size:11px;color:#8da0a5;font-weight:500}
+.citizen-status-label{flex-direction:row;align-items:center;font-weight:700;color:#d7c7af;min-width:72px}
+.citizen-status-slots{display:flex;align-items:center;gap:5px;padding:6px 8px;flex:1;min-width:0}
+.citizen-status-slot{display:flex;align-items:center;gap:6px;min-height:38px;padding:5px 9px;border:1px solid #253237;border-radius:6px;background:#0a1214;color:#62777d;opacity:.58;transition:opacity .15s,border-color .15s,background .15s}
+.citizen-status-slot.active,.citizen-status-slot.safe{opacity:1}.citizen-status-slot.safe{border-color:#315545;color:#77b887;background:#0e1915}.citizen-status-slot.warning{border-color:#765b28;color:#e0b45a;background:#1c170d}.citizen-status-slot.danger{border-color:#7a382e;color:#ef8a73;background:#21110f}.citizen-status-slot.neutral.active{border-color:#4a5355;color:#d0c3b0;background:#171817}
+.citizen-status-icon{font-size:16px;line-height:1}.citizen-status-slot-label{font-size:10px;font-weight:700;letter-spacing:.04em;white-space:nowrap;text-transform:uppercase}
+.citizen-status-dead{display:flex;align-items:center;padding:0 16px;color:#ef725f;letter-spacing:.12em}
+.citizen-status-hud.dead .citizen-status-slots,.citizen-status-hud.dead .citizen-status-ap{opacity:.4}
+.citizen-condition-detail{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 2px}.citizen-condition-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid #344247;border-radius:5px;background:#10191c;color:#9fb0b4;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}.citizen-condition-chip.warning{border-color:#705629;color:#dcb35c}.citizen-condition-chip.danger{border-color:#77352e;color:#eb7f6c}.citizen-condition-travel{font-size:10px;color:#71868b;padding:4px 2px}
+@media(max-width:850px){.status-strip{grid-template-columns:repeat(2,1fr)}.citizen-status-hud{flex-wrap:wrap}.citizen-status-slots{order:3;width:100%;border-top:1px solid #2c3b40}.citizen-status-label{display:none}.citizen-status-slot-label{display:none}.citizen-status-slot{min-width:38px;justify-content:center}.citizen-status-identity{flex:1}}

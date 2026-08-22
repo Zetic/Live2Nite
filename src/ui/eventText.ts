@@ -1,6 +1,7 @@
 import { CONSTRUCTIONS } from '../core/construction'
 import { homeName } from '../core/home'
 import { itemName } from '../core/items'
+import { CITIZEN_STATUS_DEFINITIONS } from '../core/status'
 import { specialSiteName } from '../core/specialSites'
 import type { GameEvent, GameState } from '../core/types'
 import { WORKSHOP_RECIPES } from '../core/workshop'
@@ -14,6 +15,13 @@ export function describeEvent(event: GameEvent, game: GameState): string {
     case 'AP_SPENT': return `${citizenName(game,event.citizenId)} spent ${event.amount} AP.`
     case 'GATE_SET': return `${citizenName(game,event.citizenId)} ${event.open?'opened':'closed'} the gate.`
     case 'CITIZEN_LOCATION_CHANGED': return event.location.type==='town' ? `${citizenName(game,event.citizenId)} returned to town.` : `${citizenName(game,event.citizenId)} moved to [${event.location.x},${event.location.y}].`
+    case 'CITIZEN_STATUS_CHANGED': {
+      const name=citizenName(game,event.citizenId)
+      if(event.reason==='drank_water')return event.status.hydration==='normal'?`${name} drank water and is no longer thirsty.`:`${name} drank water; dehydration eased to Thirsty, but the water did not restore AP.`
+      if(event.status.hydration==='dehydrated')return `${name} became ${CITIZEN_STATUS_DEFINITIONS.dehydrated.label}.`
+      if(event.status.hydration==='thirsty')return `${name} became ${CITIZEN_STATUS_DEFINITIONS.thirsty.label}.`
+      return `${name}'s condition improved.`
+    }
     case 'ZONE_DISCOVERED': {
       const zone=game.world.zones[event.zoneKey]
       return zone?.specialSite ? `Zone [${event.zoneKey}] revealed ${specialSiteName(zone.specialSite.type)}.` : `Zone [${event.zoneKey}] was discovered.`
@@ -38,7 +46,7 @@ export function describeEvent(event: GameEvent, game: GameState): string {
     case 'CONTAINER_OPENED': return `${citizenName(game,event.citizenId)} opened ${itemName(event.containerType)} and found ${itemName(event.output.type)}.`
     case 'CONSTRUCTION_KIT_OPENED': return `${citizenName(game,event.citizenId)} opened a Construction Kit and recovered ${event.outputs.map((item)=>itemName(item.type)).join(' + ')}.`
     case 'WATER_TAKEN': return `${citizenName(game,event.citizenId)} took a Water Ration from the well.`
-    case 'ITEM_CONSUMED': return `${citizenName(game,event.citizenId)} ${event.kind==='food'?'ate':'drank'} ${itemName(event.item.type)} and refreshed their AP.`
+    case 'ITEM_CONSUMED': return `${citizenName(game,event.citizenId)} ${event.kind==='food'?'ate':'drank'} ${itemName(event.item.type)}${event.restoresAp?' and refreshed their AP':''}.`
     case 'HOME_UPGRADED': return `${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
     case 'CONSTRUCTION_AP_CONTRIBUTED': return `${citizenName(game,event.citizenId)} contributed ${event.amount} AP to ${CONSTRUCTIONS[event.projectId].name}.`
     case 'CONSTRUCTION_COMPLETED': return `${CONSTRUCTIONS[event.projectId].name} was completed by ${citizenName(game,event.citizenId)}.`
@@ -49,10 +57,11 @@ export function describeEvent(event: GameEvent, game: GameState): string {
     case 'BOT_MISSION_ASSIGNED': return `${citizenName(game,event.citizenId)} was assigned ${event.mission.role} duty toward ${event.mission.targetLabel}.`
     case 'BOT_MISSION_PHASE_SET': return `${citizenName(game,event.citizenId)} mission phase changed to ${event.phase}.`
     case 'BOT_MISSION_CLEARED': return `${citizenName(game,event.citizenId)} ${event.outcome==='completed'?'completed':'aborted'} their field mission.`
-    case 'CITIZEN_DIED': return event.reason==='outside_at_night' ? `${citizenName(game,event.citizenId)} died outside during the nightly attack.` : `${citizenName(game,event.citizenId)} was killed when zombies broke into their home.`
+    case 'CITIZEN_DIED': return event.reason==='outside_at_night' ? `${citizenName(game,event.citizenId)} died outside during the nightly attack.` : event.reason==='dehydration' ? `${citizenName(game,event.citizenId)} died of dehydration.` : `${citizenName(game,event.citizenId)} was killed when zombies broke into their home.`
     case 'NIGHT_RESOLVED': {
       const inside=event.report.zombiesInside??Math.max(0,event.report.attackStrength-event.report.effectiveDefense)
-      return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${inside>0?` — ${inside} zombie(s) breached, ${event.report.homeDeaths??0} home death(s)`:' — the town held'}.`
+      const dehydration=event.report.dehydrationDeaths??0
+      return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${inside>0?` — ${inside} zombie(s) breached, ${event.report.homeDeaths??0} home death(s)`:' — the town held'}${dehydration?`; ${dehydration} dehydration death(s)`:''}.`
     }
     case 'DAY_STARTED': return `Day ${event.day} began.`
     case 'TIME_ADVANCED': return `Time advanced from ${String(event.fromHour).padStart(2,'0')}:00 to ${String(event.toHour).padStart(2,'0')}:00.`
@@ -66,6 +75,7 @@ export function isHighlightEvent(event: GameEvent): boolean {
 export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'system'|'home' {
   switch(event.type){
     case 'CITIZEN_DIED': return 'danger'
+    case 'CITIZEN_STATUS_CHANGED': return event.status.hydration==='dehydrated'?'danger':event.status.hydration==='thirsty'?'home':'system'
     case 'NIGHT_RESOLVED': return event.report.breached?'danger':'night'
     case 'DAY_STARTED': return 'night'
     case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': return 'world'

@@ -4,191 +4,240 @@ Live2Nite starts as a single-player browser game but keeps simulation rules inde
 
 ## Boundaries
 
-- `src/core`: authoritative game rules and persisted state. No React, DOM, network, or browser-persistence dependencies.
-- `src/agents`: citizen controllers and AI planning helpers. Controllers select ordinary legal game commands and never directly mutate gameplay state.
-- `src/agents/planning`: town-needs, mission coordination, route, expedition, loadout, water/storage policy, and return-safety evaluation.
-- `src/simulation`: orchestration that advances simulation time while invoking controllers.
-- `src/persistence`: save/load adapters. IndexedDB is the first implementation.
-- `src/ui`: React presentation, testing diagnostics, and human input only.
+- `src/core`: authoritative rules and persisted gameplay state. No React, DOM, network, IndexedDB, or local-storage dependencies.
+- `src/agents`: citizen controllers and deterministic planning helpers. Controllers select legal commands; they never directly mutate gameplay state.
+- `src/agents/planning`: town needs, mission coordination, routes, expedition budgets, supply policy, and return safety.
+- `src/simulation`: orchestration between the persistent clock and autonomous controllers.
+- `src/persistence`: save/load adapters. IndexedDB is the current implementation.
+- `src/ui`: React presentation, human input, and removable testing diagnostics.
 
 ## Core domains
 
-- `actions.ts`: legal-action generation for every controller.
-- `commands.ts`: command validation, timestamping, and gameplay-event production.
-- `events.ts`: authoritative event reduction into game state, including persisted bot-mission lifecycle events.
+- `actions.ts`: common legal-action surface for humans and autonomous controllers.
+- `commands.ts`: command validation and gameplay-event production.
+- `events.ts`: authoritative event reduction into state.
 - `clock.ts`: persistent hour/phase definitions and forward-time helpers.
-- `game.ts`: initial game creation.
-- `night.ts`: horde strength, Watchtower estimates, breaches, home survival, and attack-hour conclusion.
-- `defense.ts`: shared town-defense aggregation.
-- `combat.ts`: deterministic zombie-combat rules and weapon definitions.
-- `world.ts`: map generation, coordinates, zone control, ordinary/depleted scavenging, and deterministic special-site placement.
-- `specialSites.ts`: special-site identities, descriptions, map codes, and location-specific loot pools.
-- `items.ts`: item definitions, starter packages, consumable/defense metadata, weapon entries, and ordinary scavenging pools.
-- `home.ts`: home levels, personal defense, storage, and daily citizen-use state.
-- `well.ts`: deterministic starting-well generation.
-- `construction.ts`: construction catalog and material requirements.
-- `workshop.ts`: Workshop recipes and processing rules.
+- `game.ts`: initial state creation.
+- `status.ts`: citizen-condition definitions and hydration progression/treatment rules.
+- `night.ts`: horde strength, Watchtower estimates, outside deaths, breaches, home survival, hydration resolution, and day rollover.
+- `defense.ts`: town/home defense aggregation.
+- `combat.ts`: deterministic zombie combat and weapon definitions.
+- `world.ts`: map generation, movement, zone control, scavenging, and deterministic special-site placement.
+- `specialSites.ts`: special-site identities and location-specific loot.
+- `items.ts`: item metadata, starter packages, consumables, defense objects, weapons, and scavenging pools.
+- `home.ts`: home levels, personal defense, storage, and daily-use state.
+- `well.ts`: starting-well generation.
+- `construction.ts`: construction catalog, prerequisites, effects, and priority scoring.
+- `workshop.ts`: Workshop transformations and current repair recipes.
 - `rng.ts`: deterministic random-number generation.
 
-`src/simulation/advanceTime.ts` owns the single-player clock lifecycle. React requests a time advance; it never loops bots or mutates the clock itself.
+## Command/event invariant
+
+Gameplay follows:
+
+`GameCommand -> legal-action validation -> GameEvent[] -> reducer -> GameState`
+
+The same command/event path is used by the controlled citizen and bots. React does not directly alter AP, inventories, citizen status, Well water, map state, zombies, construction, gate state, or the clock.
+
+Simulation-owned mission-assignment and mission-phase changes are also explicit events so persistence/replay remain inspectable.
 
 ## Clock and hourly simulation
 
-A new playable day begins at **01:00**. Normal actions remain available through **23:00**. **00:00–01:00** is the nightly attack phase.
+A day begins at **01:00**. Normal actions remain available through **23:00**. **00:00–01:00** is the visible attack phase.
 
 The ordering invariant is:
 
-1. The controlled citizen performs any desired commands during the current hour. Commands do not move the clock.
+1. The controlled citizen issues any commands desired in the current hour.
 2. The player requests a time advance.
-3. `runBotHour` lets uncontrolled autonomous citizens finish their activity for the **current** hour.
-4. Only then is `TIME_ADVANCED` emitted and the clock moved forward.
+3. `runBotHour` lets uncontrolled bots finish their current-hour decisions.
+4. `TIME_ADVANCED` moves the clock.
 
-Therefore `23:00 -> 00:00` gives bots their complete final 23:00 opportunity. A citizen four tiles away with four AP can spend all four AP returning in that one hourly tick. The clock is a planning cadence, not a second action economy.
+AP remains the action budget. The clock is a planning cadence, not a one-action-per-hour system. A citizen four tiles out with four AP can move all four tiles during the 23:00 bot window before midnight.
 
-`advanceToHour` repeats this exact operation for every intermediate hour. Time shortcuts are forward-only and fast-forward stops at midnight so the attack phase remains visible.
+`advanceToHour` repeats every intermediate hourly simulation tick rather than teleporting.
+
+## Citizen status state
+
+Schema v10 adds persisted `Citizen.status`:
+
+```text
+hydration: normal | thirsty | dehydrated
+desertStepsToday: number
+```
+
+Only condition state that must survive commands/time is persisted. Statuses that are already derivable are not duplicated:
+
+- `Exhausted` derives from `ap === 0`;
+- satisfied-food derives from `daily.ate`;
+- satisfied-water derives from `daily.drank`.
+
+The first implemented condition family is hydration:
+
+- 11 desert movements while normally hydrated -> `thirsty`;
+- another 11 while Thirsty -> `dehydrated`;
+- reaching midnight without drinking while normal -> `thirsty`;
+- surviving midnight while already Thirsty -> `dehydrated`;
+- remaining Dehydrated through midnight -> dehydration death in the current reconstruction;
+- drinking while Thirsty -> normal hydration;
+- drinking while Dehydrated -> Thirsty and **does not restore AP**.
+
+A citizen may therefore consume water for treatment even after the once-per-day water AP refresh has already been used. The event explicitly records `restoresAp` so treatment and AP restoration cannot be conflated.
+
+See `docs/die2nite-reference/status-hydration.md` for evidence/confidence boundaries.
+
+## Status-aware AI
+
+Hydration is part of planning rather than a UI-only flag.
+
+`SupplyPolicy`:
+
+- reserves water for an active hydration condition;
+- allows urgent treatment to override normal expedition Well-conservation policy;
+- does not count Dehydrated treatment water as six potential AP.
+
+`BasicBotController`:
+
+- drinks accessible water before ordinary work when Thirsty/Dehydrated;
+- may withdraw Bank water or take a Well ration for treatment;
+- returns toward town when outside with a hydration warning and no carried water, unless zombie control prevents movement.
+
+This is deterministic Live2Nite autonomous behavior, not a claim about an original Die2Nite bot system.
 
 ## Coordinated town missions
 
-PR #11 adds a coordination layer above individual bot command selection. The important design rule is:
+The mission layer prevents every citizen independently deciding to solve the same town need.
 
-> Not every citizen independently solves the town's global problem. The town creates a limited set of useful field missions, and citizens are assigned to those missions while others remain available in town.
+Current field roles:
 
-`TownMissionPlanner.ts` evaluates current world knowledge, trapped citizens, construction shortages, known fresh zones, useful special sites, current staffing, time of day, and citizens already committed to field work.
+- `scout` — reveal routes, zombie counts, resources, and special sites;
+- `gatherer` — exploit known productive destinations;
+- `excavator` — clear known buried sites;
+- `rescue` — restore control around trapped citizens;
+- `combat` — reserved for increasingly explicit hostile-site missions.
 
-Current field roles are:
+Current isolated AI tuning values:
 
-- `scout` — reveal routes, zombie counts, fresh zones, and special sites;
-- `gatherer` — exploit known resource destinations;
-- `excavator` — contribute AP to known buried special sites;
-- `rescue` — reinforce a trapped citizen;
-- `combat` — reserved as a mission role for explicit hostile-site clearing as the weapon system expands.
+- minimum general town reserve: roughly 15% of living basic bots, never fewer than three;
+- new ordinary field assignments: up to roughly 20% of living bots per hour;
+- early poorly known maps target four active scouts, generally paired;
+- three citizens form the dedicated emergency reserve;
+- one of those three is a **night gate reserve** and is excluded from all field missions;
+- dedicated reserves can help town work while preserving the 4 AP floor established by PR #13 unless they accept an emergency assignment.
 
-A bot with no field assignment remains a reserve/town citizen rather than automatically inventing an expedition. It may perform ready construction/Workshop/home work or starter-package/storage housekeeping.
-
-Current coordination values are intentionally isolated Live2Nite AI heuristics:
-
-- roughly 30% of living basic bots are protected as an uncommitted reserve;
-- new field assignments are capped at roughly 15% of living bots per hour;
-- a poorly known early map begins with a small scout cohort (currently four), then later missions can be generated from the knowledge those scouts reveal;
-- new scouting winds down as the map becomes known and late-day departures are suppressed.
-
-These values are tuning policy, not fundamental game rules or reconstructed Die2Nite mechanics.
+The gate reserve is a Live2Nite safety policy added after a deterministic benchmark showed that simultaneous rescue missions could consume every bot capable of paying the final 1 AP gate-closing cost.
 
 ## Persisted mission lifecycle
 
-Unlike PR #10's fully derived per-decision expedition target, an accepted field mission is now authoritative state because continuity across hours matters to survival.
+Accepted field assignments live in `GameState.botMissions[citizenId]` because continuity across hours affects survival.
 
-`GameState.botMissions[citizenId]` stores a `BotMissionAssignment` with role, purpose, target, reason, return deadline, safety reserve, emergency flag, and current phase.
-
-The normal lifecycle is:
+Normal lifecycle:
 
 `prepare -> outbound -> operate -> return -> unload -> complete`
 
-This prevents target thrashing. A citizen who reaches and searches a destination does not immediately invent another outward trip on the next hour; the same mission transitions to `return`, reaches town, unloads, and is then cleared before another assignment can be accepted.
-
-Mission assignment/phase/clear changes are explicit `GameEvent`s and reduce through the same authoritative event pipeline as gameplay commands.
+Citizens keep the same target until completion/abort. Searching a destination no longer causes immediate target thrashing into another outward expedition.
 
 ## Return-solvency invariant
 
-The production failure after PR #10 showed that planning a feasible round trip at departure was not enough: citizens could spend their return capacity on later outward decisions.
+Ordinary missions continuously compare:
 
-Ordinary field missions now continuously calculate:
-
-`usable remaining AP = current AP + unused carried food refill + unused carried water refill`
+`usable remaining AP = current AP + actually usable carried refill capacity`
 
 against:
 
 `required return AP = safe route home + mission safety reserve`
 
-When usable capacity reaches the required return threshold, the mission transitions to `return` immediately. A full rucksack and the citizen's scheduled evening deadline also force the return phase.
+When the return reserve is reached, the mission transitions to `return` immediately. Only supplies the citizen can actually access while outside count toward solvency.
 
-Only **carried, currently usable** refill items count while outside. Food, water, starter packages, Bank stock, and Well water still sitting in town cannot make an already-outside citizen appear solvent.
-
-Scout missions currently use a larger reserve than ordinary known-resource trips because unknown travel carries more uncertainty. Emergency rescue missions are allowed to accept more risk and do not use the ordinary safe-round-trip acceptance rule.
+Scouts keep a larger safety reserve than known-resource gatherers. Emergency rescue missions may accept more risk.
 
 ## Rescue semantics
 
-A rescue is not complete merely because another citizen briefly enters the trapped zone. The rescuer must create a usable player-action window.
+A rescue is not complete merely because a rescuer briefly enters the trapped zone. A rescue mission remains in `operate` while the protected citizen is still there so the player receives a real action window with restored human control.
 
-A rescue mission therefore remains in `operate` while the protected citizen is still in the rescue zone. The rescuer holds position instead of immediately returning during the same hourly simulation tick. Once the protected citizen leaves the zone (or dies), the rescue mission may transition to return. A late emergency deadline can still force the rescuer to retreat.
-
-This preserves the clock contract: after the player advances one hour to request help, a successful rescuer can still be present when control returns to the player.
+If a rescue needs more citizens than the two field-capable dedicated responders, the planner can use other available town citizens rather than dispatching the night gate reserve.
 
 ## World Beyond search layers
 
 A zone can expose three independent resource channels:
 
-1. **ordinary search** — finite useful finds represented by `searchesRemaining` and `searchedBy`;
-2. **depleted search** — low-grade Rotting Log / Scrap Metal feedstock, tracked separately per citizen;
-3. **special-site search** — location-specific ruin loot independent from ordinary zone searching.
+1. ordinary search — useful finite finds;
+2. depleted search — Rotting Log / Scrap Metal feedstock;
+3. special-site search — location-specific ruin loot.
 
-Special sites begin buried. Citizens with zone control can spend 1 AP per excavation action, with progress shared between contributors. An uncovered site becomes `accessible`; once its special loot is exhausted it becomes `depleted`.
+Ordinary citizens can also receive automatic searches after remaining on a productive zone for the reconstructed two-hour cadence.
 
-The map currently receives 12 special sites from an isolated deterministic seed. The six initial types are Construction Site, Wrecked Cars, Pharmacy, Supermarket, Dark Woods, and Police Station. Exact counts, excavation requirements, and loot weights remain explicit Live2Nite adaptations; see `docs/die2nite-reference/world-beyond-2.md`.
+Special sites begin buried. Excavation progress is shared. The current map has 12 deterministic sites from six initial identities; exact count, placement, excavation requirements, and loot weights are explicit adaptations.
 
-## Mission and supply planning
+## Mission and supply planning stack
 
-The planning stack is separated from `BasicBotController`:
+- `TownNeeds.ts`: construction/resource/Well pressure.
+- `TownMissionPlanner.ts`: creates and staffs a limited mission set.
+- `ExpeditionPlanner.ts`: route, task, return, loadout, and feasibility for an accepted mission.
+- `MissionLifecycle.ts`: phase changes and return-solvency enforcement.
+- `RoutePlanner.ts`: deterministic routing that avoids known risk without revealing unknown-zone contents.
+- `SupplyPolicy.ts`: food/water/weapon slot decisions and Well conservation.
+- `BasicBotController.ts`: chooses executable legal commands.
 
-- `TownNeeds.ts` evaluates incomplete projects, missing materials, Bank food/weapon pressure, survivors, and Well water per survivor.
-- `TownMissionPlanner.ts` turns town/world information into limited staffed missions.
-- `ExpeditionPlanner.ts` evaluates one accepted mission's route, task cost, return cost, loadout, and feasibility.
-- `MissionLifecycle.ts` owns phase transitions and return solvency.
-- `RoutePlanner.ts` supplies deterministic path selection and avoids known dangerous routes where possible without revealing unknown-zone contents.
-- `SupplyPolicy.ts` decides whether food/water/weapons justify rucksack space and controls Well conservation.
-- `BasicBotController.ts` executes the active mission exclusively through legal `GameCommand`s.
+The non-emergency Well conservation bands remain Live2Nite tuning values:
 
-AP remains the only ordinary action budget. Food/water refill to the normal maximum rather than adding clock hours, and bots delay consumption until near exhaustion so refill value is not wasted.
+- normal: >2 rations per living citizen;
+- cautious: 1–2;
+- critical: <1.
 
-The current Well policy is:
-
-- `normal`: more than 2.0 rations per living citizen;
-- `cautious`: 1.0–2.0;
-- `critical`: below 1.0.
-
-These bands control new expedition withdrawals, not thirst survival, and are isolated tuning heuristics.
-
-## Legal-action boundary
-
-`getLegalActions(gameState, citizenId)` remains the common action surface for React, bots, future LLM-assisted agents, and future remote humans. Controllers never directly mutate AP, inventory, homes, the Well, map, Bank, construction, gate, zombies, clock time, or special-site state.
-
-Town mission assignment/phase state is different: it is simulation orchestration rather than a citizen gameplay command, but it is still represented by authoritative events and reduced through `events.ts` so persistence/replay remain explicit.
+Hydration treatment can override those expedition-economics bands because it is now a direct survival need.
 
 ## Night resolution
 
-Night resolution remains isolated in `night.ts`:
+The attack conclusion remains isolated in `night.ts`:
 
-1. 23:00 autonomous activity finishes before midnight.
-2. 00:00 is an explicit attack phase.
-3. Advancing to 01:00 resolves outside deaths, horde strength, shared defense, and home-defense outcomes.
-4. Citizens still outside die while camping remains deferred.
-5. A closed gate applies shared defense; an open gate nullifies it.
-6. Breaching zombies are distributed across surviving citizens in town.
-7. Personal home defense determines survival.
-8. `DAY_STARTED` resets AP/daily state and clears stale field missions for the new day.
+1. bots complete the 23:00 window;
+2. time enters 00:00 attack phase;
+3. citizens still outside die while camping remains deferred;
+4. attack strength and effective shared defense are resolved;
+5. breaching zombies are distributed across surviving in-town citizens;
+6. personal home defense determines home-breach survival;
+7. surviving citizen hydration progresses and untreated Dehydrated citizens die;
+8. the Night Report records horde/home/outside/dehydration outcomes;
+9. Search Tower replenishment is resolved;
+10. `DAY_STARTED` refreshes AP/daily-use state and clears stale missions.
 
-## Temporary testing tools
+## UI boundary
 
-The React-local `controlledCitizenId` lets the Citizens screen temporarily operate any living citizen. It is not persisted and does not change `Citizen.controller`.
+The compact controlled-citizen status HUD is React presentation over authoritative state. It does not own a second condition model.
 
-The Citizens screen also exposes AI diagnostics: assigned role, mission phase, target, reason, loadout/AP budget, return-safety requirement and margin, water/storage policy, and explicit `RESERVE` state for unassigned bots. The display reads the same authoritative mission state and planning helpers used by automation.
+The top HUD exposes immediate AP/condition information. The Citizens screen remains the deeper testing surface for:
 
-The diagnostics are temporary development UI. Active mission assignments themselves are persisted because they affect multi-hour simulation behavior.
+- hydration and desert-step progress;
+- mission role/phase/target;
+- AP/loadout budget;
+- return margin;
+- water/storage policy;
+- reserve state.
+
+`controlledCitizenId` remains React-local and does not change the persisted controller type.
 
 ## Determinism and persistence
 
-`Math.random()` should not be used inside the game core. A seed plus the same ordered commands and time advances should reproduce the same simulation result.
+Core rules should not use scattered `Math.random()`. A seed plus the same ordered commands/time advances should reproduce the same result.
 
-Save data is schema version **8**. The new persisted field is `botMissions`. Schema 2–7 saves migrate forward with an empty mission board while preserving citizen, town, clock, world, construction, Well, special-site, and event progress. `DAY_STARTED` clears unfinished missions so assignments are reconsidered for the new day.
+Save schema is **v10**. Schema 2–9 saves migrate forward. Legacy citizens receive a normal hydration state with zero desert travel debt; existing world/town/clock/construction/mission progress is preserved.
 
-Historical events may lack an hour; new command/time/night/mission events remain timestamped. The temporary controlled-citizen selection is not persisted.
+New `ITEM_CONSUMED` events record whether the use actually restored AP. Historical events missing that field migrate as AP-restoring consumption, matching the pre-v10 behavior.
+
+## Future status families
+
+The status boundary is intentionally prepared for later historically researched systems such as Wounded, Infected, Terrorized, Healed, Drugged/Addicted, and alcohol effects. They should be added as dedicated gameplay slices rather than speculative flags.
 
 ## Future LLM integration
 
-LLM providers will sit behind an agent adapter. A model can eventually influence mission preference, risk tolerance, social choices, supply sharing, or whether to accept an offered assignment, while authoritative rules and legal commands remain deterministic and validated by the game core. API keys must never be shipped in the GitHub Pages client.
+An LLM may eventually influence strategy, social intent, risk tolerance, or mission preference. It will not mutate state or bypass legal commands. API keys must never be shipped in the GitHub Pages client.
 
 ## Multiplayer migration
 
-Current: `React -> simulation advance -> local game core/controllers -> IndexedDB`
+Current:
 
-Future: `React -> network commands/time -> authoritative server using game core/controllers -> database`
+`React -> local simulation/core/controllers -> IndexedDB`
+
+Future:
+
+`React -> network commands/time -> authoritative server using the same core/controllers -> database`
