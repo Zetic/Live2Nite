@@ -52,11 +52,18 @@ export function planMission(state: GameState, citizenId: string, mission: BotMis
   const roundTripFeasible = roundTripLoadout.potentialAp >= roundTripRequiredAp
   const overnightRequiredAp = route.length + expectedTaskAp + gateCost + mission.safetyReserve
   const overnightLoadout = mission.allowsCamping ? planLoadout(state,citizen,mission.purpose,overnightRequiredAp,targetZombies,{overnight:true}) : roundTripLoadout
-  // Deliberate camping is only selected when a same-day round trip is not feasible.
-  // Bots must also be able to provision water before committing to an overnight trip;
-  // camping is never used as an excuse for an already-broken return plan.
-  const overnightFeasible = Boolean(mission.allowsCamping && overnightLoadout.water && overnightLoadout.potentialAp >= overnightRequiredAp)
-  const campingPlanned = !roundTripFeasible && overnightFeasible
+  // Water already consumed today still counts as overnight hydration security. This
+  // lets a bot drink the ration it deliberately packed without invalidating its camp.
+  const overnightWaterReady = overnightLoadout.water || citizen.daily.drank
+  const overnightFeasible = Boolean(mission.allowsCamping && overnightWaterReady && overnightLoadout.potentialAp >= overnightRequiredAp)
+  // A provisional mission (overnightPlanned undefined) chooses its intent once. After
+  // dispatch, TownMissionPlanner persists that decision so a same-day mission cannot
+  // become a camping mission merely because it later overspent or met unexpected risk.
+  const campingPlanned = mission.overnightPlanned === true
+    ? overnightFeasible
+    : mission.overnightPlanned === false
+      ? false
+      : !roundTripFeasible && overnightFeasible
   const loadout = campingPlanned ? overnightLoadout : roundTripLoadout
   const requiredAp = campingPlanned ? overnightRequiredAp : roundTripRequiredAp
   return {
