@@ -1,3 +1,4 @@
+import { createGameClock, DAY_START_HOUR } from './clock'
 import { createConstructionState } from './construction'
 import { createDailyState, createStarterHome } from './home'
 import { resolveNightAttack } from './night'
@@ -32,12 +33,13 @@ export function createInitialGame(seed: number, citizenCount = 40): GameState {
   const normalizedSeed = seed >>> 0 || 1
   const generated = createWorld(normalizedSeed)
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     gameId: `local-${normalizedSeed}`,
     seed: normalizedSeed,
     rngState: generated.rngState,
     nextItemId: 1,
     day: 1,
+    clock: createGameClock(),
     citizens: makeCitizens(citizenCount),
     town: {
       gateOpen: false,
@@ -49,7 +51,7 @@ export function createInitialGame(seed: number, citizenCount = 40): GameState {
     },
     world: generated.world,
     lastNight: null,
-    events: [{ type: 'DAY_STARTED', day: 1 }],
+    events: [{ type: 'DAY_STARTED', day: 1, hour: DAY_START_HOUR }],
   }
 }
 
