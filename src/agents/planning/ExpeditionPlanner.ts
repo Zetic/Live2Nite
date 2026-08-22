@@ -1,8 +1,6 @@
-import type { Citizen, GameState, SpecialSiteType, WorldZone } from '../../core/types'
-import { specialSiteName } from '../../core/specialSites'
-import { distanceToTown, zoneControl } from '../../core/world'
-import { evaluateTownNeeds } from './TownNeeds'
-import { chooseFrontierTarget, routeBetween, type Coord } from './RoutePlanner'
+import type { BotMissionAssignment, Citizen, GameState } from '../../core/types'
+import { distanceToTown } from '../../core/world'
+import { routeBetween, type Coord } from './RoutePlanner'
 import { planLoadout, supplyDispositionForCitizen, waterPolicyForState, type ExpeditionLoadout, type ExpeditionPurpose } from './SupplyPolicy'
 
 export interface ExpeditionPlan {
@@ -22,36 +20,17 @@ export interface ExpeditionPlan {
   supplyDisposition: ReturnType<typeof supplyDispositionForCitizen>
 }
 
-const SITE_PURPOSE:Partial<Record<ExpeditionPurpose,SpecialSiteType[]>>={
-  gather_construction:['construction_site','wrecked_cars','dark_woods'],
-  gather_food:['supermarket'],gather_medical:['pharmacy'],gather_weapons:['police_station'],
-}
 function citizenCoord(citizen:Citizen):Coord{return citizen.location.type==='world'?{x:citizen.location.x,y:citizen.location.y}:{x:0,y:0}}
-function trappedTarget(state:GameState,citizenId:string):Citizen|null{return state.citizens.find((candidate)=>candidate.id!==citizenId&&candidate.alive&&candidate.location.type==='world'&&zoneControl(state,candidate.location.x,candidate.location.y).trapped)??null}
-function usefulSpecialZones(state:GameState,purpose:ExpeditionPurpose,citizenId:string):WorldZone[]{const preferred=SITE_PURPOSE[purpose];return Object.values(state.world.zones).filter((zone)=>zone.discovered&&zone.specialSite&&zone.specialSite.status!=='depleted'&&!zone.specialSite.searchedBy.includes(citizenId)&&(!preferred||preferred.includes(zone.specialSite.type)))}
-function pickKnownTarget(state:GameState,citizen:Citizen,purpose:ExpeditionPurpose):WorldZone|null{
-  const specials=usefulSpecialZones(state,purpose,citizen.id)
-  if(specials.length)return [...specials].sort((a,b)=>distanceToTown(a.x,a.y)-distanceToTown(b.x,b.y))[0]
-  return null
-}
-function purposeForTown(state:GameState):{purpose:ExpeditionPurpose;reason:string}{const needs=evaluateTownNeeds(state);if(needs.activeProject&&Object.keys(needs.missingConstruction).length)return{purpose:'gather_construction',reason:`${needs.activeProject} is missing ${Object.entries(needs.missingConstruction).map(([type,count])=>`${count} ${type}`).join(', ')}`};if(needs.foodLow)return{purpose:'gather_food',reason:'The shared Bank is low on food.'};if(needs.weaponsLow)return{purpose:'gather_weapons',reason:'The town has few shared weapons.'};return{purpose:'explore',reason:'Push the known frontier and discover new resource sources.'}}
+function taskCost(state:GameState,mission:BotMissionAssignment):number{const zone=state.world.zones[`${mission.target.x},${mission.target.y}`];if(mission.role==='excavator'&&zone?.specialSite?.status==='buried')return Math.min(3,Math.max(1,zone.specialSite.excavationRequired-zone.specialSite.excavationProgress));return 0}
 
-export function planExpedition(state:GameState,citizenId:string):ExpeditionPlan|null{
+export function planMission(state:GameState,citizenId:string,mission:BotMissionAssignment):ExpeditionPlan|null{
   const citizen=state.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen||!citizen.alive||state.clock.phase!=='day')return null
-  const rescue=trappedTarget(state,citizenId)
-  let purpose:ExpeditionPurpose;let reason:string;let targetZone:WorldZone|null=null;let target:Coord
-  if(rescue?.location.type==='world'){purpose='rescue';reason=`${rescue.name} is trapped outside.`;target={x:rescue.location.x,y:rescue.location.y}}
-  else{
-    const chosen=purposeForTown(state);purpose=chosen.purpose;reason=chosen.reason;targetZone=pickKnownTarget(state,citizen,purpose)
-    if(!targetZone){targetZone=chooseFrontierTarget(state,citizenId);if(!targetZone)return null;if(purpose!=='explore')reason+=' No known matching site is ready, so this expedition will push toward fresh undepleted territory.'}
-    target={x:targetZone.x,y:targetZone.y}
-  }
-  const from=citizenCoord(citizen);const route=routeBetween(state,from,target);const zone=state.world.zones[`${target.x},${target.y}`]
-  const site=zone?.specialSite;const expectedTaskAp=site?.status==='buried'?Math.min(3,Math.max(1,site.excavationRequired-site.excavationProgress)):0
-  const returnAp=distanceToTown(target.x,target.y);const gateCost=citizen.location.type==='town'&&!state.town.gateOpen?1:0;const requiredAp=route.length+returnAp+expectedTaskAp+gateCost
-  const targetZombies=zone?.discovered?zone.zombies:2;const loadout=planLoadout(state,citizen,purpose,requiredAp,targetZombies)
-  const label=site&&zone.discovered?`${specialSiteName(site.type)} [${target.x},${target.y}]`:`[${target.x},${target.y}]`
-  return{purpose,target,targetLabel:label,reason,route,requiredAp,returnAp,expectedTaskAp,targetZombies,loadout,feasible:loadout.potentialAp>=requiredAp,plannedReturnHour:18+((Number(citizenId.slice(1))||0)%4),waterPolicy:waterPolicyForState(state),supplyDisposition:supplyDispositionForCitizen(citizenId)}
+  const from=citizenCoord(citizen);const route=routeBetween(state,from,mission.target);const zone=state.world.zones[`${mission.target.x},${mission.target.y}`]
+  const expectedTaskAp=taskCost(state,mission);const returnAp=distanceToTown(mission.target.x,mission.target.y);const gateCost=citizen.location.type==='town'&&!state.town.gateOpen?1:0
+  const requiredAp=route.length+returnAp+expectedTaskAp+gateCost+mission.safetyReserve
+  const targetZombies=zone?.discovered?zone.zombies:2;const loadout=planLoadout(state,citizen,mission.purpose,requiredAp,targetZombies)
+  return{purpose:mission.purpose,target:mission.target,targetLabel:mission.targetLabel,reason:mission.reason,route,requiredAp,returnAp,expectedTaskAp,targetZombies,loadout,feasible:loadout.potentialAp>=requiredAp,plannedReturnHour:mission.returnByHour,waterPolicy:waterPolicyForState(state),supplyDisposition:supplyDispositionForCitizen(citizenId)}
 }
 
-export function remainingReturnRequirement(state:GameState,citizenId:string):number{const citizen=state.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen||citizen.location.type!=='world')return 0;return distanceToTown(citizen.location.x,citizen.location.y)}
+export function planExpedition(state:GameState,citizenId:string):ExpeditionPlan|null{const mission=state.botMissions[citizenId];return mission?planMission(state,citizenId,mission):null}
+export function remainingReturnRequirement(state:GameState,citizenId:string):number{const citizen=state.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen||citizen.location.type!=='world')return 0;return routeBetween(state,{x:citizen.location.x,y:citizen.location.y},{x:0,y:0}).length||distanceToTown(citizen.location.x,citizen.location.y)}
