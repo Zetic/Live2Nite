@@ -67,7 +67,7 @@ export function createWorld(seed: number): { world: WorldState; rngState: number
     for (let x = WORLD_MIN_X; x <= WORLD_MAX_X; x += 1) {
       const key = zoneKey(x, y)
       if (isTownGateZone(x, y)) {
-        zones[key] = { x, y, discovered: true, zombies: 0, searchesRemaining: 0, searchedBy: [], depletedSearchedBy: [], hiddenLoot: [], groundItems: [] }
+        zones[key] = { x, y, discovered: true, zombies: 0, searchesRemaining: 0, searchedBy: [], depletedSearchedBy: [], hiddenLoot: [], groundItems: [], campImprovements: 0 }
         continue
       }
       const distance = Math.abs(x) + Math.abs(y)
@@ -85,7 +85,7 @@ export function createWorld(seed: number): { world: WorldState; rngState: number
         rngState = lootRoll.state
         hiddenLoot.push(NORMAL_SCAVENGE_LOOT_POOL[lootRoll.value])
       }
-      zones[key] = { x, y, discovered: false, zombies: zombieRoll.value, searchesRemaining: searchRoll.value, searchedBy: [], depletedSearchedBy: [], hiddenLoot, groundItems: [] }
+      zones[key] = { x, y, discovered: false, zombies: zombieRoll.value, searchesRemaining: searchRoll.value, searchedBy: [], depletedSearchedBy: [], hiddenLoot, groundItems: [], campImprovements: 0 }
     }
   }
   const base: WorldState = { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minY: WORLD_MIN_Y, maxY: WORLD_MAX_Y, zones }

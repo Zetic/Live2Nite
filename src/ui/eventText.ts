@@ -22,6 +22,10 @@ export function describeEvent(event: GameEvent, game: GameState): string {
       if(event.status.hydration==='thirsty')return `${name} became ${CITIZEN_STATUS_DEFINITIONS.thirsty.label}.`
       return `${name}'s condition improved.`
     }
+    case 'CAMP_IMPROVED': return `${citizenName(game,event.citizenId)} spent ${event.amount} AP improving a campsite at [${event.zoneKey}].`
+    case 'CAMP_IMPROVEMENTS_DECAYED': return `The campsite at [${event.zoneKey}] deteriorated overnight.`
+    case 'CITIZEN_HIDING_SET': return event.hidden ? `${citizenName(game,event.citizenId)} hid for the night and locked in their camping outlook.` : `${citizenName(game,event.citizenId)} left their hiding place.`
+    case 'CAMPING_RESOLVED': return event.survived ? `${citizenName(game,event.citizenId)} survived the night while camping outside.` : `${citizenName(game,event.citizenId)} failed to survive the night while camping.`
     case 'ZONE_DISCOVERED': {
       const zone=game.world.zones[event.zoneKey]
       return zone?.specialSite ? `Zone [${event.zoneKey}] revealed ${specialSiteName(zone.specialSite.type)}.` : `Zone [${event.zoneKey}] was discovered.`
@@ -54,14 +58,16 @@ export function describeEvent(event: GameEvent, game: GameState): string {
       const recipe=WORKSHOP_RECIPES[event.recipeId]
       return `${citizenName(game,event.citizenId)} used the Workshop: ${event.inputCount} ${itemName(recipe.input)} → ${event.outputCount} ${itemName(recipe.output)}.`
     }
-    case 'BOT_MISSION_ASSIGNED': return `${citizenName(game,event.citizenId)} was assigned ${event.mission.role} duty toward ${event.mission.targetLabel}.`
+    case 'BOT_MISSION_ASSIGNED': return `${citizenName(game,event.citizenId)} was assigned ${event.mission.role} duty toward ${event.mission.targetLabel}${event.mission.allowsCamping?' with an overnight option':''}.`
     case 'BOT_MISSION_PHASE_SET': return `${citizenName(game,event.citizenId)} mission phase changed to ${event.phase}.`
     case 'BOT_MISSION_CLEARED': return `${citizenName(game,event.citizenId)} ${event.outcome==='completed'?'completed':'aborted'} their field mission.`
-    case 'CITIZEN_DIED': return event.reason==='outside_at_night' ? `${citizenName(game,event.citizenId)} died outside during the nightly attack.` : event.reason==='dehydration' ? `${citizenName(game,event.citizenId)} died of dehydration.` : `${citizenName(game,event.citizenId)} was killed when zombies broke into their home.`
+    case 'CITIZEN_DIED': return event.reason==='outside_at_night' ? `${citizenName(game,event.citizenId)} died outside without a prepared hiding place.` : event.reason==='camping_failure' ? `${citizenName(game,event.citizenId)} died while camping outside.` : event.reason==='dehydration' ? `${citizenName(game,event.citizenId)} died of dehydration.` : `${citizenName(game,event.citizenId)} was killed when zombies broke into their home.`
     case 'NIGHT_RESOLVED': {
       const inside=event.report.zombiesInside??Math.max(0,event.report.attackStrength-event.report.effectiveDefense)
       const dehydration=event.report.dehydrationDeaths??0
-      return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${inside>0?` — ${inside} zombie(s) breached, ${event.report.homeDeaths??0} home death(s)`:' — the town held'}${dehydration?`; ${dehydration} dehydration death(s)`:''}.`
+      const campSurvivors=event.report.campingSurvivors??0
+      const campDeaths=event.report.campingDeaths??0
+      return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${inside>0?` — ${inside} zombie(s) breached, ${event.report.homeDeaths??0} home death(s)`:' — the town held'}${event.report.outsideDeaths?`; ${event.report.outsideDeaths} stranded outside death(s)`:''}${campSurvivors?`; ${campSurvivors} camper(s) survived`:''}${campDeaths?`; ${campDeaths} camping death(s)`:''}${dehydration?`; ${dehydration} dehydration death(s)`:''}.`
     }
     case 'DAY_STARTED': return `Day ${event.day} began.`
     case 'TIME_ADVANCED': return `Time advanced from ${String(event.fromHour).padStart(2,'0')}:00 to ${String(event.toHour).padStart(2,'0')}:00.`
@@ -69,16 +75,17 @@ export function describeEvent(event: GameEvent, game: GameState): string {
 }
 
 export function isHighlightEvent(event: GameEvent): boolean {
-  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','TIME_ADVANCED','BOT_MISSION_PHASE_SET'].includes(event.type)
+  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED'].includes(event.type)
 }
 
 export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'system'|'home' {
   switch(event.type){
     case 'CITIZEN_DIED': return 'danger'
     case 'CITIZEN_STATUS_CHANGED': return event.status.hydration==='dehydrated'?'danger':event.status.hydration==='thirsty'?'home':'system'
+    case 'CAMPING_RESOLVED': return event.survived?'world':'danger'
     case 'NIGHT_RESOLVED': return event.report.breached?'danger':'night'
     case 'DAY_STARTED': return 'night'
-    case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': return 'world'
+    case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': case 'CAMP_IMPROVED': case 'CAMP_IMPROVEMENTS_DECAYED': case 'CITIZEN_HIDING_SET': return 'world'
     case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'CONSTRUCTION_KIT_OPENED': case 'ITEM_CONSUMED': case 'HOME_UPGRADED': return 'home'
     case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'WORKSHOP_CONVERTED': case 'GATE_SET': return 'town'
     default: return 'system'

@@ -31,7 +31,8 @@ export function nightGateReserveCitizenId(state:GameState):string|null{return de
 export function isDedicatedRescueReserve(state:GameState,citizenId:string):boolean{return dedicatedRescueCitizenIds(state).includes(citizenId)}
 export function minimumTownReserve(state:GameState):number{const livingBots=state.citizens.filter((citizen)=>citizen.alive&&citizen.controller==='basic-bot').length;return Math.max(DEDICATED_RESCUE_RESERVE,Math.ceil(livingBots*MINIMUM_RESERVE_FRACTION))}
 
-function makeAssignment(state:GameState,citizen:Citizen,opportunity:MissionOpportunity):BotMissionAssignment{return{missionId:opportunity.missionId,role:opportunity.role,purpose:opportunity.purpose,target:opportunity.target,targetLabel:opportunity.targetLabel,reason:opportunity.reason,phase:'prepare',assignedDay:state.day,assignedHour:state.clock.hour,returnByHour:returnByHour(citizen.id),safetyReserve:opportunity.safetyReserve,emergency:opportunity.emergency}}
+function makeAssignment(state:GameState,citizen:Citizen,opportunity:MissionOpportunity):BotMissionAssignment{return{missionId:opportunity.missionId,role:opportunity.role,purpose:opportunity.purpose,target:opportunity.target,targetLabel:opportunity.targetLabel,reason:opportunity.reason,phase:'prepare',assignedDay:state.day,assignedHour:state.clock.hour,returnByHour:returnByHour(citizen.id),safetyReserve:opportunity.safetyReserve,emergency:opportunity.emergency,allowsCamping:!opportunity.emergency&&distanceToTown(opportunity.target.x,opportunity.target.y)>=6}}
+function acceptedAssignment(state:GameState,citizen:Citizen,mission:BotMissionAssignment,opportunity:MissionOpportunity):BotMissionAssignment|null{const plan=planMission(state,citizen.id,mission);if(!plan)return null;if(opportunity.emergency)return plan.route.length<=plan.loadout.potentialAp?{...mission,overnightPlanned:false}:null;if(!plan.feasible)return null;return{...mission,overnightPlanned:plan.campingPlanned}}
 function sitePurpose(zone:WorldZone):BotMissionPurpose|null{const type=zone.specialSite?.type;if(!type)return null;if(CONSTRUCTION_SITE_TYPES.has(type))return'gather_construction';if(type==='supermarket')return'gather_food';if(type==='pharmacy')return'gather_medical';if(type==='police_station')return'gather_weapons';return null}
 
 function knownOpportunities(state:GameState):MissionOpportunity[]{
@@ -75,7 +76,6 @@ function hasImmediateTownWork(state:GameState,citizen:Citizen):boolean{return Bo
 function allTownCandidates(state:GameState,controlledCitizenId?:string):Citizen[]{const offset=state.day*7+state.clock.hour*3;return state.citizens.filter((citizen)=>citizen.alive&&citizen.controller==='basic-bot'&&citizen.location.type==='town'&&citizen.id!==controlledCitizenId&&!state.botMissions[citizen.id]).sort((a,b)=>((citizenNumber(a.id)+offset)%100)-((citizenNumber(b.id)+offset)%100))}
 function normalCandidates(state:GameState,controlledCitizenId?:string):Citizen[]{const dedicated=new Set(dedicatedRescueCitizenIds(state));return allTownCandidates(state,controlledCitizenId).filter((citizen)=>!dedicated.has(citizen.id)&&!hasImmediateTownWork(state,citizen))}
 function assignmentEvent(state:GameState,citizen:Citizen,mission:BotMissionAssignment):GameEvent{return{type:'BOT_MISSION_ASSIGNED',day:state.day,hour:state.clock.hour,citizenId:citizen.id,mission}}
-function canAcceptMission(state:GameState,citizen:Citizen,mission:BotMissionAssignment,opportunity:MissionOpportunity):boolean{const plan=planMission(state,citizen.id,mission);if(!plan)return false;if(!opportunity.emergency)return plan.feasible;return plan.route.length<=plan.loadout.potentialAp}
 
 export function planTownMissionAssignments(state:GameState,controlledCitizenId?:string):GameEvent[]{
   if(state.clock.phase!=='day'||state.clock.hour>=22)return[]
@@ -86,7 +86,7 @@ export function planTownMissionAssignments(state:GameState,controlledCitizenId?:
   let rescueBudget=Math.min(DEDICATED_RESCUE_RESERVE,rescueCandidates.length)
   for(const opportunity of opportunities.filter((item)=>item.emergency)){
     let remaining=Math.max(0,opportunity.desiredCitizens-existingForMission(state,opportunity.missionId))
-    while(remaining>0&&rescueBudget>0){const citizen=rescueCandidates.find((candidate)=>!used.has(candidate.id));if(!citizen)break;used.add(citizen.id);const mission=makeAssignment(state,citizen,opportunity);if(canAcceptMission(state,citizen,mission,opportunity)){events.push(assignmentEvent(state,citizen,mission));remaining-=1;rescueBudget-=1}}
+    while(remaining>0&&rescueBudget>0){const citizen=rescueCandidates.find((candidate)=>!used.has(candidate.id));if(!citizen)break;used.add(citizen.id);const proposed=makeAssignment(state,citizen,opportunity);const mission=acceptedAssignment(state,citizen,proposed,opportunity);if(mission){events.push(assignmentEvent(state,citizen,mission));remaining-=1;rescueBudget-=1}}
   }
 
   const livingBots=state.citizens.filter((citizen)=>citizen.alive&&citizen.controller==='basic-bot').length
@@ -98,7 +98,7 @@ export function planTownMissionAssignments(state:GameState,controlledCitizenId?:
   const assignedTargets=new Set(Object.values(state.botMissions).map((mission)=>`${mission.target.x},${mission.target.y}`))
   const assignOpportunity=(opportunity:MissionOpportunity)=>{
     let remaining=Math.max(0,opportunity.desiredCitizens-existingForMission(state,opportunity.missionId)-events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.mission.missionId===opportunity.missionId).length)
-    while(remaining>0&&newBudget>0){const citizen=candidates.find((candidate)=>!used.has(candidate.id));if(!citizen)break;used.add(citizen.id);const mission=makeAssignment(state,citizen,opportunity);if(canAcceptMission(state,citizen,mission,opportunity)){events.push(assignmentEvent(state,citizen,mission));newBudget-=1;remaining-=1}}
+    while(remaining>0&&newBudget>0){const citizen=candidates.find((candidate)=>!used.has(candidate.id));if(!citizen)break;used.add(citizen.id);const proposed=makeAssignment(state,citizen,opportunity);const mission=acceptedAssignment(state,citizen,proposed,opportunity);if(mission){events.push(assignmentEvent(state,citizen,mission));newBudget-=1;remaining-=1}}
   }
   for(const opportunity of opportunities.filter((item)=>!item.emergency)){if(newBudget<=0)break;assignOpportunity(opportunity)}
 

@@ -21,7 +21,7 @@ function lastSearchAnchor(state:GameState,citizenId:string,key:string):number|nu
 
 function autoSearchEvent(state:GameState,citizenId:string):GameEvent|null{
   const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
-  if(!citizen||!citizen.alive||citizen.location.type!=='world'||isTownGateZone(citizen.location.x,citizen.location.y))return null
+  if(!citizen||!citizen.alive||citizen.camping.hidden||citizen.location.type!=='world'||isTownGateZone(citizen.location.x,citizen.location.y))return null
   const key=zoneKey(citizen.location.x,citizen.location.y)
   const zone=state.world.zones[key]
   if(!zone||zone.searchesRemaining<=0)return null

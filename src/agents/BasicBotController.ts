@@ -1,3 +1,4 @@
+import { campingChancePercent } from '../core/camping'
 import { getLegalActions } from '../core/actions'
 import { weaponDefinition } from '../core/combat'
 import { ITEMS } from '../core/items'
@@ -52,6 +53,7 @@ function packageSharingAction(citizen:Citizen,actions:GameCommand[],plan:ReturnT
 function prepareLoadout(citizen:Citizen,actions:GameCommand[],plan:NonNullable<ReturnType<typeof planExpedition>>):GameCommand|null{if(plan.loadout.weaponType&&!carried(citizen,plan.loadout.weaponType)){const home=atHome(citizen,plan.loadout.weaponType);if(home){const move=itemAction(actions,'MOVE_ITEM_TO_RUCKSACK',home.id);if(move)return move}const bank=bankAction(actions,plan.loadout.weaponType);if(bank)return bank}if(plan.loadout.water&&!carried(citizen,'water_ration')){const home=atHome(citizen,'water_ration');if(home){const move=itemAction(actions,'MOVE_ITEM_TO_RUCKSACK',home.id);if(move)return move}const bank=bankAction(actions,'water_ration');if(bank)return bank;if(plan.loadout.wellWaterAllowed){const take=pick(actions,'TAKE_WATER');if(take)return take}}if(plan.loadout.food&&!carried(citizen,'food')){const home=atHome(citizen,'food');if(home){const move=itemAction(actions,'MOVE_ITEM_TO_RUCKSACK',home.id);if(move)return move}const bag=atHome(citizen,'doggy_bag');if(bag){const open=itemAction(actions,'OPEN_CONTAINER',bag.id);if(open)return open}const bank=bankAction(actions,'food');if(bank)return bank}return null}
 function refillAction(citizen:Citizen,actions:GameCommand[],remaining:number):GameCommand|null{const water=carried(citizen,'water_ration');if(water&&shouldUseRefill(citizen,remaining,'water')){const drink=itemAction(actions,'DRINK_ITEM',water.id);if(drink)return drink}const food=carried(citizen,'food');if(food&&shouldUseRefill(citizen,remaining,'food')){const eat=itemAction(actions,'EAT_ITEM',food.id);if(eat)return eat}return null}
 function bestWeaponAction(citizen:Citizen,actions:GameCommand[]):GameCommand|null{const options=citizen.inventory.map((item)=>({item,definition:weaponDefinition(item.type)})).filter((candidate)=>candidate.definition).sort((a,b)=>((b.definition!.killChancePercent*b.definition!.maxKills)-(a.definition!.killChancePercent*a.definition!.maxKills)));for(const option of options){const action=itemAction(actions,'USE_WEAPON',option.item.id);if(action)return action}return null}
+function campingAction(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{if(citizen.camping.hidden)return null;const chance=campingChancePercent(state,citizen.id);const improve=pick(actions,'IMPROVE_CAMP');if(chance<65&&citizen.ap>1&&improve)return improve;return pick(actions,'HIDE_FOR_NIGHT')}
 
 export class BasicBotController implements AgentController{
   readonly kind='basic-bot'
@@ -63,6 +65,7 @@ export class BasicBotController implements AgentController{
     if(!actions.length)return null
     const mission=game.botMissions[citizenId]??null
     const plan=planExpedition(game,citizenId)
+    if(citizen.camping.hidden)return null
     const hydration=hydrationAction(game,citizen,actions)
     if(hydration)return hydration
     if(citizen.location.type==='town'){
@@ -76,12 +79,13 @@ export class BasicBotController implements AgentController{
       return pick(actions,'EXIT_TOWN')
     }
     const control=zoneControl(game,citizen.location.x,citizen.location.y)
-    if(control.trapped){const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon;if(game.clock.hour>=22){const fists=pick(actions,'ATTACK_BAREHANDED');if(fists)return fists}return null}
+    if(control.trapped){const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon;if(game.clock.hour>=22){const fists=pick(actions,'ATTACK_BAREHANDED');if(fists)return fists}if(mission?.phase==='camp')return campingAction(game,citizen,actions);return null}
     if(citizen.status.hydration!=='normal'&&!carried(citizen,'water_ration'))return stepTowardTown(game,citizen,actions)
     if(!mission)return stepTowardTown(game,citizen,actions)
+    if(mission.phase==='camp')return campingAction(game,citizen,actions)
     if(mission.phase==='return'){const safety=missionSafety(game,citizenId);const refill=refillAction(citizen,actions,safety.returnAp);if(refill)return refill;return stepTowardTown(game,citizen,actions)}
     if(!plan)return stepTowardTown(game,citizen,actions)
-    const refill=refillAction(citizen,actions,plan.route.length+plan.returnAp+plan.expectedTaskAp+mission.safetyReserve);if(refill)return refill
+    const refill=refillAction(citizen,actions,plan.route.length+plan.expectedTaskAp+mission.safetyReserve+(plan.campingPlanned?0:plan.returnAp));if(refill)return refill
     if(mission.phase==='operate'){
       if(mission.role==='rescue')return null
       const pickup=pick(actions,'PICK_UP_ITEM');if(pickup)return pickup
