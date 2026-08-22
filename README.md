@@ -26,7 +26,12 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - bot water-conservation policy reacts to rations available per living citizen
 - bots can open starter packages, keep supplies at Home, share them through the Bank, and withdraw expedition gear
 - expedition loadouts budget food/water/weapon slots against space reserved for loot
-- bots can use food/water refills to plan expeditions beyond the range of a single 6 AP bar
+- coordinated town mission board prevents every citizen independently becoming a scout
+- a small scout cohort creates route/zombie/resource knowledge before later gather/excavation missions are staffed
+- new field assignments are staggered across hours and a significant citizen reserve remains available for town work and rescue
+- field missions persist through `prepare -> outbound -> operate -> return -> unload`
+- ordinary expeditions continuously reserve enough carried AP/refill capacity for a safe trip home
+- rescue missions can deliberately accept additional risk and rescuers hold the rescue zone long enough for the trapped citizen to leave
 - town construction shortages drive targeted frontier/resource expeditions
 - route planning spreads citizens across longer-range targets instead of repeatedly hugging the gate
 - open/close town gate for 1 AP from the World Beyond screen
@@ -53,7 +58,7 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - nightly breaches distribute zombies across surviving citizens; personal home defense decides who survives
 - outside citizens still die when the midnight attack resolves while camping is not yet implemented
 - bots use the same legal actions for scavenging, special-site excavation/search, supply preparation, rescue, construction, Workshop work, home upgrades, combat, and late-day returns
-- Citizens testing screen exposes each bot's derived expedition purpose, target, AP budget, loadout, water policy, and return window
+- Citizens testing screen exposes each bot's assignment, mission phase, target, AP/loadout budget, return-safety margin, water policy, and reserve status
 - command/event-driven game core
 - legal-action API shared by humans and bots
 - seeded deterministic simulation
@@ -61,11 +66,11 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - GitHub Pages deployment workflow
 - Vitest simulation tests
 
-Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). The first ten nightly attack ranges are anchored to surviving English Die2Nite sample data. Special-zone identities and their narrow location-oriented loot roles are historically grounded, while Live2Nite's exact site count, current excavation requirements, loot weights, and single-player expedition-planning heuristics remain explicit adaptations. Exact horde RNG, Watchtower error distribution, later-day attack progression, broader special-zone catalog, the full construction tree, thirst/statuses, higher home upgrades, broader weapon catalog, durability/reloads/ammunition, wounds, and other advanced combat interactions remain reconstruction/deferred areas.
+Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). The first ten nightly attack ranges are anchored to surviving English Die2Nite sample data. Special-zone identities and their narrow location-oriented loot roles are historically grounded, while Live2Nite's exact site count, current excavation requirements, loot weights, town mission staffing, reserve percentages, safety margins, water bands, and autonomous expedition heuristics remain explicit adaptations. Exact horde RNG, Watchtower error distribution, later-day attack progression, broader special-zone catalog, the full construction tree, thirst/statuses, higher home upgrades, broader weapon catalog, durability/reloads/ammunition, wounds, and other advanced combat interactions remain reconstruction/deferred areas.
 
-The clock/fast-forward and autonomous expedition-planning systems are **Live2Nite single-player simulation interfaces**, not claims that the original browser game used player-controlled hourly ticks or these AI heuristics. They exist so autonomous citizens can evolve over a day while preserving the original-style AP economy: actions do not themselves consume clock hours.
+The clock/fast-forward and autonomous mission-planning systems are **Live2Nite single-player simulation interfaces**, not claims that the original browser game used player-controlled hourly ticks or these AI heuristics. They exist so autonomous citizens can evolve over a day while preserving the original-style AP economy: actions do not themselves consume clock hours.
 
-The citizen-control switcher and AI-plan readout are development aids rather than permanent game mechanics. They are kept out of authoritative save state and are expected to be removed once direct multi-citizen testing is no longer useful.
+The citizen-control switcher and AI mission readout are development aids rather than permanent game mechanics. Control selection is kept out of authoritative save state. Active bot mission assignments are authoritative/persisted because their multi-hour lifecycle affects gameplay, but the testing UI exposing those assignments is expected to be removable later.
 
 ## Development
 
