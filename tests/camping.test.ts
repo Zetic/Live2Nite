@@ -18,7 +18,7 @@ function outsideAt(game:GameState,citizenId:string,x:number,y:number):GameState{
     citizens:game.citizens.map((citizen)=>citizen.id===citizenId?{...citizen,location:{type:'world' as const,x,y}}:citizen),
   }
 }
-function mission(targetX=4,phase:BotMissionAssignment['phase']='camp',allowsCamping=true):BotMissionAssignment{return{missionId:'overnight-test',role:'scout',purpose:'explore',target:{x:targetX,y:0},targetLabel:`Scout [${targetX},0]`,reason:'test',phase,assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false,allowsCamping}}
+function mission(targetX=4,phase:BotMissionAssignment['phase']='camp',allowsCamping=true,overnightPlanned?:boolean):BotMissionAssignment{return{missionId:'overnight-test',role:'scout',purpose:'explore',target:{x:targetX,y:0},targetLabel:`Scout [${targetX},0]`,reason:'test',phase,assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false,allowsCamping,...(overnightPlanned===undefined?{}:{overnightPlanned})}}
 
 describe('camping and overnight survival',()=>{
   it('starts schema v11 with camping state and campsite state initialized',()=>{
@@ -82,11 +82,16 @@ describe('camping and overnight survival',()=>{
   it('plans an overnight mission only when a safe same-day round trip is not feasible',()=>{
     let game=createInitialGame(131,2)
     game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,daily:{...citizen.daily,ate:true},inventory:[{id:'water',type:'water_ration' as const}]}:citizen)}
-    const overnight=mission(6,'prepare',true)
-    const overnightPlan=planMission(game,'c02',overnight)
+    const provisional=mission(6,'prepare',true)
+    const overnightPlan=planMission(game,'c02',provisional)
     expect(overnightPlan?.roundTripRequiredAp).toBeGreaterThan(overnightPlan?.loadout.potentialAp??0)
     expect(overnightPlan?.campingPlanned).toBe(true)
     expect(overnightPlan?.feasible).toBe(true)
+    const persistedOvernight=planMission(game,'c02',mission(6,'prepare',true,true))
+    expect(persistedOvernight?.campingPlanned).toBe(true)
+    const lockedSameDay=planMission(game,'c02',mission(6,'prepare',true,false))
+    expect(lockedSameDay?.campingPlanned).toBe(false)
+    expect(lockedSameDay?.feasible).toBe(false)
     const nearby=planMission(game,'c02',mission(2,'prepare',true))
     expect(nearby?.campingPlanned).toBe(false)
     expect(nearby?.feasible).toBe(true)
@@ -94,7 +99,7 @@ describe('camping and overnight survival',()=>{
 
   it('lets a camp-phase bot spend preparation AP and then hide deliberately',()=>{
     let game=outsideAt(createInitialGame(132,2),'c02',6,0)
-    game={...game,clock:{hour:20,phase:'day'},citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,inventory:[{id:'water',type:'water_ration' as const}]}:citizen),botMissions:{c02:mission(6,'camp',true)}}
+    game={...game,clock:{hour:20,phase:'day'},citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,inventory:[{id:'water',type:'water_ration' as const}]}:citizen),botMissions:{c02:mission(6,'camp',true,true)}}
     for(let step=0;step<10&&!game.citizens[1].camping.hidden;step+=1){const command=bots.decide(game,'c02');expect(command).toBeTruthy();game=executeCommand(game,command!).state}
     expect(game.citizens[1].camping.hidden).toBe(true)
     expect(game.events.some((event)=>event.type==='CAMP_IMPROVED'&&event.citizenId==='c02')).toBe(true)
@@ -111,7 +116,7 @@ describe('camping and overnight survival',()=>{
 
   it('lets a successful camper remain outside, regain AP, and retain an overnight mission',()=>{
     let game=outsideAt(createInitialGame(128,1),'c01',4,0)
-    game={...game,clock:{hour:0,phase:'attack'},citizens:game.citizens.map((citizen)=>({...citizen,ap:0,camping:{...citizen.camping,hidden:true,survivalChance:100,hiddenDay:1}})),botMissions:{c01:mission()}}
+    game={...game,clock:{hour:0,phase:'attack'},citizens:game.citizens.map((citizen)=>({...citizen,ap:0,camping:{...citizen.camping,hidden:true,survivalChance:100,hiddenDay:1}})),botMissions:{c01:mission(4,'camp',true,true)}}
     game=resolveNight(game)
     const citizen=game.citizens[0]
     expect(citizen.alive).toBe(true)
