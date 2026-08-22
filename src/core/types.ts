@@ -47,12 +47,16 @@ export type SpecialSiteStatus = 'buried' | 'accessible' | 'depleted'
 export type BotMissionPurpose = 'explore' | 'gather_construction' | 'gather_food' | 'gather_medical' | 'gather_weapons' | 'rescue'
 export type BotMissionRole = 'scout' | 'gatherer' | 'excavator' | 'rescue' | 'combat'
 export type BotMissionPhase = 'prepare' | 'outbound' | 'operate' | 'return' | 'unload'
+export type HydrationStatus = 'normal' | 'thirsty' | 'dehydrated'
+export type CitizenStatusId = 'exhausted' | 'satisfied_food' | 'satisfied_water' | 'thirsty' | 'dehydrated'
+export type CitizenStatusChangeReason = 'desert_travel' | 'drank_water' | 'nightly_progression'
 
 export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType }
 export type CitizenLocation = { type: 'town' } | { type: 'world'; x: number; y: number }
 export interface CitizenHome { level: HomeLevel; defense: number; storage: ItemInstance[]; storageCapacity: number }
 export interface CitizenDailyState { ate: boolean; drank: boolean; waterTaken: boolean; bonusWaterTaken?: boolean }
+export interface CitizenStatusState { hydration: HydrationStatus; desertStepsToday: number }
 export interface Citizen {
   id: string
   name: string
@@ -65,6 +69,7 @@ export interface Citizen {
   inventoryCapacity: number
   home: CitizenHome
   daily: CitizenDailyState
+  status: CitizenStatusState
 }
 
 export interface BotMissionAssignment {
@@ -125,11 +130,12 @@ export interface NightReport {
   outsideDeaths: number
   zombiesInside?: number
   homeDeaths?: number
+  dehydrationDeaths?: number
   homeAttacks?: HomeAttackOutcome[]
 }
 
 export interface GameState {
-  schemaVersion: 9
+  schemaVersion: 10
   gameId: string
   seed: number
   rngState: number
@@ -170,12 +176,13 @@ export type GameCommand =
   | { type: 'CONTRIBUTE_CONSTRUCTION'; citizenId: string; projectId: ConstructionId }
   | { type: 'WORKSHOP_CONVERT'; citizenId: string; recipeId: WorkshopRecipeId }
 
-export type DeathReason = 'outside_at_night' | 'home_breach'
+export type DeathReason = 'outside_at_night' | 'home_breach' | 'dehydration'
 
 export type GameEvent = (
   | { type: 'AP_SPENT'; day: number; citizenId: string; amount: number }
   | { type: 'GATE_SET'; day: number; open: boolean; citizenId: string }
-  | { type: 'CITIZEN_LOCATION_CHANGED'; day: number; citizenId: string; location: CitizenLocation }
+  | { type: 'CITIZEN_LOCATION_CHANGED'; day: number; citizenId: string; location: CitizenLocation; desertStep?: boolean }
+  | { type: 'CITIZEN_STATUS_CHANGED'; day: number; citizenId: string; status: CitizenStatusState; reason: CitizenStatusChangeReason }
   | { type: 'ZONE_DISCOVERED'; day: number; zoneKey: string }
   | { type: 'ZONE_SEARCHED'; day: number; zoneKey: string; citizenId: string; mode: SearchMode; item: ItemInstance | null; automatic?: boolean; rngStateAfter?: number }
   | { type: 'ZONE_REPLENISHED'; day: number; zoneKey: string; loot: ItemType }
@@ -190,7 +197,7 @@ export type GameEvent = (
   | { type: 'CONTAINER_OPENED'; day: number; citizenId: string; containerId: string; containerType: ItemType; source: ItemStorage; output: ItemInstance; rngStateAfter: number }
   | { type: 'CONSTRUCTION_KIT_OPENED'; day: number; citizenId: string; containerId: string; source: ItemStorage; outputs: ItemInstance[]; rngStateAfter: number }
   | { type: 'WATER_TAKEN'; day: number; citizenId: string; item: ItemInstance }
-  | { type: 'ITEM_CONSUMED'; day: number; citizenId: string; item: ItemInstance; source: ItemStorage; kind: ConsumableKind }
+  | { type: 'ITEM_CONSUMED'; day: number; citizenId: string; item: ItemInstance; source: ItemStorage; kind: ConsumableKind; restoresAp: boolean }
   | { type: 'HOME_UPGRADED'; day: number; citizenId: string; from: HomeLevel; to: HomeLevel; defenseAfter: number }
   | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }
   | { type: 'CONSTRUCTION_COMPLETED'; day: number; citizenId: string; projectId: ConstructionId; consumed: Partial<Record<ItemType, number>>; defenseBonus: number }
