@@ -1,6 +1,17 @@
 export type CitizenControllerKind = 'human' | 'basic-bot'
 
-export type ItemType = 'rotten_log' | 'scrap_metal' | 'water_ration' | 'food' | 'old_door'
+export type ItemType =
+  | 'rotten_log'
+  | 'scrap_metal'
+  | 'water_ration'
+  | 'food'
+  | 'old_door'
+  | 'twisted_plank'
+  | 'wrought_iron'
+  | 'unshaped_concrete_block'
+
+export type ConstructionId = 'workshop' | 'watchtower'
+export type WorkshopRecipeId = 'logs_to_planks' | 'scrap_to_iron'
 
 export interface ItemInstance {
   id: string
@@ -42,10 +53,17 @@ export interface WorldState {
   zones: Record<string, WorldZone>
 }
 
+export interface ConstructionProjectState {
+  id: ConstructionId
+  apContributed: number
+  completed: boolean
+}
+
 export interface TownState {
   gateOpen: boolean
   defense: number
   bank: Partial<Record<ItemType, number>>
+  construction: Record<ConstructionId, ConstructionProjectState>
 }
 
 export interface NightReport {
@@ -59,7 +77,7 @@ export interface NightReport {
 }
 
 export interface GameState {
-  schemaVersion: 2
+  schemaVersion: 3
   gameId: string
   seed: number
   rngState: number
@@ -83,6 +101,8 @@ export type GameCommand =
   | { type: 'SEARCH_ZONE'; citizenId: string }
   | { type: 'PICK_UP_ITEM'; citizenId: string; itemId: string }
   | { type: 'DEPOSIT_ITEM'; citizenId: string; itemId: string }
+  | { type: 'CONTRIBUTE_CONSTRUCTION'; citizenId: string; projectId: ConstructionId }
+  | { type: 'WORKSHOP_CONVERT'; citizenId: string; recipeId: WorkshopRecipeId }
 
 export type DeathReason = 'outside_at_night'
 
@@ -94,6 +114,25 @@ export type GameEvent =
   | { type: 'ZONE_SEARCHED'; day: number; zoneKey: string; citizenId: string; item: ItemInstance | null }
   | { type: 'ITEM_PICKED_UP'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
   | { type: 'ITEM_DEPOSITED'; day: number; citizenId: string; item: ItemInstance }
+  | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }
+  | {
+      type: 'CONSTRUCTION_COMPLETED'
+      day: number
+      citizenId: string
+      projectId: ConstructionId
+      consumed: Partial<Record<ItemType, number>>
+      defenseBonus: number
+    }
+  | {
+      type: 'WORKSHOP_CONVERTED'
+      day: number
+      citizenId: string
+      recipeId: WorkshopRecipeId
+      input: ItemType
+      inputCount: number
+      output: ItemType
+      outputCount: number
+    }
   | { type: 'CITIZEN_DIED'; day: number; citizenId: string; reason: DeathReason }
   | { type: 'NIGHT_RESOLVED'; day: number; report: NightReport }
   | { type: 'DAY_STARTED'; day: number }
