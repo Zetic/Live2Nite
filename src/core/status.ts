@@ -14,8 +14,8 @@ export const CITIZEN_STATUS_DEFINITIONS: Record<CitizenStatusId, CitizenStatusDe
   exhausted: { id: 'exhausted', label: 'Exhausted', family: 'energy', severity: 'warning', effect: 'At 0 AP, contact weapons and ordinary AP actions are unavailable until AP is restored.' },
   satisfied_food: { id: 'satisfied_food', label: 'Fed', family: 'daily', severity: 'neutral', effect: 'Food has already refreshed AP today.' },
   satisfied_water: { id: 'satisfied_water', label: 'Refreshed', family: 'daily', severity: 'neutral', effect: 'Water has already refreshed AP today; extra water can still treat hydration status.' },
-  thirsty: { id: 'thirsty', label: 'Thirsty', family: 'hydration', severity: 'warning', effect: 'Drink water before midnight. Continued desert travel or another dry night can worsen this to Dehydrated.' },
-  dehydrated: { id: 'dehydrated', label: 'Dehydrated', family: 'hydration', severity: 'danger', effect: 'Water reduces this to Thirsty but does not refresh AP. Remaining dehydrated through midnight is fatal.' },
+  thirsty: { id: 'thirsty', label: 'Thirsty', family: 'hydration', severity: 'warning', effect: 'Drink water before midnight. Another 11 desert movements or surviving the night while Thirsty worsens this to Dehydrated.' },
+  dehydrated: { id: 'dehydrated', label: 'Dehydrated', family: 'hydration', severity: 'danger', effect: 'Water reduces this to Thirsty but does not refresh AP. Remaining Dehydrated through midnight is fatal.' },
 }
 
 export function createCitizenStatusState(): CitizenStatusState {
@@ -59,10 +59,13 @@ export function nightlyHydrationEvents(state: GameState): GameEvent[] {
       events.push({ type: 'CITIZEN_DIED', day: state.day, hour: 0, citizenId: citizen.id, reason: 'dehydration' })
       continue
     }
-    let hydration = citizen.status.hydration
-    if (!citizen.daily.drank) {
-      hydration = hydration === 'thirsty' ? 'dehydrated' : 'thirsty'
-    }
+    let hydration: HydrationStatus = citizen.status.hydration
+    // Surviving midnight while already Thirsty worsens the condition regardless of
+    // whether water was consumed earlier in the day; a later desert-induced thirst
+    // must be treated again before the attack. A normally hydrated citizen becomes
+    // Thirsty only when they did not drink at all during the day.
+    if (citizen.status.hydration === 'thirsty') hydration = 'dehydrated'
+    else if (!citizen.daily.drank) hydration = 'thirsty'
     const nextStatus: CitizenStatusState = { hydration, desertStepsToday: 0 }
     if (nextStatus.hydration !== citizen.status.hydration || citizen.status.desertStepsToday !== 0) {
       events.push({ type: 'CITIZEN_STATUS_CHANGED', day: state.day, hour: 0, citizenId: citizen.id, status: nextStatus, reason: 'nightly_progression' })
