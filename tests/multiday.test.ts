@@ -6,7 +6,7 @@ import { advanceOneHour, advanceToHour } from '../src/simulation/advanceTime'
 const bots=new BasicBotController()
 
 describe('multi-day town regression',()=>{
-  it('keeps coordinated towns functioning across three full nights with camping enabled',()=>{
+  it('keeps coordinated towns functioning across three full nights with camping available',()=>{
     const seeds=[3101,4202,5303,6404]
     let minimumLiving=40
     let gateFailures=0
@@ -51,6 +51,8 @@ describe('multi-day town regression',()=>{
 
     expect(gateFailures).toBe(0)
     expect(botDehydrationDeaths).toBe(0)
+    expect(maximumOutsideAtMidnight).toBeLessThanOrEqual(6)
+    expect(totalCampingSurvivors+totalCampingDeaths).toBe(totalCampingAttempts)
     expect(minimumLiving).toBeGreaterThanOrEqual(10)
   },30_000)
 })
