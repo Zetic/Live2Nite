@@ -1,8 +1,10 @@
 import { applyEvents } from './events'
 import { randomInt } from './rng'
 import type { Citizen, GameEvent, GameState, NightReport } from './types'
+import { createWorld } from './world'
 
-const DEFAULT_AP = 12
+const DEFAULT_AP = 6
+const DEFAULT_INVENTORY_CAPACITY = 4
 
 const BOT_NAMES = [
   'Mara', 'Grant', 'Erin', 'Lewis', 'Nora', 'Cal', 'June', 'Rook', 'Iris', 'Miles',
@@ -19,45 +21,60 @@ function makeCitizens(count: number): Citizen[] {
     alive: true,
     ap: DEFAULT_AP,
     maxAp: DEFAULT_AP,
+    location: { type: 'town' },
+    inventory: [],
+    inventoryCapacity: DEFAULT_INVENTORY_CAPACITY,
   }))
 }
 
 export function createInitialGame(seed: number, citizenCount = 40): GameState {
   const normalizedSeed = seed >>> 0 || 1
+  const generated = createWorld(normalizedSeed)
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     gameId: `local-${normalizedSeed}`,
     seed: normalizedSeed,
-    rngState: normalizedSeed,
+    rngState: generated.rngState,
+    nextItemId: 1,
     day: 1,
     citizens: makeCitizens(citizenCount),
-    town: { water: citizenCount * 2, defense: 40 },
+    town: { gateOpen: false, defense: 40, bank: {} },
+    world: generated.world,
     lastNight: null,
     events: [{ type: 'DAY_STARTED', day: 1 }],
   }
 }
 
 export function resolveNight(state: GameState): GameState {
-  const aliveCount = state.citizens.filter((citizen) => citizen.alive).length
-  const attackRoll = randomInt(state.rngState, 0, 20)
-  const attackStrength = 45 + state.day * 5 + attackRoll.value
-  const waterConsumed = aliveCount
-  const report: NightReport = {
+  const outside = state.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world')
+  const deathEvents: GameEvent[] = outside.map((citizen) => ({
+    type: 'CITIZEN_DIED',
     day: state.day,
+    citizenId: citizen.id,
+    reason: 'outside_at_night',
+  }))
+
+  const afterDeaths = applyEvents(state, deathEvents)
+  const attackRoll = randomInt(afterDeaths.rngState, 0, 20)
+  const attackStrength = 45 + afterDeaths.day * 5 + attackRoll.value
+  const effectiveDefense = afterDeaths.town.gateOpen ? 0 : afterDeaths.town.defense
+  const report: NightReport = {
+    day: afterDeaths.day,
     attackStrength,
-    defenseBeforeAttack: state.town.defense,
-    breached: attackStrength > state.town.defense,
-    waterConsumed,
+    defenseBeforeAttack: afterDeaths.town.defense,
+    effectiveDefense,
+    gateOpen: afterDeaths.town.gateOpen,
+    breached: attackStrength > effectiveDefense,
+    outsideDeaths: outside.length,
   }
 
   const events: GameEvent[] = [
-    { type: 'WATER_CHANGED', day: state.day, amount: -waterConsumed },
-    { type: 'NIGHT_RESOLVED', day: state.day, report },
-    { type: 'DAY_STARTED', day: state.day + 1 },
+    { type: 'NIGHT_RESOLVED', day: afterDeaths.day, report },
+    { type: 'DAY_STARTED', day: afterDeaths.day + 1 },
   ]
 
   return {
-    ...applyEvents({ ...state, rngState: attackRoll.state }, events),
+    ...applyEvents({ ...afterDeaths, rngState: attackRoll.state }, events),
     rngState: attackRoll.state,
   }
 }
