@@ -48,7 +48,7 @@ export function EventLog({ game }: { game: GameState }) {
       {events.map((event,index) => {
         const category = chronicleCategory(event)
         const categoryLabel = CHRONICLE_CATEGORIES.find((entry) => entry.id === category)?.label ?? category
-        return <div className={`event-row tone-${eventTone(event)} category-${category}`} key={`${game.events.length-index}-${event.type}-${event.day}-${event.hour ?? 'day'}`}><span className="event-day event-time">{eventStamp(event)}</span><span className="event-dot" aria-hidden="true"/><span className="event-category">{categoryLabel}</span><p>{describeEvent(event,game)}</p></div>
+        return <div className={`event-row tone-${eventTone(event)} chronicle-category-${category}`} key={`${game.events.length-index}-${event.type}-${event.day}-${event.hour ?? 'day'}`}><span className="event-day event-time">{eventStamp(event)}</span><span className="event-dot" aria-hidden="true"/><span className="event-category">{categoryLabel}</span><p>{describeEvent(event,game)}</p></div>
       })}
     </div>
   </section>
