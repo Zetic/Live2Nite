@@ -1,8 +1,7 @@
 import { createConstructionState } from './construction'
-import { applyEvents } from './events'
 import { createDailyState, createStarterHome } from './home'
-import { randomInt } from './rng'
-import type { Citizen, GameEvent, GameState, NightReport } from './types'
+import { resolveNightAttack } from './night'
+import type { Citizen, GameState } from './types'
 import { startingWellWater } from './well'
 import { createWorld } from './world'
 
@@ -42,6 +41,7 @@ export function createInitialGame(seed: number, citizenCount = 40): GameState {
     citizens: makeCitizens(citizenCount),
     town: {
       gateOpen: false,
+      // Temporary Live2Nite bootstrap defense until the broader historical construction tree exists.
       defense: 40,
       bank: {},
       construction: createConstructionState(),
@@ -54,25 +54,5 @@ export function createInitialGame(seed: number, citizenCount = 40): GameState {
 }
 
 export function resolveNight(state: GameState): GameState {
-  const outside = state.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world')
-  const deathEvents: GameEvent[] = outside.map((citizen) => ({ type: 'CITIZEN_DIED', day: state.day, citizenId: citizen.id, reason: 'outside_at_night' }))
-  const afterDeaths = applyEvents(state, deathEvents)
-  const attackRoll = randomInt(afterDeaths.rngState, 0, 16)
-  // Temporary progression curve until the historical attack-strength model is implemented.
-  const attackStrength = 20 + afterDeaths.day * 4 + attackRoll.value
-  const effectiveDefense = afterDeaths.town.gateOpen ? 0 : afterDeaths.town.defense
-  const report: NightReport = {
-    day: afterDeaths.day,
-    attackStrength,
-    defenseBeforeAttack: afterDeaths.town.defense,
-    effectiveDefense,
-    gateOpen: afterDeaths.town.gateOpen,
-    breached: attackStrength > effectiveDefense,
-    outsideDeaths: outside.length,
-  }
-  const events: GameEvent[] = [
-    { type: 'NIGHT_RESOLVED', day: afterDeaths.day, report },
-    { type: 'DAY_STARTED', day: afterDeaths.day + 1 },
-  ]
-  return { ...applyEvents({ ...afterDeaths, rngState: attackRoll.state }, events), rngState: attackRoll.state }
+  return resolveNightAttack(state)
 }
