@@ -3,6 +3,7 @@ import { executeCommand } from '../core/commands'
 import type { Citizen, GameEvent, GameState } from '../core/types'
 import { distanceToTown, zoneControl } from '../core/world'
 import type { AgentController } from './AgentController'
+import { chooseTownWork } from './townWork'
 
 export type HourlyObjective = 'return_home' | 'rescue' | 'scavenge' | 'town_work' | 'fight' | 'idle'
 
@@ -23,10 +24,6 @@ function canReachTarget(citizen: Citizen, target: Citizen): boolean {
   return citizen.ap >= distance
 }
 
-function hasTownWork(actions: ReturnType<typeof getLegalActions>): boolean {
-  return actions.some((action) => ['DEPOSIT_ITEM','CONTRIBUTE_CONSTRUCTION','WORKSHOP_CONVERT','UPGRADE_HOME'].includes(action.type))
-}
-
 export function chooseHourlyObjective(state: GameState, citizenId: string): HourlyObjective {
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || !citizen.alive || state.clock.phase !== 'day') return 'idle'
@@ -44,7 +41,8 @@ export function chooseHourlyObjective(state: GameState, citizenId: string): Hour
   }
 
   const actions = getLegalActions(state,citizenId)
-  if (citizen.inventory.length > 0 || hasTownWork(actions)) return 'town_work'
+  const plannedTownWork = chooseTownWork(state,citizen,actions)
+  if (citizen.inventory.length > 0 || plannedTownWork) return 'town_work'
   if (reachableRescue && hour < 23) return 'rescue'
   if (hour >= returnHour) return 'idle'
   return 'scavenge'
@@ -65,9 +63,7 @@ function objectiveComplete(state: GameState, citizenId: string, objective: Hourl
     const control = zoneControl(state,citizen.location.x,citizen.location.y)
     return !control.trapped || !getLegalActions(state,citizenId).some((action) => action.type === 'USE_WEAPON')
   }
-  if (objective === 'return_home') {
-    return citizen.location.type === 'town' && citizen.inventory.length === 0
-  }
+  if (objective === 'return_home') return citizen.location.type === 'town' && citizen.inventory.length === 0
   if (objective === 'town_work') {
     const completedWork = events.some((event) => ['CONSTRUCTION_AP_CONTRIBUTED','WORKSHOP_CONVERTED','HOME_UPGRADED'].includes(event.type))
     const finishedDeposits = citizen.inventory.length === 0 && events.some((event) => event.type === 'ITEM_DEPOSITED')
@@ -96,7 +92,8 @@ export function runBotHour(state: GameState, controller: AgentController, contro
     const objective = chooseHourlyObjective(nextState,startingCitizen.id)
     if (objective === 'idle') continue
     const startIndex = nextState.events.length
-    const initialRescue = objective === 'rescue' ? trappedCitizens(nextState,startingCitizen.id).find((target) => canReachTarget(nextState.citizens.find((citizen) => citizen.id === startingCitizen.id)!,target)) ?? null : null
+    const currentCitizen = nextState.citizens.find((citizen) => citizen.id === startingCitizen.id)!
+    const initialRescue = objective === 'rescue' ? trappedCitizens(nextState,startingCitizen.id).find((target) => canReachTarget(currentCitizen,target)) ?? null : null
 
     // Safety cap protects the simulation from controller loops. It is not a gameplay action limit:
     // a citizen may legally spend several AP and traverse several zones within this one hour.
