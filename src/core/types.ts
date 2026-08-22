@@ -1,6 +1,6 @@
 export type CitizenControllerKind = 'human' | 'basic-bot'
 
-export type ItemType = 'rotten_log' | 'scrap_metal' | 'water_ration' | 'food'
+export type ItemType = 'rotten_log' | 'scrap_metal' | 'water_ration' | 'food' | 'old_door'
 
 export interface ItemInstance {
   id: string
