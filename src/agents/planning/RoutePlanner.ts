@@ -23,12 +23,13 @@ export function frontierZones(state:GameState):WorldZone[]{return Object.values(
 
 function sectorPenalty(citizenId:string,zone:WorldZone):number{const sector=(Number(citizenId.slice(1))||0)%4;if(sector===0)return zone.y>=0?0:5;if(sector===1)return zone.x>=0?0:5;if(sector===2)return zone.y<=0?0:5;return zone.x<=0?0:5}
 export function chooseFrontierTarget(state:GameState,citizenId:string):WorldZone|null{
-  // A citizen may intentionally aim several tiles into unexplored territory. This does not
-  // reveal the contents of those zones; it simply creates a real long-range expedition goal.
-  const unknown=Object.values(state.world.zones).filter((zone)=>!zone.discovered&&distanceToTown(zone.x,zone.y)>0)
-  if(!unknown.length)return null
+  // A long-range target may be unknown or an undepleted zone that this citizen has reached
+  // but not yet searched. This keeps the target stable while intermediate unknown tiles are
+  // discovered, instead of collapsing every expedition back onto the first fresh tile.
+  const candidates=Object.values(state.world.zones).filter((zone)=>distanceToTown(zone.x,zone.y)>0&&(!zone.discovered||(zone.searchesRemaining>0&&!zone.searchedBy.includes(citizenId))))
+  if(!candidates.length)return null
   const preferredRadius=3+((Number(citizenId.slice(1))||0)%4)
-  return [...unknown].sort((a,b)=>{
+  return [...candidates].sort((a,b)=>{
     const crowdA=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world'&&Math.abs(citizen.location.x-a.x)+Math.abs(citizen.location.y-a.y)<=1).length
     const crowdB=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world'&&Math.abs(citizen.location.x-b.x)+Math.abs(citizen.location.y-b.y)<=1).length
     const scoreA=Math.abs(distanceToTown(a.x,a.y)-preferredRadius)*4+sectorPenalty(citizenId,a)+crowdA*3
