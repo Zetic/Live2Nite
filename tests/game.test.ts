@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { BasicBotController } from '../src/agents/BasicBotController'
-import { runBotPhase } from '../src/agents/runBotPhase'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand, InvalidCommandError } from '../src/core/commands'
-import { createInitialGame, resolveNight } from '../src/core/game'
+import { createInitialGame } from '../src/core/game'
 import type { GameCommand, GameState, ItemType } from '../src/core/types'
 import { STARTING_WELL_MAX, STARTING_WELL_MIN } from '../src/core/well'
 import { zoneControl, zoneKey } from '../src/core/world'
+import { advanceOneHour, advanceToHour } from '../src/simulation/advanceTime'
 
 const bots = new BasicBotController()
 
@@ -27,12 +27,7 @@ function withWorkshopResources(game: GameState): GameState {
 }
 
 function withInventory(game: GameState, types: ItemType[]): GameState {
-  return {
-    ...game,
-    citizens: game.citizens.map((citizen) => citizen.id === 'c01'
-      ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) }
-      : citizen),
-  }
+  return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) } : citizen) }
 }
 
 describe('Citizen homes, starter supplies, and well', () => {
@@ -103,7 +98,7 @@ describe('Citizen homes, starter supplies, and well', () => {
     expect(getLegalActions(game,'c01').some((action) => action.type === 'TAKE_WATER')).toBe(true)
   })
 
-  it('treats food and water as separate once-per-day AP refreshes and resets them next day', () => {
+  it('treats food and water as separate once-per-day AP refreshes and resets them at 1 AM', () => {
     let game = withInventory(createInitialGame(123, 1), ['food','water_ration'])
     game = { ...game, citizens: game.citizens.map((citizen) => ({ ...citizen, ap: 0 })) }
     game = executeCommand(game, itemCommand(game,'c01','EAT_ITEM','test-0')).state
@@ -113,8 +108,10 @@ describe('Citizen homes, starter supplies, and well', () => {
     game = executeCommand(game, itemCommand(game,'c01','DRINK_ITEM','test-1')).state
     expect(game.citizens[0].ap).toBe(6)
     expect(game.citizens[0].daily.drank).toBe(true)
-    expect(getLegalActions(game,'c01').some((action) => action.type === 'EAT_ITEM' || action.type === 'DRINK_ITEM')).toBe(false)
-    game = resolveNight(game)
+    game = { ...game, clock: { hour: 23, phase: 'day' } }
+    game = advanceOneHour(game,bots,'c01')
+    game = advanceOneHour(game,bots,'c01')
+    expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.citizens[0].daily).toEqual({ ate:false, drank:false, waterTaken:false })
   })
 
@@ -159,7 +156,7 @@ describe('World Beyond gameplay', () => {
     expect(getLegalActions(game, 'c01').some((a) => a.type === 'SEARCH_ZONE')).toBe(true)
   })
 
-  it('lets autonomous citizens rescue a trapped human during the day', () => {
+  it('lets autonomous citizens rescue a trapped human during an hourly tick', () => {
     let game = createInitialGame(123, 4)
     game = executeCommand(game, command(game, 'c01', 'OPEN_GATE')).state
     game = executeCommand(game, command(game, 'c01', 'EXIT_TOWN')).state
@@ -167,7 +164,7 @@ describe('World Beyond gameplay', () => {
     const key = zoneKey(2, 0)
     game = { ...game, world: { ...game.world, zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 3 } } } }
     expect(zoneControl(game, 2, 0).trapped).toBe(true)
-    game = runBotPhase(game, bots)
+    game = advanceOneHour(game,bots,'c01')
     expect(zoneControl(game, 2, 0).trapped).toBe(false)
   })
 
@@ -242,10 +239,10 @@ describe('Town construction and Workshop', () => {
     expect(game.town.defense).toBe(43)
   })
 
-  it('lets bots spend their real AP on a ready Workshop project without draining the well or starter supplies', () => {
+  it('spreads bot construction work across hourly planning ticks', () => {
     const initial = withWorkshopResources(createInitialGame(321, 8))
     const waterBefore = initial.town.well.water
-    const game = runBotPhase(initial, bots)
+    const game = advanceToHour(initial,5,bots,'c01')
     expect(game.town.construction.workshop.completed).toBe(true)
     expect(game.events.some((e) => e.type === 'CONSTRUCTION_COMPLETED' && e.projectId === 'workshop')).toBe(true)
     expect(game.town.well.water).toBe(waterBefore)
@@ -254,17 +251,26 @@ describe('Town construction and Workshop', () => {
 })
 
 describe('Night resolution', () => {
-  it('kills citizens outside at night while camping is deferred', () => {
+  it('kills citizens still outside when the midnight attack concludes', () => {
     let game = createInitialGame(123, 2)
     game = executeCommand(game, command(game, 'c01', 'OPEN_GATE')).state
     game = executeCommand(game, command(game, 'c01', 'EXIT_TOWN')).state
-    game = resolveNight(game)
+    game = { ...game, clock: { hour: 23, phase: 'day' } }
+    game = advanceOneHour(game,bots,'c01')
+    expect(game.clock).toEqual({ hour: 0, phase: 'attack' })
+    game = advanceOneHour(game,bots,'c01')
     expect(game.citizens[0].alive).toBe(false)
+    expect(game.clock).toEqual({ hour: 1, phase: 'day' })
   })
 
   it('keeps deterministic world/night output and rejects illegal commands', () => {
-    const first = resolveNight(runBotPhase(createInitialGame(9001, 6), bots))
-    const second = resolveNight(runBotPhase(createInitialGame(9001, 6), bots))
+    const simulate = () => {
+      let game = advanceToHour(createInitialGame(9001, 6),0,bots,'c01')
+      game = advanceOneHour(game,bots,'c01')
+      return game
+    }
+    const first = simulate()
+    const second = simulate()
     expect(first.world).toEqual(second.world)
     expect(first.town.well).toEqual(second.town.well)
     expect(first.lastNight).toEqual(second.lastNight)
