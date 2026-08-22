@@ -29,7 +29,7 @@ export class BasicBotController implements AgentController{readonly kind='basic-
   if(mission.phase==='return'){const safety=missionSafety(game,citizenId);const refill=refillAction(citizen,actions,safety.returnAp);if(refill)return refill;return stepTowardTown(game,citizen,actions)}
   if(!plan)return stepTowardTown(game,citizen,actions)
   const refill=refillAction(citizen,actions,plan.route.length+plan.returnAp+plan.expectedTaskAp+mission.safetyReserve);if(refill)return refill
-  if(mission.phase==='operate'){const pickup=pick(actions,'PICK_UP_ITEM');if(pickup)return pickup;if(mission.role==='excavator'){const excavate=pick(actions,'EXCAVATE_SPECIAL_SITE');if(excavate)return excavate}const siteSearch=pick(actions,'SEARCH_SPECIAL_SITE');if(siteSearch)return siteSearch;const search=pick(actions,'SEARCH_ZONE');if(search)return search;return stepTowardTown(game,citizen,actions)}
+  if(mission.phase==='operate'){if(mission.role==='rescue')return null;const pickup=pick(actions,'PICK_UP_ITEM');if(pickup)return pickup;if(mission.role==='excavator'){const excavate=pick(actions,'EXCAVATE_SPECIAL_SITE');if(excavate)return excavate}const siteSearch=pick(actions,'SEARCH_SPECIAL_SITE');if(siteSearch)return siteSearch;const search=pick(actions,'SEARCH_ZONE');if(search)return search;return stepTowardTown(game,citizen,actions)}
   if(citizen.ap<=0)return null
   const direction=nextDirectionToward(game,{x:citizen.location.x,y:citizen.location.y},mission.target);if(direction){const move=actions.find((action):action is Extract<GameCommand,{type:'MOVE'}>=>action.type==='MOVE'&&action.direction===direction);if(move)return move}return stepTowardTown(game,citizen,actions)
 }}
