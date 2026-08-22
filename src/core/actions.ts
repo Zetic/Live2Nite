@@ -1,3 +1,4 @@
+import { CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { CONSTRUCTION_ORDER, hasRequiredMaterials } from './construction'
 import { HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
@@ -27,6 +28,7 @@ function addConsumableActions(actions: GameCommand[], citizen: Citizen, items: I
 export function getLegalActions(state: GameState, citizenId: string): GameCommand[] {
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || !citizen.alive || state.clock.phase !== 'day') return []
+  if (citizen.camping.hidden) return [{ type:'LEAVE_HIDEOUT', citizenId }]
   const actions: GameCommand[] = []
   addConsumableActions(actions, citizen, citizen.inventory,'inventory')
 
@@ -70,6 +72,8 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
   if (!isTownGateZone(x, y)) {
     if (zone.searchesRemaining > 0 && !zone.searchedBy.includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
     else if (zone.searchesRemaining === 0 && !(zone.depletedSearchedBy ?? []).includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
+    if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone))actions.push({type:'IMPROVE_CAMP',citizenId})
+    actions.push({type:'HIDE_FOR_NIGHT',citizenId})
   }
 
   const control = zoneControl(state, x, y)
