@@ -241,10 +241,10 @@ describe('Town construction and Workshop', () => {
     expect(game.town.defense).toBe(43)
   })
 
-  it('spreads bot construction work across hourly planning ticks before transitioning idle workers into expedition prep', () => {
+  it('spreads bot construction work across hourly planning ticks while preserving rescue AP', () => {
     const initial = withWorkshopResources(createInitialGame(321, 8))
     const waterBefore = initial.town.well.water
-    const game = advanceToHour(initial,5,bots,'c01')
+    const game = advanceToHour(initial,8,bots,'c01')
     expect(game.town.construction.workshop.completed).toBe(true)
     expect(game.events.some((e) => e.type === 'CONSTRUCTION_COMPLETED' && e.projectId === 'workshop')).toBe(true)
     const rationEvents = game.events.filter((event) => event.type === 'WATER_TAKEN' && event.citizenId !== 'c01')
