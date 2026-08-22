@@ -11,8 +11,31 @@ function clearPath(game:GameState,fromX:number,toX=0):GameState{const zones={...
 function mission(targetX:number,phase:BotMissionAssignment['phase']='outbound'):BotMissionAssignment{return{missionId:`test:${targetX}`,role:'scout',purpose:'explore',target:{x:targetX,y:0},targetLabel:`Scout [${targetX},0]`,reason:'test mission',phase,assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false}}
 
 describe('coordinated expedition AI',()=>{
-  it('starts day one with a small scout cohort instead of flooding all bots through the gate',()=>{const initial=createInitialGame(2241014753,40);const game=advanceOneHour(initial,bots,'c01');const assigned=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===1);expect(assigned.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.mission.role==='scout')).toHaveLength(4);expect(assigned.length).toBeLessThanOrEqual(6);const exited=new Set(game.events.filter((event)=>event.type==='CITIZEN_LOCATION_CHANGED'&&event.hour===1&&event.location.type==='world'&&event.location.x===0&&event.location.y===0).map((event)=>event.type==='CITIZEN_LOCATION_CHANGED'?event.citizenId:''));expect(exited.size).toBeLessThanOrEqual(4)})
-  it('caps new assignments per hour so newly discovered information creates staggered follow-up missions',()=>{let game=createInitialGame(2241014753,40);game=advanceOneHour(game,bots,'c01');const first=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===1).length;game=advanceOneHour(game,bots,'c01');const second=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===2).length;expect(first).toBe(4);expect(second).toBeLessThanOrEqual(6)})
+  it('starts day one with two-person scout teams instead of flooding all bots through the gate',()=>{
+    const initial=createInitialGame(2241014753,40)
+    const game=advanceOneHour(initial,bots,'c01')
+    const assigned=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===1)
+    const scouts=assigned.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.mission.role==='scout')
+    expect(scouts).toHaveLength(4)
+    const targets=new Set(scouts.map((event)=>event.type==='BOT_MISSION_ASSIGNED'?`${event.mission.target.x},${event.mission.target.y}`:''))
+    expect(targets.size).toBeLessThanOrEqual(2)
+    const exited=new Set(game.events.filter((event)=>event.type==='CITIZEN_LOCATION_CHANGED'&&event.hour===1&&event.location.type==='world'&&event.location.x===0&&event.location.y===0).map((event)=>event.type==='CITIZEN_LOCATION_CHANGED'?event.citizenId:''))
+    expect(exited.size).toBeLessThanOrEqual(4)
+  })
+
+  it('stages follow-up mobilization while preserving an emergency rescue budget',()=>{
+    let game=createInitialGame(2241014753,40)
+    game=advanceOneHour(game,bots,'c01')
+    const first=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===1).length
+    game=advanceOneHour(game,bots,'c01')
+    const second=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===2).length
+    expect(first).toBe(4)
+    // Normal field mobilization is capped near 20% of living bots, with up to three
+    // additional emergency rescue assignments allowed to bypass that quota.
+    expect(second).toBeLessThanOrEqual(11)
+    expect(game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town').length).toBeGreaterThan(3)
+  })
+
   it('forces a solvent return before a citizen spends the AP reserved for home',()=>{let game=clearPath(createInitialGame(123,2),4);game={...game,clock:{hour:10,phase:'day'},town:{...game.town,gateOpen:true},citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,ap:4,location:{type:'world' as const,x:4,y:0},inventory:[]}:citizen),botMissions:{c02:mission(5)}};const before=missionSafety(game,'c02');expect(before.usableAp).toBe(4);expect(before.requiredAp).toBe(5);game=advanceOneHour(game,bots,'c01');expect(game.citizens.find((citizen)=>citizen.id==='c02')?.location).toEqual({type:'town'});expect(game.events.some((event)=>event.type==='BOT_MISSION_PHASE_SET'&&event.citizenId==='c02'&&event.phase==='return')).toBe(true)})
   it('counts carried unused refills as return capacity and can consume them near exhaustion',()=>{let game=clearPath(createInitialGame(123,2),4);game={...game,clock:{hour:10,phase:'day'},town:{...game.town,gateOpen:true},citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,ap:0,location:{type:'world' as const,x:4,y:0},inventory:[{id:'water-test',type:'water_ration' as const}]}:citizen),botMissions:{c02:mission(5,'return')}};expect(missionSafety(game,'c02').usableAp).toBe(6);game=advanceOneHour(game,bots,'c01');const bot=game.citizens.find((citizen)=>citizen.id==='c02')!;expect(bot.location).toEqual({type:'town'});expect(bot.daily.drank).toBe(true)})
   it('regresses the reported mass-death seed without a town-wide suicide march',()=>{let game=createInitialGame(2241014753,40);game=advanceToHour(game,0,bots,'c01');const outsideAtMidnight=game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world').length;expect(outsideAtMidnight).toBeLessThanOrEqual(6);game=advanceOneHour(game,bots,'c01');expect(game.lastNight?.outsideDeaths??99).toBeLessThanOrEqual(6);expect(game.citizens.filter((citizen)=>citizen.alive).length).toBeGreaterThanOrEqual(30)})
