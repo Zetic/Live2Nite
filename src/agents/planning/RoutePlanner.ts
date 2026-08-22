@@ -21,15 +21,18 @@ export function routeBetween(state:GameState,from:Coord,target:Coord):Direction[
 export function nextDirectionToward(state:GameState,from:Coord,target:Coord):Direction|null{return routeBetween(state,from,target)[0]??null}
 export function frontierZones(state:GameState):WorldZone[]{return Object.values(state.world.zones).filter((zone)=>!zone.discovered&&DIRECTIONS.some((direction)=>{const adjacent=moveCoordinates(zone.x,zone.y,direction);return getZone(state.world,adjacent.x,adjacent.y)?.discovered}))}
 
-function sectorPenalty(citizenId:string,zone:WorldZone):number{const sector=(Number(citizenId.slice(1))||0)%4;if(sector===0)return zone.y>=0?0:4;if(sector===1)return zone.x>=0?0:4;if(sector===2)return zone.y<=0?0:4;return zone.x<=0?0:4}
+function sectorPenalty(citizenId:string,zone:WorldZone):number{const sector=(Number(citizenId.slice(1))||0)%4;if(sector===0)return zone.y>=0?0:5;if(sector===1)return zone.x>=0?0:5;if(sector===2)return zone.y<=0?0:5;return zone.x<=0?0:5}
 export function chooseFrontierTarget(state:GameState,citizenId:string):WorldZone|null{
-  const frontier=frontierZones(state);if(!frontier.length)return null
+  // A citizen may intentionally aim several tiles into unexplored territory. This does not
+  // reveal the contents of those zones; it simply creates a real long-range expedition goal.
+  const unknown=Object.values(state.world.zones).filter((zone)=>!zone.discovered&&distanceToTown(zone.x,zone.y)>0)
+  if(!unknown.length)return null
   const preferredRadius=3+((Number(citizenId.slice(1))||0)%4)
-  return [...frontier].sort((a,b)=>{
+  return [...unknown].sort((a,b)=>{
     const crowdA=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world'&&Math.abs(citizen.location.x-a.x)+Math.abs(citizen.location.y-a.y)<=1).length
     const crowdB=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world'&&Math.abs(citizen.location.x-b.x)+Math.abs(citizen.location.y-b.y)<=1).length
-    const scoreA=Math.abs(distanceToTown(a.x,a.y)-preferredRadius)*3+sectorPenalty(citizenId,a)+crowdA*2
-    const scoreB=Math.abs(distanceToTown(b.x,b.y)-preferredRadius)*3+sectorPenalty(citizenId,b)+crowdB*2
+    const scoreA=Math.abs(distanceToTown(a.x,a.y)-preferredRadius)*4+sectorPenalty(citizenId,a)+crowdA*3
+    const scoreB=Math.abs(distanceToTown(b.x,b.y)-preferredRadius)*4+sectorPenalty(citizenId,b)+crowdB*3
     return scoreA-scoreB
   })[0]
 }
