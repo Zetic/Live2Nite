@@ -1,6 +1,6 @@
 import { getLegalActions } from '../core/actions'
 import { ITEMS } from '../core/items'
-import type { Citizen, Direction, GameCommand, GameState, ItemInstance, ItemType } from '../core/types'
+import type { Citizen, GameCommand, GameState, ItemInstance, ItemType } from '../core/types'
 import { distanceToTown, zoneControl } from '../core/world'
 import type { AgentController } from './AgentController'
 import { planExpedition } from './planning/ExpeditionPlanner'
@@ -45,19 +45,21 @@ function packageSharingAction(citizen:Citizen,actions:GameCommand[],plan:ReturnT
 }
 
 function prepareLoadout(state:GameState,citizen:Citizen,actions:GameCommand[],plan:NonNullable<ReturnType<typeof planExpedition>>):GameCommand|null{
-  if(plan.loadout.food&&!carried(citizen,'food')){
-    const homeFood=atHome(citizen,'food');if(homeFood){const move=itemAction(actions,'MOVE_ITEM_TO_RUCKSACK',homeFood.id);if(move)return move}
-    const bag=atHome(citizen,'doggy_bag');if(bag){const open=itemAction(actions,'OPEN_CONTAINER',bag.id);if(open)return open}
-    const bank=bankAction(actions,'food');if(bank)return bank
+  // Safety gear comes first. Endurance supplies follow, and each occupied slot is justified
+  // against the plan's reserved loot capacity rather than withdrawing everything available.
+  if(plan.loadout.weapon&&!carried(citizen,'water_bomb')){
+    const homeWeapon=atHome(citizen,'water_bomb');if(homeWeapon){const move=itemAction(actions,'MOVE_ITEM_TO_RUCKSACK',homeWeapon.id);if(move)return move}
+    const bank=bankAction(actions,'water_bomb');if(bank)return bank
   }
   if(plan.loadout.water&&!carried(citizen,'water_ration')){
     const homeWater=atHome(citizen,'water_ration');if(homeWater){const move=itemAction(actions,'MOVE_ITEM_TO_RUCKSACK',homeWater.id);if(move)return move}
     const bank=bankAction(actions,'water_ration');if(bank)return bank
     if(plan.loadout.wellWaterAllowed){const take=pick(actions,'TAKE_WATER');if(take)return take}
   }
-  if(plan.loadout.weapon&&!carried(citizen,'water_bomb')){
-    const homeWeapon=atHome(citizen,'water_bomb');if(homeWeapon){const move=itemAction(actions,'MOVE_ITEM_TO_RUCKSACK',homeWeapon.id);if(move)return move}
-    const bank=bankAction(actions,'water_bomb');if(bank)return bank
+  if(plan.loadout.food&&!carried(citizen,'food')){
+    const homeFood=atHome(citizen,'food');if(homeFood){const move=itemAction(actions,'MOVE_ITEM_TO_RUCKSACK',homeFood.id);if(move)return move}
+    const bag=atHome(citizen,'doggy_bag');if(bag){const open=itemAction(actions,'OPEN_CONTAINER',bag.id);if(open)return open}
+    const bank=bankAction(actions,'food');if(bank)return bank
   }
   return null
 }
@@ -80,9 +82,9 @@ export class BasicBotController implements AgentController{
     if(citizen.location.type==='town'){
       const unload=unloadAction(game,citizen,actions,plan);if(unload)return unload
       const townWork=chooseTownWork(game,citizen,actions);if(townWork)return townWork
-      const packages=packageSharingAction(citizen,actions,plan,hour);if(packages)return packages
       if(lateReturn)return null
       if(plan){const prep=prepareLoadout(game,citizen,actions,plan);if(prep)return prep;if(!plan.feasible)return null}
+      const packages=packageSharingAction(citizen,actions,plan,hour);if(packages)return packages
       if(rescue?.location.type==='world'||plan){const open=pick(actions,'OPEN_GATE');if(open)return open;return pick(actions,'EXIT_TOWN')}
       return null
     }
