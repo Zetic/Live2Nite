@@ -1,6 +1,6 @@
 import type { ConsumableKind, ItemType } from './types'
 
-export type ItemCategory = 'raw' | 'construction' | 'consumable' | 'defense' | 'container' | 'misc'
+export type ItemCategory = 'raw' | 'construction' | 'consumable' | 'defense' | 'container' | 'weapon' | 'misc'
 
 export interface ItemDefinition {
   type: ItemType
@@ -22,6 +22,7 @@ export const ITEMS: Record<ItemType, ItemDefinition> = {
   water_ration: { type: 'water_ration', name: 'Water Ration', purpose: 'Drinking refreshes AP to 6/6 once per day. Thirst and dehydration consequences are deferred.', category: 'consumable', consumableKind: 'water' },
   food: { type: 'food', name: 'Moldy Ham Sandwich', purpose: 'Ordinary food. Eating refreshes AP to 6/6 once per day.', category: 'consumable', consumableKind: 'food' },
   old_door: { type: 'old_door', name: 'Old Door', purpose: 'Defensive object: +2 town defense in the Bank, or +1 personal defense when stored at Home.', category: 'defense', bankDefense: 2, homeDefense: 1 },
+  water_bomb: { type: 'water_bomb', name: 'Water Bomb', purpose: 'Single-use weapon. While outside and not exhausted, it kills 1–5 zombies without spending AP.', category: 'weapon' },
   doggy_bag: { type: 'doggy_bag', name: 'Doggy Bag', purpose: 'Starter food package. Open it to reveal one ordinary food item.', category: 'container', containerPool: ['food'] },
   citizen_welcome_pack: { type: 'citizen_welcome_pack', name: "Citizen's Welcome Pack", purpose: 'Starter package using a small verified pool of common welcome-pack contents.', category: 'container', containerPool: ['battery', 'box_of_matches', 'pharmaceutical_products'] },
   battery: { type: 'battery', name: 'Battery', purpose: "A common component that can be found in a Citizen's Welcome Pack. Its recipes are deferred.", category: 'misc' },
@@ -31,12 +32,12 @@ export const ITEMS: Record<ItemType, ItemDefinition> = {
 
 export const ITEM_TYPES: ItemType[] = [
   'rotten_log', 'scrap_metal', 'twisted_plank', 'wrought_iron', 'unshaped_concrete_block',
-  'water_ration', 'food', 'old_door', 'doggy_bag', 'citizen_welcome_pack', 'battery', 'box_of_matches', 'pharmaceutical_products',
+  'water_ration', 'food', 'old_door', 'water_bomb', 'doggy_bag', 'citizen_welcome_pack', 'battery', 'box_of_matches', 'pharmaceutical_products',
 ]
 
-// Exact frequencies remain a Live2Nite placeholder. The important rule established in PR #6 is
-// that undepleted zones can provide construction-ready resources needed to bootstrap the Workshop,
-// while low-grade Workshop feedstock is reserved for depleted-zone scavenging.
+// Exact frequencies remain a Live2Nite placeholder. Undepleted zones can provide useful,
+// construction-ready, and occasional weapon finds while low-grade Workshop feedstock remains
+// reserved for depleted-zone scavenging.
 export const NORMAL_SCAVENGE_LOOT_POOL: ItemType[] = [
   'twisted_plank', 'twisted_plank', 'twisted_plank', 'twisted_plank',
   'wrought_iron', 'wrought_iron', 'wrought_iron', 'wrought_iron',
@@ -44,6 +45,7 @@ export const NORMAL_SCAVENGE_LOOT_POOL: ItemType[] = [
   'water_ration', 'water_ration',
   'food', 'food',
   'old_door',
+  'water_bomb',
   'battery', 'box_of_matches', 'pharmaceutical_products',
 ]
 

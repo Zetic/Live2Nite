@@ -35,12 +35,13 @@ function ItemCard({ item, location, actions, act }: {
   </article>
 }
 
-export function HomeView({ game, legalActions, act }: {
+export function HomeView({ game, citizenId, legalActions, act }: {
   game: GameState
+  citizenId: string
   legalActions: GameCommand[]
   act: (command: GameCommand | undefined) => void
 }) {
-  const player = game.citizens[0]
+  const player = game.citizens.find((citizen) => citizen.id === citizenId) ?? game.citizens[0]
   const upgrade = legalActions.find((action) => action.type === 'UPGRADE_HOME')
   const currentDefense = personalDefense(player)
   const structuralDefense = HOME_LEVELS[player.home.level].defense
@@ -48,9 +49,9 @@ export function HomeView({ game, legalActions, act }: {
   return <section className="panel screen-panel home-screen">
     <div className="panel-heading">
       <div>
-        <p className="section-kicker">Your private space</p>
+        <p className="section-kicker">{player.controller === 'human' ? 'Your private space' : `${player.name} · controlled citizen`}</p>
         <h2>{homeName(player.home.level)}</h2>
-        <p className="section-note">Your home is your last line of defense if zombies get through the town walls.</p>
+        <p className="section-note">This home is the citizen's last line of defense if zombies get through the town walls.</p>
       </div>
       <div className="home-summary">
         <span>Personal defense <strong>{currentDefense}</strong></span>
@@ -64,7 +65,7 @@ export function HomeView({ game, legalActions, act }: {
         <h3>{player.home.level === 'camp_bed' ? 'Upgrade to a Tent' : 'Tent established'}</h3>
         <p>{player.home.level === 'camp_bed'
           ? 'The first documented home upgrade costs 2 AP and raises structural personal defense from 0 to 1.'
-          : 'Your Tent provides 1 structural defense. Later Hovel and higher upgrades are deliberately deferred.'}</p>
+          : 'This Tent provides 1 structural defense. Later Hovel and higher upgrades are deliberately deferred.'}</p>
       </div>
       <div className="home-defense-breakdown">
         <span>Structure <strong>{structuralDefense}</strong></span>
@@ -78,24 +79,24 @@ export function HomeView({ game, legalActions, act }: {
 
     <div className="daily-supplies">
       <article className={player.daily.ate ? 'done' : ''}>
-        <span>Food refresh</span><strong>{player.daily.ate ? 'USED' : 'AVAILABLE'}</strong><small>Food can refill your AP to {player.maxAp} once each day.</small>
+        <span>Food refresh</span><strong>{player.daily.ate ? 'USED' : 'AVAILABLE'}</strong><small>Food can refill AP to {player.maxAp} once each day.</small>
       </article>
       <article className={player.daily.drank ? 'done' : ''}>
-        <span>Water refresh</span><strong>{player.daily.drank ? 'USED' : 'AVAILABLE'}</strong><small>Water can independently refill your AP to {player.maxAp} once each day.</small>
+        <span>Water refresh</span><strong>{player.daily.drank ? 'USED' : 'AVAILABLE'}</strong><small>Water can independently refill AP to {player.maxAp} once each day.</small>
       </article>
       <article className={player.daily.waterTaken ? 'done' : ''}>
-        <span>Well ration</span><strong>{player.daily.waterTaken ? 'CLAIMED' : 'UNCLAIMED'}</strong><small>You may take one Water Ration from the town well per day.</small>
+        <span>Well ration</span><strong>{player.daily.waterTaken ? 'CLAIMED' : 'UNCLAIMED'}</strong><small>This citizen may take one Water Ration from the town well per day.</small>
       </article>
     </div>
 
     <div className="storage-columns">
       <section className="storage-zone">
-        <div className="section-heading-row"><div><h3>Home Chest</h3><p>Defensive objects stored here can protect your home if the town is breached.</p></div><span className="micro-stat">{player.home.storage.length}/{player.home.storageCapacity}</span></div>
-        <div className="storage-list">{player.home.storage.length === 0 ? <p className="empty-state">Your chest is empty.</p> : player.home.storage.map((item) => <ItemCard key={item.id} item={item} location="home" actions={legalActions} act={act}/>)}</div>
+        <div className="section-heading-row"><div><h3>Home Chest</h3><p>Defensive objects stored here can protect this home if the town is breached.</p></div><span className="micro-stat">{player.home.storage.length}/{player.home.storageCapacity}</span></div>
+        <div className="storage-list">{player.home.storage.length === 0 ? <p className="empty-state">This chest is empty.</p> : player.home.storage.map((item) => <ItemCard key={item.id} item={item} location="home" actions={legalActions} act={act}/>)}</div>
       </section>
 
       <section className="storage-zone">
-        <div className="section-heading-row"><div><h3>Rucksack</h3><p>Only carried items travel with you into the World Beyond.</p></div><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div>
+        <div className="section-heading-row"><div><h3>Rucksack</h3><p>Only carried items travel with this citizen into the World Beyond.</p></div><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div>
         <div className="storage-list">{player.inventory.length === 0 ? <p className="empty-state">Nothing carried.</p> : player.inventory.map((item) => <ItemCard key={item.id} item={item} location="inventory" actions={legalActions} act={act}/>)}</div>
       </section>
     </div>

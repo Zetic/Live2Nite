@@ -34,10 +34,11 @@ export function App() {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [screen, setScreen] = useState<GameScreen>('home')
+  const [controlledCitizenId, setControlledCitizenId] = useState('c01')
   useEffect(() => { repository.load().then((saved) => setGame(saved ?? createInitialGame(newSeed()))).catch(() => setGame(createInitialGame(newSeed()))).finally(() => setLoaded(true)) }, [])
   useEffect(() => { if (loaded) void repository.save(game) }, [game, loaded])
 
-  const player = game.citizens[0]
+  const player = game.citizens.find((citizen) => citizen.id === controlledCitizenId) ?? game.citizens[0]
   const alive = useMemo(() => game.citizens.filter((citizen) => citizen.alive).length, [game.citizens])
   const outsideCitizens = useMemo(() => game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world'), [game.citizens])
   const townDefense = useMemo(() => totalTownDefense(game), [game])
@@ -50,8 +51,11 @@ export function App() {
   }, [game])
   const outsideDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'outside_at_night').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const homeDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'home_breach').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
-  const playerDeathReason = useMemo(() => [...game.events].reverse().find((event): event is Extract<GameEvent,{type:'CITIZEN_DIED'}> => event.type === 'CITIZEN_DIED' && event.citizenId === player.id)?.reason ?? null, [game.events, player.id])
+  const controlledDeathReason = useMemo(() => [...game.events].reverse().find((event): event is Extract<GameEvent,{type:'CITIZEN_DIED'}> => event.type === 'CITIZEN_DIED' && event.citizenId === player.id)?.reason ?? null, [game.events, player.id])
 
+  useEffect(() => {
+    if (!game.citizens.some((citizen) => citizen.id === controlledCitizenId)) setControlledCitizenId(game.citizens[0]?.id ?? 'c01')
+  }, [game.citizens, controlledCitizenId])
   useEffect(() => {
     if (player.location.type === 'world' && isTownOnlyScreen(screen)) setScreen('world')
     if (screen === 'workshop' && !game.town.construction.workshop.completed) setScreen('construction')
@@ -64,9 +68,10 @@ export function App() {
     catch (caught) { setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.') }
   }
   const move = (direction: Direction) => act(legalActions.find((action): action is Extract<GameCommand,{type:'MOVE'}> => action.type === 'MOVE' && action.direction === direction))
-  const runCitizens = () => { setGame((current) => runBotPhase(current, botController)); setError(null) }
-  const endDay = () => { if (!player.alive) return; setGame((current) => resolveNight(runBotPhase(current, botController))); setError(null) }
-  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setScreen('home'); setError(null) }
+  const runCitizens = () => { setGame((current) => runBotPhase(current, botController, controlledCitizenId)); setError(null) }
+  const endDay = () => { if (alive === 0) return; setGame((current) => resolveNight(runBotPhase(current, botController, controlledCitizenId))); setError(null) }
+  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setScreen('home'); setError(null) }
+  const controlCitizen = (citizenId: string) => { setControlledCitizenId(citizenId); setError(null) }
 
   if (!loaded) return <main className="shell loading-shell"><p>Opening the town gates…</p></main>
 
@@ -74,7 +79,7 @@ export function App() {
 
   return <main className="shell">
     <header className="hero">
-      <div className="brand-block"><p className="eyebrow">Distant town survival</p><h1>Live<span>2</span>Nite</h1><div className="dayline"><strong>DAY {game.day}</strong><span>Town seed {game.seed}</span></div></div>
+      <div className="brand-block"><p className="eyebrow">Distant town survival</p><h1>Live<span>2</span>Nite</h1><div className="dayline"><strong>DAY {game.day}</strong><span>Town seed {game.seed}</span><span className="test-control-chip">TEST CONTROL · {player.name}</span></div></div>
       <div className="header-actions"><span className="save-state">● Local save active</span><button className="secondary" onClick={() => void reset()}>Start a new town</button></div>
     </header>
 
@@ -84,7 +89,7 @@ export function App() {
       <article><span>Well water</span><strong>{game.town.well.water}</strong></article>
       <article><span>Town defense</span><strong>{townDefense}</strong></article>
       <article><span>Gate</span><strong className={game.town.gateOpen ? 'danger-value' : 'safe-value'}>{game.town.gateOpen ? 'OPEN' : 'SEALED'}</strong></article>
-      <article><span>Your AP</span><strong>{player.ap}<small>/ {player.maxAp}</small></strong></article>
+      <article><span>{player.name} AP</span><strong>{player.ap}<small>/ {player.maxAp}</small></strong></article>
     </section>
 
     {game.lastNight && <section className={`night-report ${game.lastNight.breached ? 'danger' : 'safe'}`}>
@@ -99,29 +104,29 @@ export function App() {
         </div>}
       </div>
     </section>}
-    {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Your run has ended</span><strong>{playerDeathReason === 'home_breach' ? 'Zombies overwhelmed your home.' : 'You died outside during the nightly attack.'}</strong><p>Start a new town to continue.</p></div></section>}
+    {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Controlled citizen is dead</span><strong>{controlledDeathReason === 'home_breach' ? `${player.name}'s home was overwhelmed.` : `${player.name} died outside during the nightly attack.`}</strong><p>Open Citizens and take control of another living citizen to continue testing this town.</p></div></section>}
 
     <GameNavigation game={game} screen={screen} outside={player.location.type === 'world'} onChange={setScreen}/>
 
     <div className="screen-stage">
-      {screen === 'home' && <HomeView game={game} legalActions={legalActions} act={act}/>} 
-      {screen === 'well' && <WellView game={game} legalActions={legalActions} act={act}/>} 
-      {screen === 'bank' && <BankView game={game} legalActions={legalActions} act={act}/>} 
+      {screen === 'home' && <HomeView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
+      {screen === 'well' && <WellView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
+      {screen === 'bank' && <BankView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
       {screen === 'construction' && <ConstructionView game={game} legalActions={legalActions} act={act}/>} 
       {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
       {screen === 'watchtower' && <WatchtowerView game={game}/>} 
-      {screen === 'world' && <div className="world-screen-layout"><WorldView game={game} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move}/><section className="panel map-panel"><div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div><WorldMap game={game}/><p className="map-key"><span>?</span> unknown <span>0–9</span> observed zombies <span>T</span> town <span>@</span> you</p></section></div>}
-      {screen === 'citizens' && <CitizenRoster game={game}/>} 
+      {screen === 'world' && <div className="world-screen-layout"><WorldView game={game} citizenId={player.id} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move}/><section className="panel map-panel"><div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div><WorldMap game={game} citizenId={player.id}/><p className="map-key"><span>?</span> unknown <span>0–9</span> observed zombies <span>T</span> town <span>@</span> controlled citizen</p></section></div>}
+      {screen === 'citizens' && <CitizenRoster game={game} controlledCitizenId={player.id} onControl={controlCitizen}/>} 
       {screen === 'chronicle' && <EventLog game={game}/>} 
     </div>
 
     {error && <p className="error-banner global-error">{error}</p>}
-    {control?.trapped && <div className="rescue-hint global-rescue"><strong>Rescue required.</strong><span>Searching and carried supplies remain usable, but movement is blocked. Run citizen activity to give another citizen a chance to reach your zone.</span></div>}
+    {control?.trapped && <div className="rescue-hint global-rescue"><strong>Zone control lost.</strong><span>Search, use a carried weapon, attempt bare-handed combat, or run citizen activity so another citizen can rescue {player.name}.</span></div>}
 
     <footer className="turn-bar">
-      <div><span>Day {game.day}</span><strong>{player.location.type === 'town' ? 'Inside town' : `Outside [${player.location.x},${player.location.y}]`}</strong></div>
-      <button className="activity-button" disabled={!player.alive} onClick={runCitizens}><span>Run citizen activity</span><small>Bots act now · night does not advance</small></button>
-      <button className="primary end-day" disabled={!player.alive} onClick={endDay}><span>End the day</span><small>Remaining citizens act, then the attack resolves</small></button>
+      <div><span>Day {game.day} · controlling {player.name}</span><strong>{player.alive ? (player.location.type === 'town' ? 'Inside town' : `Outside [${player.location.x},${player.location.y}]`) : 'DEAD · switch citizens to continue testing'}</strong></div>
+      <button className="activity-button" disabled={alive === 0} onClick={runCitizens}><span>Run citizen activity</span><small>All bots except the controlled citizen act now</small></button>
+      <button className="primary end-day" disabled={alive === 0} onClick={endDay}><span>End the day</span><small>Uncontrolled citizens act, then the attack resolves</small></button>
     </footer>
   </main>
 }

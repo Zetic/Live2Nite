@@ -52,6 +52,24 @@ function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
         world: { ...state.world, zones: { ...state.world.zones, [event.zoneKey]: { ...zone, groundItems: zone.groundItems.filter((item) => item.id !== event.item.id) } } },
       }
     }
+    case 'COMBAT_RESOLVED': {
+      const zone = state.world.zones[event.zoneKey]
+      if (!zone) return state
+      return {
+        ...state,
+        rngState: event.rngStateAfter,
+        citizens: event.consumed && event.item
+          ? replaceCitizen(state, event.citizenId, (citizen) => ({ ...citizen, inventory: citizen.inventory.filter((item) => item.id !== event.item?.id) }))
+          : state.citizens,
+        world: {
+          ...state.world,
+          zones: {
+            ...state.world.zones,
+            [event.zoneKey]: { ...zone, zombies: Math.max(0, zone.zombies - event.kills) },
+          },
+        },
+      }
+    }
     case 'ITEM_DEPOSITED': {
       const currentCount = state.town.bank[event.item.type] ?? 0
       return {

@@ -9,6 +9,7 @@ export type ItemType =
   | 'twisted_plank'
   | 'wrought_iron'
   | 'unshaped_concrete_block'
+  | 'water_bomb'
   | 'doggy_bag'
   | 'citizen_welcome_pack'
   | 'battery'
@@ -21,6 +22,7 @@ export type HomeLevel = 'camp_bed' | 'tent'
 export type ItemStorage = 'inventory' | 'home'
 export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
+export type CombatMethod = 'fists' | ItemType
 
 export interface ItemInstance {
   id: string
@@ -140,6 +142,8 @@ export type GameCommand =
   | { type: 'MOVE'; citizenId: string; direction: Direction }
   | { type: 'SEARCH_ZONE'; citizenId: string }
   | { type: 'PICK_UP_ITEM'; citizenId: string; itemId: string }
+  | { type: 'ATTACK_BAREHANDED'; citizenId: string }
+  | { type: 'USE_WEAPON'; citizenId: string; itemId: string }
   | { type: 'DEPOSIT_ITEM'; citizenId: string; itemId: string }
   | { type: 'WITHDRAW_BANK_ITEM'; citizenId: string; itemType: ItemType }
   | { type: 'MOVE_ITEM_TO_HOME'; citizenId: string; itemId: string }
@@ -169,6 +173,17 @@ export type GameEvent =
       rngStateAfter?: number
     }
   | { type: 'ITEM_PICKED_UP'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
+  | {
+      type: 'COMBAT_RESOLVED'
+      day: number
+      citizenId: string
+      zoneKey: string
+      method: CombatMethod
+      kills: number
+      item: ItemInstance | null
+      consumed: boolean
+      rngStateAfter: number
+    }
   | { type: 'ITEM_DEPOSITED'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_WITHDRAWN'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_MOVED_TO_HOME'; day: number; citizenId: string; item: ItemInstance }

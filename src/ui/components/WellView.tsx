@@ -1,18 +1,19 @@
 import type { GameCommand, GameState } from '../../core/types'
 import { findAction } from '../actionHelpers'
 
-export function WellView({ game, legalActions, act }: {
+export function WellView({ game, citizenId, legalActions, act }: {
   game: GameState
+  citizenId: string
   legalActions: GameCommand[]
   act: (command: GameCommand | undefined) => void
 }) {
-  const player = game.citizens[0]
+  const player = game.citizens.find((citizen) => citizen.id === citizenId) ?? game.citizens[0]
   const takeWater = findAction(legalActions, 'TAKE_WATER')
 
-  let status = 'Your daily ration is available.'
-  if (player.daily.waterTaken) status = 'You already claimed today’s ration.'
+  let status = `${player.name}'s daily ration is available.`
+  if (player.daily.waterTaken) status = `${player.name} already claimed today's ration.`
   else if (game.town.well.water <= 0) status = 'The well is dry.'
-  else if (player.inventory.length >= player.inventoryCapacity) status = 'Your rucksack is full.'
+  else if (player.inventory.length >= player.inventoryCapacity) status = `${player.name}'s rucksack is full.`
 
   return <section className="panel screen-panel">
     <div className="panel-heading">
@@ -27,9 +28,9 @@ export function WellView({ game, legalActions, act }: {
     </section>
 
     <div className="daily-supplies well-status-grid">
-      <article className={player.daily.waterTaken ? 'done' : ''}><span>Your ration</span><strong>{player.daily.waterTaken ? 'CLAIMED' : 'AVAILABLE'}</strong><small>Well withdrawals reset at the beginning of the next day.</small></article>
-      <article className={player.daily.drank ? 'done' : ''}><span>Water refresh</span><strong>{player.daily.drank ? 'USED' : 'AVAILABLE'}</strong><small>A carried Water Ration can refresh your AP once per day.</small></article>
-      <article><span>Rucksack</span><strong>{player.inventory.length}/{player.inventoryCapacity}</strong><small>You need an empty carried slot to take a ration.</small></article>
+      <article className={player.daily.waterTaken ? 'done' : ''}><span>{player.name} · ration</span><strong>{player.daily.waterTaken ? 'CLAIMED' : 'AVAILABLE'}</strong><small>Well withdrawals reset at the beginning of the next day.</small></article>
+      <article className={player.daily.drank ? 'done' : ''}><span>Water refresh</span><strong>{player.daily.drank ? 'USED' : 'AVAILABLE'}</strong><small>A carried Water Ration can refresh AP once per day.</small></article>
+      <article><span>Rucksack</span><strong>{player.inventory.length}/{player.inventoryCapacity}</strong><small>An empty carried slot is required to take a ration.</small></article>
     </div>
   </section>
 }

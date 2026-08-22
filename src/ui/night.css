@@ -1,3 +1,5 @@
+@import './combat.css';
+
 .home-defense-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;

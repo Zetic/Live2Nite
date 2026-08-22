@@ -1,3 +1,4 @@
+import { BAREHANDED_KILL_CHANCE_PERCENT, weaponDefinition } from '../../core/combat'
 import { ITEMS, itemName, itemPurpose } from '../../core/items'
 import type { Direction, GameCommand, GameState, ItemInstance } from '../../core/types'
 import { getZone, zoneControl } from '../../core/world'
@@ -18,15 +19,15 @@ function SupplyCard({ item, actions, act }: { item: ItemInstance; actions: GameC
   </article>
 }
 
-export function WorldView({game,legalActions,currentZone,control,act,move}:{game:GameState;legalActions:GameCommand[];currentZone:ReturnType<typeof getZone>;control:ReturnType<typeof zoneControl>|null;act:(command:GameCommand|undefined)=>void;move:(direction:Direction)=>void}){
-  const player = game.citizens[0]
+export function WorldView({game,citizenId,legalActions,currentZone,control,act,move}:{game:GameState;citizenId:string;legalActions:GameCommand[];currentZone:ReturnType<typeof getZone>;control:ReturnType<typeof zoneControl>|null;act:(command:GameCommand|undefined)=>void;move:(direction:Direction)=>void}){
+  const player = game.citizens.find((citizen)=>citizen.id===citizenId)??game.citizens[0]
 
   if (player.location.type === 'town') {
     const open = findAction(legalActions, 'OPEN_GATE')
     const close = findAction(legalActions, 'CLOSE_GATE')
     const exit = findAction(legalActions, 'EXIT_TOWN')
     return <section className="panel screen-panel world-staging">
-      <div className="panel-heading"><div><p className="section-kicker">Expedition planning</p><h2>World Beyond</h2><p className="section-note">The town gate and every expedition action live here. Open the gate, leave town, scavenge, then return here to seal it before night.</p></div><span className={`gate-chip ${game.town.gateOpen?'open':''}`}>{game.town.gateOpen?'GATE OPEN':'GATE SEALED'}</span></div>
+      <div className="panel-heading"><div><p className="section-kicker">Expedition planning · {player.name}</p><h2>World Beyond</h2><p className="section-note">The town gate and every expedition action live here. Open the gate, leave town, scavenge or fight, then return here to seal it before night.</p></div><span className={`gate-chip ${game.town.gateOpen?'open':''}`}>{game.town.gateOpen?'GATE OPEN':'GATE SEALED'}</span></div>
       <section className="town-feature gate-card facility-hero-card">
         <div className="feature-icon" aria-hidden="true">G</div>
         <div className="feature-copy"><span>Town Gate</span><strong>{game.town.gateOpen ? 'Open' : 'Sealed'}</strong><p>An open gate nullifies town defense during the nightly attack.</p></div>
@@ -36,23 +37,43 @@ export function WorldView({game,legalActions,currentZone,control,act,move}:{game
           {exit && <button className="primary" onClick={() => act(exit)}>Go outside <small>0 AP</small></button>}
         </div>
       </section>
-      <div className="expedition-primer"><strong>Scavenging model</strong><span>Undepleted zones can yield useful and construction-ready finds. Once a zone is depleted, a citizen may comb the leftovers for low-grade Workshop feedstock such as Rotting Logs or Scrap Metal.</span></div>
+      <div className="expedition-primer"><strong>Combat & scavenging</strong><span>Weapons can clear zombies without spending AP, but an exhausted citizen cannot use them. Bare hands are a risky 1 AP fallback. Undepleted zones can yield useful finds, including rare weapons.</span></div>
     </section>
   }
 
   if (!currentZone || !control) return null
   const search = findAction(legalActions, 'SEARCH_ZONE')
   const enter = findAction(legalActions, 'ENTER_TOWN')
+  const fists = findAction(legalActions, 'ATTACK_BAREHANDED')
   const pickups = legalActions.filter((action):action is Extract<GameCommand,{type:'PICK_UP_ITEM'}> => action.type === 'PICK_UP_ITEM')
+  const weaponActions = legalActions.filter((action):action is Extract<GameCommand,{type:'USE_WEAPON'}> => action.type === 'USE_WEAPON')
+  const carriedWeapons = player.inventory.flatMap((item) => {
+    const definition = weaponDefinition(item.type)
+    const command = weaponActions.find((action) => action.itemId === item.id)
+    return definition ? [{ item, definition, command }] : []
+  })
   const depleted = currentZone.searchesRemaining === 0
   const alreadyDepletedSearched = (currentZone.depletedSearchedBy ?? []).includes(player.id)
 
   return <section className="panel screen-panel">
-    <div className="panel-heading"><div><p className="section-kicker">World Beyond</p><h2>Zone [{player.location.x},{player.location.y}]</h2><p className="section-note">Every cardinal move costs 1 AP. Food and water carried in your rucksack can restore AP in the field.</p></div><div className="world-heading-chips"><span className={`zone-chip ${control.trapped?'danger':''}`}>{control.trapped?'TRAPPED':'CONTROLLED'}</span><span className={`zone-chip ${depleted?'depleted-chip':''}`}>{depleted?'DEPLETED':'UNDEPLETED'}</span></div></div>
-    <div className={`control ${control.trapped?'danger':''}`}><div><span>Citizens here</span><strong>{control.humans}</strong><small>{control.humanPoints} control points</small></div><div><span>Zombies</span><strong>{control.zombies}</strong><small>{control.zombiePoints} control points</small></div><p>{control.trapped?'Zombie control exceeds human control. You may still search or use supplies, but movement is blocked until help arrives.':'Human control is sufficient to leave this zone.'}</p></div>
-    <section className="world-actions-grid"><div className="movement-card"><h3>Travel</h3><div className="movement" aria-label="Movement controls"><button disabled={!legalActions.some(a=>a.type==='MOVE'&&a.direction==='NORTH')} onClick={()=>move('NORTH')}>↑ <small>1 AP</small></button><div><button disabled={!legalActions.some(a=>a.type==='MOVE'&&a.direction==='WEST')} onClick={()=>move('WEST')}>←</button><button disabled={!legalActions.some(a=>a.type==='MOVE'&&a.direction==='SOUTH')} onClick={()=>move('SOUTH')}>↓</button><button disabled={!legalActions.some(a=>a.type==='MOVE'&&a.direction==='EAST')} onClick={()=>move('EAST')}>→</button></div></div>{enter&&<button className="primary return-button" onClick={()=>act(enter)}>Enter town <small>0 AP</small></button>}</div>
-      <div className={`search-card ${depleted?'depleted-search':''}`}><h3>{depleted ? 'Scavenge Depleted Zone' : 'Search Undepleted Zone'}</h3><p>{depleted ? (alreadyDepletedSearched ? 'You have already combed the depleted ground here.' : 'The main finds are gone. A depleted search yields low-grade material that only becomes broadly useful once the Workshop is built.') : `${currentZone.searchesRemaining} normal search opportunity(s) remain in this zone.`}</p><button disabled={!search} onClick={()=>act(search)}>{depleted ? 'Comb the depleted ground' : 'Search the zone'} <small>0 AP</small></button><div className="ground-list"><h4>Visible on the ground</h4>{currentZone.groundItems.length===0?<p className="empty-state">Nothing visible.</p>:currentZone.groundItems.map((item)=>{const command=pickups.find((candidate)=>candidate.itemId===item.id);return <button key={item.id} disabled={!command} onClick={()=>act(command)}>Pick up {itemName(item.type)} <small>0 AP</small></button>})}</div></div>
+    <div className="panel-heading"><div><p className="section-kicker">World Beyond · {player.name}</p><h2>Zone [{player.location.x},{player.location.y}]</h2><p className="section-note">Every cardinal move costs 1 AP. Combat can reduce zombie control immediately, potentially freeing a trapped citizen.</p></div><div className="world-heading-chips"><span className={`zone-chip ${control.trapped?'danger':''}`}>{control.trapped?'TRAPPED':'CONTROLLED'}</span><span className={`zone-chip ${depleted?'depleted-chip':''}`}>{depleted?'DEPLETED':'UNDEPLETED'}</span></div></div>
+    <div className={`control ${control.trapped?'danger':''}`}><div><span>Citizens here</span><strong>{control.humans}</strong><small>{control.humanPoints} control points</small></div><div><span>Zombies</span><strong>{control.zombies}</strong><small>{control.zombiePoints} control points</small></div><p>{control.trapped?'Zombie control exceeds human control. You may search, fight, or use supplies; movement unlocks as soon as zombie control no longer exceeds human control.':'Human control is sufficient to leave this zone.'}</p></div>
+
+    <section className={`combat-panel ${control.trapped?'combat-urgent':''}`}>
+      <div className="section-heading-row"><div><p className="section-kicker">Zone combat</p><h3>{currentZone.zombies > 0 ? `${currentZone.zombies} zombie${currentZone.zombies === 1 ? '' : 's'} present` : 'Zone clear'}</h3></div>{currentZone.zombies > 0 && <span className="micro-stat">{player.ap}/{player.maxAp} AP</span>}</div>
+      {currentZone.zombies === 0 ? <p className="empty-state">There are no zombies here to attack.</p> : <>
+        <p className="combat-rule">Ordinary weapons cost 0 AP but cannot be used while exhausted. Bare-handed combat costs 1 AP and currently uses the documented ~{BAREHANDED_KILL_CHANCE_PERCENT}% kill chance; wound consequences are deferred until citizen statuses exist.</p>
+        <div className="combat-actions">
+          {carriedWeapons.map(({item,definition,command})=><button className="weapon-action" key={item.id} disabled={!command} onClick={()=>act(command)}><strong>Use {itemName(item.type)}</strong><small>{definition.minKills}–{definition.maxKills} kills · {definition.apCost} AP · single use</small></button>)}
+          <button className="fist-action" disabled={!fists} onClick={()=>act(fists)}><strong>Fight bare-handed</strong><small>{BAREHANDED_KILL_CHANCE_PERCENT}% kill chance · 1 AP</small></button>
+        </div>
+        {carriedWeapons.length===0&&<p className="combat-warning">No carried weapon. A Water Bomb is a rare undepleted-zone find in the current loot prototype.</p>}
+      </>}
     </section>
-    <section className="field-kit"><div className="section-heading-row"><div><h3>Field Rucksack</h3><p>Use carried food or water before moving if you need another AP pool.</p></div><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div>{player.inventory.length===0?<p className="empty-state">Nothing carried.</p>:<div className="field-supplies">{player.inventory.map((item)=><SupplyCard key={item.id} item={item} actions={legalActions} act={act}/>)}</div>}</section>
+
+    <section className="world-actions-grid"><div className="movement-card"><h3>Travel</h3><div className="movement" aria-label="Movement controls"><button disabled={!legalActions.some(a=>a.type==='MOVE'&&a.direction==='NORTH')} onClick={()=>move('NORTH')}>↑ <small>1 AP</small></button><div><button disabled={!legalActions.some(a=>a.type==='MOVE'&&a.direction==='WEST')} onClick={()=>move('WEST')}>←</button><button disabled={!legalActions.some(a=>a.type==='MOVE'&&a.direction==='SOUTH')} onClick={()=>move('SOUTH')}>↓</button><button disabled={!legalActions.some(a=>a.type==='MOVE'&&a.direction==='EAST')} onClick={()=>move('EAST')}>→</button></div></div>{enter&&<button className="primary return-button" onClick={()=>act(enter)}>Enter town <small>0 AP</small></button>}</div>
+      <div className={`search-card ${depleted?'depleted-search':''}`}><h3>{depleted ? 'Scavenge Depleted Zone' : 'Search Undepleted Zone'}</h3><p>{depleted ? (alreadyDepletedSearched ? 'This citizen has already combed the depleted ground here.' : 'The main finds are gone. A depleted search yields low-grade material that only becomes broadly useful once the Workshop is built.') : `${currentZone.searchesRemaining} normal search opportunity(s) remain in this zone.`}</p><button disabled={!search} onClick={()=>act(search)}>{depleted ? 'Comb the depleted ground' : 'Search the zone'} <small>0 AP</small></button><div className="ground-list"><h4>Visible on the ground</h4>{currentZone.groundItems.length===0?<p className="empty-state">Nothing visible.</p>:currentZone.groundItems.map((item)=>{const command=pickups.find((candidate)=>candidate.itemId===item.id);return <button key={item.id} disabled={!command} onClick={()=>act(command)}>Pick up {itemName(item.type)} <small>0 AP</small></button>})}</div></div>
+    </section>
+    <section className="field-kit"><div className="section-heading-row"><div><h3>{player.name} · Field Rucksack</h3><p>Weapons must be carried to use them. Food or water can restore AP before moving or fighting.</p></div><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div>{player.inventory.length===0?<p className="empty-state">Nothing carried.</p>:<div className="field-supplies">{player.inventory.map((item)=><SupplyCard key={item.id} item={item} actions={legalActions} act={act}/>)}</div>}</section>
   </section>
 }

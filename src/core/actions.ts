@@ -1,3 +1,4 @@
+import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { CONSTRUCTION_ORDER, hasRequiredMaterials } from './construction'
 import { HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
 import { consumableKind, isContainer } from './items'
@@ -77,6 +78,17 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
   if (citizen.inventory.length < citizen.inventoryCapacity) {
     for (const item of zone.groundItems) actions.push({ type: 'PICK_UP_ITEM', citizenId, itemId: item.id })
   }
+
+  if (zone.zombies > 0 && citizen.ap > 0) {
+    for (const item of citizen.inventory) {
+      const weapon = weaponDefinition(item.type)
+      if (weapon && isWeapon(item.type) && (!weapon.requiresPositiveAp || citizen.ap > 0)) {
+        actions.push({ type: 'USE_WEAPON', citizenId, itemId: item.id })
+      }
+    }
+    if (citizen.ap >= BAREHANDED_AP_COST) actions.push({ type: 'ATTACK_BAREHANDED', citizenId })
+  }
+
   const control = zoneControl(state, x, y)
   if (!control.trapped && citizen.ap >= MOVE_AP_COST) {
     for (const direction of ['NORTH', 'SOUTH', 'EAST', 'WEST'] as const) {

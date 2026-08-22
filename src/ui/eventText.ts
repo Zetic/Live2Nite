@@ -17,6 +17,10 @@ export function describeEvent(event: GameEvent, game: GameState): string {
       return event.item ? `${citizenName(game,event.citizenId)} ${searchLabel} at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.` : `${citizenName(game,event.citizenId)} ${searchLabel} at [${event.zoneKey}] and found nothing.`
     }
     case 'ITEM_PICKED_UP': return `${citizenName(game,event.citizenId)} picked up ${itemName(event.item.type)}.`
+    case 'COMBAT_RESOLVED': {
+      const method = event.method === 'fists' ? 'bare hands' : itemName(event.method)
+      return `${citizenName(game,event.citizenId)} attacked with ${method} at [${event.zoneKey}] and killed ${event.kills} zombie${event.kills === 1 ? '' : 's'}.`
+    }
     case 'ITEM_DEPOSITED': return `${citizenName(game,event.citizenId)} deposited ${itemName(event.item.type)} in the town bank.`
     case 'ITEM_WITHDRAWN': return `${citizenName(game,event.citizenId)} took ${itemName(event.item.type)} from the town bank.`
     case 'ITEM_MOVED_TO_HOME': return `${citizenName(game,event.citizenId)} stored ${itemName(event.item.type)} at home.`
@@ -47,7 +51,7 @@ export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'sy
     case 'CITIZEN_DIED': return 'danger'
     case 'NIGHT_RESOLVED': return event.report.breached?'danger':'night'
     case 'DAY_STARTED': return 'night'
-    case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ITEM_PICKED_UP': case 'CITIZEN_LOCATION_CHANGED': return 'world'
+    case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': return 'world'
     case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'ITEM_CONSUMED': case 'HOME_UPGRADED': return 'home'
     case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'WORKSHOP_CONVERTED': case 'GATE_SET': return 'town'
     default: return 'system'

@@ -1,8 +1,8 @@
 import type { GameState } from '../../core/types'
 import { zoneKey } from '../../core/world'
 
-export function WorldMap({ game }: { game: GameState }) {
-  const player=game.citizens[0]
+export function WorldMap({ game, citizenId }: { game: GameState; citizenId: string }) {
+  const player=game.citizens.find((citizen)=>citizen.id===citizenId)??game.citizens[0]
   const rows=[]
   for(let y=game.world.maxY;y>=game.world.minY;y-=1){
     const cells=[]
