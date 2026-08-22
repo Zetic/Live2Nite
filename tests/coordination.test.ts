@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BasicBotController } from '../src/agents/BasicBotController'
 import { missionSafety } from '../src/agents/planning/MissionLifecycle'
+import { nightGateReserveCitizenId } from '../src/agents/planning/TownMissionPlanner'
 import { createInitialGame } from '../src/core/game'
 import type { BotMissionAssignment, GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
@@ -30,10 +31,21 @@ describe('coordinated expedition AI',()=>{
     game=advanceOneHour(game,bots,'c01')
     const second=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===2).length
     expect(first).toBe(4)
-    // Normal field mobilization is capped near 20% of living bots, with up to three
-    // additional emergency rescue assignments allowed to bypass that quota.
     expect(second).toBeLessThanOrEqual(11)
     expect(game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town').length).toBeGreaterThan(3)
+  })
+
+  it('keeps one protected citizen off field missions so a bad rescue seed can still seal the gate',()=>{
+    let game=createInitialGame(2233,40)
+    const gateReserve=nightGateReserveCitizenId(game)
+    expect(gateReserve).toBeTruthy()
+    game=advanceToHour(game,0,bots,'c01')
+    expect(game.town.gateOpen).toBe(false)
+    const keeper=game.citizens.find((citizen)=>citizen.id===gateReserve)!
+    expect(keeper.alive).toBe(true)
+    expect(keeper.location).toEqual({type:'town'})
+    expect(keeper.ap).toBeGreaterThanOrEqual(3)
+    expect(game.events.some((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.citizenId===gateReserve)).toBe(false)
   })
 
   it('forces a solvent return before a citizen spends the AP reserved for home',()=>{let game=clearPath(createInitialGame(123,2),4);game={...game,clock:{hour:10,phase:'day'},town:{...game.town,gateOpen:true},citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,ap:4,location:{type:'world' as const,x:4,y:0},inventory:[]}:citizen),botMissions:{c02:mission(5)}};const before=missionSafety(game,'c02');expect(before.usableAp).toBe(4);expect(before.requiredAp).toBe(5);game=advanceOneHour(game,bots,'c01');expect(game.citizens.find((citizen)=>citizen.id==='c02')?.location).toEqual({type:'town'});expect(game.events.some((event)=>event.type==='BOT_MISSION_PHASE_SET'&&event.citizenId==='c02'&&event.phase==='return')).toBe(true)})
