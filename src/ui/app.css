@@ -37,7 +37,12 @@ button small { float: right; color: #9ca3af; }
 button.primary { background: #e5e7eb; color: #111827; border-color: #e5e7eb; font-weight: 800; text-align: center; }
 button.primary small { color: #475569; }
 button.secondary { background: transparent; }
-.end-day { width: 100%; margin-top: 28px; }
+.activity { width: 100%; margin-top: 18px; }
+.end-day { width: 100%; margin-top: 10px; }
+
+.rescue-hint { margin-top: 18px; padding: 12px 14px; border: 1px solid #92400e; border-radius: 8px; background: #2a1d0d; color: #fde68a; line-height: 1.45; }
+.outside-summary { padding: 10px 0; margin-top: -4px; border-bottom: 1px solid #202a35; color: #cbd5e1; }
+.danger-text { color: #fca5a5; }
 
 .control { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid #334155; border-radius: 8px; }
 .control strong { font-size: .75rem; letter-spacing: .08em; }
@@ -49,6 +54,7 @@ button.secondary { background: transparent; }
 .bank-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .bank-grid span { border: 1px solid #27313d; border-radius: 7px; padding: 9px 10px; color: #cbd5e1; }
 .bank-grid strong { float: right; }
+.bank-grid small { display: block; clear: both; margin-top: 8px; color: #7f8b99; line-height: 1.35; }
 
 .world-map { overflow-x: auto; padding: 8px; background: #080c10; border: 1px solid #27313d; border-radius: 8px; width: fit-content; max-width: 100%; }
 .map-row { display: flex; }
@@ -71,4 +77,5 @@ button.secondary { background: transparent; }
   .log-panel { grid-column: auto; }
   .hero { flex-direction: column; }
   .control { grid-template-columns: 1fr; }
+  .bank-grid { grid-template-columns: 1fr; }
 }

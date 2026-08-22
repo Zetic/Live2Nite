@@ -1,3 +1,4 @@
+import { bankDefenseFor } from './items'
 import { zoneKey } from './world'
 import type { GameEvent, GameState } from './types'
 
@@ -92,6 +93,7 @@ function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
         ),
         town: {
           ...state.town,
+          defense: state.town.defense + bankDefenseFor(event.item.type),
           bank: { ...state.town.bank, [event.item.type]: currentCount + 1 },
         },
       }

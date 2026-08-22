@@ -5,7 +5,7 @@ import { getLegalActions } from '../src/core/actions'
 import { executeCommand, InvalidCommandError } from '../src/core/commands'
 import { createInitialGame, resolveNight } from '../src/core/game'
 import type { GameState } from '../src/core/types'
-import { zoneKey } from '../src/core/world'
+import { zoneControl, zoneKey } from '../src/core/world'
 
 const bots = new BasicBotController()
 
@@ -52,7 +52,7 @@ describe('World Beyond gameplay', () => {
     expect(game.world.zones[zoneKey(1, 0)].discovered).toBe(true)
   })
 
-  it('traps a lone ordinary citizen when zombie control exceeds 2 CP', () => {
+  it('traps a lone ordinary citizen when zombie control exceeds 2 CP but still allows searching', () => {
     let game = createInitialGame(123, 2)
     game = executeCommand(game, command(game, 'c01', 'OPEN_GATE')).state
     game = executeCommand(game, command(game, 'c01', 'EXIT_TOWN')).state
@@ -63,11 +63,45 @@ describe('World Beyond gameplay', () => {
       ...game,
       world: {
         ...game.world,
-        zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 3 } },
+        zones: {
+          ...game.world.zones,
+          [key]: { ...game.world.zones[key], zombies: 3, searchesRemaining: 1, hiddenLoot: ['food'] },
+        },
       },
     }
 
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'MOVE')).toBe(false)
+    expect(getLegalActions(game, 'c01').some((action) => action.type === 'SEARCH_ZONE')).toBe(true)
+  })
+
+  it('lets autonomous citizens rescue a trapped human during the day', () => {
+    let game = createInitialGame(123, 4)
+    game = executeCommand(game, command(game, 'c01', 'OPEN_GATE')).state
+    game = executeCommand(game, command(game, 'c01', 'EXIT_TOWN')).state
+    for (let step = 0; step < 2; step += 1) {
+      const east = getLegalActions(game, 'c01').find((action) => action.type === 'MOVE' && action.direction === 'EAST')!
+      game = executeCommand(game, east).state
+    }
+
+    const key = zoneKey(2, 0)
+    game = {
+      ...game,
+      world: {
+        ...game.world,
+        zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 3 } },
+      },
+    }
+    expect(zoneControl(game, 2, 0).trapped).toBe(true)
+
+    game = runBotPhase(game, bots)
+
+    expect(zoneControl(game, 2, 0).trapped).toBe(false)
+    expect(game.citizens.some((citizen) =>
+      citizen.controller === 'basic-bot' &&
+      citizen.location.type === 'world' &&
+      citizen.location.x === 2 &&
+      citizen.location.y === 0,
+    )).toBe(true)
   })
 
   it('searches for 0 AP, puts loot on the ground, and only allows one manual search per citizen per zone', () => {
@@ -125,6 +159,21 @@ describe('World Beyond gameplay', () => {
     expect(game.town.bank.scrap_metal).toBe(1)
   })
 
+  it('adds the documented defense value when a defensive object is banked', () => {
+    let game = createInitialGame(123, 2)
+    game = {
+      ...game,
+      citizens: game.citizens.map((citizen) => citizen.id === 'c01'
+        ? { ...citizen, inventory: [{ id: 'test-door', type: 'old_door' }] }
+        : citizen),
+    }
+
+    game = executeCommand(game, command(game, 'c01', 'DEPOSIT_ITEM')).state
+
+    expect(game.town.bank.old_door).toBe(1)
+    expect(game.town.defense).toBe(42)
+  })
+
   it('kills citizens who end the day outside when camping is not implemented', () => {
     let game = createInitialGame(123, 2)
     game = executeCommand(game, command(game, 'c01', 'OPEN_GATE')).state
@@ -135,6 +184,13 @@ describe('World Beyond gameplay', () => {
     expect(game.lastNight?.outsideDeaths).toBe(1)
   })
 
+  it('does not guarantee a day-one breach when the prototype gate is closed', () => {
+    const game = resolveNight(createInitialGame(123, 2))
+    expect(game.lastNight?.effectiveDefense).toBe(40)
+    expect(game.lastNight?.attackStrength).toBeLessThanOrEqual(40)
+    expect(game.lastNight?.breached).toBe(false)
+  })
+
   it('keeps deterministic world and night results for the same seed and command sequence', () => {
     const first = resolveNight(runBotPhase(createInitialGame(9001, 6), bots))
     const second = resolveNight(runBotPhase(createInitialGame(9001, 6), bots))
@@ -142,6 +198,7 @@ describe('World Beyond gameplay', () => {
     expect(first.world).toEqual(second.world)
     expect(first.lastNight).toEqual(second.lastNight)
     expect(first.rngState).toBe(second.rngState)
+    expect(first.lastNight?.gateOpen).toBe(false)
   })
 
   it('rejects commands that are not currently legal', () => {
