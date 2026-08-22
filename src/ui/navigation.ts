@@ -1,6 +1,6 @@
 import type { ConstructionId, GameState } from '../core/types'
 
-export type GameScreen = 'home' | 'well' | 'bank' | 'construction' | 'workshop' | 'world' | 'citizens' | 'chronicle'
+export type GameScreen = 'home' | 'well' | 'bank' | 'construction' | 'workshop' | 'watchtower' | 'world' | 'citizens' | 'chronicle'
 
 export interface ScreenDefinition {
   id: GameScreen
@@ -18,6 +18,7 @@ const PRIMARY_SCREENS: ScreenDefinition[] = [
 
 const FACILITY_SCREENS: Array<ScreenDefinition & { projectId: ConstructionId }> = [
   { id: 'workshop', projectId: 'workshop', label: 'Workshop', short: 'Material processing', townOnly: true },
+  { id: 'watchtower', projectId: 'watchtower', label: 'Watchtower', short: 'Horde estimate', townOnly: true },
 ]
 
 const GLOBAL_SCREENS: ScreenDefinition[] = [
@@ -32,5 +33,5 @@ export function availableScreens(game: GameState): ScreenDefinition[] {
 }
 
 export function isTownOnlyScreen(screen: GameScreen): boolean {
-  return ['home', 'well', 'bank', 'construction', 'workshop'].includes(screen)
+  return ['home', 'well', 'bank', 'construction', 'workshop', 'watchtower'].includes(screen)
 }
