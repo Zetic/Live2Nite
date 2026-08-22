@@ -76,7 +76,6 @@ export class BasicBotController implements AgentController {
 
     if (citizen.location.type==='town') {
       const deposit = pick(actions,'DEPOSIT_ITEM'); if (deposit) return deposit
-
       if (rescueTarget?.location.type==='world' && (!lateReturn || rescueCanStillReturn(citizen,rescueTarget))) {
         const rescueDistance = distanceToTown(rescueTarget.location.x,rescueTarget.location.y)
         const gateCost = game.town.gateOpen ? 0 : 1
@@ -86,12 +85,8 @@ export class BasicBotController implements AgentController {
           const exit = pick(actions,'EXIT_TOWN'); if (exit) return exit
         }
       }
-
-      // Once evening return pressure starts, citizens already home do not launch optional expeditions.
-      // They may still perform useful town work before the final 23:00 gate-closing pass.
       const townWork = chooseTownWork(game,citizen,actions); if (townWork) return townWork
-      if (lateReturn) return null
-      if (citizen.ap <= 1) return null
+      if (lateReturn || citizen.ap <= 1) return null
       const open = pick(actions,'OPEN_GATE'); if (open) return open
       return pick(actions,'EXIT_TOWN')
     }
@@ -106,6 +101,17 @@ export class BasicBotController implements AgentController {
       if (emergencyReturn) return null
     }
 
+    // A feasible rescue remains a valid late-hour objective. Once the trapped citizen is
+    // stabilized, findRescueTarget stops returning them and the same bot immediately falls
+    // through to the return-home logic below, allowing a rescue + full AP dump in one hour.
+    if (rescueTarget?.location.type==='world' && (!lateReturn || rescueCanStillReturn(citizen,rescueTarget))) {
+      const rescueDistance=Math.abs(rescueTarget.location.x-x)+Math.abs(rescueTarget.location.y-y)
+      if (rescueDistance>0 && citizen.ap>=rescueDistance) {
+        const rescueStep=stepToward(actions,x,y,rescueTarget.location.x,rescueTarget.location.y)
+        if(rescueStep)return rescueStep
+      }
+    }
+
     // Evening behavior is intentionally decisive: AP is an action budget, not an hourly
     // movement limit. A citizen can spend every remaining AP at 23:00 getting home.
     if (lateReturn && !control.trapped) {
@@ -114,10 +120,6 @@ export class BasicBotController implements AgentController {
     }
 
     if (isNeededAsAnchor(game,citizenId)) return null
-    if (rescueTarget?.location.type==='world') {
-      const rescueDistance=Math.abs(rescueTarget.location.x-x)+Math.abs(rescueTarget.location.y-y)
-      if (rescueDistance>0 && citizen.ap>=rescueDistance) { const rescueStep=stepToward(actions,x,y,rescueTarget.location.x,rescueTarget.location.y); if(rescueStep)return rescueStep }
-    }
     const pickup=pick(actions,'PICK_UP_ITEM'); if(pickup)return pickup
     const search=pick(actions,'SEARCH_ZONE'); if(search)return search
     if(x===0&&y===0){
@@ -126,9 +128,7 @@ export class BasicBotController implements AgentController {
       return safeMove??pick(actions,'ENTER_TOWN')
     }
     if(control.trapped)return null
-    if(citizen.ap<=distance+2||citizen.inventory.length>=citizen.inventoryCapacity){
-      return stepTowardTown(actions,x,y)
-    }
+    if(citizen.ap<=distance+2||citizen.inventory.length>=citizen.inventoryCapacity)return stepTowardTown(actions,x,y)
     const preferredDirection=Number(citizen.id.slice(1))%4
     const order:Direction[]=preferredDirection===0?['NORTH','EAST','SOUTH','WEST']:preferredDirection===1?['EAST','SOUTH','WEST','NORTH']:preferredDirection===2?['SOUTH','WEST','NORTH','EAST']:['WEST','NORTH','EAST','SOUTH']
     for(const direction of order){const move=pickMove(actions,direction);if(move&&isSafeKnownMove(game,citizen,move))return move}
