@@ -24,34 +24,14 @@ export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
 export type CombatMethod = 'fists' | ItemType
 export type ClockPhase = 'day' | 'attack'
+export type SpecialSiteType = 'construction_site' | 'wrecked_cars' | 'pharmacy' | 'supermarket' | 'dark_woods' | 'police_station'
+export type SpecialSiteStatus = 'buried' | 'accessible' | 'depleted'
 
-export interface GameClock {
-  hour: number
-  phase: ClockPhase
-}
-
-export interface ItemInstance {
-  id: string
-  type: ItemType
-}
-
-export type CitizenLocation =
-  | { type: 'town' }
-  | { type: 'world'; x: number; y: number }
-
-export interface CitizenHome {
-  level: HomeLevel
-  defense: number
-  storage: ItemInstance[]
-  storageCapacity: number
-}
-
-export interface CitizenDailyState {
-  ate: boolean
-  drank: boolean
-  waterTaken: boolean
-}
-
+export interface GameClock { hour: number; phase: ClockPhase }
+export interface ItemInstance { id: string; type: ItemType }
+export type CitizenLocation = { type: 'town' } | { type: 'world'; x: number; y: number }
+export interface CitizenHome { level: HomeLevel; defense: number; storage: ItemInstance[]; storageCapacity: number }
+export interface CitizenDailyState { ate: boolean; drank: boolean; waterTaken: boolean }
 export interface Citizen {
   id: string
   name: string
@@ -66,6 +46,15 @@ export interface Citizen {
   daily: CitizenDailyState
 }
 
+export interface SpecialSiteState {
+  type: SpecialSiteType
+  status: SpecialSiteStatus
+  excavationRequired: number
+  excavationProgress: number
+  hiddenLoot: ItemType[]
+  searchedBy: string[]
+}
+
 export interface WorldZone {
   x: number
   y: number
@@ -76,26 +65,12 @@ export interface WorldZone {
   depletedSearchedBy: string[]
   hiddenLoot: ItemType[]
   groundItems: ItemInstance[]
+  specialSite?: SpecialSiteState
 }
 
-export interface WorldState {
-  minX: number
-  maxX: number
-  minY: number
-  maxY: number
-  zones: Record<string, WorldZone>
-}
-
-export interface ConstructionProjectState {
-  id: ConstructionId
-  apContributed: number
-  completed: boolean
-}
-
-export interface TownWellState {
-  water: number
-}
-
+export interface WorldState { minX: number; maxX: number; minY: number; maxY: number; zones: Record<string, WorldZone> }
+export interface ConstructionProjectState { id: ConstructionId; apContributed: number; completed: boolean }
+export interface TownWellState { water: number }
 export interface TownState {
   gateOpen: boolean
   defense: number
@@ -103,14 +78,7 @@ export interface TownState {
   construction: Record<ConstructionId, ConstructionProjectState>
   well: TownWellState
 }
-
-export interface HomeAttackOutcome {
-  citizenId: string
-  zombies: number
-  defense: number
-  survived: boolean
-}
-
+export interface HomeAttackOutcome { citizenId: string; zombies: number; defense: number; survived: boolean }
 export interface NightReport {
   day: number
   attackStrength: number
@@ -125,7 +93,7 @@ export interface NightReport {
 }
 
 export interface GameState {
-  schemaVersion: 6
+  schemaVersion: 7
   gameId: string
   seed: number
   rngState: number
@@ -148,6 +116,8 @@ export type GameCommand =
   | { type: 'ENTER_TOWN'; citizenId: string }
   | { type: 'MOVE'; citizenId: string; direction: Direction }
   | { type: 'SEARCH_ZONE'; citizenId: string }
+  | { type: 'EXCAVATE_SPECIAL_SITE'; citizenId: string }
+  | { type: 'SEARCH_SPECIAL_SITE'; citizenId: string }
   | { type: 'PICK_UP_ITEM'; citizenId: string; itemId: string }
   | { type: 'ATTACK_BAREHANDED'; citizenId: string }
   | { type: 'USE_WEAPON'; citizenId: string; itemId: string }
@@ -170,70 +140,22 @@ export type GameEvent = (
   | { type: 'GATE_SET'; day: number; open: boolean; citizenId: string }
   | { type: 'CITIZEN_LOCATION_CHANGED'; day: number; citizenId: string; location: CitizenLocation }
   | { type: 'ZONE_DISCOVERED'; day: number; zoneKey: string }
-  | {
-      type: 'ZONE_SEARCHED'
-      day: number
-      zoneKey: string
-      citizenId: string
-      mode: SearchMode
-      item: ItemInstance | null
-      rngStateAfter?: number
-    }
+  | { type: 'ZONE_SEARCHED'; day: number; zoneKey: string; citizenId: string; mode: SearchMode; item: ItemInstance | null; rngStateAfter?: number }
+  | { type: 'SPECIAL_SITE_EXCAVATED'; day: number; zoneKey: string; citizenId: string; amount: number }
+  | { type: 'SPECIAL_SITE_SEARCHED'; day: number; zoneKey: string; citizenId: string; item: ItemInstance | null }
   | { type: 'ITEM_PICKED_UP'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
-  | {
-      type: 'COMBAT_RESOLVED'
-      day: number
-      citizenId: string
-      zoneKey: string
-      method: CombatMethod
-      kills: number
-      item: ItemInstance | null
-      consumed: boolean
-      rngStateAfter: number
-    }
+  | { type: 'COMBAT_RESOLVED'; day: number; citizenId: string; zoneKey: string; method: CombatMethod; kills: number; item: ItemInstance | null; consumed: boolean; rngStateAfter: number }
   | { type: 'ITEM_DEPOSITED'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_WITHDRAWN'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_MOVED_TO_HOME'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_MOVED_TO_RUCKSACK'; day: number; citizenId: string; item: ItemInstance }
-  | {
-      type: 'CONTAINER_OPENED'
-      day: number
-      citizenId: string
-      containerId: string
-      containerType: ItemType
-      source: ItemStorage
-      output: ItemInstance
-      rngStateAfter: number
-    }
+  | { type: 'CONTAINER_OPENED'; day: number; citizenId: string; containerId: string; containerType: ItemType; source: ItemStorage; output: ItemInstance; rngStateAfter: number }
   | { type: 'WATER_TAKEN'; day: number; citizenId: string; item: ItemInstance }
-  | {
-      type: 'ITEM_CONSUMED'
-      day: number
-      citizenId: string
-      item: ItemInstance
-      source: ItemStorage
-      kind: ConsumableKind
-    }
+  | { type: 'ITEM_CONSUMED'; day: number; citizenId: string; item: ItemInstance; source: ItemStorage; kind: ConsumableKind }
   | { type: 'HOME_UPGRADED'; day: number; citizenId: string; from: HomeLevel; to: HomeLevel; defenseAfter: number }
   | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }
-  | {
-      type: 'CONSTRUCTION_COMPLETED'
-      day: number
-      citizenId: string
-      projectId: ConstructionId
-      consumed: Partial<Record<ItemType, number>>
-      defenseBonus: number
-    }
-  | {
-      type: 'WORKSHOP_CONVERTED'
-      day: number
-      citizenId: string
-      recipeId: WorkshopRecipeId
-      input: ItemType
-      inputCount: number
-      output: ItemType
-      outputCount: number
-    }
+  | { type: 'CONSTRUCTION_COMPLETED'; day: number; citizenId: string; projectId: ConstructionId; consumed: Partial<Record<ItemType, number>>; defenseBonus: number }
+  | { type: 'WORKSHOP_CONVERTED'; day: number; citizenId: string; recipeId: WorkshopRecipeId; input: ItemType; inputCount: number; output: ItemType; outputCount: number }
   | { type: 'CITIZEN_DIED'; day: number; citizenId: string; reason: DeathReason }
   | { type: 'NIGHT_RESOLVED'; day: number; report: NightReport }
   | { type: 'DAY_STARTED'; day: number }
