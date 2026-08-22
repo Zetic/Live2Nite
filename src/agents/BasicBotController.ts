@@ -26,18 +26,20 @@ function findRescueTarget(state: GameState, citizenId: string): Citizen | null {
 
 function isNeededAsAnchor(state: GameState, citizenId: string): boolean {
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
-  if (!citizen || citizen.location.type !== 'world') return false
+  if (!citizen) return false
+  const location = citizen.location
+  if (location.type !== 'world') return false
 
   const companion = state.citizens.find((candidate) =>
     candidate.id !== citizenId &&
     candidate.alive &&
     candidate.location.type === 'world' &&
-    candidate.location.x === citizen.location.x &&
-    candidate.location.y === citizen.location.y,
+    candidate.location.x === location.x &&
+    candidate.location.y === location.y,
   )
   if (!companion) return false
 
-  const control = zoneControl(state, citizen.location.x, citizen.location.y)
+  const control = zoneControl(state, location.x, location.y)
   return control.zombiePoints > Math.max(0, control.humanPoints - 2)
 }
 
