@@ -14,10 +14,12 @@ Live2Nite starts as a single-player browser game but keeps the simulation indepe
 - `actions.ts`: legal-action generation for every controller.
 - `commands.ts`: command validation and event production.
 - `events.ts`: authoritative event reduction into game state.
-- `game.ts`: game creation and day/night lifecycle.
+- `game.ts`: initial game creation plus the public day/night entry point.
+- `night.ts`: isolated horde-strength generation, Watchtower estimates, breach distribution, and home survival.
+- `defense.ts`: shared town-defense aggregation, including defensive objects stored in living citizens' homes.
 - `world.ts`: map generation, coordinates, zone control, and normal/depleted search state.
-- `items.ts`: item definitions, starter packages, consumable metadata, and normal/depleted scavenging pools.
-- `home.ts`: base Camp Bed storage and daily citizen-use state.
+- `items.ts`: item definitions, starter packages, consumable metadata, defense metadata, and normal/depleted scavenging pools.
+- `home.ts`: home levels, personal defense, storage, and daily citizen-use state.
 - `well.ts`: deterministic starting-well generation.
 - `construction.ts`: construction catalog and material requirements.
 - `workshop.ts`: Workshop recipes and processing rules.
@@ -27,7 +29,7 @@ Live2Nite starts as a single-player browser game but keeps the simulation indepe
 
 `getLegalActions(gameState, citizenId)` is the common action surface for every controller. React, traditional bots, future LLM-assisted bots, and future remote humans all operate through the same legal commands. No controller directly mutates AP, inventory, homes, the well, map, bank, construction, gate, or other simulation state.
 
-The current legal surface includes personal storage transfers, container opening, bank deposits/withdrawals, well withdrawal, food/water consumption, gate operations, movement, normal/depleted search, pickup, construction labor, and Workshop processing.
+The current legal surface includes personal storage transfers, container opening, bank deposits/withdrawals, well withdrawal, food/water consumption, the Camp Bed -> Tent home upgrade, gate operations, movement, normal/depleted search, pickup, construction labor, and Workshop processing.
 
 ## Command and event flow
 
@@ -38,21 +40,29 @@ The current legal surface includes personal storage transfers, container opening
 
 Container contents and depleted-search outcomes are selected by the command layer from stored RNG state, then recorded in events so the reducer remains deterministic and replayable.
 
-## Personal vs shared storage
+## Night resolution
 
-The simulation distinguishes three storage contexts:
+Night resolution is isolated in `night.ts` instead of expanding `game.ts` into another rules hub.
 
-- rucksack: the citizen's carried inventory and the only personal items available outside;
-- home chest: private town storage associated with that citizen;
-- town bank: shared storage used by construction and available to all citizens.
+1. Citizens still outside die before the town attack while camping is deferred.
+2. The nightly horde strength is generated from an isolated seed derived from town seed + day, so opening a package or performing a depleted search cannot silently change tonight's attack.
+3. Closed-gate town defense blocks zombies one-for-one. An open gate still nullifies shared town defense.
+4. Any zombies that get through are assigned uniformly at random across surviving citizens in town. Repeating that assignment for every zombie reproduces the documented binomial per-citizen distribution.
+5. A citizen survives when zombies assigned to their home are less than or equal to their personal defense. Otherwise they die from a home breach.
 
-Bank entries are currently represented as counts rather than individual instances. Withdrawing one bank item creates a new deterministic item instance and removes any bank-defense contribution that item provided.
+The first ten horde ranges are anchored to surviving English Die2Nite sample data. Later-day growth and the exact Watchtower uncertainty envelope remain isolated adaptations until the original algorithms are reconstructed more precisely.
+
+## Personal vs shared defense
+
+The existing `town.defense` value remains the shared defense accumulated by the current bootstrap town, Bank defensive objects, and defensive construction bonuses. Defensive items stored at Home contribute their documented reduced home value to both personal protection and the attack-time shared defense calculation.
+
+Structural home defense is currently personal only. The exact original contribution of housing levels to the shared town-defense display is not treated as settled in this slice.
 
 ## Facility navigation
 
-The generic Town screen has been removed. The persistent shell exposes distinct destinations for Home, The Well, The Bank, Construction Sites, World Beyond, Citizens, and Chronicle.
+The generic Town screen is removed. The persistent shell exposes Home, The Well, The Bank, Construction Sites, World Beyond, Citizens, and Chronicle.
 
-Operational built sites register additional destinations from game state. The Workshop is the first dynamic facility: its navigation entry appears only after `town.construction.workshop.completed` becomes true. Future operational buildings such as the Watchtower can follow the same pattern without expanding a generic Town dashboard.
+Operational built sites register additional destinations from game state. Workshop and Watchtower now both follow this pattern: their navigation entries appear only after their respective construction projects are complete.
 
 The gate belongs to the World Beyond travel flow. Returning to town leaves the player on the World Beyond screen so the open gate remains visible and can be closed before night.
 
@@ -69,17 +79,17 @@ The exact depleted-search cadence and loot weights remain placeholder rules pend
 
 ## Agent organization
 
-`BasicBotController` handles high-level sequencing while town-specific work is delegated to `townWork.ts`. Bots use the same search, Bank, construction, Workshop, gate, movement, and rescue commands as the human player.
+`BasicBotController` handles high-level sequencing while town-specific work is delegated to `townWork.ts`. Bots use the same search, Bank, construction, Workshop, home-upgrade, gate, movement, and rescue commands as the human player. Once the Watchtower is built, the traditional town-work layer can use its estimate to prioritize the basic Tent upgrade when the estimated minimum exceeds current town defense.
 
 ## Determinism
 
 Simulation randomness is generated from stored seed/RNG state. `Math.random()` should not be used inside the game core. A seed plus the same ordered commands should reproduce the same simulation result.
 
-Starting well water uses an isolated deterministic seed derived from the town seed so the well does not perturb initial World Beyond generation. Runtime depleted searches advance the main RNG state through recorded events.
+Starting well water and nightly horde resolution use isolated deterministic seeds derived from the town seed. Runtime depleted searches and container outcomes advance the main RNG state through recorded events.
 
 ## Persistence versions
 
-Save data is schema-versioned. Schema version 5 adds depleted-search history to zones and search-mode metadata to new search events. The IndexedDB adapter migrates schema-2 through schema-4 saves forward, preserves existing world/town/citizen progress, adds depleted-search tracking, and normalizes undiscovered legacy normal-loot entries so low-grade Workshop feedstock no longer appears as new undepleted loot.
+Save data remains schema version 5 because PR #7 adds backward-compatible enum/event/report extensions rather than requiring a destructive state migration. Existing v5 saves and older saves already migrated to v5 remain loadable; older `NightReport` records simply lack the new optional breach-detail fields.
 
 ## Event history
 
