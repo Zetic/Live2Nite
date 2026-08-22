@@ -36,9 +36,9 @@ function withInventory(game: GameState, types: ItemType[]): GameState {
 }
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v4 citizens with a Camp Bed, four chest slots, and both starter packages', () => {
+  it('starts schema v5 citizens with a Camp Bed, four chest slots, and both starter packages', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(4)
+    expect(game.schemaVersion).toBe(5)
     expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.storage.map((item) => item.type).sort().join(',') === 'citizen_welcome_pack,doggy_bag')).toBe(true)
