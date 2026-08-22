@@ -8,6 +8,8 @@ export const WORLD_MAX_X = 6
 export const WORLD_MIN_Y = -6
 export const WORLD_MAX_Y = 6
 export const SPECIAL_SITE_COUNT = 12
+export const NORMAL_ZONE_SEARCH_MIN = 5
+export const NORMAL_ZONE_SEARCH_MAX = 7
 
 export function zoneKey(x: number, y: number): string { return `${x},${y}` }
 export function isTownGateZone(x: number, y: number): boolean { return x === 0 && y === 0 }
@@ -71,7 +73,11 @@ export function createWorld(seed: number): { world: WorldState; rngState: number
       const distance = Math.abs(x) + Math.abs(y)
       const zombieRoll = randomInt(rngState, 0, Math.min(12, 2 + Math.floor(distance / 2)))
       rngState = zombieRoll.state
-      const searchRoll = randomInt(rngState, 1, 3)
+      // Surviving play guidance describes one ordinary citizen commonly taking about
+      // twelve hours (~six two-hour autosearches) to exhaust a productive zone. The
+      // original server formula is not recovered, so Live2Nite uses a 5–7 envelope
+      // rather than the old 1–3 placeholder that starved the Day-1 economy.
+      const searchRoll = randomInt(rngState, NORMAL_ZONE_SEARCH_MIN, NORMAL_ZONE_SEARCH_MAX)
       rngState = searchRoll.state
       const hiddenLoot: ItemType[] = []
       for (let i = 0; i < searchRoll.value; i += 1) {
