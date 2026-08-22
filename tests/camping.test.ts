@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { BasicBotController } from '../src/agents/BasicBotController'
+import { planMission } from '../src/agents/planning/ExpeditionPlanner'
 import { campingChancePercent, ORDINARY_CAMPING_CAP_PERCENT } from '../src/core/camping'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
@@ -6,6 +8,7 @@ import { createInitialGame, resolveNight } from '../src/core/game'
 import type { BotMissionAssignment, GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
 
+const bots=new BasicBotController()
 function outsideAt(game:GameState,citizenId:string,x:number,y:number):GameState{
   const key=zoneKey(x,y)
   return{
@@ -15,7 +18,7 @@ function outsideAt(game:GameState,citizenId:string,x:number,y:number):GameState{
     citizens:game.citizens.map((citizen)=>citizen.id===citizenId?{...citizen,location:{type:'world' as const,x,y}}:citizen),
   }
 }
-function mission():BotMissionAssignment{return{missionId:'overnight-test',role:'scout',purpose:'explore',target:{x:4,y:0},targetLabel:'Scout [4,0]',reason:'test',phase:'camp',assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false,allowsCamping:true}}
+function mission(targetX=4,phase:BotMissionAssignment['phase']='camp',allowsCamping=true):BotMissionAssignment{return{missionId:'overnight-test',role:'scout',purpose:'explore',target:{x:targetX,y:0},targetLabel:`Scout [${targetX},0]`,reason:'test',phase,assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false,allowsCamping}}
 
 describe('camping and overnight survival',()=>{
   it('starts schema v11 with camping state and campsite state initialized',()=>{
@@ -74,6 +77,28 @@ describe('camping and overnight survival',()=>{
     const first=campingChancePercent(game,'c02')
     game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,camping:{...citizen.camping,hidden:true,survivalChance:50,hiddenDay:1}}:citizen)}
     expect(campingChancePercent(game,'c02')).toBeLessThan(first)
+  })
+
+  it('plans an overnight mission only when a safe same-day round trip is not feasible',()=>{
+    let game=createInitialGame(131,2)
+    game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,inventory:[{id:'water',type:'water_ration' as const}]}:citizen)}
+    const overnight=mission(6,'prepare',true)
+    const overnightPlan=planMission(game,'c02',overnight)
+    expect(overnightPlan?.roundTripRequiredAp).toBeGreaterThan(overnightPlan?.loadout.potentialAp??0)
+    expect(overnightPlan?.campingPlanned).toBe(true)
+    expect(overnightPlan?.feasible).toBe(true)
+    const nearby=planMission(game,'c02',mission(2,'prepare',true))
+    expect(nearby?.campingPlanned).toBe(false)
+    expect(nearby?.feasible).toBe(true)
+  })
+
+  it('lets a camp-phase bot spend preparation AP and then hide deliberately',()=>{
+    let game=outsideAt(createInitialGame(132,2),'c02',6,0)
+    game={...game,clock:{hour:20,phase:'day'},citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,inventory:[{id:'water',type:'water_ration' as const}]}:citizen),botMissions:{c02:mission(6,'camp',true)}}
+    for(let step=0;step<10&&!game.citizens[1].camping.hidden;step+=1){const command=bots.decide(game,'c02');expect(command).toBeTruthy();game=executeCommand(game,command!).state}
+    expect(game.citizens[1].camping.hidden).toBe(true)
+    expect(game.events.some((event)=>event.type==='CAMP_IMPROVED'&&event.citizenId==='c02')).toBe(true)
+    expect(game.events.some((event)=>event.type==='CITIZEN_HIDING_SET'&&event.citizenId==='c02'&&event.hidden)).toBe(true)
   })
 
   it('still kills an outside citizen who never hid',()=>{
