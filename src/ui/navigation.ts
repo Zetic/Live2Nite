@@ -24,7 +24,7 @@ const FACILITY_SCREENS: Array<ScreenDefinition & { projectId: ConstructionId }> 
 const GLOBAL_SCREENS: ScreenDefinition[] = [
   { id: 'world', label: 'World Beyond', short: 'Gate & expeditions' },
   { id: 'citizens', label: 'Citizens', short: 'Population' },
-  { id: 'chronicle', label: 'Chronicle', short: 'Town history' },
+  { id: 'chronicle', label: 'Town Records', short: 'History & statistics' },
 ]
 
 export function availableScreens(game: GameState): ScreenDefinition[] {
