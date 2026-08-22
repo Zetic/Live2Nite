@@ -1,3 +1,4 @@
+import { zoneKey } from './world'
 import type { GameEvent, GameState } from './types'
 
 function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
@@ -12,16 +13,96 @@ function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
         ),
       }
 
-    case 'DEFENSE_CHANGED':
+    case 'GATE_SET':
+      return { ...state, town: { ...state.town, gateOpen: event.open } }
+
+    case 'CITIZEN_LOCATION_CHANGED':
       return {
         ...state,
-        town: { ...state.town, defense: Math.max(0, state.town.defense + event.amount) },
+        citizens: state.citizens.map((citizen) =>
+          citizen.id === event.citizenId ? { ...citizen, location: event.location } : citizen,
+        ),
       }
 
-    case 'WATER_CHANGED':
+    case 'ZONE_DISCOVERED': {
+      const zone = state.world.zones[event.zoneKey]
+      if (!zone || zone.discovered) return state
       return {
         ...state,
-        town: { ...state.town, water: Math.max(0, state.town.water + event.amount) },
+        world: {
+          ...state.world,
+          zones: { ...state.world.zones, [event.zoneKey]: { ...zone, discovered: true } },
+        },
+      }
+    }
+
+    case 'ZONE_SEARCHED': {
+      const zone = state.world.zones[event.zoneKey]
+      if (!zone) return state
+      return {
+        ...state,
+        nextItemId: event.item ? state.nextItemId + 1 : state.nextItemId,
+        world: {
+          ...state.world,
+          zones: {
+            ...state.world.zones,
+            [event.zoneKey]: {
+              ...zone,
+              searchesRemaining: Math.max(0, zone.searchesRemaining - 1),
+              searchedBy: [...zone.searchedBy, event.citizenId],
+              hiddenLoot: zone.hiddenLoot.slice(1),
+              groundItems: event.item ? [...zone.groundItems, event.item] : zone.groundItems,
+            },
+          },
+        },
+      }
+    }
+
+    case 'ITEM_PICKED_UP': {
+      const zone = state.world.zones[event.zoneKey]
+      if (!zone) return state
+      return {
+        ...state,
+        citizens: state.citizens.map((citizen) =>
+          citizen.id === event.citizenId
+            ? { ...citizen, inventory: [...citizen.inventory, event.item] }
+            : citizen,
+        ),
+        world: {
+          ...state.world,
+          zones: {
+            ...state.world.zones,
+            [event.zoneKey]: {
+              ...zone,
+              groundItems: zone.groundItems.filter((item) => item.id !== event.item.id),
+            },
+          },
+        },
+      }
+    }
+
+    case 'ITEM_DEPOSITED': {
+      const currentCount = state.town.bank[event.item.type] ?? 0
+      return {
+        ...state,
+        citizens: state.citizens.map((citizen) =>
+          citizen.id === event.citizenId
+            ? { ...citizen, inventory: citizen.inventory.filter((item) => item.id !== event.item.id) }
+            : citizen,
+        ),
+        town: {
+          ...state.town,
+          bank: { ...state.town.bank, [event.item.type]: currentCount + 1 },
+        },
+      }
+    }
+
+    case 'CITIZEN_DIED':
+      return {
+        ...state,
+        citizens: state.citizens.map((citizen) =>
+          citizen.id === event.citizenId ? { ...citizen, alive: false, ap: 0 } : citizen,
+        ),
       }
 
     case 'NIGHT_RESOLVED':
@@ -42,4 +123,10 @@ function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
 export function applyEvents(state: GameState, events: GameEvent[]): GameState {
   const nextState = events.reduce(reduceSingleEvent, state)
   return { ...nextState, events: [...state.events, ...events] }
+}
+
+export function currentZoneKey(state: GameState, citizenId: string): string | null {
+  const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
+  if (!citizen || citizen.location.type !== 'world') return null
+  return zoneKey(citizen.location.x, citizen.location.y)
 }

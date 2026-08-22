@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BasicBotController } from '../agents/BasicBotController'
 import { runBotPhase } from '../agents/runBotPhase'
+import { getLegalActions } from '../core/actions'
 import { executeCommand, InvalidCommandError } from '../core/commands'
 import { createInitialGame, resolveNight } from '../core/game'
-import type { GameEvent, GameState } from '../core/types'
+import { itemName, ITEM_TYPES } from '../core/items'
+import type { Direction, GameCommand, GameEvent, GameState } from '../core/types'
+import { getZone, zoneControl, zoneKey } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
 import './app.css'
 
@@ -19,11 +22,24 @@ function newSeed(): number {
 function describeEvent(event: GameEvent): string {
   switch (event.type) {
     case 'AP_SPENT': return `${event.citizenId} spent ${event.amount} AP.`
-    case 'DEFENSE_CHANGED': return `Defense ${event.amount >= 0 ? '+' : ''}${event.amount}.`
-    case 'WATER_CHANGED': return `Water ${event.amount >= 0 ? '+' : ''}${event.amount}.`
-    case 'NIGHT_RESOLVED': return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.defenseBeforeAttack}${event.report.breached ? ' — BREACH' : ' — held'}.`
+    case 'GATE_SET': return `${event.citizenId} ${event.open ? 'opened' : 'closed'} the gate.`
+    case 'CITIZEN_LOCATION_CHANGED': return event.location.type === 'town'
+      ? `${event.citizenId} entered town.`
+      : `${event.citizenId} moved to [${event.location.x},${event.location.y}].`
+    case 'ZONE_DISCOVERED': return `Zone [${event.zoneKey}] was discovered.`
+    case 'ZONE_SEARCHED': return event.item
+      ? `${event.citizenId} searched [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.`
+      : `${event.citizenId} searched [${event.zoneKey}] and found nothing.`
+    case 'ITEM_PICKED_UP': return `${event.citizenId} picked up ${itemName(event.item.type)}.`
+    case 'ITEM_DEPOSITED': return `${event.citizenId} deposited ${itemName(event.item.type)}.`
+    case 'CITIZEN_DIED': return `${event.citizenId} died outside during the nightly attack.`
+    case 'NIGHT_RESOLVED': return `Night ${event.day}: attack ${event.report.attackStrength} vs effective defense ${event.report.effectiveDefense}${event.report.breached ? ' — BREACH' : ' — held'}.`
     case 'DAY_STARTED': return `Day ${event.day} began.`
   }
+}
+
+function findAction<T extends GameCommand['type']>(actions: GameCommand[], type: T): Extract<GameCommand, { type: T }> | undefined {
+  return actions.find((action) => action.type === type) as Extract<GameCommand, { type: T }> | undefined
 }
 
 export function App() {
@@ -44,17 +60,29 @@ export function App() {
 
   const player = game.citizens[0]
   const alive = useMemo(() => game.citizens.filter((citizen) => citizen.alive).length, [game.citizens])
+  const legalActions = useMemo(() => player ? getLegalActions(game, player.id) : [], [game, player])
+  const currentZone = player?.location.type === 'world' ? getZone(game.world, player.location.x, player.location.y) : null
+  const control = player?.location.type === 'world' ? zoneControl(game, player.location.x, player.location.y) : null
 
-  const act = (type: 'WORK_DEFENSE' | 'GATHER_WATER') => {
+  const act = (command: GameCommand | undefined) => {
+    if (!command) return
     try {
-      setGame((current) => executeCommand(current, { type, citizenId: current.citizens[0].id }).state)
+      setGame((current) => executeCommand(current, command).state)
       setError(null)
     } catch (caught) {
       setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.')
     }
   }
 
+  const move = (direction: Direction) => {
+    const command = legalActions.find((action): action is Extract<GameCommand, { type: 'MOVE' }> =>
+      action.type === 'MOVE' && action.direction === direction,
+    )
+    act(command)
+  }
+
   const endDay = () => {
+    if (!player?.alive) return
     setGame((current) => resolveNight(runBotPhase(current, botController)))
     setError(null)
   }
@@ -71,7 +99,7 @@ export function App() {
     <main className="shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">LOCAL PROTOTYPE</p>
+          <p className="eyebrow">WORLD BEYOND PROTOTYPE</p>
           <h1>Live2Nite</h1>
           <p className="subtitle">Day {game.day} · Seed {game.seed}</p>
         </div>
@@ -79,29 +107,48 @@ export function App() {
       </header>
 
       <section className="stats" aria-label="Town status">
-        <article><span>Population</span><strong>{alive}</strong></article>
-        <article><span>Water</span><strong>{game.town.water}</strong></article>
+        <article><span>Population</span><strong>{alive}/40</strong></article>
+        <article><span>Gate</span><strong>{game.town.gateOpen ? 'OPEN' : 'CLOSED'}</strong></article>
         <article><span>Defense</span><strong>{game.town.defense}</strong></article>
         <article><span>Your AP</span><strong>{player.ap}/{player.maxAp}</strong></article>
       </section>
 
       {game.lastNight && (
         <section className={`night ${game.lastNight.breached ? 'danger' : ''}`}>
-          <strong>Last night:</strong> attack {game.lastNight.attackStrength} vs defense {game.lastNight.defenseBeforeAttack}.{' '}
-          {game.lastNight.breached ? 'The defenses were breached.' : 'The town held.'}
+          <strong>Last night:</strong> attack {game.lastNight.attackStrength} vs effective defense {game.lastNight.effectiveDefense}.{' '}
+          {game.lastNight.breached ? 'The town was breached.' : 'The town held.'}
+          {game.lastNight.outsideDeaths > 0 && ` ${game.lastNight.outsideDeaths} citizen(s) died outside.`}
         </section>
       )}
 
-      <div className="grid">
-        <section className="panel">
-          <h2>Town</h2>
-          <p>Spend the human citizen's AP. Basic bots act automatically when the day ends.</p>
-          <div className="actions">
-            <button disabled={player.ap < 2} onClick={() => act('WORK_DEFENSE')}>Reinforce defenses <small>2 AP</small></button>
-            <button disabled={player.ap < 2} onClick={() => act('GATHER_WATER')}>Gather water <small>2 AP</small></button>
-            <button className="primary" onClick={endDay}>End day</button>
-          </div>
+      {!player.alive && (
+        <section className="night danger">
+          <strong>You died outside during the nightly attack.</strong> Reset the run to continue the current single-player prototype.
+        </section>
+      )}
+
+      <div className="game-grid">
+        <section className="panel action-panel">
+          {player.location.type === 'town' ? (
+            <TownView game={game} legalActions={legalActions} act={act} />
+          ) : (
+            <WorldView
+              game={game}
+              legalActions={legalActions}
+              currentZone={currentZone}
+              control={control}
+              act={act}
+              move={move}
+            />
+          )}
           {error && <p className="error">{error}</p>}
+          <button className="primary end-day" disabled={!player.alive} onClick={endDay}>End day / run bots / resolve night</button>
+        </section>
+
+        <section className="panel map-panel">
+          <h2>World Beyond</h2>
+          <WorldMap game={game} />
+          <p className="muted map-key">? unknown · number = observed zombies · T town gate · @ you</p>
         </section>
 
         <section className="panel">
@@ -109,8 +156,8 @@ export function App() {
           <div className="citizen-list">
             {game.citizens.slice(0, 12).map((citizen) => (
               <div className="citizen" key={citizen.id}>
-                <span>{citizen.name}</span>
-                <span>{citizen.controller === 'human' ? 'HUMAN' : 'BOT'} · {citizen.ap} AP</span>
+                <span>{citizen.name}{!citizen.alive ? ' †' : ''}</span>
+                <span>{citizen.controller === 'human' ? 'HUMAN' : 'BOT'} · {citizen.ap} AP · {citizen.location.type === 'town' ? 'TOWN' : `${citizen.location.x},${citizen.location.y}`}</span>
               </div>
             ))}
             <p className="muted">+ {Math.max(0, game.citizens.length - 12)} additional citizens</p>
@@ -120,7 +167,7 @@ export function App() {
         <section className="panel log-panel">
           <h2>Event Log</h2>
           <ol className="log">
-            {game.events.slice(-24).reverse().map((event, index) => (
+            {game.events.slice(-40).reverse().map((event, index) => (
               <li key={`${game.events.length - index}-${event.type}`}>{describeEvent(event)}</li>
             ))}
           </ol>
@@ -128,4 +175,126 @@ export function App() {
       </div>
     </main>
   )
+}
+
+function TownView({ game, legalActions, act }: {
+  game: GameState
+  legalActions: GameCommand[]
+  act: (command: GameCommand | undefined) => void
+}) {
+  const player = game.citizens[0]
+  const open = findAction(legalActions, 'OPEN_GATE')
+  const close = findAction(legalActions, 'CLOSE_GATE')
+  const exit = findAction(legalActions, 'EXIT_TOWN')
+  const deposits = legalActions.filter((action): action is Extract<GameCommand, { type: 'DEPOSIT_ITEM' }> => action.type === 'DEPOSIT_ITEM')
+
+  return (
+    <>
+      <h2>Town</h2>
+      <p>The town is safe during the day. Open the gate to enter the World Beyond. Gate actions cost 1 AP.</p>
+
+      <h3>Gate</h3>
+      <div className="actions inline-actions">
+        {open && <button onClick={() => act(open)}>Open gate <small>1 AP</small></button>}
+        {close && <button onClick={() => act(close)}>Close gate <small>1 AP</small></button>}
+        {exit && <button className="primary" onClick={() => act(exit)}>Enter the World Beyond <small>0 AP</small></button>}
+      </div>
+
+      <h3>Backpack {player.inventory.length}/{player.inventoryCapacity}</h3>
+      {player.inventory.length === 0 ? <p className="muted">Empty.</p> : (
+        <div className="item-list">
+          {player.inventory.map((item) => {
+            const command = deposits.find((candidate) => candidate.itemId === item.id)
+            return <button key={item.id} onClick={() => act(command)}>Deposit {itemName(item.type)} <small>0 AP</small></button>
+          })}
+        </div>
+      )}
+
+      <h3>Town Bank</h3>
+      <div className="bank-grid">
+        {ITEM_TYPES.map((type) => <span key={type}>{itemName(type)} <strong>×{game.town.bank[type] ?? 0}</strong></span>)}
+      </div>
+    </>
+  )
+}
+
+function WorldView({ game, legalActions, currentZone, control, act, move }: {
+  game: GameState
+  legalActions: GameCommand[]
+  currentZone: ReturnType<typeof getZone>
+  control: ReturnType<typeof zoneControl> | null
+  act: (command: GameCommand | undefined) => void
+  move: (direction: Direction) => void
+}) {
+  const player = game.citizens[0]
+  if (player.location.type !== 'world' || !currentZone || !control) return null
+
+  const search = findAction(legalActions, 'SEARCH_ZONE')
+  const enter = findAction(legalActions, 'ENTER_TOWN')
+  const pickups = legalActions.filter((action): action is Extract<GameCommand, { type: 'PICK_UP_ITEM' }> => action.type === 'PICK_UP_ITEM')
+
+  return (
+    <>
+      <h2>World Beyond [{player.location.x},{player.location.y}]</h2>
+      <div className={`control ${control.trapped ? 'danger' : ''}`}>
+        <span>Humans: {control.humans} ({control.humanPoints} CP)</span>
+        <span>Zombies: {control.zombies} ({control.zombiePoints} CP)</span>
+        <strong>{control.trapped ? 'TRAPPED' : 'ZONE CONTROLLED'}</strong>
+      </div>
+
+      <div className="movement" aria-label="Movement controls">
+        <button disabled={!legalActions.some((a) => a.type === 'MOVE' && a.direction === 'NORTH')} onClick={() => move('NORTH')}>↑ <small>1 AP</small></button>
+        <div>
+          <button disabled={!legalActions.some((a) => a.type === 'MOVE' && a.direction === 'WEST')} onClick={() => move('WEST')}>←</button>
+          <button disabled={!legalActions.some((a) => a.type === 'MOVE' && a.direction === 'SOUTH')} onClick={() => move('SOUTH')}>↓</button>
+          <button disabled={!legalActions.some((a) => a.type === 'MOVE' && a.direction === 'EAST')} onClick={() => move('EAST')}>→</button>
+        </div>
+      </div>
+
+      {enter && <button className="primary" onClick={() => act(enter)}>Enter town <small>0 AP</small></button>}
+
+      <h3>Search</h3>
+      <p>{currentZone.searchesRemaining > 0 ? `${currentZone.searchesRemaining} search opportunity(s) remain in this prototype zone.` : 'This zone is depleted.'}</p>
+      <button disabled={!search} onClick={() => act(search)}>Search zone <small>0 AP</small></button>
+
+      <h3>Ground</h3>
+      {currentZone.groundItems.length === 0 ? <p className="muted">Nothing visible.</p> : (
+        <div className="item-list">
+          {currentZone.groundItems.map((item) => {
+            const command = pickups.find((candidate) => candidate.itemId === item.id)
+            return <button key={item.id} disabled={!command} onClick={() => act(command)}>Pick up {itemName(item.type)} <small>0 AP</small></button>
+          })}
+        </div>
+      )}
+
+      <h3>Backpack {player.inventory.length}/{player.inventoryCapacity}</h3>
+      <p>{player.inventory.length ? player.inventory.map((item) => itemName(item.type)).join(' · ') : 'Empty'}</p>
+    </>
+  )
+}
+
+function WorldMap({ game }: { game: GameState }) {
+  const player = game.citizens[0]
+  const rows = []
+  for (let y = game.world.maxY; y >= game.world.minY; y -= 1) {
+    const cells = []
+    for (let x = game.world.minX; x <= game.world.maxX; x += 1) {
+      const zone = game.world.zones[zoneKey(x, y)]
+      const isPlayer = player.location.type === 'world' && player.location.x === x && player.location.y === y
+      const isTown = x === 0 && y === 0
+      let label = '?'
+      if (zone.discovered) label = String(zone.zombies)
+      if (isTown) label = 'T'
+      if (isPlayer) label = '@'
+      cells.push(
+        <span
+          key={zoneKey(x, y)}
+          className={`map-cell ${zone.discovered ? 'known' : ''} ${isTown ? 'town' : ''} ${isPlayer ? 'player' : ''}`}
+          title={zone.discovered ? `[${x},${y}] · ${zone.zombies} zombies` : `[${x},${y}] · unexplored`}
+        >{label}</span>,
+      )
+    }
+    rows.push(<div className="map-row" key={y}>{cells}</div>)
+  }
+  return <div className="world-map">{rows}</div>
 }

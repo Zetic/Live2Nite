@@ -25,7 +25,10 @@ export class IndexedDbGameRepository implements GameRepository {
     return new Promise((resolve, reject) => {
       const transaction = database.transaction(STORE_NAME, 'readonly')
       const request = transaction.objectStore(STORE_NAME).get(SAVE_KEY)
-      request.onsuccess = () => resolve((request.result as GameState | undefined) ?? null)
+      request.onsuccess = () => {
+        const result = request.result as Partial<GameState> | undefined
+        resolve(result?.schemaVersion === 2 ? result as GameState : null)
+      }
       request.onerror = () => reject(request.error)
       transaction.oncomplete = () => database.close()
     })
