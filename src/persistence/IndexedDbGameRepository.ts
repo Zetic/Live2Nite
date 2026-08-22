@@ -1,3 +1,4 @@
+import { createGameClock } from '../core/clock'
 import { createConstructionState } from '../core/construction'
 import { createDailyState, createStarterHome } from '../core/home'
 import type { Citizen, GameEvent, GameState, ItemType, WorldState, WorldZone } from '../core/types'
@@ -53,13 +54,13 @@ function migrateEvents(events: unknown): GameEvent[] {
   })
 }
 
-function migrateToV5(result: Record<string, unknown>): GameState | null {
+function migrateToV6(result: Record<string, unknown>): GameState | null {
   const schemaVersion = result.schemaVersion as number | undefined
-  if (schemaVersion === 5) return result as unknown as GameState
-  if (![2, 3, 4].includes(schemaVersion ?? -1) || !Array.isArray(result.citizens) || !result.town || !result.world || typeof result.seed !== 'number') return null
+  if (schemaVersion === 6) return result as unknown as GameState
+  if (![2, 3, 4, 5].includes(schemaVersion ?? -1) || !Array.isArray(result.citizens) || !result.town || !result.world || typeof result.seed !== 'number') return null
 
-  const legacy = result as unknown as Omit<GameState, 'schemaVersion' | 'citizens' | 'town' | 'world' | 'events'> & {
-    schemaVersion: 2 | 3 | 4
+  const legacy = result as unknown as Omit<GameState, 'schemaVersion' | 'clock' | 'citizens' | 'town' | 'world' | 'events'> & {
+    schemaVersion: 2 | 3 | 4 | 5
     citizens: Array<Partial<Citizen> & Pick<Citizen, 'id'>>
     town: Omit<GameState['town'], 'well' | 'construction'> & Partial<Pick<GameState['town'], 'well' | 'construction'>>
     world: WorldState
@@ -68,7 +69,8 @@ function migrateToV5(result: Record<string, unknown>): GameState | null {
 
   return {
     ...(legacy as unknown as GameState),
-    schemaVersion: 5,
+    schemaVersion: 6,
+    clock: createGameClock(),
     citizens: legacy.citizens.map(migrateCitizen),
     town: {
       ...legacy.town,
@@ -88,7 +90,7 @@ export class IndexedDbGameRepository implements GameRepository {
       const request = transaction.objectStore(STORE_NAME).get(SAVE_KEY)
       request.onsuccess = () => {
         const result = request.result as Record<string, unknown> | undefined
-        resolve(result ? migrateToV5(result) : null)
+        resolve(result ? migrateToV6(result) : null)
       }
       request.onerror = () => reject(request.error)
       transaction.oncomplete = () => database.close()

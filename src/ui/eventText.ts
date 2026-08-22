@@ -1,3 +1,4 @@
+import { formatGameHour } from '../core/clock'
 import { CONSTRUCTIONS } from '../core/construction'
 import { homeName } from '../core/home'
 import { itemName } from '../core/items'
@@ -38,12 +39,13 @@ export function describeEvent(event: GameEvent, game: GameState): string {
       const homeDeaths = event.report.homeDeaths ?? 0
       return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${inside > 0 ? ` — ${inside} zombie(s) breached, ${homeDeaths} home death(s)` : ' — the town held'}.`
     }
-    case 'DAY_STARTED': return `Day ${event.day} began.`
+    case 'TIME_ADVANCED': return `Town time advanced from ${formatGameHour(event.fromHour)} to ${formatGameHour(event.toHour)}.`
+    case 'DAY_STARTED': return `Day ${event.day} began at ${formatGameHour(event.hour ?? 1)}.`
   }
 }
 
 export function isHighlightEvent(event: GameEvent): boolean {
-  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','ZONE_DISCOVERED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK'].includes(event.type)
+  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','ZONE_DISCOVERED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','TIME_ADVANCED'].includes(event.type)
 }
 
 export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'system'|'home' {
@@ -51,6 +53,7 @@ export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'sy
     case 'CITIZEN_DIED': return 'danger'
     case 'NIGHT_RESOLVED': return event.report.breached?'danger':'night'
     case 'DAY_STARTED': return 'night'
+    case 'TIME_ADVANCED': return event.phase === 'attack' ? 'night' : 'system'
     case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': return 'world'
     case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'ITEM_CONSUMED': case 'HOME_UPGRADED': return 'home'
     case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'WORKSHOP_CONVERTED': case 'GATE_SET': return 'town'

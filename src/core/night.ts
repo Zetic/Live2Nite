@@ -1,3 +1,4 @@
+import { ATTACK_HOUR, DAY_START_HOUR } from './clock'
 import { totalTownDefense } from './defense'
 import { applyEvents } from './events'
 import { personalDefense } from './home'
@@ -18,8 +19,6 @@ export interface WatchtowerEstimate {
   basis: AttackRange['basis']
 }
 
-// These first ten ranges are anchored to the surviving English Die2Nite attack-strength
-// sample table. They are not claimed to reconstruct the original server RNG distribution.
 const HISTORICAL_RANGES: Record<number, readonly [number, number]> = {
   1: [21, 29],
   2: [25, 84],
@@ -36,16 +35,9 @@ const HISTORICAL_RANGES: Record<number, readonly [number, number]> = {
 export function attackRangeForDay(day: number): AttackRange {
   const historical = HISTORICAL_RANGES[Math.max(1, Math.floor(day))]
   if (historical) return { min: historical[0], max: historical[1], basis: 'historical-sample' }
-
-  // The exact later-day curve is still under reconstruction. Keep it isolated here so a
-  // future historically verified curve can replace this without touching night resolution.
   const steps = Math.max(1, Math.floor(day) - 10)
   const growth = Math.pow(1.15, steps)
-  return {
-    min: Math.round(611 * growth),
-    max: Math.round(901 * growth),
-    basis: 'extrapolated',
-  }
+  return { min: Math.round(611 * growth), max: Math.round(901 * growth), basis: 'extrapolated' }
 }
 
 function isolatedNightSeed(seed: number, day: number, salt: number): number {
@@ -62,24 +54,13 @@ export function watchtowerEstimate(state: GameState): WatchtowerEstimate | null 
   if (!state.town.construction.watchtower.completed) return null
   const range = attackRangeForDay(state.day)
   const actual = attackStrengthForDay(state.seed, state.day)
-
-  // The original Watchtower provides an estimate, while Scanner/Predictor improve its
-  // usefulness. The exact base-tower error distribution is not preserved in our sources,
-  // so this deliberately uses a rough ±15% envelope and is documented as an adaptation.
   const margin = Math.max(3, Math.round(actual * 0.15))
-  return {
-    min: Math.max(range.min, actual - margin),
-    max: Math.min(range.max, actual + margin),
-    actual,
-    townDefense: totalTownDefense(state),
-    basis: range.basis,
-  }
+  return { min: Math.max(range.min, actual - margin), max: Math.min(range.max, actual + margin), actual, townDefense: totalTownDefense(state), basis: range.basis }
 }
 
 function distributeBreachedZombies(state: GameState, zombiesInside: number): HomeAttackOutcome[] {
   const citizens = state.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'town')
   if (zombiesInside <= 0 || citizens.length === 0) return []
-
   const assigned = new Map<string, number>()
   let rngState = isolatedNightSeed(state.seed, state.day, 0x63d83595)
   for (let zombie = 0; zombie < zombiesInside; zombie += 1) {
@@ -88,7 +69,6 @@ function distributeBreachedZombies(state: GameState, zombiesInside: number): Hom
     const citizen = citizens[roll.value]
     assigned.set(citizen.id, (assigned.get(citizen.id) ?? 0) + 1)
   }
-
   return citizens.flatMap((citizen) => {
     const zombies = assigned.get(citizen.id) ?? 0
     if (zombies === 0) return []
@@ -99,12 +79,7 @@ function distributeBreachedZombies(state: GameState, zombiesInside: number): Hom
 
 export function resolveNightAttack(state: GameState): GameState {
   const outside = state.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world')
-  const outsideDeathEvents: GameEvent[] = outside.map((citizen) => ({
-    type: 'CITIZEN_DIED',
-    day: state.day,
-    citizenId: citizen.id,
-    reason: 'outside_at_night',
-  }))
+  const outsideDeathEvents: GameEvent[] = outside.map((citizen) => ({ type: 'CITIZEN_DIED', day: state.day, hour: ATTACK_HOUR, citizenId: citizen.id, reason: 'outside_at_night' }))
   const afterOutsideDeaths = applyEvents(state, outsideDeathEvents)
 
   const attackStrength = attackStrengthForDay(afterOutsideDeaths.seed, afterOutsideDeaths.day)
@@ -114,7 +89,7 @@ export function resolveNightAttack(state: GameState): GameState {
   const homeAttacks = distributeBreachedZombies(afterOutsideDeaths, zombiesInside)
   const homeDeathEvents: GameEvent[] = homeAttacks
     .filter((outcome) => !outcome.survived)
-    .map((outcome) => ({ type: 'CITIZEN_DIED', day: state.day, citizenId: outcome.citizenId, reason: 'home_breach' }))
+    .map((outcome) => ({ type: 'CITIZEN_DIED', day: state.day, hour: ATTACK_HOUR, citizenId: outcome.citizenId, reason: 'home_breach' }))
   const afterHomeDeaths = applyEvents(afterOutsideDeaths, homeDeathEvents)
 
   const report: NightReport = {
@@ -131,7 +106,7 @@ export function resolveNightAttack(state: GameState): GameState {
   }
 
   return applyEvents(afterHomeDeaths, [
-    { type: 'NIGHT_RESOLVED', day: state.day, report },
-    { type: 'DAY_STARTED', day: state.day + 1 },
+    { type: 'NIGHT_RESOLVED', day: state.day, hour: ATTACK_HOUR, report },
+    { type: 'DAY_STARTED', day: state.day + 1, hour: DAY_START_HOUR },
   ])
 }

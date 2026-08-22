@@ -42,10 +42,7 @@ function normalSearchItem(state: GameState, zoneX: number, zoneY: number): ItemI
 
 function depletedSearchOutcome(state: GameState): { item: ItemInstance; rngStateAfter: number } {
   const roll = randomInt(state.rngState, 0, DEPLETED_SCAVENGE_LOOT_POOL.length - 1)
-  return {
-    item: { id: `i${String(state.nextItemId).padStart(6, '0')}`, type: DEPLETED_SCAVENGE_LOOT_POOL[roll.value] },
-    rngStateAfter: roll.state,
-  }
+  return { item: { id: `i${String(state.nextItemId).padStart(6, '0')}`, type: DEPLETED_SCAVENGE_LOOT_POOL[roll.value] }, rngStateAfter: roll.state }
 }
 
 function locateItem(state: GameState, citizenId: string, itemId: string): { item: ItemInstance; source: ItemStorage } {
@@ -68,16 +65,10 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
 
   switch (command.type) {
     case 'OPEN_GATE':
-      events.push(
-        { type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: GATE_AP_COST },
-        { type: 'GATE_SET', day: state.day, open: true, citizenId: command.citizenId },
-      )
+      events.push({ type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: GATE_AP_COST }, { type: 'GATE_SET', day: state.day, open: true, citizenId: command.citizenId })
       break
     case 'CLOSE_GATE':
-      events.push(
-        { type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: GATE_AP_COST },
-        { type: 'GATE_SET', day: state.day, open: false, citizenId: command.citizenId },
-      )
+      events.push({ type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: GATE_AP_COST }, { type: 'GATE_SET', day: state.day, open: false, citizenId: command.citizenId })
       break
     case 'EXIT_TOWN':
       events.push({ type: 'CITIZEN_LOCATION_CHANGED', day: state.day, citizenId: command.citizenId, location: { type: 'world', x: 0, y: 0 } })
@@ -101,12 +92,8 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
       const key = zoneKey(citizen.location.x, citizen.location.y)
       const zone = state.world.zones[key]
       const mode: SearchMode = zone.searchesRemaining > 0 ? 'normal' : 'depleted'
-      if (mode === 'normal') {
-        events.push({ type: 'ZONE_SEARCHED', day: state.day, zoneKey: key, citizenId: command.citizenId, mode, item: normalSearchItem(state, citizen.location.x, citizen.location.y) })
-      } else {
-        const outcome = depletedSearchOutcome(state)
-        events.push({ type: 'ZONE_SEARCHED', day: state.day, zoneKey: key, citizenId: command.citizenId, mode, item: outcome.item, rngStateAfter: outcome.rngStateAfter })
-      }
+      if (mode === 'normal') events.push({ type: 'ZONE_SEARCHED', day: state.day, zoneKey: key, citizenId: command.citizenId, mode, item: normalSearchItem(state, citizen.location.x, citizen.location.y) })
+      else { const outcome = depletedSearchOutcome(state); events.push({ type: 'ZONE_SEARCHED', day: state.day, zoneKey: key, citizenId: command.citizenId, mode, item: outcome.item, rngStateAfter: outcome.rngStateAfter }) }
       break
     }
     case 'PICK_UP_ITEM': {
@@ -178,34 +165,24 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
     case 'UPGRADE_HOME': {
       const target = nextHomeLevel(citizen.home.level)
       if (!target) throw new InvalidCommandError('No home upgrade is currently available')
-      events.push(
-        { type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: HOME_UPGRADE_AP_COST },
-        { type: 'HOME_UPGRADED', day: state.day, citizenId: command.citizenId, from: citizen.home.level, to: target, defenseAfter: HOME_LEVELS[target].defense },
-      )
+      events.push({ type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: HOME_UPGRADE_AP_COST }, { type: 'HOME_UPGRADED', day: state.day, citizenId: command.citizenId, from: citizen.home.level, to: target, defenseAfter: HOME_LEVELS[target].defense })
       break
     }
     case 'CONTRIBUTE_CONSTRUCTION': {
       const definition = CONSTRUCTIONS[command.projectId]
       const project = state.town.construction[command.projectId]
       const amount = Math.min(CONSTRUCTION_AP_COST, definition.apCost - project.apContributed)
-      events.push(
-        { type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount },
-        { type: 'CONSTRUCTION_AP_CONTRIBUTED', day: state.day, citizenId: command.citizenId, projectId: command.projectId, amount },
-      )
-      if (project.apContributed + amount >= definition.apCost) {
-        events.push({ type: 'CONSTRUCTION_COMPLETED', day: state.day, citizenId: command.citizenId, projectId: command.projectId, consumed: definition.resources, defenseBonus: definition.defenseBonus })
-      }
+      events.push({ type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount }, { type: 'CONSTRUCTION_AP_CONTRIBUTED', day: state.day, citizenId: command.citizenId, projectId: command.projectId, amount })
+      if (project.apContributed + amount >= definition.apCost) events.push({ type: 'CONSTRUCTION_COMPLETED', day: state.day, citizenId: command.citizenId, projectId: command.projectId, consumed: definition.resources, defenseBonus: definition.defenseBonus })
       break
     }
     case 'WORKSHOP_CONVERT': {
       const recipe = WORKSHOP_RECIPES[command.recipeId]
-      events.push(
-        { type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: recipe.apCost },
-        { type: 'WORKSHOP_CONVERTED', day: state.day, citizenId: command.citizenId, recipeId: command.recipeId, input: recipe.input, inputCount: recipe.inputCount, output: recipe.output, outputCount: recipe.outputCount },
-      )
+      events.push({ type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: recipe.apCost }, { type: 'WORKSHOP_CONVERTED', day: state.day, citizenId: command.citizenId, recipeId: command.recipeId, input: recipe.input, inputCount: recipe.inputCount, output: recipe.output, outputCount: recipe.outputCount })
       break
     }
   }
 
-  return { state: applyEvents(state, events), events }
+  const stampedEvents: GameEvent[] = events.map((event) => ({ ...event, hour: state.clock.hour }))
+  return { state: applyEvents(state, stampedEvents), events: stampedEvents }
 }

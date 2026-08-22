@@ -23,6 +23,12 @@ export type ItemStorage = 'inventory' | 'home'
 export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
 export type CombatMethod = 'fists' | ItemType
+export type ClockPhase = 'day' | 'attack'
+
+export interface GameClock {
+  hour: number
+  phase: ClockPhase
+}
 
 export interface ItemInstance {
   id: string
@@ -119,12 +125,13 @@ export interface NightReport {
 }
 
 export interface GameState {
-  schemaVersion: 5
+  schemaVersion: 6
   gameId: string
   seed: number
   rngState: number
   nextItemId: number
   day: number
+  clock: GameClock
   citizens: Citizen[]
   town: TownState
   world: WorldState
@@ -158,7 +165,7 @@ export type GameCommand =
 
 export type DeathReason = 'outside_at_night' | 'home_breach'
 
-export type GameEvent =
+export type GameEvent = (
   | { type: 'AP_SPENT'; day: number; citizenId: string; amount: number }
   | { type: 'GATE_SET'; day: number; open: boolean; citizenId: string }
   | { type: 'CITIZEN_LOCATION_CHANGED'; day: number; citizenId: string; location: CitizenLocation }
@@ -230,3 +237,5 @@ export type GameEvent =
   | { type: 'CITIZEN_DIED'; day: number; citizenId: string; reason: DeathReason }
   | { type: 'NIGHT_RESOLVED'; day: number; report: NightReport }
   | { type: 'DAY_STARTED'; day: number }
+  | { type: 'TIME_ADVANCED'; day: number; fromHour: number; toHour: number; phase: ClockPhase }
+) & { hour?: number }
