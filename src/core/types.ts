@@ -46,10 +46,11 @@ export type SpecialSiteType = 'construction_site' | 'wrecked_cars' | 'pharmacy' 
 export type SpecialSiteStatus = 'buried' | 'accessible' | 'depleted'
 export type BotMissionPurpose = 'explore' | 'gather_construction' | 'gather_food' | 'gather_medical' | 'gather_weapons' | 'rescue'
 export type BotMissionRole = 'scout' | 'gatherer' | 'excavator' | 'rescue' | 'combat'
-export type BotMissionPhase = 'prepare' | 'outbound' | 'operate' | 'return' | 'unload'
+export type BotMissionPhase = 'prepare' | 'outbound' | 'operate' | 'camp' | 'return' | 'unload'
 export type HydrationStatus = 'normal' | 'thirsty' | 'dehydrated'
 export type CitizenStatusId = 'exhausted' | 'satisfied_food' | 'satisfied_water' | 'thirsty' | 'dehydrated'
 export type CitizenStatusChangeReason = 'desert_travel' | 'drank_water' | 'nightly_progression'
+export type CampingOutlook = 'suicidal' | 'very_poor' | 'poor' | 'limited' | 'satisfactory' | 'decent'
 
 export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType }
@@ -57,6 +58,7 @@ export type CitizenLocation = { type: 'town' } | { type: 'world'; x: number; y: 
 export interface CitizenHome { level: HomeLevel; defense: number; storage: ItemInstance[]; storageCapacity: number }
 export interface CitizenDailyState { ate: boolean; drank: boolean; waterTaken: boolean; bonusWaterTaken?: boolean }
 export interface CitizenStatusState { hydration: HydrationStatus; desertStepsToday: number }
+export interface CitizenCampingState { hidden:boolean; survivalChance:number|null; hiddenDay:number|null; nightsSurvived:number; lastSurvivedDay:number|null }
 export interface Citizen {
   id: string
   name: string
@@ -70,6 +72,7 @@ export interface Citizen {
   home: CitizenHome
   daily: CitizenDailyState
   status: CitizenStatusState
+  camping: CitizenCampingState
 }
 
 export interface BotMissionAssignment {
@@ -85,6 +88,7 @@ export interface BotMissionAssignment {
   returnByHour: number
   safetyReserve: number
   emergency: boolean
+  allowsCamping?: boolean
 }
 
 export interface SpecialSiteState {
@@ -106,6 +110,7 @@ export interface WorldZone {
   depletedSearchedBy: string[]
   hiddenLoot: ItemType[]
   groundItems: ItemInstance[]
+  campImprovements: number
   specialSite?: SpecialSiteState
 }
 
@@ -128,6 +133,8 @@ export interface NightReport {
   gateOpen: boolean
   breached: boolean
   outsideDeaths: number
+  campingSurvivors?: number
+  campingDeaths?: number
   zombiesInside?: number
   homeDeaths?: number
   dehydrationDeaths?: number
@@ -135,7 +142,7 @@ export interface NightReport {
 }
 
 export interface GameState {
-  schemaVersion: 10
+  schemaVersion: 11
   gameId: string
   seed: number
   rngState: number
@@ -164,6 +171,9 @@ export type GameCommand =
   | { type: 'PICK_UP_ITEM'; citizenId: string; itemId: string }
   | { type: 'ATTACK_BAREHANDED'; citizenId: string }
   | { type: 'USE_WEAPON'; citizenId: string; itemId: string }
+  | { type: 'IMPROVE_CAMP'; citizenId: string }
+  | { type: 'HIDE_FOR_NIGHT'; citizenId: string }
+  | { type: 'LEAVE_HIDEOUT'; citizenId: string }
   | { type: 'DEPOSIT_ITEM'; citizenId: string; itemId: string }
   | { type: 'WITHDRAW_BANK_ITEM'; citizenId: string; itemType: ItemType }
   | { type: 'MOVE_ITEM_TO_HOME'; citizenId: string; itemId: string }
@@ -176,13 +186,17 @@ export type GameCommand =
   | { type: 'CONTRIBUTE_CONSTRUCTION'; citizenId: string; projectId: ConstructionId }
   | { type: 'WORKSHOP_CONVERT'; citizenId: string; recipeId: WorkshopRecipeId }
 
-export type DeathReason = 'outside_at_night' | 'home_breach' | 'dehydration'
+export type DeathReason = 'outside_at_night' | 'camping_failure' | 'home_breach' | 'dehydration'
 
 export type GameEvent = (
   | { type: 'AP_SPENT'; day: number; citizenId: string; amount: number }
   | { type: 'GATE_SET'; day: number; open: boolean; citizenId: string }
   | { type: 'CITIZEN_LOCATION_CHANGED'; day: number; citizenId: string; location: CitizenLocation; desertStep?: boolean }
   | { type: 'CITIZEN_STATUS_CHANGED'; day: number; citizenId: string; status: CitizenStatusState; reason: CitizenStatusChangeReason }
+  | { type: 'CAMP_IMPROVED'; day:number; citizenId:string; zoneKey:string; amount:number }
+  | { type: 'CAMP_IMPROVEMENTS_DECAYED'; day:number; zoneKey:string; amount:number }
+  | { type: 'CITIZEN_HIDING_SET'; day:number; citizenId:string; hidden:boolean; survivalChance:number|null }
+  | { type: 'CAMPING_RESOLVED'; day:number; citizenId:string; survivalChance:number; roll:number; survived:boolean }
   | { type: 'ZONE_DISCOVERED'; day: number; zoneKey: string }
   | { type: 'ZONE_SEARCHED'; day: number; zoneKey: string; citizenId: string; mode: SearchMode; item: ItemInstance | null; automatic?: boolean; rngStateAfter?: number }
   | { type: 'ZONE_REPLENISHED'; day: number; zoneKey: string; loot: ItemType }
