@@ -103,15 +103,38 @@ describe('Day-1 economy benchmark', () => {
     let workshops = 0
     let totalOutsideAtMidnight = 0
     let minimumLiving = 40
+    let totalBankPlanks = 0
+    let totalBankIron = 0
+    let totalWorkshopLabor = 0
+    let totalNormalSearches = 0
+    let totalAutomaticSearches = 0
+    let totalConstructionKits = 0
     for (const seed of seeds) {
       let game = createInitialGame(seed,40)
       game = advanceToHour(game,0,bots,'c01')
       if (game.town.construction.workshop.completed) workshops += 1
+      totalBankPlanks += game.town.bank.twisted_plank ?? 0
+      totalBankIron += game.town.bank.wrought_iron ?? 0
+      totalWorkshopLabor += game.town.construction.workshop.apContributed
       totalOutsideAtMidnight += game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world').length
+      totalNormalSearches += game.events.filter((event) => event.type === 'ZONE_SEARCHED' && event.mode === 'normal').length
+      totalAutomaticSearches += game.events.filter((event) => event.type === 'ZONE_SEARCHED' && event.automatic === true).length
+      totalConstructionKits += game.events.filter((event) => event.type === 'CONSTRUCTION_KIT_OPENED').length
       game = advanceOneHour(game,bots,'c01')
       minimumLiving = Math.min(minimumLiving,game.citizens.filter((citizen) => citizen.alive).length)
     }
-    console.log('DAY1 BENCHMARK', { towns:seeds.length, workshops, averageOutsideAtMidnight:totalOutsideAtMidnight/seeds.length, minimumLiving })
+    console.log('DAY1 BENCHMARK', {
+      towns:seeds.length,
+      workshops,
+      averageBankPlanks:totalBankPlanks/seeds.length,
+      averageBankIron:totalBankIron/seeds.length,
+      averageWorkshopLabor:totalWorkshopLabor/seeds.length,
+      averageNormalSearches:totalNormalSearches/seeds.length,
+      averageAutomaticSearches:totalAutomaticSearches/seeds.length,
+      constructionKitsOpened:totalConstructionKits,
+      averageOutsideAtMidnight:totalOutsideAtMidnight/seeds.length,
+      minimumLiving,
+    })
     expect(workshops).toBeGreaterThanOrEqual(4)
     expect(totalOutsideAtMidnight / seeds.length).toBeLessThanOrEqual(6)
     expect(minimumLiving).toBeGreaterThanOrEqual(28)
