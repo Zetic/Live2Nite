@@ -10,6 +10,7 @@ import { isDedicatedRescueReserve, planTownMissionAssignments } from './planning
 import { chooseTownWork } from './townWork'
 
 export type HourlyObjective='return_home'|'mission'|'town_work'|'fight'|'reserve'|'idle'
+export const DEDICATED_RESCUE_AP_FLOOR=4
 
 export function chooseHourlyObjective(state:GameState,citizenId:string):HourlyObjective{
   const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
@@ -18,7 +19,8 @@ export function chooseHourlyObjective(state:GameState,citizenId:string):HourlyOb
   const mission=state.botMissions[citizenId]
   if(mission){if(mission.phase==='return')return'return_home';return'mission'}
   if(citizen.location.type==='world')return'return_home'
-  if(isDedicatedRescueReserve(state,citizenId))return'reserve'
+  const dedicated=isDedicatedRescueReserve(state,citizenId)
+  if(dedicated&&citizen.ap<=DEDICATED_RESCUE_AP_FLOOR)return'reserve'
   if(chooseTownWork(state,citizen,getLegalActions(state,citizenId)))return'town_work'
   return'reserve'
 }
@@ -39,8 +41,9 @@ export function runBotHour(state:GameState,controller:AgentController,controlled
       if(lifecycle){nextState=applyEvents(nextState,[lifecycle]);continue}
       const objective=chooseHourlyObjective(nextState,startingCitizen.id)
       if(objective==='idle')break
-      // These citizens are intentionally held with AP available for emergency rescue
-      // and, if no rescue is required, the 1 AP final gate close before midnight.
+      // Dedicated rescue citizens may help with urgent town work, but never below
+      // four saved AP unless they have accepted an emergency mission. That keeps a
+      // meaningful rescue radius and guarantees enough AP for the final gate close.
       if(objective==='reserve'&&isDedicatedRescueReserve(nextState,startingCitizen.id))break
       const beforeEvents=nextState.events.length
       const command=controller.decide(nextState,startingCitizen.id)
