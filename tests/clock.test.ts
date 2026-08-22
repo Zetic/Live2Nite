@@ -41,7 +41,7 @@ describe('game clock', () => {
   })
 
   it('lets autonomous citizens finish the current hour before the clock advances', () => {
-    let initial = { ...createInitialGame(123,2), clock: { hour: 9, phase: 'day' as const }, botMissions:{ c02:scoutMission() } }
+    let initial: GameState = { ...createInitialGame(123,2), clock: { hour: 9, phase: 'day' }, botMissions:{ c02:scoutMission() } }
     initial = clearPath(initial,1)
     const beforeEvents = initial.events.length
     const game = advanceOneHour(initial,bots,'c01')
