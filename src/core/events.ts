@@ -5,6 +5,7 @@ import type { Citizen, GameEvent, GameState, ItemStorage, ItemType } from './typ
 function changeBankCount(state:GameState,type:ItemType,amount:number):GameState['town']['bank']{const current=state.town.bank[type]??0;return{...state.town.bank,[type]:Math.max(0,current+amount)}}
 function replaceCitizen(state:GameState,citizenId:string,update:(citizen:Citizen)=>Citizen):Citizen[]{return state.citizens.map((citizen)=>citizen.id===citizenId?update(citizen):citizen)}
 function removeStoredItem(citizen:Citizen,itemId:string,source:ItemStorage):Citizen{if(source==='inventory')return{...citizen,inventory:citizen.inventory.filter((item)=>item.id!==itemId)};return{...citizen,home:{...citizen.home,storage:citizen.home.storage.filter((item)=>item.id!==itemId)}}}
+function withoutMission(state:GameState,citizenId:string):GameState['botMissions']{const next={...state.botMissions};delete next[citizenId];return next}
 
 function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
   switch(event.type){
@@ -28,10 +29,13 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CONSTRUCTION_AP_CONTRIBUTED':{const project=state.town.construction[event.projectId];return{...state,town:{...state.town,construction:{...state.town.construction,[event.projectId]:{...project,apContributed:project.apContributed+event.amount}}}}}
     case 'CONSTRUCTION_COMPLETED':{let bank={...state.town.bank};for(const[type,amount]of Object.entries(event.consumed)){const itemType=type as ItemType;bank={...bank,[itemType]:Math.max(0,(bank[itemType]??0)-(amount??0))}}return{...state,town:{...state.town,defense:state.town.defense+event.defenseBonus,bank,construction:{...state.town.construction,[event.projectId]:{...state.town.construction[event.projectId],completed:true}}}}}
     case 'WORKSHOP_CONVERTED':{const afterInput=changeBankCount(state,event.input,-event.inputCount);const outputCurrent=afterInput[event.output]??0;return{...state,town:{...state.town,bank:{...afterInput,[event.output]:outputCurrent+event.outputCount}}}}
-    case 'CITIZEN_DIED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,alive:false,ap:0}))}
+    case 'BOT_MISSION_ASSIGNED':return{...state,botMissions:{...state.botMissions,[event.citizenId]:event.mission}}
+    case 'BOT_MISSION_PHASE_SET':{const mission=state.botMissions[event.citizenId];if(!mission||mission.missionId!==event.missionId)return state;return{...state,botMissions:{...state.botMissions,[event.citizenId]:{...mission,phase:event.phase}}}}
+    case 'BOT_MISSION_CLEARED':return{...state,botMissions:withoutMission(state,event.citizenId)}
+    case 'CITIZEN_DIED':return{...state,botMissions:withoutMission(state,event.citizenId),citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,alive:false,ap:0}))}
     case 'NIGHT_RESOLVED':return{...state,lastNight:event.report}
     case 'TIME_ADVANCED':return{...state,clock:{hour:event.toHour,phase:event.phase}}
-    case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},citizens:state.citizens.map((citizen)=>({...citizen,ap:citizen.alive?citizen.maxAp:0,daily:{ate:false,drank:false,waterTaken:false}}))}
+    case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:{},citizens:state.citizens.map((citizen)=>({...citizen,ap:citizen.alive?citizen.maxAp:0,daily:{ate:false,drank:false,waterTaken:false}}))}
   }
 }
 export function applyEvents(state:GameState,events:GameEvent[]):GameState{const nextState=events.reduce(reduceSingleEvent,state);return{...nextState,events:[...state.events,...events]}}
