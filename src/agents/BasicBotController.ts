@@ -24,14 +24,14 @@ function isNeededAsAnchor(state: GameState, citizenId: string): boolean {
   const control = zoneControl(state, location.x, location.y)
   return control.zombiePoints > Math.max(0, control.humanPoints - 2)
 }
-function stepToward(actions: GameCommand[], fromX:number, fromY:number, targetX:number, targetY:number): GameCommand | null {
+function stepToward(actions: GameCommand[], fromX:number, fromY:number, targetX:number,targetY:number):GameCommand|null {
   if (targetX > fromX) return pickMove(actions,'EAST')
   if (targetX < fromX) return pickMove(actions,'WEST')
   if (targetY > fromY) return pickMove(actions,'NORTH')
   if (targetY < fromY) return pickMove(actions,'SOUTH')
   return null
 }
-function isSafeKnownMove(state:GameState, citizen:Citizen, action:Extract<GameCommand,{type:'MOVE'}>):boolean {
+function isSafeKnownMove(state:GameState,citizen:Citizen,action:Extract<GameCommand,{type:'MOVE'}>):boolean {
   if (citizen.location.type !== 'world') return false
   const target = moveCoordinates(citizen.location.x,citizen.location.y,action.direction)
   const zone = getZone(state.world,target.x,target.y)
@@ -68,6 +68,11 @@ export class BasicBotController implements AgentController {
     const {x,y}=citizen.location
     const distance=distanceToTown(x,y)
     const control=zoneControl(game,x,y)
+
+    if (control.trapped) {
+      const weapon = pick(actions,'USE_WEAPON')
+      if (weapon) return weapon
+    }
     if (isNeededAsAnchor(game,citizenId)) return null
     if (rescueTarget?.location.type==='world') {
       const rescueDistance=Math.abs(rescueTarget.location.x-x)+Math.abs(rescueTarget.location.y-y)
