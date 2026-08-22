@@ -1,4 +1,5 @@
 import { CONSTRUCTIONS } from '../core/construction'
+import { homeName } from '../core/home'
 import { itemName } from '../core/items'
 import type { GameEvent, GameState } from '../core/types'
 import { WORKSHOP_RECIPES } from '../core/workshop'
@@ -23,11 +24,16 @@ export function describeEvent(event: GameEvent, game: GameState): string {
     case 'CONTAINER_OPENED': return `${citizenName(game,event.citizenId)} opened ${itemName(event.containerType)} and found ${itemName(event.output.type)}.`
     case 'WATER_TAKEN': return `${citizenName(game,event.citizenId)} took a Water Ration from the well.`
     case 'ITEM_CONSUMED': return `${citizenName(game,event.citizenId)} ${event.kind==='food'?'ate':'drank'} ${itemName(event.item.type)} and refreshed their AP.`
+    case 'HOME_UPGRADED': return `${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
     case 'CONSTRUCTION_AP_CONTRIBUTED': return `${citizenName(game,event.citizenId)} contributed ${event.amount} AP to ${CONSTRUCTIONS[event.projectId].name}.`
     case 'CONSTRUCTION_COMPLETED': return `${CONSTRUCTIONS[event.projectId].name} was completed by ${citizenName(game,event.citizenId)}.`
     case 'WORKSHOP_CONVERTED': { const recipe=WORKSHOP_RECIPES[event.recipeId]; return `${citizenName(game,event.citizenId)} used the Workshop: ${event.inputCount} ${itemName(recipe.input)} → ${event.outputCount} ${itemName(recipe.output)}.` }
-    case 'CITIZEN_DIED': return `${citizenName(game,event.citizenId)} died outside during the nightly attack.`
-    case 'NIGHT_RESOLVED': return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${event.report.breached?' — the town was breached':' — the town held'}.`
+    case 'CITIZEN_DIED': return event.reason === 'outside_at_night' ? `${citizenName(game,event.citizenId)} died outside during the nightly attack.` : `${citizenName(game,event.citizenId)} was killed when zombies broke into their home.`
+    case 'NIGHT_RESOLVED': {
+      const inside = event.report.zombiesInside ?? Math.max(0, event.report.attackStrength - event.report.effectiveDefense)
+      const homeDeaths = event.report.homeDeaths ?? 0
+      return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${inside > 0 ? ` — ${inside} zombie(s) breached, ${homeDeaths} home death(s)` : ' — the town held'}.`
+    }
     case 'DAY_STARTED': return `Day ${event.day} began.`
   }
 }
@@ -42,7 +48,7 @@ export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'sy
     case 'NIGHT_RESOLVED': return event.report.breached?'danger':'night'
     case 'DAY_STARTED': return 'night'
     case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ITEM_PICKED_UP': case 'CITIZEN_LOCATION_CHANGED': return 'world'
-    case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'ITEM_CONSUMED': return 'home'
+    case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'ITEM_CONSUMED': case 'HOME_UPGRADED': return 'home'
     case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'WORKSHOP_CONVERTED': case 'GATE_SET': return 'town'
     default: return 'system'
   }
