@@ -89,6 +89,7 @@ export interface BotMissionAssignment {
   safetyReserve: number
   emergency: boolean
   allowsCamping?: boolean
+  overnightPlanned?: boolean
 }
 
 export interface SpecialSiteState {
