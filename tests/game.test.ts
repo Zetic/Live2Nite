@@ -4,14 +4,21 @@ import { runBotPhase } from '../src/agents/runBotPhase'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand, InvalidCommandError } from '../src/core/commands'
 import { createInitialGame, resolveNight } from '../src/core/game'
-import type { GameState } from '../src/core/types'
+import type { GameCommand, GameState, ItemType } from '../src/core/types'
+import { STARTING_WELL_MAX, STARTING_WELL_MIN } from '../src/core/well'
 import { zoneControl, zoneKey } from '../src/core/world'
 
 const bots = new BasicBotController()
 
-function command(game: GameState, citizenId: string, type: ReturnType<typeof getLegalActions>[number]['type']) {
+function command(game: GameState, citizenId: string, type: GameCommand['type']) {
   const action = getLegalActions(game, citizenId).find((candidate) => candidate.type === type)
   if (!action) throw new Error(`Missing ${type}`)
+  return action
+}
+
+function itemCommand(game: GameState, citizenId: string, type: 'OPEN_CONTAINER'|'EAT_ITEM'|'DRINK_ITEM'|'MOVE_ITEM_TO_HOME'|'MOVE_ITEM_TO_RUCKSACK', itemId: string) {
+  const action = getLegalActions(game, citizenId).find((candidate) => candidate.type === type && 'itemId' in candidate && candidate.itemId === itemId)
+  if (!action) throw new Error(`Missing ${type} for ${itemId}`)
   return action
 }
 
@@ -19,15 +26,108 @@ function withWorkshopResources(game: GameState): GameState {
   return { ...game, town: { ...game.town, bank: { ...game.town.bank, twisted_plank: 10, wrought_iron: 8, unshaped_concrete_block: 1 } } }
 }
 
-describe('World Beyond gameplay', () => {
-  it('starts citizens with 6 AP, 4 inventory slots, and schema v3 construction state', () => {
+function withInventory(game: GameState, types: ItemType[]): GameState {
+  return {
+    ...game,
+    citizens: game.citizens.map((citizen) => citizen.id === 'c01'
+      ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) }
+      : citizen),
+  }
+}
+
+describe('Citizen homes, starter supplies, and well', () => {
+  it('starts schema v4 citizens with a Camp Bed, four chest slots, and both starter packages', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(3)
-    expect(game.citizens.every((c) => c.ap === 6 && c.inventoryCapacity === 4)).toBe(true)
-    expect(game.town.construction.workshop.completed).toBe(false)
-    expect(Object.keys(game.world.zones)).toHaveLength(14 * 13)
+    expect(game.schemaVersion).toBe(4)
+    expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
+    expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 4)).toBe(true)
+    expect(game.citizens.every((citizen) => citizen.home.storage.map((item) => item.type).sort().join(',') === 'citizen_welcome_pack,doggy_bag')).toBe(true)
   })
 
+  it('creates deterministic starting well water in the verified 80–140 range', () => {
+    const first = createInitialGame(123, 4)
+    const second = createInitialGame(123, 4)
+    expect(first.town.well.water).toBeGreaterThanOrEqual(STARTING_WELL_MIN)
+    expect(first.town.well.water).toBeLessThanOrEqual(STARTING_WELL_MAX)
+    expect(second.town.well.water).toBe(first.town.well.water)
+  })
+
+  it('moves personal items between the home chest and rucksack for zero AP', () => {
+    let game = createInitialGame(123, 2)
+    const bag = game.citizens[0].home.storage.find((item) => item.type === 'doggy_bag')!
+    game = executeCommand(game, itemCommand(game,'c01','MOVE_ITEM_TO_RUCKSACK',bag.id)).state
+    expect(game.citizens[0].ap).toBe(6)
+    expect(game.citizens[0].inventory.some((item) => item.id === bag.id)).toBe(true)
+    game = executeCommand(game, itemCommand(game,'c01','MOVE_ITEM_TO_HOME',bag.id)).state
+    expect(game.citizens[0].ap).toBe(6)
+    expect(game.citizens[0].home.storage.some((item) => item.id === bag.id)).toBe(true)
+  })
+
+  it('opens the Doggy Bag into ordinary food without consuming a storage slot', () => {
+    let game = createInitialGame(123, 2)
+    const bag = game.citizens[0].home.storage.find((item) => item.type === 'doggy_bag')!
+    const beforeLength = game.citizens[0].home.storage.length
+    game = executeCommand(game, itemCommand(game,'c01','OPEN_CONTAINER',bag.id)).state
+    expect(game.citizens[0].home.storage).toHaveLength(beforeLength)
+    expect(game.citizens[0].home.storage.some((item) => item.type === 'food')).toBe(true)
+    expect(game.citizens[0].home.storage.some((item) => item.type === 'doggy_bag')).toBe(false)
+  })
+
+  it('opens the Welcome Pack into the small verified starter-content pool deterministically', () => {
+    const open = (seed: number) => {
+      let game = createInitialGame(seed, 2)
+      const pack = game.citizens[0].home.storage.find((item) => item.type === 'citizen_welcome_pack')!
+      game = executeCommand(game, itemCommand(game,'c01','OPEN_CONTAINER',pack.id)).state
+      return game.citizens[0].home.storage.find((item) => item.id.startsWith('i'))?.type
+    }
+    const first = open(9988)
+    expect(['battery','box_of_matches','pharmaceutical_products']).toContain(first)
+    expect(open(9988)).toBe(first)
+  })
+
+  it('allows one water-ration withdrawal per citizen each day and decrements the well', () => {
+    let game = createInitialGame(123, 2)
+    const before = game.town.well.water
+    game = executeCommand(game, command(game,'c01','TAKE_WATER')).state
+    expect(game.town.well.water).toBe(before - 1)
+    expect(game.citizens[0].daily.waterTaken).toBe(true)
+    expect(game.citizens[0].inventory.some((item) => item.type === 'water_ration')).toBe(true)
+    expect(getLegalActions(game,'c01').some((action) => action.type === 'TAKE_WATER')).toBe(false)
+  })
+
+  it('blocks well withdrawal when the rucksack is full', () => {
+    let game = withInventory(createInitialGame(123, 1), ['food','food','food','food'])
+    expect(getLegalActions(game,'c01').some((action) => action.type === 'TAKE_WATER')).toBe(false)
+    game = { ...game, citizens: game.citizens.map((citizen) => ({ ...citizen, inventory: citizen.inventory.slice(0,3) })) }
+    expect(getLegalActions(game,'c01').some((action) => action.type === 'TAKE_WATER')).toBe(true)
+  })
+
+  it('treats food and water as separate once-per-day AP refreshes and resets them next day', () => {
+    let game = withInventory(createInitialGame(123, 1), ['food','water_ration'])
+    game = { ...game, citizens: game.citizens.map((citizen) => ({ ...citizen, ap: 0 })) }
+    game = executeCommand(game, itemCommand(game,'c01','EAT_ITEM','test-0')).state
+    expect(game.citizens[0].ap).toBe(6)
+    expect(game.citizens[0].daily.ate).toBe(true)
+    game = { ...game, citizens: game.citizens.map((citizen) => ({ ...citizen, ap: 0 })) }
+    game = executeCommand(game, itemCommand(game,'c01','DRINK_ITEM','test-1')).state
+    expect(game.citizens[0].ap).toBe(6)
+    expect(game.citizens[0].daily.drank).toBe(true)
+    expect(getLegalActions(game,'c01').some((action) => action.type === 'EAT_ITEM' || action.type === 'DRINK_ITEM')).toBe(false)
+    game = resolveNight(game)
+    expect(game.citizens[0].daily).toEqual({ ate:false, drank:false, waterTaken:false })
+  })
+
+  it('allows carried food and water to be used outside', () => {
+    let game = withInventory(createInitialGame(123, 1), ['food','water_ration'])
+    game = executeCommand(game, command(game,'c01','OPEN_GATE')).state
+    game = executeCommand(game, command(game,'c01','EXIT_TOWN')).state
+    const legal = getLegalActions(game,'c01')
+    expect(legal.some((action) => action.type === 'EAT_ITEM')).toBe(true)
+    expect(legal.some((action) => action.type === 'DRINK_ITEM')).toBe(true)
+  })
+})
+
+describe('World Beyond gameplay', () => {
   it('charges 1 AP to open the gate and 0 AP to exit', () => {
     let game = createInitialGame(123, 2)
     game = executeCommand(game, command(game, 'c01', 'OPEN_GATE')).state
@@ -87,11 +187,14 @@ describe('World Beyond gameplay', () => {
     expect(game.town.bank.scrap_metal).toBe(1)
   })
 
-  it('adds bank defense from a defensive object', () => {
-    let game = createInitialGame(123, 2)
-    game = { ...game, citizens: game.citizens.map((c) => c.id === 'c01' ? { ...c, inventory: [{ id: 'door', type: 'old_door' }] } : c) }
-    game = executeCommand(game, command(game, 'c01', 'DEPOSIT_ITEM')).state
+  it('can withdraw a shared bank item and removes its bank-defense value', () => {
+    let game = withInventory(createInitialGame(123, 1), ['old_door'])
+    game = executeCommand(game, command(game,'c01','DEPOSIT_ITEM')).state
     expect(game.town.defense).toBe(42)
+    game = executeCommand(game, command(game,'c01','WITHDRAW_BANK_ITEM')).state
+    expect(game.town.bank.old_door).toBe(0)
+    expect(game.town.defense).toBe(40)
+    expect(game.citizens[0].inventory.some((item) => item.type === 'old_door')).toBe(true)
   })
 })
 
@@ -138,10 +241,14 @@ describe('Town construction and Workshop', () => {
     expect(game.town.defense).toBe(43)
   })
 
-  it('lets bots spend their real AP on a ready Workshop project', () => {
-    const game = runBotPhase(withWorkshopResources(createInitialGame(321, 8)), bots)
+  it('lets bots spend their real AP on a ready Workshop project without draining the well or starter supplies', () => {
+    const initial = withWorkshopResources(createInitialGame(321, 8))
+    const waterBefore = initial.town.well.water
+    const game = runBotPhase(initial, bots)
     expect(game.town.construction.workshop.completed).toBe(true)
     expect(game.events.some((e) => e.type === 'CONSTRUCTION_COMPLETED' && e.projectId === 'workshop')).toBe(true)
+    expect(game.town.well.water).toBe(waterBefore)
+    expect(game.citizens.slice(1).every((citizen) => citizen.home.storage.length === 2)).toBe(true)
   })
 })
 
@@ -158,6 +265,7 @@ describe('Night resolution', () => {
     const first = resolveNight(runBotPhase(createInitialGame(9001, 6), bots))
     const second = resolveNight(runBotPhase(createInitialGame(9001, 6), bots))
     expect(first.world).toEqual(second.world)
+    expect(first.town.well).toEqual(second.town.well)
     expect(first.lastNight).toEqual(second.lastNight)
     expect(() => executeCommand(createInitialGame(1, 2), { type: 'MOVE', citizenId: 'c01', direction: 'EAST' })).toThrow(InvalidCommandError)
   })

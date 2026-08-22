@@ -9,9 +9,17 @@ export type ItemType =
   | 'twisted_plank'
   | 'wrought_iron'
   | 'unshaped_concrete_block'
+  | 'doggy_bag'
+  | 'citizen_welcome_pack'
+  | 'battery'
+  | 'box_of_matches'
+  | 'pharmaceutical_products'
 
 export type ConstructionId = 'workshop' | 'watchtower'
 export type WorkshopRecipeId = 'logs_to_planks' | 'scrap_to_iron'
+export type HomeLevel = 'camp_bed'
+export type ItemStorage = 'inventory' | 'home'
+export type ConsumableKind = 'food' | 'water'
 
 export interface ItemInstance {
   id: string
@@ -21,6 +29,19 @@ export interface ItemInstance {
 export type CitizenLocation =
   | { type: 'town' }
   | { type: 'world'; x: number; y: number }
+
+export interface CitizenHome {
+  level: HomeLevel
+  defense: number
+  storage: ItemInstance[]
+  storageCapacity: number
+}
+
+export interface CitizenDailyState {
+  ate: boolean
+  drank: boolean
+  waterTaken: boolean
+}
 
 export interface Citizen {
   id: string
@@ -32,6 +53,8 @@ export interface Citizen {
   location: CitizenLocation
   inventory: ItemInstance[]
   inventoryCapacity: number
+  home: CitizenHome
+  daily: CitizenDailyState
 }
 
 export interface WorldZone {
@@ -59,11 +82,16 @@ export interface ConstructionProjectState {
   completed: boolean
 }
 
+export interface TownWellState {
+  water: number
+}
+
 export interface TownState {
   gateOpen: boolean
   defense: number
   bank: Partial<Record<ItemType, number>>
   construction: Record<ConstructionId, ConstructionProjectState>
+  well: TownWellState
 }
 
 export interface NightReport {
@@ -77,7 +105,7 @@ export interface NightReport {
 }
 
 export interface GameState {
-  schemaVersion: 3
+  schemaVersion: 4
   gameId: string
   seed: number
   rngState: number
@@ -101,6 +129,13 @@ export type GameCommand =
   | { type: 'SEARCH_ZONE'; citizenId: string }
   | { type: 'PICK_UP_ITEM'; citizenId: string; itemId: string }
   | { type: 'DEPOSIT_ITEM'; citizenId: string; itemId: string }
+  | { type: 'WITHDRAW_BANK_ITEM'; citizenId: string; itemType: ItemType }
+  | { type: 'MOVE_ITEM_TO_HOME'; citizenId: string; itemId: string }
+  | { type: 'MOVE_ITEM_TO_RUCKSACK'; citizenId: string; itemId: string }
+  | { type: 'OPEN_CONTAINER'; citizenId: string; itemId: string }
+  | { type: 'TAKE_WATER'; citizenId: string }
+  | { type: 'EAT_ITEM'; citizenId: string; itemId: string }
+  | { type: 'DRINK_ITEM'; citizenId: string; itemId: string }
   | { type: 'CONTRIBUTE_CONSTRUCTION'; citizenId: string; projectId: ConstructionId }
   | { type: 'WORKSHOP_CONVERT'; citizenId: string; recipeId: WorkshopRecipeId }
 
@@ -114,6 +149,28 @@ export type GameEvent =
   | { type: 'ZONE_SEARCHED'; day: number; zoneKey: string; citizenId: string; item: ItemInstance | null }
   | { type: 'ITEM_PICKED_UP'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
   | { type: 'ITEM_DEPOSITED'; day: number; citizenId: string; item: ItemInstance }
+  | { type: 'ITEM_WITHDRAWN'; day: number; citizenId: string; item: ItemInstance }
+  | { type: 'ITEM_MOVED_TO_HOME'; day: number; citizenId: string; item: ItemInstance }
+  | { type: 'ITEM_MOVED_TO_RUCKSACK'; day: number; citizenId: string; item: ItemInstance }
+  | {
+      type: 'CONTAINER_OPENED'
+      day: number
+      citizenId: string
+      containerId: string
+      containerType: ItemType
+      source: ItemStorage
+      output: ItemInstance
+      rngStateAfter: number
+    }
+  | { type: 'WATER_TAKEN'; day: number; citizenId: string; item: ItemInstance }
+  | {
+      type: 'ITEM_CONSUMED'
+      day: number
+      citizenId: string
+      item: ItemInstance
+      source: ItemStorage
+      kind: ConsumableKind
+    }
   | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }
   | {
       type: 'CONSTRUCTION_COMPLETED'

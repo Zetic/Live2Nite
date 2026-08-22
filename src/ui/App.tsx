@@ -9,6 +9,8 @@ import { getZone, zoneControl } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
 import { CitizenRoster } from './components/CitizenRoster'
 import { EventLog } from './components/EventLog'
+import { GameNavigation, type GameScreen } from './components/GameNavigation'
+import { HomeView } from './components/HomeView'
 import { TownView } from './components/TownView'
 import { WorldMap } from './components/WorldMap'
 import { WorldView } from './components/WorldView'
@@ -17,13 +19,13 @@ import './app.css'
 
 const repository = new IndexedDbGameRepository()
 const botController = new BasicBotController()
-
 function newSeed(): number { const values = new Uint32Array(1); crypto.getRandomValues(values); return values[0] || 1 }
 
 export function App() {
   const [game, setGame] = useState<GameState>(() => createInitialGame(1))
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [screen, setScreen] = useState<GameScreen>('town')
   useEffect(() => { repository.load().then((saved) => setGame(saved ?? createInitialGame(newSeed()))).catch(() => setGame(createInitialGame(newSeed()))).finally(() => setLoaded(true)) }, [])
   useEffect(() => { if (loaded) void repository.save(game) }, [game, loaded])
 
@@ -33,21 +35,28 @@ export function App() {
   const legalActions = useMemo(() => getLegalActions(game, player.id), [game, player.id])
   const currentZone = player.location.type === 'world' ? getZone(game.world, player.location.x, player.location.y) : null
   const control = player.location.type === 'world' ? zoneControl(game, player.location.x, player.location.y) : null
-  const completedProjects = useMemo(() => Object.values(game.town.construction).filter((project) => project.completed).length, [game.town.construction])
   const lastNightDeathNames = useMemo(() => {
     if (!game.lastNight) return []
     return game.events.filter((event): event is Extract<GameEvent,{type:'CITIZEN_DIED'}> => event.type === 'CITIZEN_DIED' && event.day === game.lastNight?.day).map((event) => citizenName(game,event.citizenId))
   }, [game])
+
+  useEffect(() => {
+    if (player.location.type === 'world' && (screen === 'town' || screen === 'home')) setScreen('world')
+  }, [player.location.type, screen])
 
   const act = (command: GameCommand | undefined) => {
     if (!command) return
     try { setGame((current) => executeCommand(current, command).state); setError(null) }
     catch (caught) { setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.') }
   }
+  const actAndNavigate = (command: GameCommand, target: GameScreen) => {
+    try { setGame((current) => executeCommand(current, command).state); setScreen(target); setError(null) }
+    catch (caught) { setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.') }
+  }
   const move = (direction: Direction) => act(legalActions.find((action): action is Extract<GameCommand,{type:'MOVE'}> => action.type === 'MOVE' && action.direction === direction))
   const runCitizens = () => { setGame((current) => runBotPhase(current, botController)); setError(null) }
   const endDay = () => { if (!player.alive) return; setGame((current) => resolveNight(runBotPhase(current, botController))); setError(null) }
-  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setError(null) }
+  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setScreen('town'); setError(null) }
 
   if (!loaded) return <main className="shell loading-shell"><p>Opening the town gates…</p></main>
 
@@ -60,27 +69,32 @@ export function App() {
     <section className="status-strip" aria-label="Town status">
       <article><span>Population</span><strong>{alive}<small>/ {game.citizens.length}</small></strong></article>
       <article><span>Outside</span><strong className={outsideCitizens.length ? 'warning-value' : ''}>{outsideCitizens.length}</strong></article>
+      <article><span>Well water</span><strong>{game.town.well.water}</strong></article>
       <article><span>Town defense</span><strong>{game.town.defense}</strong></article>
       <article><span>Gate</span><strong className={game.town.gateOpen ? 'danger-value' : 'safe-value'}>{game.town.gateOpen ? 'OPEN' : 'SEALED'}</strong></article>
       <article><span>Your AP</span><strong>{player.ap}<small>/ {player.maxAp}</small></strong></article>
-      <article><span>Projects</span><strong>{completedProjects}<small>/ {Object.keys(game.town.construction).length}</small></strong></article>
     </section>
 
     {game.lastNight && <section className={`night-report ${game.lastNight.breached ? 'danger' : 'safe'}`}><div className="night-icon" aria-hidden="true">☾</div><div><span>Night {game.lastNight.day} report</span><strong>{game.lastNight.breached ? 'The defenses were breached.' : 'The town held.'}</strong><p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}{lastNightDeathNames.length > 0 && ` Died outside: ${lastNightDeathNames.join(', ')}.`}</p></div></section>}
     {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Your run has ended</span><strong>You died outside during the nightly attack.</strong><p>Start a new town to continue.</p></div></section>}
 
-    <div className="dashboard-grid">
-      <div className="main-column">
-        <section className="panel action-panel">
-          {player.location.type === 'town' ? <TownView game={game} legalActions={legalActions} act={act}/> : <WorldView game={game} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move}/>} 
-          {error && <p className="error-banner">{error}</p>}
-          {control?.trapped && <div className="rescue-hint"><strong>Rescue required.</strong><span>Searching is still legal, but movement is blocked. Let the town act so another citizen can travel here and restore control before night.</span></div>}
-          <div className="turn-controls"><button className="activity-button" disabled={!player.alive} onClick={runCitizens}><span>Run citizen activity</span><small>Bots act now · night does not advance</small></button><button className="primary end-day" disabled={!player.alive} onClick={endDay}><span>End the day</span><small>Remaining citizens act, then the attack resolves</small></button></div>
-        </section>
-        <section className="panel map-panel"><div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div><WorldMap game={game}/><p className="map-key"><span>?</span> unknown <span>0–9</span> observed zombies <span>T</span> town <span>@</span> you</p></section>
-      </div>
-      <CitizenRoster game={game}/>
+    <GameNavigation screen={screen} outside={player.location.type === 'world'} onChange={setScreen}/>
+
+    <div className="screen-stage">
+      {screen === 'town' && <TownView game={game} legalActions={legalActions} act={act} onEnterWorld={(command) => actAndNavigate(command,'world')}/>} 
+      {screen === 'home' && <HomeView game={game} legalActions={legalActions} act={act}/>} 
+      {screen === 'world' && <div className="world-screen-layout"><WorldView game={game} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move} onReturnTown={(command) => actAndNavigate(command,'town')}/><section className="panel map-panel"><div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div><WorldMap game={game}/><p className="map-key"><span>?</span> unknown <span>0–9</span> observed zombies <span>T</span> town <span>@</span> you</p></section></div>}
+      {screen === 'citizens' && <CitizenRoster game={game}/>} 
+      {screen === 'chronicle' && <EventLog game={game}/>} 
     </div>
-    <EventLog game={game}/>
+
+    {error && <p className="error-banner global-error">{error}</p>}
+    {control?.trapped && <div className="rescue-hint global-rescue"><strong>Rescue required.</strong><span>Searching and carried supplies remain usable, but movement is blocked. Run citizen activity to give another citizen a chance to reach your zone.</span></div>}
+
+    <footer className="turn-bar">
+      <div><span>Day {game.day}</span><strong>{player.location.type === 'town' ? 'Inside town' : `Outside [${player.location.x},${player.location.y}]`}</strong></div>
+      <button className="activity-button" disabled={!player.alive} onClick={runCitizens}><span>Run citizen activity</span><small>Bots act now · night does not advance</small></button>
+      <button className="primary end-day" disabled={!player.alive} onClick={endDay}><span>End the day</span><small>Remaining citizens act, then the attack resolves</small></button>
+    </footer>
   </main>
 }
