@@ -12,8 +12,11 @@ function rescueComplete(state:GameState,rescuer:Citizen,mission:BotMissionAssign
 function operationComplete(state:GameState,citizen:Citizen,mission:BotMissionAssignment):boolean{const zone=state.world.zones[`${mission.target.x},${mission.target.y}`];if(!zone)return true;if(mission.role==='rescue')return rescueComplete(state,citizen,mission);if(mission.role==='excavator')return!zone.specialSite||zone.specialSite.status!=='buried';if(mission.role==='combat')return zone.zombies<=zoneControl(state,mission.target.x,mission.target.y).humanPoints;if(mission.role==='scout')return zone.discovered&&(zone.searchedBy.includes(citizen.id)||zone.searchesRemaining===0);if(zone.specialSite&&zone.specialSite.status!=='buried')return zone.specialSite.searchedBy.includes(citizen.id)||zone.specialSite.status==='depleted';return zone.searchesRemaining===0}
 function phaseEvent(state:GameState,citizenId:string,mission:BotMissionAssignment,phase:BotMissionPhase):GameEvent{return{type:'BOT_MISSION_PHASE_SET',day:state.day,hour:state.clock.hour,citizenId,missionId:mission.missionId,phase}}
 function canPrepareCamp(state:GameState,citizen:Citizen,mission:BotMissionAssignment):boolean{
-  if(!mission.allowsCamping||citizen.location.type!=='world'||isTownGateZone(citizen.location.x,citizen.location.y))return false
-  if(!citizen.inventory.some((item)=>item.type==='water_ration'))return false
+  if(!mission.allowsCamping||mission.overnightPlanned!==true||citizen.location.type!=='world'||isTownGateZone(citizen.location.x,citizen.location.y))return false
+  // A ration that was already consumed this day still supplied the intended overnight
+  // hydration. Requiring the physical item to remain carried would invalidate plans as
+  // soon as a bot used that same ration to extend the outbound AP budget.
+  if(!citizen.daily.drank&&!citizen.inventory.some((item)=>item.type==='water_ration'))return false
   const current=campingChancePercent(state,citizen.id)
   const possibleWithThreeImprovements=current+Math.min(3,citizen.ap)*5
   return possibleWithThreeImprovements>=50
@@ -25,7 +28,7 @@ export function nextMissionLifecycleEvent(state:GameState,citizenId:string):Game
   if(mission.phase==='camp')return null
   if(mission.phase==='prepare'){if(citizen.location.type==='world')return phaseEvent(state,citizenId,mission,'outbound');if(state.clock.hour>=mission.returnByHour)return{type:'BOT_MISSION_CLEARED',day:state.day,hour:state.clock.hour,citizenId,missionId:mission.missionId,outcome:'aborted'};return null}
   const plan=planMission(state,citizenId,mission)
-  const plannedCamp=Boolean(plan?.campingPlanned&&canPrepareCamp(state,citizen,mission))
+  const plannedCamp=Boolean(mission.overnightPlanned===true&&plan?.campingPlanned&&canPrepareCamp(state,citizen,mission))
   if(citizen.location.type==='world'&&mission.phase!=='return'){
     const safety=missionSafety(state,citizenId)
     if(state.clock.hour>=mission.returnByHour){if(plannedCamp)return phaseEvent(state,citizenId,mission,'camp');return phaseEvent(state,citizenId,mission,'return')}
