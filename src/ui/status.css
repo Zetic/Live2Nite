@@ -1,3 +1,4 @@
+.status-strip{grid-template-columns:repeat(5,1fr)}
 .citizen-status-hud{display:flex;align-items:stretch;gap:0;margin:0 0 12px;border:1px solid #2c3b40;border-radius:10px;background:linear-gradient(180deg,#111c1f 0%,#0b1417 100%);overflow:hidden;min-height:54px;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
 .citizen-status-identity,.citizen-status-ap,.citizen-status-label{display:flex;flex-direction:column;justify-content:center;padding:8px 14px;border-right:1px solid #2c3b40;text-transform:uppercase;letter-spacing:.08em}
 .citizen-status-identity span,.citizen-status-ap span,.citizen-status-label{font-size:9px;color:#7fa0a8}
@@ -12,4 +13,4 @@
 .citizen-status-dead{display:flex;align-items:center;padding:0 16px;color:#ef725f;letter-spacing:.12em}
 .citizen-status-hud.dead .citizen-status-slots,.citizen-status-hud.dead .citizen-status-ap{opacity:.4}
 .citizen-condition-detail{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 2px}.citizen-condition-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid #344247;border-radius:5px;background:#10191c;color:#9fb0b4;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}.citizen-condition-chip.warning{border-color:#705629;color:#dcb35c}.citizen-condition-chip.danger{border-color:#77352e;color:#eb7f6c}.citizen-condition-travel{font-size:10px;color:#71868b;padding:4px 2px}
-@media(max-width:850px){.citizen-status-hud{flex-wrap:wrap}.citizen-status-slots{order:3;width:100%;border-top:1px solid #2c3b40}.citizen-status-label{display:none}.citizen-status-slot-label{display:none}.citizen-status-slot{min-width:38px;justify-content:center}.citizen-status-identity{flex:1}}
+@media(max-width:850px){.status-strip{grid-template-columns:repeat(2,1fr)}.citizen-status-hud{flex-wrap:wrap}.citizen-status-slots{order:3;width:100%;border-top:1px solid #2c3b40}.citizen-status-label{display:none}.citizen-status-slot-label{display:none}.citizen-status-slot{min-width:38px;justify-content:center}.citizen-status-identity{flex:1}}
