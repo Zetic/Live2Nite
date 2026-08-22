@@ -1,17 +1,29 @@
 import { bankDefenseFor } from './items'
 import { zoneKey } from './world'
-import type { GameEvent, GameState, ItemType } from './types'
+import type { Citizen, GameEvent, GameState, ItemStorage, ItemType } from './types'
 
 function changeBankCount(state: GameState, type: ItemType, amount: number): GameState['town']['bank'] {
   const current = state.town.bank[type] ?? 0
   return { ...state.town.bank, [type]: Math.max(0, current + amount) }
 }
 
+function replaceCitizen(state: GameState, citizenId: string, update: (citizen: Citizen) => Citizen): Citizen[] {
+  return state.citizens.map((citizen) => citizen.id === citizenId ? update(citizen) : citizen)
+}
+
+function removeStoredItem(citizen: Citizen, itemId: string, source: ItemStorage): Citizen {
+  if (source === 'inventory') return { ...citizen, inventory: citizen.inventory.filter((item) => item.id !== itemId) }
+  return { ...citizen, home: { ...citizen.home, storage: citizen.home.storage.filter((item) => item.id !== itemId) } }
+}
+
 function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
   switch (event.type) {
-    case 'AP_SPENT': return { ...state, citizens: state.citizens.map((citizen) => citizen.id === event.citizenId ? { ...citizen, ap: Math.max(0, citizen.ap - event.amount) } : citizen) }
-    case 'GATE_SET': return { ...state, town: { ...state.town, gateOpen: event.open } }
-    case 'CITIZEN_LOCATION_CHANGED': return { ...state, citizens: state.citizens.map((citizen) => citizen.id === event.citizenId ? { ...citizen, location: event.location } : citizen) }
+    case 'AP_SPENT':
+      return { ...state, citizens: replaceCitizen(state, event.citizenId, (citizen) => ({ ...citizen, ap: Math.max(0, citizen.ap - event.amount) })) }
+    case 'GATE_SET':
+      return { ...state, town: { ...state.town, gateOpen: event.open } }
+    case 'CITIZEN_LOCATION_CHANGED':
+      return { ...state, citizens: replaceCitizen(state, event.citizenId, (citizen) => ({ ...citizen, location: event.location })) }
     case 'ZONE_DISCOVERED': {
       const zone = state.world.zones[event.zoneKey]
       if (!zone || zone.discovered) return state
@@ -20,17 +32,109 @@ function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
     case 'ZONE_SEARCHED': {
       const zone = state.world.zones[event.zoneKey]
       if (!zone) return state
-      return { ...state, nextItemId: event.item ? state.nextItemId + 1 : state.nextItemId, world: { ...state.world, zones: { ...state.world.zones, [event.zoneKey]: { ...zone, searchesRemaining: Math.max(0, zone.searchesRemaining - 1), searchedBy: [...zone.searchedBy, event.citizenId], hiddenLoot: zone.hiddenLoot.slice(1), groundItems: event.item ? [...zone.groundItems, event.item] : zone.groundItems } } } }
+      return {
+        ...state,
+        nextItemId: event.item ? state.nextItemId + 1 : state.nextItemId,
+        world: {
+          ...state.world,
+          zones: {
+            ...state.world.zones,
+            [event.zoneKey]: {
+              ...zone,
+              searchesRemaining: Math.max(0, zone.searchesRemaining - 1),
+              searchedBy: [...zone.searchedBy, event.citizenId],
+              hiddenLoot: zone.hiddenLoot.slice(1),
+              groundItems: event.item ? [...zone.groundItems, event.item] : zone.groundItems,
+            },
+          },
+        },
+      }
     }
     case 'ITEM_PICKED_UP': {
       const zone = state.world.zones[event.zoneKey]
       if (!zone) return state
-      return { ...state, citizens: state.citizens.map((citizen) => citizen.id === event.citizenId ? { ...citizen, inventory: [...citizen.inventory, event.item] } : citizen), world: { ...state.world, zones: { ...state.world.zones, [event.zoneKey]: { ...zone, groundItems: zone.groundItems.filter((item) => item.id !== event.item.id) } } } }
+      return {
+        ...state,
+        citizens: replaceCitizen(state, event.citizenId, (citizen) => ({ ...citizen, inventory: [...citizen.inventory, event.item] })),
+        world: { ...state.world, zones: { ...state.world.zones, [event.zoneKey]: { ...zone, groundItems: zone.groundItems.filter((item) => item.id !== event.item.id) } } },
+      }
     }
     case 'ITEM_DEPOSITED': {
       const currentCount = state.town.bank[event.item.type] ?? 0
-      return { ...state, citizens: state.citizens.map((citizen) => citizen.id === event.citizenId ? { ...citizen, inventory: citizen.inventory.filter((item) => item.id !== event.item.id) } : citizen), town: { ...state.town, defense: state.town.defense + bankDefenseFor(event.item.type), bank: { ...state.town.bank, [event.item.type]: currentCount + 1 } } }
+      return {
+        ...state,
+        citizens: replaceCitizen(state, event.citizenId, (citizen) => ({ ...citizen, inventory: citizen.inventory.filter((item) => item.id !== event.item.id) })),
+        town: { ...state.town, defense: state.town.defense + bankDefenseFor(event.item.type), bank: { ...state.town.bank, [event.item.type]: currentCount + 1 } },
+      }
     }
+    case 'ITEM_WITHDRAWN': {
+      const currentCount = state.town.bank[event.item.type] ?? 0
+      return {
+        ...state,
+        nextItemId: state.nextItemId + 1,
+        citizens: replaceCitizen(state, event.citizenId, (citizen) => ({ ...citizen, inventory: [...citizen.inventory, event.item] })),
+        town: {
+          ...state.town,
+          defense: Math.max(0, state.town.defense - bankDefenseFor(event.item.type)),
+          bank: { ...state.town.bank, [event.item.type]: Math.max(0, currentCount - 1) },
+        },
+      }
+    }
+    case 'ITEM_MOVED_TO_HOME':
+      return {
+        ...state,
+        citizens: replaceCitizen(state, event.citizenId, (citizen) => ({
+          ...citizen,
+          inventory: citizen.inventory.filter((item) => item.id !== event.item.id),
+          home: { ...citizen.home, storage: [...citizen.home.storage, event.item] },
+        })),
+      }
+    case 'ITEM_MOVED_TO_RUCKSACK':
+      return {
+        ...state,
+        citizens: replaceCitizen(state, event.citizenId, (citizen) => ({
+          ...citizen,
+          inventory: [...citizen.inventory, event.item],
+          home: { ...citizen.home, storage: citizen.home.storage.filter((item) => item.id !== event.item.id) },
+        })),
+      }
+    case 'CONTAINER_OPENED':
+      return {
+        ...state,
+        rngState: event.rngStateAfter,
+        nextItemId: state.nextItemId + 1,
+        citizens: replaceCitizen(state, event.citizenId, (citizen) => {
+          if (event.source === 'inventory') {
+            return { ...citizen, inventory: [...citizen.inventory.filter((item) => item.id !== event.containerId), event.output] }
+          }
+          return { ...citizen, home: { ...citizen.home, storage: [...citizen.home.storage.filter((item) => item.id !== event.containerId), event.output] } }
+        }),
+      }
+    case 'WATER_TAKEN':
+      return {
+        ...state,
+        nextItemId: state.nextItemId + 1,
+        town: { ...state.town, well: { water: Math.max(0, state.town.well.water - 1) } },
+        citizens: replaceCitizen(state, event.citizenId, (citizen) => ({
+          ...citizen,
+          inventory: [...citizen.inventory, event.item],
+          daily: { ...citizen.daily, waterTaken: true },
+        })),
+      }
+    case 'ITEM_CONSUMED':
+      return {
+        ...state,
+        citizens: replaceCitizen(state, event.citizenId, (citizen) => {
+          const withoutItem = removeStoredItem(citizen, event.item.id, event.source)
+          return {
+            ...withoutItem,
+            ap: withoutItem.maxAp,
+            daily: event.kind === 'food'
+              ? { ...withoutItem.daily, ate: true }
+              : { ...withoutItem.daily, drank: true },
+          }
+        }),
+      }
     case 'CONSTRUCTION_AP_CONTRIBUTED': {
       const project = state.town.construction[event.projectId]
       return { ...state, town: { ...state.town, construction: { ...state.town.construction, [event.projectId]: { ...project, apContributed: project.apContributed + event.amount } } } }
@@ -48,9 +152,20 @@ function reduceSingleEvent(state: GameState, event: GameEvent): GameState {
       const outputCurrent = afterInput[event.output] ?? 0
       return { ...state, town: { ...state.town, bank: { ...afterInput, [event.output]: outputCurrent + event.outputCount } } }
     }
-    case 'CITIZEN_DIED': return { ...state, citizens: state.citizens.map((citizen) => citizen.id === event.citizenId ? { ...citizen, alive: false, ap: 0 } : citizen) }
-    case 'NIGHT_RESOLVED': return { ...state, lastNight: event.report }
-    case 'DAY_STARTED': return { ...state, day: event.day, citizens: state.citizens.map((citizen) => ({ ...citizen, ap: citizen.alive ? citizen.maxAp : 0 })) }
+    case 'CITIZEN_DIED':
+      return { ...state, citizens: replaceCitizen(state, event.citizenId, (citizen) => ({ ...citizen, alive: false, ap: 0 })) }
+    case 'NIGHT_RESOLVED':
+      return { ...state, lastNight: event.report }
+    case 'DAY_STARTED':
+      return {
+        ...state,
+        day: event.day,
+        citizens: state.citizens.map((citizen) => ({
+          ...citizen,
+          ap: citizen.alive ? citizen.maxAp : 0,
+          daily: { ate: false, drank: false, waterTaken: false },
+        })),
+      }
   }
 }
 

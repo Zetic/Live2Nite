@@ -11,9 +11,9 @@ export function EventLog({ game }: { game: GameState }) {
     return [...filtered].reverse()
   }, [game.events, mode])
 
-  return <section className="panel log-panel">
+  return <section className="panel screen-panel log-panel">
     <div className="panel-heading">
-      <div><p className="section-kicker">Town chronicle</p><h2>Event Log</h2><p className="section-note">Readable highlights by default. Switch to All events for the full simulation trace.</p></div>
+      <div><p className="section-kicker">Town chronicle</p><h2>Chronicle</h2><p className="section-note">Highlights suppress repetitive travel and AP bookkeeping. All events exposes the complete simulation trace.</p></div>
       <div className="segmented" aria-label="Event log filter"><button className={mode==='highlights'?'active':''} onClick={()=>setMode('highlights')}>Highlights</button><button className={mode==='all'?'active':''} onClick={()=>setMode('all')}>All events</button></div>
     </div>
     <div className="event-log" role="log" aria-live="polite">

@@ -7,27 +7,32 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - React + Vite + TypeScript
 - 40 citizen slots: 1 human, 39 basic bots
 - verified 6 AP ordinary-citizen baseline
+- Camp Bed home for every citizen with 4-slot private chest storage
+- Citizen's Welcome Pack + Doggy Bag starter supplies
+- seeded town well with original-English-style 80–140 starting rations
+- one well ration per citizen per day
+- separate once-per-day food and water AP refreshes
 - open/close town gate for 1 AP
 - seeded 14 × 13 World Beyond prototype map
 - 1 AP cardinal movement
 - original-style 2 human CP vs. 1 zombie CP zone control
 - zero-AP manual searches
-- 4-slot ordinary backpack
-- shared town bank deposits and defensive bank objects
+- 4-slot ordinary rucksack
+- shared town bank deposits and withdrawals, including defensive bank objects
 - shared Construction Sites with persistent AP progress
 - Workshop project and raw-material processing
 - Watchtower project
 - bots use the same legal actions for scavenging, rescue, construction, and Workshop work
 - citizens outside at nightly resolution die while camping is not yet implemented
+- screen-based Town / Home / World Beyond / Citizens / Chronicle UI
 - command/event-driven game core
 - legal-action API shared by humans and bots
 - seeded deterministic simulation
 - IndexedDB autosave with schema migration
-- full citizen roster and readable filtered event log
 - GitHub Pages deployment workflow
 - Vitest simulation tests
 
-Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). Procedural map generation, loot frequency, base defense, and the nightly attack curve remain explicit Live2Nite placeholders until their original behavior is researched and encoded.
+Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). Procedural map generation, exact loot frequency, base defense, nightly attack progression, complete starter-package distributions, thirst, and home upgrades remain explicit deferred areas until their original behavior is researched and encoded.
 
 ## Development
 
