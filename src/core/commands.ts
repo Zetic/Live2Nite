@@ -1,6 +1,7 @@
 import { CONSTRUCTION_AP_COST, GATE_AP_COST, MOVE_AP_COST, getLegalActions } from './actions'
 import { CONSTRUCTIONS } from './construction'
 import { applyEvents } from './events'
+import { HOME_LEVELS, HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
 import { containerPool, DEPLETED_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
 import type { GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, SearchMode } from './types'
@@ -99,25 +100,10 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
       const zone = state.world.zones[key]
       const mode: SearchMode = zone.searchesRemaining > 0 ? 'normal' : 'depleted'
       if (mode === 'normal') {
-        events.push({
-          type: 'ZONE_SEARCHED',
-          day: state.day,
-          zoneKey: key,
-          citizenId: command.citizenId,
-          mode,
-          item: normalSearchItem(state, citizen.location.x, citizen.location.y),
-        })
+        events.push({ type: 'ZONE_SEARCHED', day: state.day, zoneKey: key, citizenId: command.citizenId, mode, item: normalSearchItem(state, citizen.location.x, citizen.location.y) })
       } else {
         const outcome = depletedSearchOutcome(state)
-        events.push({
-          type: 'ZONE_SEARCHED',
-          day: state.day,
-          zoneKey: key,
-          citizenId: command.citizenId,
-          mode,
-          item: outcome.item,
-          rngStateAfter: outcome.rngStateAfter,
-        })
+        events.push({ type: 'ZONE_SEARCHED', day: state.day, zoneKey: key, citizenId: command.citizenId, mode, item: outcome.item, rngStateAfter: outcome.rngStateAfter })
       }
       break
     }
@@ -151,16 +137,7 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
       const pool = containerPool(located.item.type)
       if (!pool?.length) throw new InvalidCommandError(`${located.item.type} is not an openable container`)
       const roll = randomInt(state.rngState, 0, pool.length - 1)
-      events.push({
-        type: 'CONTAINER_OPENED',
-        day: state.day,
-        citizenId: command.citizenId,
-        containerId: located.item.id,
-        containerType: located.item.type,
-        source: located.source,
-        output: nextItem(state, pool[roll.value]),
-        rngStateAfter: roll.state,
-      })
+      events.push({ type: 'CONTAINER_OPENED', day: state.day, citizenId: command.citizenId, containerId: located.item.id, containerType: located.item.type, source: located.source, output: nextItem(state, pool[roll.value]), rngStateAfter: roll.state })
       break
     }
     case 'TAKE_WATER':
@@ -174,6 +151,15 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
     case 'DRINK_ITEM': {
       const located = locateItem(state, command.citizenId, command.itemId)
       events.push({ type: 'ITEM_CONSUMED', day: state.day, citizenId: command.citizenId, item: located.item, source: located.source, kind: 'water' })
+      break
+    }
+    case 'UPGRADE_HOME': {
+      const target = nextHomeLevel(citizen.home.level)
+      if (!target) throw new InvalidCommandError('No home upgrade is currently available')
+      events.push(
+        { type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: HOME_UPGRADE_AP_COST },
+        { type: 'HOME_UPGRADED', day: state.day, citizenId: command.citizenId, from: citizen.home.level, to: target, defenseAfter: HOME_LEVELS[target].defense },
+      )
       break
     }
     case 'CONTRIBUTE_CONSTRUCTION': {
