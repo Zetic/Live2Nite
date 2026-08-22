@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BasicBotController } from '../agents/BasicBotController'
-import { runBotPhase } from '../agents/runBotPhase'
 import { getLegalActions } from '../core/actions'
+import { formatGameHour } from '../core/clock'
 import { executeCommand, InvalidCommandError } from '../core/commands'
 import { totalTownDefense } from '../core/defense'
-import { createInitialGame, resolveNight } from '../core/game'
+import { createInitialGame } from '../core/game'
 import type { Direction, GameCommand, GameEvent, GameState } from '../core/types'
 import { getZone, zoneControl } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
+import { advanceOneHour, advanceToHour, InvalidTimeAdvanceError } from '../simulation/advanceTime'
 import { BankView } from './components/BankView'
 import { CitizenRoster } from './components/CitizenRoster'
 import { ConstructionView } from './components/ConstructionView'
 import { EventLog } from './components/EventLog'
 import { GameNavigation } from './components/GameNavigation'
 import { HomeView } from './components/HomeView'
+import { TimeControls } from './components/TimeControls'
 import { WatchtowerView } from './components/WatchtowerView'
 import { WellView } from './components/WellView'
 import { WorkshopView } from './components/WorkshopView'
@@ -24,6 +26,7 @@ import { isTownOnlyScreen, type GameScreen } from './navigation'
 import './app.css'
 import './facility.css'
 import './night.css'
+import './clock.css'
 
 const repository = new IndexedDbGameRepository()
 const botController = new BasicBotController()
@@ -68,18 +71,25 @@ export function App() {
     catch (caught) { setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.') }
   }
   const move = (direction: Direction) => act(legalActions.find((action): action is Extract<GameCommand,{type:'MOVE'}> => action.type === 'MOVE' && action.direction === direction))
-  const runCitizens = () => { setGame((current) => runBotPhase(current, botController, controlledCitizenId)); setError(null) }
-  const endDay = () => { if (alive === 0) return; setGame((current) => resolveNight(runBotPhase(current, botController, controlledCitizenId))); setError(null) }
+  const advanceHour = () => {
+    try { setGame(advanceOneHour(game,botController,controlledCitizenId)); setError(null) }
+    catch (caught) { setError(caught instanceof InvalidTimeAdvanceError ? caught.message : 'Time advance failed.') }
+  }
+  const advanceTarget = (hour: number) => {
+    try { setGame(advanceToHour(game,hour,botController,controlledCitizenId)); setError(null) }
+    catch (caught) { setError(caught instanceof InvalidTimeAdvanceError ? caught.message : 'Time advance failed.') }
+  }
   const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setScreen('home'); setError(null) }
   const controlCitizen = (citizenId: string) => { setControlledCitizenId(citizenId); setError(null) }
 
   if (!loaded) return <main className="shell loading-shell"><p>Opening the town gates…</p></main>
 
   const zombiesInside = game.lastNight?.zombiesInside ?? (game.lastNight ? Math.max(0, game.lastNight.attackStrength - game.lastNight.effectiveDefense) : 0)
+  const attackPhase = game.clock.phase === 'attack'
 
   return <main className="shell">
     <header className="hero">
-      <div className="brand-block"><p className="eyebrow">Distant town survival</p><h1>Live<span>2</span>Nite</h1><div className="dayline"><strong>DAY {game.day}</strong><span>Town seed {game.seed}</span><span className="test-control-chip">TEST CONTROL · {player.name}</span></div></div>
+      <div className="brand-block"><p className="eyebrow">Distant town survival</p><h1>Live<span>2</span>Nite</h1><div className="dayline"><strong>DAY {game.day}</strong><span className="clock-value">{formatGameHour(game.clock.hour)}</span><span>Town seed {game.seed}</span><span className="test-control-chip">TEST CONTROL · {player.name}</span></div></div>
       <div className="header-actions"><span className="save-state">● Local save active</span><button className="secondary" onClick={() => void reset()}>Start a new town</button></div>
     </header>
 
@@ -92,7 +102,12 @@ export function App() {
       <article><span>{player.name} AP</span><strong>{player.ap}<small>/ {player.maxAp}</small></strong></article>
     </section>
 
-    {game.lastNight && <section className={`night-report ${game.lastNight.breached ? 'danger' : 'safe'}`}>
+    {attackPhase && <section className="night-report danger attack-hour-banner">
+      <div className="night-icon" aria-hidden="true">☾</div>
+      <div className="night-report-copy"><span>00:00–01:00 · attack hour</span><strong>The horde is attacking.</strong><p>Normal actions are locked. Advance one hour to resolve the attack, casualties, home-defense checks, and the start of Day {game.day + 1} at 1:00 AM.</p></div>
+    </section>}
+
+    {!attackPhase && game.lastNight && <section className={`night-report ${game.lastNight.breached ? 'danger' : 'safe'}`}>
       <div className="night-icon" aria-hidden="true">☾</div>
       <div className="night-report-copy">
         <span>Night {game.lastNight.day} report</span>
@@ -121,12 +136,9 @@ export function App() {
     </div>
 
     {error && <p className="error-banner global-error">{error}</p>}
-    {control?.trapped && <div className="rescue-hint global-rescue"><strong>Zone control lost.</strong><span>Search, use a carried weapon, attempt bare-handed combat, or run citizen activity so another citizen can rescue {player.name}.</span></div>}
+    {control?.trapped && !attackPhase && <div className="rescue-hint global-rescue"><strong>Zone control lost.</strong><span>Search, fight, use a carried weapon, or advance time so autonomous citizens can react during the current hour.</span></div>}
 
-    <footer className="turn-bar">
-      <div><span>Day {game.day} · controlling {player.name}</span><strong>{player.alive ? (player.location.type === 'town' ? 'Inside town' : `Outside [${player.location.x},${player.location.y}]`) : 'DEAD · switch citizens to continue testing'}</strong></div>
-      <button className="activity-button" disabled={alive === 0} onClick={runCitizens}><span>Run citizen activity</span><small>All bots except the controlled citizen act now</small></button>
-      <button className="primary end-day" disabled={alive === 0} onClick={endDay}><span>End the day</span><small>Uncontrolled citizens act, then the attack resolves</small></button>
-    </footer>
+    <div className="controlled-clock-context"><span>Controlling {player.name}</span><strong>{player.alive ? (player.location.type === 'town' ? 'Inside town' : `Outside [${player.location.x},${player.location.y}]`) : 'DEAD · switch citizens to continue testing'}</strong></div>
+    <TimeControls game={game} onAdvanceOne={advanceHour} onAdvanceTarget={advanceTarget}/>
   </main>
 }
