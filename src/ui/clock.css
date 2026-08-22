@@ -1,3 +1,16 @@
+.controlled-clock-context {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #0d1417;
+}
+.controlled-clock-context span { color: var(--muted); font-size: .62rem; text-transform: uppercase; letter-spacing: .09em; }
+.controlled-clock-context strong { font-size: .76rem; color: #d7c7b9; }
 .time-controls {
   position: sticky;
   bottom: 10px;
@@ -6,7 +19,7 @@
   grid-template-columns: minmax(220px,.7fr) minmax(0,1.5fr);
   gap: 10px;
   align-items: stretch;
-  margin-top: 12px;
+  margin-top: 8px;
   padding: 9px;
   border: 1px solid #3a464b;
   border-radius: 11px;
@@ -30,12 +43,13 @@
 @keyframes attackPulse { 0%,100% { box-shadow: 0 0 0 rgba(211,109,100,0); } 50% { box-shadow: 0 0 18px rgba(211,109,100,.18); } }
 .attack-hour-banner { border-left-color: var(--red) !important; background: linear-gradient(90deg,#251010,#151315) !important; }
 .clock-value { color: #e7c8ac; }
-.event-time { min-width: 68px !important; }
+.event-time { min-width: 76px !important; }
 
 @media (max-width: 900px) {
   .time-controls { position: static; grid-template-columns: 1fr; }
   .time-buttons { grid-template-columns: repeat(2,1fr); }
 }
 @media (max-width: 560px) {
+  .controlled-clock-context { align-items: flex-start; flex-direction: column; }
   .time-buttons { grid-template-columns: 1fr; }
 }
