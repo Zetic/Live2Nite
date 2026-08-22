@@ -81,7 +81,7 @@ describe('camping and overnight survival',()=>{
 
   it('plans an overnight mission only when a safe same-day round trip is not feasible',()=>{
     let game=createInitialGame(131,2)
-    game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,inventory:[{id:'water',type:'water_ration' as const}]}:citizen)}
+    game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,daily:{...citizen.daily,ate:true},inventory:[{id:'water',type:'water_ration' as const}]}:citizen)}
     const overnight=mission(6,'prepare',true)
     const overnightPlan=planMission(game,'c02',overnight)
     expect(overnightPlan?.roundTripRequiredAp).toBeGreaterThan(overnightPlan?.loadout.potentialAp??0)
