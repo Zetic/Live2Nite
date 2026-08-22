@@ -112,7 +112,6 @@ describe('Day-1 economy benchmark', () => {
     for (const seed of seeds) {
       let game = createInitialGame(seed,40)
       game = advanceToHour(game,0,bots,'c01')
-      const midnight = game
       if (game.town.construction.workshop.completed) workshops += 1
       totalBankPlanks += game.town.bank.twisted_plank ?? 0
       totalBankIron += game.town.bank.wrought_iron ?? 0
@@ -122,10 +121,6 @@ describe('Day-1 economy benchmark', () => {
       totalAutomaticSearches += game.events.filter((event) => event.type === 'ZONE_SEARCHED' && event.automatic === true).length
       totalConstructionKits += game.events.filter((event) => event.type === 'CONSTRUCTION_KIT_OPENED').length
       game = advanceOneHour(game,bots,'c01')
-      const deathEvents=game.events.filter((event)=>event.type==='CITIZEN_DIED'&&event.day===1)
-      const byReason=deathEvents.reduce<Record<string,number>>((counts,event)=>{if(event.type==='CITIZEN_DIED')counts[event.reason]=(counts[event.reason]??0)+1;return counts},{})
-      const reserveIds=['c40','c39','c38']
-      console.log('DAY1 SEED',seed,{gateAtMidnight:midnight.town.gateOpen,outsideAtMidnight:midnight.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world').length,living:game.citizens.filter((citizen)=>citizen.alive).length,deaths:byReason,reserve:midnight.citizens.filter((citizen)=>reserveIds.includes(citizen.id)).map((citizen)=>({id:citizen.id,alive:citizen.alive,ap:citizen.ap,location:citizen.location,hydration:citizen.status.hydration}))})
       minimumLiving = Math.min(minimumLiving,game.citizens.filter((citizen) => citizen.alive).length)
     }
     console.log('DAY1 BENCHMARK', {
