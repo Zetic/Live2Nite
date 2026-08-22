@@ -4,7 +4,7 @@ import { runBotPhase } from '../agents/runBotPhase'
 import { getLegalActions } from '../core/actions'
 import { executeCommand, InvalidCommandError } from '../core/commands'
 import { createInitialGame, resolveNight } from '../core/game'
-import { itemName, ITEM_TYPES } from '../core/items'
+import { itemName, itemPurpose, ITEM_TYPES } from '../core/items'
 import type { Direction, GameCommand, GameEvent, GameState } from '../core/types'
 import { getZone, zoneControl, zoneKey } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
@@ -19,20 +19,24 @@ function newSeed(): number {
   return values[0] || 1
 }
 
-function describeEvent(event: GameEvent): string {
+function citizenName(game: GameState, citizenId: string): string {
+  return game.citizens.find((citizen) => citizen.id === citizenId)?.name ?? citizenId
+}
+
+function describeEvent(event: GameEvent, game: GameState): string {
   switch (event.type) {
-    case 'AP_SPENT': return `${event.citizenId} spent ${event.amount} AP.`
-    case 'GATE_SET': return `${event.citizenId} ${event.open ? 'opened' : 'closed'} the gate.`
+    case 'AP_SPENT': return `${citizenName(game, event.citizenId)} spent ${event.amount} AP.`
+    case 'GATE_SET': return `${citizenName(game, event.citizenId)} ${event.open ? 'opened' : 'closed'} the gate.`
     case 'CITIZEN_LOCATION_CHANGED': return event.location.type === 'town'
-      ? `${event.citizenId} entered town.`
-      : `${event.citizenId} moved to [${event.location.x},${event.location.y}].`
+      ? `${citizenName(game, event.citizenId)} entered town.`
+      : `${citizenName(game, event.citizenId)} moved to [${event.location.x},${event.location.y}].`
     case 'ZONE_DISCOVERED': return `Zone [${event.zoneKey}] was discovered.`
     case 'ZONE_SEARCHED': return event.item
-      ? `${event.citizenId} searched [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.`
-      : `${event.citizenId} searched [${event.zoneKey}] and found nothing.`
-    case 'ITEM_PICKED_UP': return `${event.citizenId} picked up ${itemName(event.item.type)}.`
-    case 'ITEM_DEPOSITED': return `${event.citizenId} deposited ${itemName(event.item.type)}.`
-    case 'CITIZEN_DIED': return `${event.citizenId} died outside during the nightly attack.`
+      ? `${citizenName(game, event.citizenId)} searched [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.`
+      : `${citizenName(game, event.citizenId)} searched [${event.zoneKey}] and found nothing.`
+    case 'ITEM_PICKED_UP': return `${citizenName(game, event.citizenId)} picked up ${itemName(event.item.type)}.`
+    case 'ITEM_DEPOSITED': return `${citizenName(game, event.citizenId)} deposited ${itemName(event.item.type)}.`
+    case 'CITIZEN_DIED': return `${citizenName(game, event.citizenId)} died outside during the nightly attack.`
     case 'NIGHT_RESOLVED': return `Night ${event.day}: attack ${event.report.attackStrength} vs effective defense ${event.report.effectiveDefense}${event.report.breached ? ' — BREACH' : ' — held'}.`
     case 'DAY_STARTED': return `Day ${event.day} began.`
   }
@@ -60,9 +64,18 @@ export function App() {
 
   const player = game.citizens[0]
   const alive = useMemo(() => game.citizens.filter((citizen) => citizen.alive).length, [game.citizens])
+  const outsideCitizens = useMemo(() => game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world'), [game.citizens])
   const legalActions = useMemo(() => player ? getLegalActions(game, player.id) : [], [game, player])
   const currentZone = player?.location.type === 'world' ? getZone(game.world, player.location.x, player.location.y) : null
   const control = player?.location.type === 'world' ? zoneControl(game, player.location.x, player.location.y) : null
+  const lastNightDeathNames = useMemo(() => {
+    if (!game.lastNight) return []
+    return game.events
+      .filter((event): event is Extract<GameEvent, { type: 'CITIZEN_DIED' }> =>
+        event.type === 'CITIZEN_DIED' && event.day === game.lastNight?.day,
+      )
+      .map((event) => citizenName(game, event.citizenId))
+  }, [game])
 
   const act = (command: GameCommand | undefined) => {
     if (!command) return
@@ -79,6 +92,11 @@ export function App() {
       action.type === 'MOVE' && action.direction === direction,
     )
     act(command)
+  }
+
+  const runCitizens = () => {
+    setGame((current) => runBotPhase(current, botController))
+    setError(null)
   }
 
   const endDay = () => {
@@ -117,7 +135,8 @@ export function App() {
         <section className={`night ${game.lastNight.breached ? 'danger' : ''}`}>
           <strong>Last night:</strong> attack {game.lastNight.attackStrength} vs effective defense {game.lastNight.effectiveDefense}.{' '}
           {game.lastNight.breached ? 'The town was breached.' : 'The town held.'}
-          {game.lastNight.outsideDeaths > 0 && ` ${game.lastNight.outsideDeaths} citizen(s) died outside.`}
+          {game.lastNight.gateOpen && <span> The gate was left OPEN, so the town's defense did not apply.</span>}
+          {lastNightDeathNames.length > 0 && <span> Died outside: {lastNightDeathNames.join(', ')}.</span>}
         </section>
       )}
 
@@ -142,7 +161,17 @@ export function App() {
             />
           )}
           {error && <p className="error">{error}</p>}
-          <button className="primary end-day" disabled={!player.alive} onClick={endDay}>End day / run bots / resolve night</button>
+
+          {control?.trapped && (
+            <div className="rescue-hint">
+              <strong>You are trapped.</strong> Searching is still allowed, but you cannot move until citizens regain control of this zone. Run citizen activity to give autonomous citizens a chance to respond and rescue you before ending the day.
+            </div>
+          )}
+
+          <button className="secondary activity" disabled={!player.alive} onClick={runCitizens}>
+            Run citizen activity <small>0 AP · no night attack</small>
+          </button>
+          <button className="primary end-day" disabled={!player.alive} onClick={endDay}>End day / run remaining citizens / resolve night</button>
         </section>
 
         <section className="panel map-panel">
@@ -153,6 +182,10 @@ export function App() {
 
         <section className="panel">
           <h2>Citizens</h2>
+          <p className={`outside-summary ${outsideCitizens.length ? 'danger-text' : ''}`}>
+            Outside now: <strong>{outsideCitizens.length}</strong>
+            {outsideCitizens.length > 0 && ` — ${outsideCitizens.map((citizen) => citizen.name).join(', ')}`}
+          </p>
           <div className="citizen-list">
             {game.citizens.slice(0, 12).map((citizen) => (
               <div className="citizen" key={citizen.id}>
@@ -168,7 +201,7 @@ export function App() {
           <h2>Event Log</h2>
           <ol className="log">
             {game.events.slice(-40).reverse().map((event, index) => (
-              <li key={`${game.events.length - index}-${event.type}`}>{describeEvent(event)}</li>
+              <li key={`${game.events.length - index}-${event.type}`}>{describeEvent(event, game)}</li>
             ))}
           </ol>
         </section>
@@ -212,7 +245,12 @@ function TownView({ game, legalActions, act }: {
 
       <h3>Town Bank</h3>
       <div className="bank-grid">
-        {ITEM_TYPES.map((type) => <span key={type}>{itemName(type)} <strong>×{game.town.bank[type] ?? 0}</strong></span>)}
+        {ITEM_TYPES.map((type) => (
+          <span key={type}>
+            {itemName(type)} <strong>×{game.town.bank[type] ?? 0}</strong>
+            <small>{itemPurpose(type)}</small>
+          </span>
+        ))}
       </div>
     </>
   )
