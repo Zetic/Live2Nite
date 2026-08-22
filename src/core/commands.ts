@@ -1,4 +1,5 @@
 import { CONSTRUCTION_AP_COST, GATE_AP_COST, MOVE_AP_COST, getLegalActions } from './actions'
+import { BAREHANDED_AP_COST, resolveBarehandedAttack, resolveWeaponAttack } from './combat'
 import { CONSTRUCTIONS } from './construction'
 import { applyEvents } from './events'
 import { HOME_LEVELS, HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
@@ -15,6 +16,7 @@ function sameCommand(left: GameCommand, right: GameCommand): boolean {
   if (left.type !== right.type || left.citizenId !== right.citizenId) return false
   if (left.type === 'MOVE' && right.type === 'MOVE') return left.direction === right.direction
   if (left.type === 'PICK_UP_ITEM' && right.type === 'PICK_UP_ITEM') return left.itemId === right.itemId
+  if (left.type === 'USE_WEAPON' && right.type === 'USE_WEAPON') return left.itemId === right.itemId
   if (left.type === 'DEPOSIT_ITEM' && right.type === 'DEPOSIT_ITEM') return left.itemId === right.itemId
   if (left.type === 'WITHDRAW_BANK_ITEM' && right.type === 'WITHDRAW_BANK_ITEM') return left.itemType === right.itemType
   if (left.type === 'MOVE_ITEM_TO_HOME' && right.type === 'MOVE_ITEM_TO_HOME') return left.itemId === right.itemId
@@ -112,6 +114,26 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
       const key = zoneKey(citizen.location.x, citizen.location.y)
       const item = state.world.zones[key].groundItems.find((candidate) => candidate.id === command.itemId)!
       events.push({ type: 'ITEM_PICKED_UP', day: state.day, citizenId: command.citizenId, zoneKey: key, item })
+      break
+    }
+    case 'ATTACK_BAREHANDED': {
+      if (citizen.location.type !== 'world') throw new InvalidCommandError('Citizen is not outside')
+      const key = zoneKey(citizen.location.x, citizen.location.y)
+      const outcome = resolveBarehandedAttack(state)
+      events.push(
+        { type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: BAREHANDED_AP_COST },
+        { type: 'COMBAT_RESOLVED', day: state.day, citizenId: command.citizenId, zoneKey: key, method: 'fists', kills: outcome.kills, item: null, consumed: false, rngStateAfter: outcome.rngStateAfter },
+      )
+      break
+    }
+    case 'USE_WEAPON': {
+      if (citizen.location.type !== 'world') throw new InvalidCommandError('Citizen is not outside')
+      const key = zoneKey(citizen.location.x, citizen.location.y)
+      const zone = state.world.zones[key]
+      const item = citizen.inventory.find((candidate) => candidate.id === command.itemId)
+      if (!item) throw new InvalidCommandError(`Missing carried weapon ${command.itemId}`)
+      const outcome = resolveWeaponAttack(state, item, zone.zombies)
+      events.push({ type: 'COMBAT_RESOLVED', day: state.day, citizenId: command.citizenId, zoneKey: key, method: item.type, kills: outcome.kills, item, consumed: outcome.consumed, rngStateAfter: outcome.rngStateAfter })
       break
     }
     case 'DEPOSIT_ITEM': {
