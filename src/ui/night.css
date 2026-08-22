@@ -1,0 +1,43 @@
+.home-defense-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 18px;
+  align-items: center;
+  border: 1px solid #4a382e;
+  background: linear-gradient(135deg, #1b1511, #12191c);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+.home-defense-panel h3 { margin-bottom: 4px; }
+.home-defense-panel p { margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+.home-defense-breakdown { display: flex; gap: 6px; }
+.home-defense-breakdown span { min-width: 78px; border: 1px solid #39464c; border-radius: 7px; padding: 8px; color: var(--muted); font-size: .62rem; text-align: center; }
+.home-defense-breakdown strong { display: block; margin-top: 2px; color: #ead8c9; font-size: 1.05rem; }
+.item-title-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.home-defense-chip { border: 1px solid #506b55; border-radius: 999px; padding: 2px 6px; color: #a8cea9; background: #142019; font-size: .55rem; font-weight: 850; letter-spacing: .06em; }
+
+.watchtower-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.forecast-card { border: 1px solid #354249; background: #10181c; border-radius: 10px; padding: 18px; }
+.forecast-card > span { display: block; text-transform: uppercase; letter-spacing: .1em; font-size: .6rem; color: var(--muted); }
+.forecast-card > strong { display: block; margin: 7px 0 3px; font-size: clamp(1.5rem, 3vw, 2.2rem); color: #e6d4c3; }
+.forecast-card > small { color: var(--muted); font-size: .68rem; line-height: 1.4; }
+.forecast-state.safe { border-color: #426549; background: #101a15; }
+.forecast-state.safe strong { color: #9fc8a2; }
+.forecast-state.warning { border-color: #6f5831; background: #1d1810; }
+.forecast-state.warning strong { color: #dfb967; }
+.forecast-state.danger { border-color: #7f3d32; background: #241313; }
+.forecast-state.danger strong { color: #f0a198; }
+.watchtower-note { margin-top: 14px; border-top: 1px solid #273238; padding-top: 16px; }
+.watchtower-note p { margin: 5px 0 0; max-width: 900px; color: var(--muted); font-size: .78rem; line-height: 1.5; }
+.night-casualties { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; }
+.night-casualties span { color: #e1a49b; font-size: .72rem; text-transform: none; letter-spacing: 0; }
+
+@media (max-width: 900px) {
+  .home-defense-panel { grid-template-columns: 1fr; }
+  .home-defense-breakdown { flex-wrap: wrap; }
+  .watchtower-grid { grid-template-columns: 1fr; }
+}
+
+/* Facility count is now dynamic; avoid forcing every destination into a fixed five-column row. */
+.game-nav { grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); }
