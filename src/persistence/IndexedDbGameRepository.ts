@@ -1,3 +1,4 @@
+import { createConstructionState } from '../core/construction'
 import type { GameState } from '../core/types'
 import type { GameRepository } from './GameRepository'
 
@@ -8,15 +9,18 @@ const SAVE_KEY = 'active'
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1)
-    request.onupgradeneeded = () => {
-      const database = request.result
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        database.createObjectStore(STORE_NAME)
-      }
-    }
+    request.onupgradeneeded = () => { const database = request.result; if (!database.objectStoreNames.contains(STORE_NAME)) database.createObjectStore(STORE_NAME) }
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })
+}
+
+function migrateSave(result: Partial<GameState> & { schemaVersion?: number }): GameState | null {
+  if (result.schemaVersion === 3) return result as GameState
+  if (result.schemaVersion === 2 && result.town) {
+    return { ...(result as unknown as GameState), schemaVersion: 3, town: { ...(result.town as GameState['town']), construction: createConstructionState() } }
+  }
+  return null
 }
 
 export class IndexedDbGameRepository implements GameRepository {
@@ -25,37 +29,26 @@ export class IndexedDbGameRepository implements GameRepository {
     return new Promise((resolve, reject) => {
       const transaction = database.transaction(STORE_NAME, 'readonly')
       const request = transaction.objectStore(STORE_NAME).get(SAVE_KEY)
-      request.onsuccess = () => {
-        const result = request.result as Partial<GameState> | undefined
-        resolve(result?.schemaVersion === 2 ? result as GameState : null)
-      }
+      request.onsuccess = () => { const result = request.result as (Partial<GameState> & { schemaVersion?: number }) | undefined; resolve(result ? migrateSave(result) : null) }
       request.onerror = () => reject(request.error)
       transaction.oncomplete = () => database.close()
     })
   }
-
   async save(state: GameState): Promise<void> {
     const database = await openDatabase()
     return new Promise((resolve, reject) => {
       const transaction = database.transaction(STORE_NAME, 'readwrite')
       transaction.objectStore(STORE_NAME).put(state, SAVE_KEY)
-      transaction.oncomplete = () => {
-        database.close()
-        resolve()
-      }
+      transaction.oncomplete = () => { database.close(); resolve() }
       transaction.onerror = () => reject(transaction.error)
     })
   }
-
   async clear(): Promise<void> {
     const database = await openDatabase()
     return new Promise((resolve, reject) => {
       const transaction = database.transaction(STORE_NAME, 'readwrite')
       transaction.objectStore(STORE_NAME).delete(SAVE_KEY)
-      transaction.oncomplete = () => {
-        database.close()
-        resolve()
-      }
+      transaction.oncomplete = () => { database.close(); resolve() }
       transaction.onerror = () => reject(transaction.error)
     })
   }
