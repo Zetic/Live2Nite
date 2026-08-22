@@ -17,8 +17,9 @@ Live2Nite starts as a single-player browser game but keeps the simulation indepe
 - `game.ts`: initial game creation plus the public day/night entry point.
 - `night.ts`: isolated horde-strength generation, Watchtower estimates, breach distribution, and home survival.
 - `defense.ts`: shared town-defense aggregation, including defensive objects stored in living citizens' homes.
+- `combat.ts`: deterministic zombie-combat rules and weapon definitions.
 - `world.ts`: map generation, coordinates, zone control, and normal/depleted search state.
-- `items.ts`: item definitions, starter packages, consumable metadata, defense metadata, and normal/depleted scavenging pools.
+- `items.ts`: item definitions, starter packages, consumable/defense metadata, weapon catalog entries, and normal/depleted scavenging pools.
 - `home.ts`: home levels, personal defense, storage, and daily citizen-use state.
 - `well.ts`: deterministic starting-well generation.
 - `construction.ts`: construction catalog and material requirements.
@@ -27,9 +28,9 @@ Live2Nite starts as a single-player browser game but keeps the simulation indepe
 
 ## Legal-action boundary
 
-`getLegalActions(gameState, citizenId)` is the common action surface for every controller. React, traditional bots, future LLM-assisted bots, and future remote humans all operate through the same legal commands. No controller directly mutates AP, inventory, homes, the well, map, bank, construction, gate, or other simulation state.
+`getLegalActions(gameState, citizenId)` is the common action surface for every controller. React, traditional bots, future LLM-assisted bots, and future remote humans all operate through the same legal commands. No controller directly mutates AP, inventory, homes, the well, map, bank, construction, gate, zombie counts, or other simulation state.
 
-The current legal surface includes personal storage transfers, container opening, bank deposits/withdrawals, well withdrawal, food/water consumption, the Camp Bed -> Tent home upgrade, gate operations, movement, normal/depleted search, pickup, construction labor, and Workshop processing.
+The current legal surface includes personal storage transfers, container opening, bank deposits/withdrawals, well withdrawal, food/water consumption, the Camp Bed -> Tent home upgrade, gate operations, movement, normal/depleted search, pickup, bare-handed combat, carried-weapon combat, construction labor, and Workshop processing.
 
 ## Command and event flow
 
@@ -38,7 +39,22 @@ The current legal surface includes personal storage transfers, container opening
 3. A valid command emits `GameEvent` records.
 4. Events reduce into the next `GameState` and append to event history.
 
-Container contents and depleted-search outcomes are selected by the command layer from stored RNG state, then recorded in events so the reducer remains deterministic and replayable.
+Random outcomes are selected from stored deterministic RNG state and recorded in events. Container contents, depleted-search outcomes, bare-handed attacks, and weapon kill counts therefore replay from the recorded event instead of being rerolled by the reducer.
+
+## Zombie combat
+
+Combat is a first-class World Beyond domain rather than a UI-side zombie decrement.
+
+- combat commands are exposed only for living citizens outside in a zone containing zombies;
+- ordinary implemented weapons require positive AP but do not spend AP themselves;
+- bare-handed combat spends 1 AP;
+- weapon definitions and kill ranges live in `combat.ts`;
+- the first fully implemented weapon is the single-use Water Bomb;
+- `COMBAT_RESOLVED` records citizen, zone, method, kills, item consumption, and post-roll RNG state;
+- the reducer removes killed zombies and consumed weapons;
+- zone control then updates naturally from the new zombie count, so combat can immediately make movement legal.
+
+Stateful breakable/reloadable weapons are deferred until item instances can represent ammunition, charges, or durability cleanly.
 
 ## Night resolution
 
@@ -75,25 +91,42 @@ World zones distinguish normal search history from depleted search history:
 - depleted searching uses the stored simulation RNG and a separate low-grade pool (currently Rotting Logs / Scrap Metal);
 - each citizen currently gets one depleted search per zone, tracked separately from normal searching.
 
-The exact depleted-search cadence and loot weights remain placeholder rules pending deeper historical reconstruction.
+The exact depleted-search cadence and loot weights remain placeholder rules pending deeper historical reconstruction. Water Bomb is currently an uncommon normal-pool result so combat can be exercised before special-zone/item-table reconstruction; its exact frequency is not claimed as historical.
+
+## Temporary citizen-control testing hook
+
+PR #8 adds a React-local `controlledCitizenId` so the Citizens screen can temporarily operate any living citizen during development.
+
+This is intentionally **not** authoritative game state and is not a permanent gameplay/controller model:
+
+- selecting another citizen does not change `Citizen.controller`;
+- selection is not persisted into the save schema;
+- all actions still go through `getLegalActions` and `executeCommand` for the selected citizen;
+- Home, Well, Bank, World Beyond, inventory, AP, and map presentation are rendered for the selected citizen;
+- `runBotPhase` accepts an optional excluded citizen id so a selected `basic-bot` is not also acted by automation during the same testing turn;
+- selecting another survivor after the controlled citizen dies lets testing continue without changing actual death state.
+
+This hook should be removable from `App` / `CitizenRoster` / the optional bot-phase exclusion without altering the core command or citizen-controller architecture.
 
 ## Agent organization
 
-`BasicBotController` handles high-level sequencing while town-specific work is delegated to `townWork.ts`. Bots use the same search, Bank, construction, Workshop, home-upgrade, gate, movement, and rescue commands as the human player. Once the Watchtower is built, the traditional town-work layer can use its estimate to prioritize the basic Tent upgrade when the estimated minimum exceeds current town defense.
+`BasicBotController` handles high-level sequencing while town-specific work is delegated to `townWork.ts`. Bots use the same search, Bank, construction, Workshop, home-upgrade, gate, movement, rescue, and combat commands as the human-controlled citizen. Trapped bots currently prefer a carried implemented weapon before waiting for rescue; they deliberately do not spam low-probability bare-handed attacks.
+
+Once the Watchtower is built, the traditional town-work layer can use its estimate to prioritize the basic Tent upgrade when the estimated minimum exceeds current town defense.
 
 ## Determinism
 
 Simulation randomness is generated from stored seed/RNG state. `Math.random()` should not be used inside the game core. A seed plus the same ordered commands should reproduce the same simulation result.
 
-Starting well water and nightly horde resolution use isolated deterministic seeds derived from the town seed. Runtime depleted searches and container outcomes advance the main RNG state through recorded events.
+Starting well water and nightly horde resolution use isolated deterministic seeds derived from the town seed. Runtime depleted searches, container outcomes, and combat outcomes advance the main RNG state through recorded events.
 
 ## Persistence versions
 
-Save data remains schema version 5 because PR #7 adds backward-compatible enum/event/report extensions rather than requiring a destructive state migration. Existing v5 saves and older saves already migrated to v5 remain loadable; older `NightReport` records simply lack the new optional breach-detail fields.
+Save data remains schema version 5. PR #8 adds a new item type and event/command types but no new required fields on stored citizen/town/world records. Existing v5 saves remain valid, and the temporary `controlledCitizenId` is UI state rather than save data.
 
 ## Event history
 
-The UI presents a filtered readable Chronicle while preserving the complete raw event stream. Long term, current state, recent UI events, and persistent historical events should be separated so long-running towns do not carry an indefinitely growing array in every save.
+The UI presents a filtered readable Chronicle while preserving the complete raw event stream. Combat is included as a normal recorded world event. Long term, current state, recent UI events, and persistent historical events should be separated so long-running towns do not carry an indefinitely growing array in every save.
 
 ## Future LLM integration
 
