@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BasicBotController } from '../src/agents/BasicBotController'
 import { getLegalActions } from '../src/core/actions'
 import { createInitialGame } from '../src/core/game'
-import type { GameState } from '../src/core/types'
+import type { BotMissionAssignment, GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
 import { advanceOneHour, advanceToHour, InvalidTimeAdvanceError } from '../src/simulation/advanceTime'
 
@@ -27,17 +27,22 @@ function botOutsideAt(game: GameState, x: number, ap: number): GameState {
   },x)
 }
 
+function scoutMission(): BotMissionAssignment {
+  return { missionId:'clock-scout', role:'scout', purpose:'explore', target:{x:1,y:0}, targetLabel:'Scout [1,0]', reason:'clock ordering test', phase:'prepare', assignedDay:1, assignedHour:9, returnByHour:20, safetyReserve:1, emergency:false }
+}
+
 describe('game clock', () => {
-  it('starts a new town at 1:00 AM in schema v7', () => {
+  it('starts a new town at 1:00 AM in schema v8', () => {
     const game = createInitialGame(123,2)
-    expect(game.schemaVersion).toBe(7)
+    expect(game.schemaVersion).toBe(8)
     expect(game.day).toBe(1)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.events[0]).toMatchObject({ type: 'DAY_STARTED', day: 1, hour: 1 })
   })
 
   it('lets autonomous citizens finish the current hour before the clock advances', () => {
-    const initial = { ...createInitialGame(123,2), clock: { hour: 9, phase: 'day' as const } }
+    let initial: GameState = { ...createInitialGame(123,2), clock: { hour: 9, phase: 'day' }, botMissions:{ c02:scoutMission() } }
+    initial = clearPath(initial,1)
     const beforeEvents = initial.events.length
     const game = advanceOneHour(initial,bots,'c01')
     expect(game.clock).toEqual({ hour: 10, phase: 'day' })
@@ -93,6 +98,7 @@ describe('game clock', () => {
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.citizens[0].ap).toBe(6)
     expect(game.citizens[0].daily).toEqual({ ate: false, drank: false, waterTaken: false })
+    expect(game.botMissions).toEqual({})
   })
 
   it('fast-forward simulates every intermediate hour instead of teleporting', () => {

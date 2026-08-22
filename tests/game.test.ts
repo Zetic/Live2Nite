@@ -31,10 +31,11 @@ function withInventory(game: GameState, types: ItemType[]): GameState {
 }
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v7 citizens at 1 AM with a Camp Bed, four chest slots, and both starter packages', () => {
+  it('starts schema v8 citizens at 1 AM with a Camp Bed, four chest slots, and both starter packages', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(7)
+    expect(game.schemaVersion).toBe(8)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
+    expect(game.botMissions).toEqual({})
     expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.storage.map((item) => item.type).sort().join(',') === 'citizen_welcome_pack,doggy_bag')).toBe(true)
@@ -166,6 +167,7 @@ describe('World Beyond gameplay', () => {
     expect(zoneControl(game, 2, 0).trapped).toBe(true)
     game = advanceOneHour(game,bots,'c01')
     expect(zoneControl(game, 2, 0).trapped).toBe(false)
+    expect(game.citizens.some((citizen) => citizen.id !== 'c01' && citizen.location.type === 'world' && citizen.location.x === 2 && citizen.location.y === 0)).toBe(true)
   })
 
   it('searches for 0 AP and deposits scavenged resources into the bank', () => {

@@ -26,6 +26,9 @@ export type CombatMethod = 'fists' | ItemType
 export type ClockPhase = 'day' | 'attack'
 export type SpecialSiteType = 'construction_site' | 'wrecked_cars' | 'pharmacy' | 'supermarket' | 'dark_woods' | 'police_station'
 export type SpecialSiteStatus = 'buried' | 'accessible' | 'depleted'
+export type BotMissionPurpose = 'explore' | 'gather_construction' | 'gather_food' | 'gather_medical' | 'gather_weapons' | 'rescue'
+export type BotMissionRole = 'scout' | 'gatherer' | 'excavator' | 'rescue' | 'combat'
+export type BotMissionPhase = 'prepare' | 'outbound' | 'operate' | 'return' | 'unload'
 
 export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType }
@@ -44,6 +47,21 @@ export interface Citizen {
   inventoryCapacity: number
   home: CitizenHome
   daily: CitizenDailyState
+}
+
+export interface BotMissionAssignment {
+  missionId: string
+  role: BotMissionRole
+  purpose: BotMissionPurpose
+  target: { x: number; y: number }
+  targetLabel: string
+  reason: string
+  phase: BotMissionPhase
+  assignedDay: number
+  assignedHour: number
+  returnByHour: number
+  safetyReserve: number
+  emergency: boolean
 }
 
 export interface SpecialSiteState {
@@ -93,7 +111,7 @@ export interface NightReport {
 }
 
 export interface GameState {
-  schemaVersion: 7
+  schemaVersion: 8
   gameId: string
   seed: number
   rngState: number
@@ -101,6 +119,7 @@ export interface GameState {
   day: number
   clock: GameClock
   citizens: Citizen[]
+  botMissions: Record<string, BotMissionAssignment>
   town: TownState
   world: WorldState
   lastNight: NightReport | null
@@ -156,6 +175,9 @@ export type GameEvent = (
   | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }
   | { type: 'CONSTRUCTION_COMPLETED'; day: number; citizenId: string; projectId: ConstructionId; consumed: Partial<Record<ItemType, number>>; defenseBonus: number }
   | { type: 'WORKSHOP_CONVERTED'; day: number; citizenId: string; recipeId: WorkshopRecipeId; input: ItemType; inputCount: number; output: ItemType; outputCount: number }
+  | { type: 'BOT_MISSION_ASSIGNED'; day: number; citizenId: string; mission: BotMissionAssignment }
+  | { type: 'BOT_MISSION_PHASE_SET'; day: number; citizenId: string; missionId: string; phase: BotMissionPhase }
+  | { type: 'BOT_MISSION_CLEARED'; day: number; citizenId: string; missionId: string; outcome: 'completed' | 'aborted' }
   | { type: 'CITIZEN_DIED'; day: number; citizenId: string; reason: DeathReason }
   | { type: 'NIGHT_RESOLVED'; day: number; report: NightReport }
   | { type: 'DAY_STARTED'; day: number }
