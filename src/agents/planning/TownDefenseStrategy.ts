@@ -1,4 +1,4 @@
-import { CONSTRUCTIONS, constructionFlatDefenseForProject, constructionPriority, prioritizedConstruction } from '../../core/construction'
+import { CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionFlatDefenseForProject, constructionPriority } from '../../core/construction'
 import { totalTownDefense } from '../../core/defense'
 import { watchtowerEstimate } from '../../core/night'
 import type { ConstructionId, GameState, ItemType } from '../../core/types'
@@ -31,9 +31,9 @@ function pressureFor(defense:number,min:number|null,max:number|null,gateOpen:boo
  * otherwise citizens extrapolate conservatively from the previous public Night Report.
  */
 export function publicDefenseAssessment(state:GameState):PublicDefenseAssessment{
-  const townDefense=totalTownDefense(state)
   const tower=watchtowerEstimate(state)
   if(tower){
+    const townDefense=tower.townDefense
     const pressure=pressureFor(townDefense,tower.min,tower.max,state.town.gateOpen)
     return{
       source:'watchtower',expectedMin:tower.min,expectedMax:tower.max,townDefense,
@@ -41,6 +41,8 @@ export function publicDefenseAssessment(state:GameState):PublicDefenseAssessment
       reason:state.town.gateOpen?'The gate is open, so shared defense will not apply.':pressure==='comfortable'?'Current defense covers the full Watchtower estimate.':pressure==='critical'?'Current defense is below the Watchtower minimum by a dangerous margin.':pressure==='shortfall'?'Current defense is below the Watchtower minimum.':'Current defense covers part, but not all, of the Watchtower estimate.',
     }
   }
+
+  const townDefense=totalTownDefense(state)
   if(state.lastNight){
     // LIVE2NITE_ADAPTATION: without a Watchtower, bots use the public previous attack as a
     // conservative planning anchor rather than reading the current hidden attack roll.
@@ -60,10 +62,9 @@ function defensiveUtility(projectId:ConstructionId):boolean{
   return CONSTRUCTIONS[projectId].effects.some((effect)=>['town_defense_flat','town_defense_multiplier','bank_defense_multiplier','home_defense_flat','home_contribution_ratio','defense_per_dead_citizen','gate_lock_hour','gate_auto_close_hour'].includes(effect.type))
 }
 
-export function strategicConstructionScore(state:GameState,projectId:ConstructionId):number{
+function scoreWithAssessment(state:GameState,projectId:ConstructionId,assessment:PublicDefenseAssessment):number{
   let score=constructionPriority(state,projectId)
   if(score<0)return score
-  const assessment=publicDefenseAssessment(state)
   const definition=CONSTRUCTIONS[projectId]
   const flat=constructionFlatDefenseForProject(projectId)
   const defensive=defensiveUtility(projectId)
@@ -89,8 +90,25 @@ export function strategicConstructionScore(state:GameState,projectId:Constructio
   return score
 }
 
+export function strategicConstructionScore(state:GameState,projectId:ConstructionId):number{
+  return scoreWithAssessment(state,projectId,publicDefenseAssessment(state))
+}
+
+/** Rank candidates without recomputing town defense/Watchtower state in every sort comparison. */
+export function rankStrategicConstruction(
+  state:GameState,
+  projectIds:readonly ConstructionId[],
+  assessment:PublicDefenseAssessment=publicDefenseAssessment(state),
+):ConstructionId[]{
+  return projectIds
+    .map((projectId,index)=>({projectId,index,score:scoreWithAssessment(state,projectId,assessment)}))
+    .filter((candidate)=>candidate.score>=0)
+    .sort((left,right)=>right.score-left.score||left.index-right.index)
+    .map((candidate)=>candidate.projectId)
+}
+
 export function strategicConstructionProjects(state:GameState):ConstructionId[]{
-  return [...prioritizedConstruction(state)].sort((left,right)=>strategicConstructionScore(state,right)-strategicConstructionScore(state,left))
+  return rankStrategicConstruction(state,CONSTRUCTION_ORDER)
 }
 
 export function strategicConstructionNeed(state:GameState):{projectId:ConstructionId|null;missing:Partial<Record<ItemType,number>>}{
