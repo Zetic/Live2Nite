@@ -31,9 +31,10 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   patchwork_beam:def({type:'patchwork_beam',name:'Patchwork Beam',purpose:'Advanced wooden construction material produced from a Twisted Plank or recovered while scavenging.',category:'construction',displayCategory:'resources',capabilities:['construction_material'],source:'MYHORDES_CURRENT'}),
   metal_support:def({type:'metal_support',name:'Metal Support',purpose:'Advanced metal construction material produced from Wrought Iron or recovered while scavenging.',category:'construction',displayCategory:'resources',capabilities:['construction_material'],source:'MYHORDES_CURRENT'}),
   sheet_metal:def({type:'sheet_metal',name:'Sheet Metal',purpose:'Scarce construction supply used by defensive and mechanical projects.',category:'construction',displayCategory:'resources',capabilities:['construction_material','component','defense'],source:'MYHORDES_CURRENT'}),
-  unshaped_concrete_block:def({type:'unshaped_concrete_block',name:'Unshaped Concrete Block',purpose:'Heavy construction material used by advanced fortifications.',category:'construction',displayCategory:'resources',capabilities:['construction_material','defense'],source:'MYHORDES_CURRENT'}),
+  unshaped_concrete_block:def({type:'unshaped_concrete_block',name:'Unshaped Concrete Block',purpose:'Heavy construction material used by advanced fortifications. It can be mixed anywhere from a Bag of Cement and a Water Ration.',category:'construction',displayCategory:'resources',capabilities:['construction_material','defense'],source:'MYHORDES_CURRENT'}),
 
   bag_of_damp_grass:resource('bag_of_damp_grass','Bag of Damp Grass','Scarce supply used by combinations and specialist projects.'),
+  bag_of_cement:resource('bag_of_cement','Bag of Cement','Construction supply found while scavenging. Combine it with a Water Ration to make an Unshaped Concrete Block.', ['component','raw_material']),
   battery:resource('battery','Battery','Electrical supply used by electronic construction and reloadable equipment.'),
   belt:resource('belt','Belt','Mechanical supply used by tensioned and launching mechanisms.'),
   compact_detonator:resource('compact_detonator','Compact Detonator','Scarce explosive component used by demolition, combinations and hydraulic projects.'),
@@ -103,7 +104,7 @@ export const NORMAL_SCAVENGE_LOOT_POOL:ItemType[]=[
   'construction_kit','construction_kit','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
   'human_bone','human_bone','pathetic_penknife','staff','serrated_knife','water_bomb','battery','box_of_matches','pharmaceutical_products',
   // Construction/combination supplies are intentionally rarer than the basic resource stream.
-  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','human_flesh','plastic_bag',
+  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag',
 ]
 export const DEPLETED_SCAVENGE_LOOT_POOL:ItemType[]=['rotten_log','rotten_log','rotten_log','scrap_metal','scrap_metal','scrap_metal']
 
