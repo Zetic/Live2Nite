@@ -8,28 +8,32 @@ export interface ScreenDefinition {
   short: string
   townOnly?: boolean
 }
+export interface FacilityScreenDefinition extends ScreenDefinition { projectId: ConstructionId }
 
-const PRIMARY_SCREENS: ScreenDefinition[] = [
+export const PRIMARY_SCREENS: readonly ScreenDefinition[] = [
   { id: 'home', label: 'Home', short: 'Private storage', townOnly: true },
   { id: 'well', label: 'The Well', short: 'Daily water', townOnly: true },
   { id: 'bank', label: 'The Bank', short: 'Shared inventory', townOnly: true },
   { id: 'construction', label: 'Construction Sites', short: 'Town projects', townOnly: true },
-]
-
-const FACILITY_SCREENS: Array<ScreenDefinition & { projectId: ConstructionId }> = [
-  { id: 'workshop', projectId: 'workshop', label: 'Workshop', short: 'Material processing', townOnly: true },
-  { id: 'watchtower', projectId: 'watchtower', label: 'Watchtower', short: 'Horde estimate', townOnly: true },
-]
-
-const GLOBAL_SCREENS: ScreenDefinition[] = [
   { id: 'world', label: 'World Beyond', short: 'Gate & expeditions' },
   { id: 'citizens', label: 'Citizens', short: 'Population' },
   { id: 'chronicle', label: 'Town Records', short: 'History & statistics' },
 ]
 
+const FACILITY_DEFINITIONS: readonly FacilityScreenDefinition[] = [
+  { id: 'workshop', projectId: 'workshop', label: 'Workshop', short: 'Material processing', townOnly: true },
+  { id: 'watchtower', projectId: 'watchtower', label: 'Watchtower', short: 'Horde estimates', townOnly: true },
+]
+
+export const FACILITY_SLOT_COUNT=6
+
+export function facilitySlots(game:GameState):Array<FacilityScreenDefinition|null>{
+  const available=FACILITY_DEFINITIONS.map((entry)=>game.town.construction[entry.projectId]?.completed?entry:null)
+  return Array.from({length:FACILITY_SLOT_COUNT},(_,index)=>available[index]??null)
+}
+
 export function availableScreens(game: GameState): ScreenDefinition[] {
-  const facilities = FACILITY_SCREENS.filter((entry) => game.town.construction[entry.projectId].completed)
-  return [...PRIMARY_SCREENS, ...facilities, ...GLOBAL_SCREENS]
+  return [...PRIMARY_SCREENS,...FACILITY_DEFINITIONS.filter((entry)=>game.town.construction[entry.projectId]?.completed)]
 }
 
 export function isTownOnlyScreen(screen: GameScreen): boolean {
