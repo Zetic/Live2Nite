@@ -57,6 +57,15 @@ describe('bot AP utilization discipline',()=>{
     expect(assignments.length).toBeGreaterThanOrEqual(4)
   })
 
+  it('still permits a safe short volunteer expedition at 20:00 when AP would otherwise expire',()=>{
+    const initial=createInitialGame(7106,40)
+    const game:GameState={...initial,day:3,clock:{hour:20,phase:'day'}}
+    const assignments=planTownMissionAssignments(game,'c01')
+      .filter((event)=>event.type==='BOT_MISSION_ASSIGNED')
+    expect(assignments.length).toBeGreaterThan(0)
+    expect(assignments.every((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.mission.returnByHour<=22)).toBe(true)
+  })
+
   it('spends repeated safe town AP in the late window instead of one AP per hour',()=>{
     const initial=createInitialGame(7105,2)
     const game:GameState={
