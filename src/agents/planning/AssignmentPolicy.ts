@@ -74,7 +74,8 @@ export function acceptedAssignment(
   const plan = planMission(state, citizen.id, mission)
   if (!plan) return null
   if (opportunity.emergency) {
-    return plan.route.length <= plan.loadout.potentialAp
+    const extractionRequired=plan.route.length+plan.returnAp+mission.safetyReserve
+    return plan.loadout.potentialAp>=extractionRequired
       ? { ...mission, overnightPlanned: false }
       : null
   }

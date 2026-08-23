@@ -6,7 +6,7 @@ import { createInitialGame } from '../src/core/game'
 import { zoneKey } from '../src/core/world'
 
 describe('agent architecture boundaries', () => {
-  it('hides authoritative zone details until the town has discovered the zone', () => {
+  it('hides authoritative zone details until the town has actually observed the zone', () => {
     const game = createInitialGame(9191, 4)
     const zone = Object.values(game.world.zones).find((candidate) => candidate.x !== 0 || candidate.y !== 0)!
     expect(zone.discovered).toBe(false)
@@ -18,7 +18,7 @@ describe('agent architecture boundaries', () => {
     expect(unknown.specialSite).toBeUndefined()
 
     const key = zoneKey(zone.x, zone.y)
-    const discovered = {
+    const discoveredOnly = {
       ...game,
       world: {
         ...game.world,
@@ -28,11 +28,26 @@ describe('agent architecture boundaries', () => {
         },
       },
     }
-    const known = createAgentWorldKnowledge(discovered).zone(zone.x, zone.y)!
-    expect(known.discovered).toBe(true)
+    const unobserved = createAgentWorldKnowledge(discoveredOnly).zone(zone.x, zone.y)!
+    expect(unobserved.discovered).toBe(true)
+    expect(unobserved.zombies).toBeNull()
+    expect(unobserved.freshness).toBe('unknown')
+    expect(unobserved.searchesRemaining).toBe(zone.searchesRemaining)
+    expect(unobserved.specialSite).toEqual(zone.specialSite)
+
+    const observed = {
+      ...discoveredOnly,
+      world: {
+        ...discoveredOnly.world,
+        intel: {
+          ...discoveredOnly.world.intel,
+          [key]: { observedZombies: zone.zombies, lastObservedDay: 1, lastObservedHour: 5 },
+        },
+      },
+    }
+    const known = createAgentWorldKnowledge(observed).zone(zone.x, zone.y)!
     expect(known.zombies).toBe(zone.zombies)
-    expect(known.searchesRemaining).toBe(zone.searchesRemaining)
-    expect(known.specialSite).toEqual(zone.specialSite)
+    expect(known.freshness).toBe('fresh')
   })
 
   it('keeps direct controller calls compatible with the simulation decision context', () => {

@@ -30,6 +30,12 @@ export function describeEvent(event: GameEvent, game: GameState): string {
       const zone=game.world.zones[event.zoneKey]
       return zone?.specialSite ? `Zone [${event.zoneKey}] revealed ${specialSiteName(zone.specialSite.type)}.` : `Zone [${event.zoneKey}] was discovered.`
     }
+    case 'ZONE_OBSERVED': return event.citizenId ? `${citizenName(game,event.citizenId)} surveyed [${event.zoneKey}]: ${event.zombies} zombie${event.zombies===1?'':'s'} observed.` : `Zone [${event.zoneKey}] was surveyed: ${event.zombies} zombie${event.zombies===1?'':'s'} observed.`
+    case 'WORLD_ZOMBIES_EVOLVED': return `The World Beyond shifted overnight across ${event.changes.length} zone${event.changes.length===1?'':'s'}; yesterday's zombie reports may now be stale.`
+    case 'ZONE_CONTROL_LOST': return `${citizenName(game,event.causedByCitizenId)} left [${event.zoneKey}], causing human control to fail. ${event.remainingCitizenIds.length} citizen${event.remainingCitizenIds.length===1?' received':'s received'} a temporary extraction window.`
+    case 'TEMPORARY_CONTROL_GRANTED': return `${citizenName(game,event.citizenId)} has temporary control at [${event.zoneKey}] and can still escape this hour.`
+    case 'TEMPORARY_CONTROL_EXPIRED': return `${citizenName(game,event.citizenId)}'s temporary control at [${event.zoneKey}] expired.`
+    case 'ZONE_CONTROL_RESTORED': return `Human control at [${event.zoneKey}] was restored by ${event.reason==='combat'?'reducing the zombie threat':'additional citizen control'}.`
     case 'ZONE_SEARCHED': {
       const label = event.automatic ? 'automatically searched' : event.mode==='depleted' ? 'combed depleted ground' : 'searched'
       return event.item ? `${citizenName(game,event.citizenId)} ${label} at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.` : `${citizenName(game,event.citizenId)} ${label} at [${event.zoneKey}] and found nothing.`
@@ -75,17 +81,17 @@ export function describeEvent(event: GameEvent, game: GameState): string {
 }
 
 export function isHighlightEvent(event: GameEvent): boolean {
-  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED'].includes(event.type)
+  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED'].includes(event.type)
 }
 
 export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'system'|'home' {
   switch(event.type){
-    case 'CITIZEN_DIED': return 'danger'
+    case 'CITIZEN_DIED': case 'ZONE_CONTROL_LOST': return 'danger'
     case 'CITIZEN_STATUS_CHANGED': return event.status.hydration==='dehydrated'?'danger':event.status.hydration==='thirsty'?'home':'system'
     case 'CAMPING_RESOLVED': return event.survived?'world':'danger'
     case 'NIGHT_RESOLVED': return event.report.breached?'danger':'night'
-    case 'DAY_STARTED': return 'night'
-    case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': case 'CAMP_IMPROVED': case 'CAMP_IMPROVEMENTS_DECAYED': case 'CITIZEN_HIDING_SET': return 'world'
+    case 'DAY_STARTED': case 'WORLD_ZOMBIES_EVOLVED': return 'night'
+    case 'ZONE_DISCOVERED': case 'ZONE_OBSERVED': case 'ZONE_CONTROL_RESTORED': case 'TEMPORARY_CONTROL_GRANTED': case 'TEMPORARY_CONTROL_EXPIRED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': case 'CAMP_IMPROVED': case 'CAMP_IMPROVEMENTS_DECAYED': case 'CITIZEN_HIDING_SET': return 'world'
     case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'CONSTRUCTION_KIT_OPENED': case 'ITEM_CONSUMED': case 'HOME_UPGRADED': return 'home'
     case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'WORKSHOP_CONVERTED': case 'GATE_SET': return 'town'
     default: return 'system'

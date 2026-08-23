@@ -9,7 +9,7 @@ import { getLegalActions } from '../core/actions'
 import { executeCommand } from '../core/commands'
 import { applyEvents } from '../core/events'
 import type { GameEvent, GameState } from '../core/types'
-import { zoneControl } from '../core/world'
+import { temporaryControlActive, zoneControl } from '../core/world'
 
 export type HourlyObjective = 'return_home' | 'mission' | 'town_work' | 'fight' | 'reserve' | 'idle'
 export const DEDICATED_RESCUE_AP_FLOOR = AI_TUNING.dedicatedRescueApFloor
@@ -17,7 +17,9 @@ export const DEDICATED_RESCUE_AP_FLOOR = AI_TUNING.dedicatedRescueApFloor
 export function chooseHourlyObjective(state: GameState, citizenId: string): HourlyObjective {
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || !citizen.alive || state.clock.phase !== 'day') return 'idle'
-  if (citizen.location.type === 'world' && zoneControl(state, citizen.location.x, citizen.location.y).trapped) return 'fight'
+  if (citizen.location.type === 'world' && zoneControl(state, citizen.location.x, citizen.location.y).trapped) {
+    return temporaryControlActive(state,citizenId)?'return_home':'fight'
+  }
   const mission = state.botMissions[citizenId]
   if (mission) {
     if (mission.phase === 'return') return 'return_home'
@@ -32,6 +34,24 @@ export function chooseHourlyObjective(state: GameState, citizenId: string): Hour
 
 function meaningfulTownWork(event: GameEvent): boolean {
   return ['CONSTRUCTION_AP_CONTRIBUTED', 'WORKSHOP_CONVERTED', 'HOME_UPGRADED'].includes(event.type)
+}
+
+function runTemporaryExtractionPass(state:GameState,controller:AgentController,controlledCitizenId?:string):GameState{
+  let nextState=state
+  for(const startingCitizen of nextState.citizens){
+    if(startingCitizen.id===controlledCitizenId||startingCitizen.controller!=='basic-bot'||!startingCitizen.alive)continue
+    if(!temporaryControlActive(nextState,startingCitizen.id))continue
+    for(let step=0;step<16;step+=1){
+      const citizen=nextState.citizens.find((candidate)=>candidate.id===startingCitizen.id)
+      if(!citizen?.alive||citizen.location.type!=='world'||!temporaryControlActive(nextState,citizen.id))break
+      const lifecycle=nextMissionLifecycleEvent(nextState,citizen.id)
+      if(lifecycle){nextState=applyEvents(nextState,[lifecycle]);continue}
+      const command=controller.decide(createAgentDecisionContext(nextState),citizen.id)
+      if(!command)break
+      nextState=executeCommand(nextState,command).state
+    }
+  }
+  return nextState
 }
 
 export function runBotHour(state: GameState, controller: AgentController, controlledCitizenId?: string): GameState {
@@ -55,10 +75,6 @@ export function runBotHour(state: GameState, controller: AgentController, contro
 
       const objective = chooseHourlyObjective(nextState, startingCitizen.id)
       if (objective === 'idle') break
-
-      // Dedicated rescue citizens may help with urgent town work, but never below
-      // four saved AP unless they have accepted an emergency mission. That keeps a
-      // meaningful rescue radius and guarantees enough AP for the final gate close.
       if (objective === 'reserve' && isDedicatedRescueReserve(nextState, startingCitizen.id)) break
 
       const beforeEvents = nextState.events.length
@@ -68,7 +84,7 @@ export function runBotHour(state: GameState, controller: AgentController, contro
         if (mission?.phase === 'unload') {
           const complete = missionCompleteAtTown(nextState, startingCitizen.id)
           if (complete) nextState = applyEvents(nextState, [complete])
-        } else if (mission?.phase === 'prepare' && !planExpedition(nextState, startingCitizen.id)?.feasible) {
+        } else if (mission?.phase === 'prepare' && !planExpedition(nextState, startingCitizen.id)?.feasible && !mission.emergency) {
           nextState = applyEvents(nextState, [{
             type: 'BOT_MISSION_CLEARED',
             day: nextState.day,
@@ -90,6 +106,11 @@ export function runBotHour(state: GameState, controller: AgentController, contro
       }
     }
   }
+
+  // A departure late in the sequential bot order can grant grace to a citizen who
+  // already took its ordinary turn. Revisit those citizens before the hour closes so
+  // temporary control functions as a real coordinated extraction window.
+  nextState=runTemporaryExtractionPass(nextState,controller,controlledCitizenId)
 
   if (state.clock.hour === 23 && nextState.town.gateOpen) {
     const closer = nextState.citizens.find((citizen) =>

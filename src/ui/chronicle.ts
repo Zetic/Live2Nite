@@ -41,6 +41,7 @@ export function chronicleCategory(event: GameEvent): ChronicleCategory {
     case 'SPECIAL_SITE_SEARCHED':
     case 'ITEM_PICKED_UP':
       return 'scavenging'
+    case 'ZONE_OBSERVED':
     case 'CITIZEN_LOCATION_CHANGED':
       return 'travel'
     case 'BOT_MISSION_ASSIGNED':
@@ -61,9 +62,14 @@ export function chronicleCategory(event: GameEvent): ChronicleCategory {
     case 'CITIZEN_HIDING_SET':
     case 'CAMPING_RESOLVED':
       return 'camping'
+    case 'ZONE_CONTROL_LOST':
+    case 'TEMPORARY_CONTROL_GRANTED':
+    case 'TEMPORARY_CONTROL_EXPIRED':
+    case 'ZONE_CONTROL_RESTORED':
     case 'CITIZEN_STATUS_CHANGED':
     case 'CITIZEN_DIED':
       return 'survival'
+    case 'WORLD_ZOMBIES_EVOLVED':
     case 'NIGHT_RESOLVED':
     case 'DAY_STARTED':
       return 'night'
@@ -80,7 +86,7 @@ export function chronicleCategory(event: GameEvent): ChronicleCategory {
 }
 
 export function eventCitizenId(event: GameEvent): string | null {
-  return 'citizenId' in event ? event.citizenId : null
+  return 'citizenId' in event && typeof event.citizenId === 'string' ? event.citizenId : null
 }
 
 export function filterChronicleEvents(events: readonly GameEvent[], filters: ChronicleFilters): GameEvent[] {

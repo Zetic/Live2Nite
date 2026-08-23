@@ -7,8 +7,8 @@ import { HOME_LEVELS, HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
 import { containerPool, DEPLETED_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
 import { travelHydrationTransition, waterConsumptionOutcome } from './status'
-import type { GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, SearchMode } from './types'
-import { getZone, moveCoordinates, zoneKey } from './world'
+import type { Citizen, GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, SearchMode } from './types'
+import { citizensInZone, getZone, moveCoordinates, zoneControl, zoneKey } from './world'
 import { WORKSHOP_RECIPES } from './workshop'
 
 export interface CommandResult { state: GameState; events: GameEvent[] }
@@ -37,6 +37,32 @@ function depletedSearchOutcome(state: GameState): { item: ItemInstance; rngState
 function itemAt(state:GameState,type:ItemType,offset=0):ItemInstance{return{id:`i${String(state.nextItemId+offset).padStart(6,'0')}`,type}}
 function locateItem(state: GameState,citizenId:string,itemId:string):{item:ItemInstance;source:ItemStorage}{const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)!;const inventoryItem=citizen.inventory.find((item)=>item.id===itemId);if(inventoryItem)return{item:inventoryItem,source:'inventory'};const homeItem=citizen.home.storage.find((item)=>item.id===itemId);if(homeItem)return{item:homeItem,source:'home'};throw new InvalidCommandError(`Missing item ${itemId}`)}
 
+function movementControlEvents(state:GameState,citizen:Citizen,target:{x:number;y:number}):GameEvent[]{
+  if(citizen.location.type!=='world')return[]
+  const events:GameEvent[]=[]
+  const originKey=zoneKey(citizen.location.x,citizen.location.y)
+  const beforeOrigin=zoneControl(state,citizen.location.x,citizen.location.y)
+  const remaining=citizensInZone(state,citizen.location.x,citizen.location.y).filter((candidate)=>candidate.id!==citizen.id)
+  if(!beforeOrigin.trapped&&remaining.length>0&&beforeOrigin.zombiePoints>remaining.length*2){
+    events.push({type:'ZONE_CONTROL_LOST',day:state.day,zoneKey:originKey,causedByCitizenId:citizen.id,remainingCitizenIds:remaining.map((candidate)=>candidate.id)})
+    for(const resident of remaining)events.push({type:'TEMPORARY_CONTROL_GRANTED',day:state.day,citizenId:resident.id,zoneKey:originKey})
+  }
+  const beforeTarget=zoneControl(state,target.x,target.y)
+  if(beforeTarget.trapped&&beforeTarget.zombiePoints<=(beforeTarget.humans+1)*2){
+    events.push({type:'ZONE_CONTROL_RESTORED',day:state.day,zoneKey:zoneKey(target.x,target.y),reason:'arrival'})
+  }
+  return events
+}
+
+function combatObservationEvents(state:GameState,citizen:Citizen,key:string,kills:number):GameEvent[]{
+  if(citizen.location.type!=='world')return[]
+  const before=zoneControl(state,citizen.location.x,citizen.location.y)
+  const afterZombies=Math.max(0,before.zombies-kills)
+  const events:GameEvent[]=[{type:'ZONE_OBSERVED',day:state.day,zoneKey:key,zombies:afterZombies,citizenId:citizen.id}]
+  if(before.trapped&&afterZombies<=before.humanPoints)events.push({type:'ZONE_CONTROL_RESTORED',day:state.day,zoneKey:key,reason:'combat'})
+  return events
+}
+
 export function executeCommand(state: GameState, command: GameCommand): CommandResult {
   requireLegal(state,command)
   const citizen=state.citizens.find((candidate)=>candidate.id===command.citizenId)!
@@ -44,15 +70,47 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
   switch(command.type){
     case 'OPEN_GATE':events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:GATE_AP_COST},{type:'GATE_SET',day:state.day,open:true,citizenId:command.citizenId});break
     case 'CLOSE_GATE':events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:GATE_AP_COST},{type:'GATE_SET',day:state.day,open:false,citizenId:command.citizenId});break
-    case 'EXIT_TOWN':events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'world',x:0,y:0}});break
+    case 'EXIT_TOWN':events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'world',x:0,y:0}},{type:'ZONE_OBSERVED',day:state.day,zoneKey:'0,0',zombies:0,citizenId:command.citizenId});break
     case 'ENTER_TOWN':events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'town'}});break
-    case 'MOVE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const target=moveCoordinates(citizen.location.x,citizen.location.y,command.direction);const key=zoneKey(target.x,target.y);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:MOVE_AP_COST},{type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'world',x:target.x,y:target.y},desertStep:true},{type:'ZONE_DISCOVERED',day:state.day,zoneKey:key});const transition=travelHydrationTransition(citizen);if(transition)events.push({type:'CITIZEN_STATUS_CHANGED',day:state.day,citizenId:command.citizenId,status:transition,reason:'desert_travel'});break}
+    case 'MOVE':{
+      if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
+      const target=moveCoordinates(citizen.location.x,citizen.location.y,command.direction)
+      const key=zoneKey(target.x,target.y)
+      const targetZone=getZone(state.world,target.x,target.y)
+      if(!targetZone)throw new InvalidCommandError('Target zone does not exist')
+      const controlEvents=movementControlEvents(state,citizen,target)
+      events.push(
+        {type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:MOVE_AP_COST},
+        {type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'world',x:target.x,y:target.y},desertStep:true},
+        {type:'ZONE_DISCOVERED',day:state.day,zoneKey:key},
+        {type:'ZONE_OBSERVED',day:state.day,zoneKey:key,zombies:targetZone.zombies,citizenId:command.citizenId},
+        ...controlEvents,
+      )
+      const transition=travelHydrationTransition(citizen)
+      if(transition)events.push({type:'CITIZEN_STATUS_CHANGED',day:state.day,citizenId:command.citizenId,status:transition,reason:'desert_travel'})
+      break
+    }
     case 'SEARCH_ZONE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const zone=state.world.zones[key];const mode:SearchMode=zone.searchesRemaining>0?'normal':'depleted';if(mode==='normal')events.push({type:'ZONE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,mode,item:normalSearchItem(state,citizen.location.x,citizen.location.y)});else{const outcome=depletedSearchOutcome(state);events.push({type:'ZONE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,mode,item:outcome.item,rngStateAfter:outcome.rngStateAfter})}break}
     case 'EXCAVATE_SPECIAL_SITE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:SPECIAL_EXCAVATION_AP_COST},{type:'SPECIAL_SITE_EXCAVATED',day:state.day,zoneKey:key,citizenId:command.citizenId,amount:SPECIAL_EXCAVATION_AP_COST});break}
     case 'SEARCH_SPECIAL_SITE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const type=state.world.zones[key].specialSite?.hiddenLoot[0];events.push({type:'SPECIAL_SITE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,item:type?itemAt(state,type):null});break}
     case 'PICK_UP_ITEM':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const item=state.world.zones[key].groundItems.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_PICKED_UP',day:state.day,citizenId:command.citizenId,zoneKey:key,item});break}
-    case 'ATTACK_BAREHANDED':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveBarehandedAttack(state);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:BAREHANDED_AP_COST},{type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:'fists',kills:outcome.kills,item:null,consumed:false,rngStateAfter:outcome.rngStateAfter});break}
-    case 'USE_WEAPON':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const zone=state.world.zones[key];const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId);if(!item)throw new InvalidCommandError(`Missing carried weapon ${command.itemId}`);const outcome=resolveWeaponAttack(state,item,zone.zombies);events.push({type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:item.type,kills:outcome.kills,item,consumed:outcome.consumed,brokenInto:outcome.brokenInto,rngStateAfter:outcome.rngStateAfter});break}
+    case 'ATTACK_BAREHANDED':{
+      if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
+      const key=zoneKey(citizen.location.x,citizen.location.y)
+      const outcome=resolveBarehandedAttack(state)
+      events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:BAREHANDED_AP_COST},{type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:'fists',kills:outcome.kills,item:null,consumed:false,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills))
+      break
+    }
+    case 'USE_WEAPON':{
+      if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
+      const key=zoneKey(citizen.location.x,citizen.location.y)
+      const zone=state.world.zones[key]
+      const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId)
+      if(!item)throw new InvalidCommandError(`Missing carried weapon ${command.itemId}`)
+      const outcome=resolveWeaponAttack(state,item,zone.zombies)
+      events.push({type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:item.type,kills:outcome.kills,item,consumed:outcome.consumed,brokenInto:outcome.brokenInto,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills))
+      break
+    }
     case 'IMPROVE_CAMP':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMP_IMPROVEMENT_AP_COST},{type:'CAMP_IMPROVED',day:state.day,citizenId:command.citizenId,zoneKey:key,amount:1});break}
     case 'HIDE_FOR_NIGHT':{const chance=campingChancePercent(state,command.citizenId);events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:true,survivalChance:chance});break}
     case 'LEAVE_HIDEOUT':events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:false,survivalChance:null});break

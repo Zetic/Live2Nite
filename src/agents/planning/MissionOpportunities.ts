@@ -1,8 +1,8 @@
 import { specialSiteName } from '../../core/specialSites'
 import type { BotMissionPurpose, BotMissionRole, GameState, WorldZone } from '../../core/types'
-import { distanceToTown, zoneControl } from '../../core/world'
+import { distanceToTown, zoneControl, zoneControlState } from '../../core/world'
 import { AI_TUNING } from '../AiTuning'
-import { knownZombieCount } from '../WorldKnowledge'
+import { hasFreshZoneIntel, knownZombieCount } from '../WorldKnowledge'
 import { evaluateTownNeeds } from './TownNeeds'
 
 export interface MissionOpportunity {
@@ -50,13 +50,17 @@ export function knownOpportunities(state: GameState): MissionOpportunity[] {
   const trapped = state.citizens.filter((citizen) =>
     citizen.alive
     && citizen.location.type === 'world'
-    && zoneControl(state, citizen.location.x, citizen.location.y).trapped)
+    && zoneControlState(state,citizen.location.x,citizen.location.y,citizen.id)==='trapped')
 
+  const rescueZones=new Set<string>()
   for (const citizen of trapped) {
     if (citizen.location.type !== 'world') continue
+    const key=`${citizen.location.x},${citizen.location.y}`
+    if(rescueZones.has(key))continue
+    rescueZones.add(key)
     const control = zoneControl(state, citizen.location.x, citizen.location.y)
-    const missingPoints = Math.max(1, control.zombiePoints - control.humanPoints)
-    const desired = Math.min(5, Math.max(1, Math.ceil(missingPoints / 2)))
+    const missingPoints = Math.max(1,control.zombiePoints-control.humanPoints)
+    const desired = Math.min(AI_TUNING.maxRescueResponders,Math.max(1,Math.ceil(missingPoints/2)))
     const id = missionKey('rescue', 'rescue', citizen.location.x, citizen.location.y)
     opportunities.push({
       missionId: id,
@@ -64,16 +68,19 @@ export function knownOpportunities(state: GameState): MissionOpportunity[] {
       purpose: 'rescue',
       target: { x: citizen.location.x, y: citizen.location.y },
       targetLabel: `Rescue at [${citizen.location.x},${citizen.location.y}]`,
-      reason: `${citizen.name} is trapped; send enough control points and field weapons to restore movement.`,
+      reason: `${citizen.name} is trapped; responders must restore control and retain enough range to extract themselves.`,
       desiredCitizens: desired,
       priority: 300,
-      safetyReserve: 0,
+      safetyReserve: AI_TUNING.rescueSafetyReserve,
       emergency: true,
     })
   }
 
   const missingConstruction = Boolean(needs.activeProject && Object.keys(needs.missingConstruction).length > 0)
   for (const zone of knownNonTownZones(state)) {
+    // Large work parties do not mobilize against yesterday's zombie count. A scout or
+    // any visiting citizen must refresh the destination first.
+    if(!hasFreshZoneIntel(state,zone.x,zone.y))continue
     if (!zone.specialSite) continue
     const purpose = sitePurpose(zone)
     const useful = purpose === 'gather_construction'
@@ -95,7 +102,7 @@ export function knownOpportunities(state: GameState): MissionOpportunity[] {
         purpose,
         target: { x: zone.x, y: zone.y },
         targetLabel: `${specialSiteName(zone.specialSite.type)} [${zone.x},${zone.y}]`,
-        reason: `A known ${specialSiteName(zone.specialSite.type)} can address the town's ${purpose.replace('gather_', '')} need once uncovered.`,
+        reason: `Fresh reconnaissance confirms a known ${specialSiteName(zone.specialSite.type)} can address the town's ${purpose.replace('gather_', '')} need.`,
         desiredCitizens: Math.min(4, Math.max(2, Math.ceil((zone.specialSite.excavationRequired - zone.specialSite.excavationProgress) / 2))),
         priority: 180,
         safetyReserve: AI_TUNING.ordinarySafetyReserve,
@@ -109,7 +116,7 @@ export function knownOpportunities(state: GameState): MissionOpportunity[] {
         purpose,
         target: { x: zone.x, y: zone.y },
         targetLabel: `${specialSiteName(zone.specialSite.type)} [${zone.x},${zone.y}]`,
-        reason: `The town has a known ${specialSiteName(zone.specialSite.type)} matching its ${purpose.replace('gather_', '')} need.`,
+        reason: `Fresh reconnaissance confirms the ${specialSiteName(zone.specialSite.type)} route is usable for the town's ${purpose.replace('gather_', '')} need.`,
         desiredCitizens: staffingForZone(state, zone),
         priority: 170,
         safetyReserve: AI_TUNING.ordinarySafetyReserve,
@@ -120,7 +127,7 @@ export function knownOpportunities(state: GameState): MissionOpportunity[] {
 
   if (missingConstruction) {
     const fresh = knownNonTownZones(state)
-      .filter((zone) => zone.searchesRemaining > 0 && (knownZombieCount(state, zone.x, zone.y) ?? 0) <= 8)
+      .filter((zone) => hasFreshZoneIntel(state,zone.x,zone.y)&&zone.searchesRemaining > 0 && (knownZombieCount(state, zone.x, zone.y) ?? 0) <= 8)
       .sort((a, b) =>
         (knownZombieCount(state, a.x, a.y) ?? 0) - (knownZombieCount(state, b.x, b.y) ?? 0)
         || distanceToTown(b.x, b.y) - distanceToTown(a.x, a.y))
@@ -134,7 +141,7 @@ export function knownOpportunities(state: GameState): MissionOpportunity[] {
         purpose: 'gather_construction',
         target: { x: zone.x, y: zone.y },
         targetLabel: `Fresh zone [${zone.x},${zone.y}]`,
-        reason: `${needs.activeProject} still lacks construction materials; keep a party on this productive zone long enough to exploit repeated searches.`,
+        reason: `${needs.activeProject} still lacks construction materials; current scouting confirms this productive zone is viable.`,
         desiredCitizens: staffingForZone(state, zone),
         priority: 140,
         safetyReserve: AI_TUNING.ordinarySafetyReserve,

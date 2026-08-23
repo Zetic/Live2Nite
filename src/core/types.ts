@@ -47,10 +47,13 @@ export type SpecialSiteStatus = 'buried' | 'accessible' | 'depleted'
 export type BotMissionPurpose = 'explore' | 'gather_construction' | 'gather_food' | 'gather_medical' | 'gather_weapons' | 'rescue'
 export type BotMissionRole = 'scout' | 'gatherer' | 'excavator' | 'rescue' | 'combat'
 export type BotMissionPhase = 'prepare' | 'outbound' | 'operate' | 'camp' | 'return' | 'unload'
+export type ScoutMissionKind = 'frontier' | 'recon'
 export type HydrationStatus = 'normal' | 'thirsty' | 'dehydrated'
 export type CitizenStatusId = 'exhausted' | 'satisfied_food' | 'satisfied_water' | 'thirsty' | 'dehydrated'
 export type CitizenStatusChangeReason = 'desert_travel' | 'drank_water' | 'nightly_progression'
 export type CampingOutlook = 'suicidal' | 'very_poor' | 'poor' | 'limited' | 'satisfactory' | 'decent'
+export type ZoneIntelFreshness = 'fresh' | 'stale' | 'unknown'
+export type ZoneControlState = 'secure' | 'fragile' | 'temporary' | 'trapped'
 
 export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType }
@@ -59,6 +62,7 @@ export interface CitizenHome { level: HomeLevel; defense: number; storage: ItemI
 export interface CitizenDailyState { ate: boolean; drank: boolean; waterTaken: boolean; bonusWaterTaken?: boolean }
 export interface CitizenStatusState { hydration: HydrationStatus; desertStepsToday: number }
 export interface CitizenCampingState { hidden:boolean; survivalChance:number|null; hiddenDay:number|null; nightsSurvived:number; lastSurvivedDay:number|null }
+export interface TemporaryControlState { zoneKey:string; grantedDay:number; grantedHour:number }
 export interface Citizen {
   id: string
   name: string
@@ -73,6 +77,7 @@ export interface Citizen {
   daily: CitizenDailyState
   status: CitizenStatusState
   camping: CitizenCampingState
+  temporaryControl: TemporaryControlState | null
 }
 
 export interface BotMissionAssignment {
@@ -90,6 +95,7 @@ export interface BotMissionAssignment {
   emergency: boolean
   allowsCamping?: boolean
   overnightPlanned?: boolean
+  scoutKind?: ScoutMissionKind
 }
 
 export interface SpecialSiteState {
@@ -115,7 +121,20 @@ export interface WorldZone {
   specialSite?: SpecialSiteState
 }
 
-export interface WorldState { minX: number; maxX: number; minY: number; maxY: number; zones: Record<string, WorldZone> }
+export interface ZoneIntelState {
+  observedZombies: number | null
+  lastObservedDay: number | null
+  lastObservedHour: number | null
+}
+
+export interface WorldState {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+  zones: Record<string, WorldZone>
+  intel: Record<string, ZoneIntelState>
+}
 export interface ConstructionProjectState { id: ConstructionId; apContributed: number; completed: boolean }
 export interface TownWellState { water: number }
 export interface TownState {
@@ -142,8 +161,10 @@ export interface NightReport {
   homeAttacks?: HomeAttackOutcome[]
 }
 
+export interface WorldZombieChange { zoneKey:string; before:number; after:number }
+
 export interface GameState {
-  schemaVersion: 11
+  schemaVersion: 12
   gameId: string
   seed: number
   rngState: number
@@ -199,6 +220,12 @@ export type GameEvent = (
   | { type: 'CITIZEN_HIDING_SET'; day:number; citizenId:string; hidden:boolean; survivalChance:number|null }
   | { type: 'CAMPING_RESOLVED'; day:number; citizenId:string; survivalChance:number; roll:number; survived:boolean }
   | { type: 'ZONE_DISCOVERED'; day: number; zoneKey: string }
+  | { type: 'ZONE_OBSERVED'; day:number; zoneKey:string; zombies:number; citizenId?:string }
+  | { type: 'WORLD_ZOMBIES_EVOLVED'; day:number; changes:WorldZombieChange[] }
+  | { type: 'ZONE_CONTROL_LOST'; day:number; zoneKey:string; causedByCitizenId:string; remainingCitizenIds:string[] }
+  | { type: 'TEMPORARY_CONTROL_GRANTED'; day:number; citizenId:string; zoneKey:string }
+  | { type: 'TEMPORARY_CONTROL_EXPIRED'; day:number; citizenId:string; zoneKey:string }
+  | { type: 'ZONE_CONTROL_RESTORED'; day:number; zoneKey:string; reason:'arrival'|'combat' }
   | { type: 'ZONE_SEARCHED'; day: number; zoneKey: string; citizenId: string; mode: SearchMode; item: ItemInstance | null; automatic?: boolean; rngStateAfter?: number }
   | { type: 'ZONE_REPLENISHED'; day: number; zoneKey: string; loot: ItemType }
   | { type: 'SPECIAL_SITE_EXCAVATED'; day: number; zoneKey: string; citizenId: string; amount: number }

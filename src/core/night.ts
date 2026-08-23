@@ -8,6 +8,7 @@ import { randomInt } from './rng'
 import { nightlyHydrationEvents } from './status'
 import type { GameEvent, GameState, HomeAttackOutcome, NightReport } from './types'
 import { isTownGateZone, zoneKey } from './world'
+import { worldZombieEvolutionEvent } from './worldEvolution'
 
 export interface AttackRange { min:number; max:number; basis:'historical-sample'|'extrapolated' }
 export interface WatchtowerEstimate { min:number; max:number; actual:number; townDefense:number; basis:AttackRange['basis'] }
@@ -48,5 +49,9 @@ export function resolveNightAttack(state:GameState):GameState{
   const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,homeAttacks}
   const replenishment=searchTowerReplenishmentEvents(afterHydration)
   const decay=campDecayEvents(afterHydration)
-  return applyEvents(afterHydration,[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...replenishment,...decay,{type:'DAY_STARTED',day:state.day+1,hour:DAY_START_HOUR}])
+  const evolution=worldZombieEvolutionEvent(afterHydration)
+  const rollover:GameEvent[]=[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...replenishment,...decay]
+  if(evolution)rollover.push(evolution)
+  rollover.push({type:'DAY_STARTED',day:state.day+1,hour:DAY_START_HOUR})
+  return applyEvents(afterHydration,rollover)
 }

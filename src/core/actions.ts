@@ -4,7 +4,7 @@ import { CONSTRUCTION_ORDER, hasRequiredMaterials } from './construction'
 import { HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
 import { consumableKind, isContainer } from './items'
 import type { Citizen, GameCommand, GameState, ItemInstance, ItemStorage, ItemType } from './types'
-import { getZone, isTownGateZone, moveCoordinates, zoneControl } from './world'
+import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, zoneControl } from './world'
 import { WORKSHOP_RECIPE_ORDER, WORKSHOP_RECIPES, canRunWorkshopRecipe } from './workshop'
 
 export const GATE_AP_COST = 1
@@ -69,14 +69,19 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
   const zone = getZone(state.world, x, y)
   if (!zone) return actions
   if (isTownGateZone(x, y) && state.town.gateOpen) actions.push({ type: 'ENTER_TOWN', citizenId })
+
+  const control = zoneControl(state, x, y)
   if (!isTownGateZone(x, y)) {
-    if (zone.searchesRemaining > 0 && !zone.searchedBy.includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
-    else if (zone.searchesRemaining === 0 && !(zone.depletedSearchedBy ?? []).includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
+    // Temporary control is an escape window, not continued ownership of the zone.
+    // Productive scavenging therefore requires real human control.
+    if (!control.trapped) {
+      if (zone.searchesRemaining > 0 && !zone.searchedBy.includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
+      else if (zone.searchesRemaining === 0 && !(zone.depletedSearchedBy ?? []).includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
+    }
     if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone))actions.push({type:'IMPROVE_CAMP',citizenId})
     actions.push({type:'HIDE_FOR_NIGHT',citizenId})
   }
 
-  const control = zoneControl(state, x, y)
   const site = zone.specialSite
   if (site && !control.trapped) {
     if (site.status === 'buried' && citizen.ap >= SPECIAL_EXCAVATION_AP_COST) actions.push({ type: 'EXCAVATE_SPECIAL_SITE', citizenId })
@@ -91,7 +96,7 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
     }
     if (citizen.ap >= BAREHANDED_AP_COST) actions.push({ type: 'ATTACK_BAREHANDED', citizenId })
   }
-  if (!control.trapped && citizen.ap >= MOVE_AP_COST) {
+  if (canCitizenMoveFromZone(state,citizenId) && citizen.ap >= MOVE_AP_COST) {
     for (const direction of ['NORTH', 'SOUTH', 'EAST', 'WEST'] as const) {
       const target = moveCoordinates(x, y, direction)
       if (getZone(state.world, target.x, target.y)) actions.push({ type: 'MOVE', citizenId, direction })

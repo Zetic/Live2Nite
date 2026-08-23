@@ -61,7 +61,7 @@ export interface TownStats {
 }
 
 function recordFor(records: Map<string, CitizenRecord>, event: GameEvent): CitizenRecord | null {
-  if (!('citizenId' in event)) return null
+  if (!('citizenId' in event) || typeof event.citizenId !== 'string') return null
   return records.get(event.citizenId) ?? null
 }
 
