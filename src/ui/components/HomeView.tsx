@@ -26,8 +26,8 @@ export function HomeView({ game, citizenId, legalActions, act }: {game:GameState
   const nextDefinition=nextLevel?HOME_LEVELS[nextLevel]:null
   const defenseTooltip=`Total defense protecting this home during a breach. Structure: ${structuralDefense}. Defensive objects and installed improvements are included here.`
 
-  const moveToHome=(itemId:string)=>act(commandFor(legalActions,'MOVE_ITEM_TO_HOME',itemId))
-  const moveToRucksack=(itemId:string)=>act(commandFor(legalActions,'MOVE_ITEM_TO_RUCKSACK',itemId))
+  const toHome=(itemId:string)=>commandFor(legalActions,'MOVE_ITEM_TO_HOME',itemId)
+  const toRucksack=(itemId:string)=>commandFor(legalActions,'MOVE_ITEM_TO_RUCKSACK',itemId)
 
   return <section className="panel screen-panel home-screen">
     <div className="panel-heading">
@@ -45,11 +45,11 @@ export function HomeView({ game, citizenId, legalActions, act }: {game:GameState
       <div className="compact-home-inventory">
         <section className="inventory-surface">
           <div className="inventory-heading"><h3>Rucksack</h3><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div>
-          <ItemStrip items={player.inventory} capacity={player.inventoryCapacity} onItemClick={(item)=>moveToHome(item.id)} extraTooltip={()=> 'Click to store in your chest.'}/>
+          <ItemStrip items={player.inventory} capacity={player.inventoryCapacity} disabledForItem={(item)=>!toHome(item.id)} onItemClick={(item)=>act(toHome(item.id))} extraTooltip={(item)=>toHome(item.id)?'Click to store in your chest.':'Chest is full or this item cannot be stored right now.'}/>
         </section>
         <section className="inventory-surface">
           <div className="inventory-heading"><h3>Chest</h3><span className="micro-stat">{player.home.storage.length}/{player.home.storageCapacity}</span></div>
-          <ItemStrip items={player.home.storage} capacity={player.home.storageCapacity} onItemClick={(item)=>moveToRucksack(item.id)} extraTooltip={()=> 'Click to pack into your rucksack.'}/>
+          <ItemStrip items={player.home.storage} capacity={player.home.storageCapacity} disabledForItem={(item)=>!toRucksack(item.id)} onItemClick={(item)=>act(toRucksack(item.id))} extraTooltip={(item)=>toRucksack(item.id)?'Click to pack into your rucksack.':'Rucksack is full or this item cannot be packed right now.'}/>
         </section>
       </div>
       <section className="inventory-actions-block">
