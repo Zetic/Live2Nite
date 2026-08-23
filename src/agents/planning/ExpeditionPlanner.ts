@@ -1,5 +1,6 @@
 import type { BotMissionAssignment, Citizen, GameState } from '../../core/types'
 import { distanceToTown } from '../../core/world'
+import { knownZombieCount } from '../WorldKnowledge'
 import { routeBetween, type Coord } from './RoutePlanner'
 import { planLoadout, supplyDispositionForCitizen, waterPolicyForState, type ExpeditionLoadout, type ExpeditionPurpose } from './SupplyPolicy'
 
@@ -39,23 +40,31 @@ export function planMission(state: GameState, citizenId: string, mission: BotMis
   if (!citizen || !citizen.alive || state.clock.phase !== 'day') return null
   const from = citizenCoord(citizen)
   const route = routeBetween(state, from, mission.target)
-  const zone = state.world.zones[`${mission.target.x},${mission.target.y}`]
   const expectedTaskAp = taskCost(state, mission)
   const returnAp = distanceToTown(mission.target.x, mission.target.y)
   const gateCost = citizen.location.type === 'town' && !state.town.gateOpen ? 1 : 0
   const roundTripRequiredAp = route.length + returnAp + expectedTaskAp + gateCost + mission.safetyReserve
-  // Unknown frontier zones are budgeted as a modest four-zombie risk. The bot still
-  // learns the real count only after discovery, but scout teams can justify a cheap
-  // field weapon instead of pretending an unknown destination is automatically safe.
-  const targetZombies = zone?.discovered ? zone.zombies : 4
+
+  // Unknown frontier zones are budgeted as a modest four-zombie risk. All known
+  // zombie reads go through WorldKnowledge so future stale-intel rules do not require
+  // auditing every expedition calculation for authoritative-world leaks.
+  const targetZombies = knownZombieCount(state, mission.target.x, mission.target.y) ?? 4
   const roundTripLoadout = planLoadout(state, citizen, mission.purpose, roundTripRequiredAp, targetZombies)
   const roundTripFeasible = roundTripLoadout.potentialAp >= roundTripRequiredAp
   const overnightRequiredAp = route.length + expectedTaskAp + gateCost + mission.safetyReserve
-  const overnightLoadout = mission.allowsCamping ? planLoadout(state,citizen,mission.purpose,overnightRequiredAp,targetZombies,{overnight:true}) : roundTripLoadout
+  const overnightLoadout = mission.allowsCamping
+    ? planLoadout(state, citizen, mission.purpose, overnightRequiredAp, targetZombies, { overnight: true })
+    : roundTripLoadout
+
   // Water already consumed today still counts as overnight hydration security. This
   // lets a bot drink the ration it deliberately packed without invalidating its camp.
   const overnightWaterReady = overnightLoadout.water || citizen.daily.drank
-  const overnightFeasible = Boolean(mission.allowsCamping && overnightWaterReady && overnightLoadout.potentialAp >= overnightRequiredAp)
+  const overnightFeasible = Boolean(
+    mission.allowsCamping
+    && overnightWaterReady
+    && overnightLoadout.potentialAp >= overnightRequiredAp,
+  )
+
   // A provisional mission (overnightPlanned undefined) chooses its intent once. After
   // dispatch, TownMissionPlanner persists that decision so a same-day mission cannot
   // become a camping mission merely because it later overspent or met unexpected risk.
@@ -66,6 +75,7 @@ export function planMission(state: GameState, citizenId: string, mission: BotMis
       : !roundTripFeasible && overnightFeasible
   const loadout = campingPlanned ? overnightLoadout : roundTripLoadout
   const requiredAp = campingPlanned ? overnightRequiredAp : roundTripRequiredAp
+
   return {
     purpose: mission.purpose,
     target: mission.target,
@@ -94,5 +104,6 @@ export function planExpedition(state: GameState, citizenId: string): ExpeditionP
 export function remainingReturnRequirement(state: GameState, citizenId: string): number {
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || citizen.location.type !== 'world') return 0
-  return routeBetween(state, { x: citizen.location.x, y: citizen.location.y }, { x: 0, y: 0 }).length || distanceToTown(citizen.location.x,citizen.location.y)
+  return routeBetween(state, { x: citizen.location.x, y: citizen.location.y }, { x: 0, y: 0 }).length
+    || distanceToTown(citizen.location.x, citizen.location.y)
 }

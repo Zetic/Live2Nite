@@ -1,0 +1,25 @@
+export const AI_TUNING = {
+  minimumTownReserveFraction: 0.15,
+  dedicatedRescueReserve: 3,
+  dedicatedRescueApFloor: 4,
+  newAssignmentFractionPerHour: 0.20,
+  assignmentCutoffHour: 22,
+  scoutCutoffHour: 18,
+  earlyScoutTarget: 4,
+  matureScoutTarget: 2,
+  earlyMapKnownZoneThreshold: 25,
+  scoutTeamSize: 2,
+  scoutSafetyReserve: 2,
+  ordinarySafetyReserve: 1,
+  campingEligibilityDistance: 6,
+  returnHourBase: 18,
+  returnHourSpread: 4,
+  lateBarehandedFightHour: 22,
+  campingImproveTargetPercent: 65,
+  campingViabilityTargetPercent: 50,
+  campingPlanningImprovementBudget: 3,
+  maxBotDecisionStepsPerHour: 64,
+  maxReserveTownWorkStepsPerHour: 4,
+} as const
+
+export type AiTuning = typeof AI_TUNING
