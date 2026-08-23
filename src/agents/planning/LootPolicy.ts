@@ -5,44 +5,23 @@ import { distanceToTown, zoneKey } from '../../core/world'
 import { evaluateTownNeeds, type TownNeeds } from './TownNeeds'
 
 const BASE_LOOT_VALUE: Record<ItemType, number> = {
-  construction_kit: 105,
-  twisted_plank: 72,
-  wrought_iron: 72,
-  unshaped_concrete_block: 58,
-  water_ration: 62,
-  food: 52,
-  old_door: 58,
-  rotten_log: 38,
-  scrap_metal: 38,
-  water_bomb: 70,
-  machete: 68,
-  serrated_knife: 58,
-  staff: 50,
-  pathetic_penknife: 43,
-  human_bone: 36,
-  doggy_bag: 48,
-  citizen_welcome_pack: 42,
-  pharmaceutical_products: 30,
-  battery: 24,
-  box_of_matches: 22,
-  broken_machete: 20,
-  broken_serrated_knife: 18,
-  broken_staff: 16,
-  broken_pathetic_penknife: 14,
-  broken_human_bone: 12,
-  metal_support: 68,
-  patchwork_beam: 62,
-  sheet_metal: 58,
-  water_pistol: 64,
-  water_cooler_bottle: 66,
-  repair_kit: 60,
+  construction_kit:105, twisted_plank:72, wrought_iron:72, patchwork_beam:82, metal_support:86, sheet_metal:80,
+  unshaped_concrete_block:76, rotten_log:38, scrap_metal:38,
+  nuts_and_bolts:92, copper_pipe:86, wire_reel:82, duct_tape:78, compact_detonator:96, semtex:100,
+  electronic_component:90, laser_diode:96, telescope:94, convex_lens:72, battery:70, empty_oil_can:64,
+  mechanism:78, broken_electronic_device:82, belt:68, bag_of_damp_grass:46, earplugs:34,
+  meaty_bone:62, human_flesh:60, poison_gland:82, working_radio:80, guitar:66, table:70, chicken:62, wire_mesh:72, grain_sack:58,
+  water_ration:62, food:52, old_door:58, water_bomb:70, machete:68, serrated_knife:58, staff:50, pathetic_penknife:43, human_bone:36,
+  doggy_bag:48, citizen_welcome_pack:42, pharmaceutical_products:72, box_of_matches:22,
+  broken_machete:20, broken_serrated_knife:18, broken_staff:26, broken_pathetic_penknife:14, broken_human_bone:12,
+  water_pistol:64, water_cooler_bottle:66, repair_kit:60,
 }
 
 function missionBonus(mission: BotMissionAssignment | null, type: ItemType): number {
   if (!mission) return 0
-  if (mission.purpose === 'gather_construction' && ['construction_kit','twisted_plank','wrought_iron','unshaped_concrete_block','rotten_log','scrap_metal'].includes(type)) return 24
-  if (mission.purpose === 'gather_food' && type === 'food') return 35
-  if (mission.purpose === 'gather_medical' && type === 'pharmaceutical_products') return 35
+  if (mission.purpose === 'gather_construction' && ['raw','construction','misc'].includes(ITEMS[type].category)) return 24
+  if (mission.purpose === 'gather_food' && ['food','grain_sack','chicken'].includes(type)) return 35
+  if (mission.purpose === 'gather_medical' && ['pharmaceutical_products','duct_tape'].includes(type)) return 35
   if ((mission.purpose === 'gather_weapons' || mission.purpose === 'rescue') && isWeapon(type)) return 28
   return 0
 }
@@ -50,9 +29,13 @@ function missionBonus(mission: BotMissionAssignment | null, type: ItemType): num
 function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null):number {
   let score = BASE_LOOT_VALUE[type] + missionBonus(mission, type)
   const directlyMissing = needs.missingConstruction[type] ?? 0
-  if (directlyMissing > 0) score += 70 + Math.min(20, directlyMissing * 4)
-  if (type === 'rotten_log' && (needs.missingConstruction.twisted_plank ?? 0) > 0) score += 36
-  if (type === 'scrap_metal' && (needs.missingConstruction.wrought_iron ?? 0) > 0) score += 36
+  if (directlyMissing > 0) score += 70 + Math.min(28, directlyMissing * 4)
+  if (type === 'rotten_log' && ((needs.missingConstruction.twisted_plank ?? 0) > 0 || (needs.missingConstruction.patchwork_beam ?? 0) > 0)) score += 36
+  if (type === 'scrap_metal' && ((needs.missingConstruction.wrought_iron ?? 0) > 0 || (needs.missingConstruction.metal_support ?? 0) > 0)) score += 36
+  if (type === 'twisted_plank' && (needs.missingConstruction.patchwork_beam ?? 0) > 0) score += 24
+  if (type === 'wrought_iron' && (needs.missingConstruction.metal_support ?? 0) > 0) score += 24
+  if (type === 'broken_electronic_device' && Object.keys(needs.missingConstruction).some((key)=>['electronic_component','nuts_and_bolts','battery','compact_detonator'].includes(key))) score += 30
+  if (type === 'mechanism' && Object.keys(needs.missingConstruction).some((key)=>['wrought_iron','nuts_and_bolts','copper_pipe'].includes(key))) score += 30
   if (type === 'construction_kit' && Object.keys(needs.missingConstruction).length > 0) score += 28
   if (type === 'food' && needs.foodLow) score += 45
   if (isWeapon(type) && needs.weaponsLow) score += 35
@@ -83,48 +66,29 @@ function isProtectedCarry(state: GameState, citizen: Citizen, item: ItemInstance
   return false
 }
 
-function pickupAction(actions: GameCommand[], itemId: string): GameCommand | null {
-  return actions.find((action) => action.type === 'PICK_UP_ITEM' && action.itemId === itemId) ?? null
-}
-function dropAction(actions: GameCommand[], itemId: string): GameCommand | null {
-  return actions.find((action) => action.type === 'DROP_ITEM' && action.itemId === itemId) ?? null
-}
+function pickupAction(actions: GameCommand[], itemId: string): GameCommand | null { return actions.find((action) => action.type === 'PICK_UP_ITEM' && action.itemId === itemId) ?? null }
+function dropAction(actions: GameCommand[], itemId: string): GameCommand | null { return actions.find((action) => action.type === 'DROP_ITEM' && action.itemId === itemId) ?? null }
 
 /** Free field actions happen before another movement AP is spent. */
-export function opportunisticFieldAction(
-  state: GameState,
-  citizen: Citizen,
-  actions: GameCommand[],
-  mission: BotMissionAssignment | null,
-): GameCommand | null {
+export function opportunisticFieldAction(state: GameState,citizen: Citizen,actions: GameCommand[],mission: BotMissionAssignment | null): GameCommand | null {
   if (citizen.location.type !== 'world') return null
   let needs:TownNeeds|null=null
   const score=(type:ItemType)=>scoreWithNeeds(needs??(needs=evaluateTownNeeds(state)),citizen,type,mission)
   const zone = state.world.zones[zoneKey(citizen.location.x,citizen.location.y)]
-  const ground = zone?.groundItems.length
-    ? [...zone.groundItems].sort((a,b)=>score(b.type)-score(a.type))[0]??null
-    : null
+  const ground = zone?.groundItems.length ? [...zone.groundItems].sort((a,b)=>score(b.type)-score(a.type))[0]??null : null
 
   if (ground) {
     const groundValue = score(ground.type)
     if (citizen.inventory.length < citizen.inventoryCapacity) {
       const preserveTargetSlots = mission?.phase === 'outbound' && citizen.inventory.length >= citizen.inventoryCapacity - 2
-      if (!preserveTargetSlots || groundValue >= 88 || mission?.phase === 'return') {
-        const pickup = pickupAction(actions,ground.id)
-        if (pickup) return pickup
-      }
+      if (!preserveTargetSlots || groundValue >= 88 || mission?.phase === 'return') { const pickup = pickupAction(actions,ground.id); if (pickup) return pickup }
     } else {
       const candidates=citizen.inventory.filter((item)=>!isProtectedCarry(state,citizen,item,mission))
       const lowest=[...candidates].sort((a,b)=>score(a.type)-score(b.type))[0]??null
-      if (lowest && groundValue >= score(lowest.type) + 15) {
-        const drop = dropAction(actions,lowest.id)
-        if (drop) return drop
-      }
+      if (lowest && groundValue >= score(lowest.type) + 15) { const drop = dropAction(actions,lowest.id); if (drop) return drop }
     }
   }
 
-  // Search first when there is no better visible pickup. These free actions need no town
-  // strategic scoring at all, which keeps dense route scavenging cheap.
   const specialSearch = actions.find((action) => action.type === 'SEARCH_SPECIAL_SITE') ?? null
   if (specialSearch) return specialSearch
   const search = actions.find((action) => action.type === 'SEARCH_ZONE') ?? null
