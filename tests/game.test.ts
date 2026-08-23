@@ -31,9 +31,9 @@ function withInventory(game: GameState, types: ItemType[]): GameState {
 }
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v11 citizens at 1 AM with starter home, packages, hydration, and camping state', () => {
+  it('starts schema v12 citizens at 1 AM with starter home, packages, hydration, camping, and control state', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(11)
+    expect(game.schemaVersion).toBe(12)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
@@ -41,6 +41,7 @@ describe('Citizen homes, starter supplies, and well', () => {
     expect(game.citizens.every((citizen) => citizen.home.storage.map((item) => item.type).sort().join(',') === 'citizen_welcome_pack,doggy_bag')).toBe(true)
     expect(game.citizens.every((citizen) => citizen.status.hydration === 'normal' && citizen.status.desertStepsToday === 0)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.camping.hidden === false && citizen.camping.nightsSurvived === 0)).toBe(true)
+    expect(game.citizens.every((citizen) => citizen.temporaryControl === null)).toBe(true)
   })
 
   it('creates deterministic starting well water in the verified 80–140 range', () => {
@@ -148,7 +149,7 @@ describe('World Beyond gameplay', () => {
     expect(game.world.zones[zoneKey(1, 0)].discovered).toBe(true)
   })
 
-  it('blocks movement while trapped but still permits a manual search', () => {
+  it('blocks movement and productive search while trapped', () => {
     let game = createInitialGame(123, 2)
     game = executeCommand(game, command(game, 'c01', 'OPEN_GATE')).state
     game = executeCommand(game, command(game, 'c01', 'EXIT_TOWN')).state
@@ -156,7 +157,7 @@ describe('World Beyond gameplay', () => {
     const key = zoneKey(1, 0)
     game = { ...game, world: { ...game.world, zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 3, searchesRemaining: 1, hiddenLoot: ['food'] } } } }
     expect(getLegalActions(game, 'c01').some((a) => a.type === 'MOVE')).toBe(false)
-    expect(getLegalActions(game, 'c01').some((a) => a.type === 'SEARCH_ZONE')).toBe(true)
+    expect(getLegalActions(game, 'c01').some((a) => a.type === 'SEARCH_ZONE')).toBe(false)
   })
 
   it('lets autonomous citizens rescue a trapped human during an hourly tick', () => {
