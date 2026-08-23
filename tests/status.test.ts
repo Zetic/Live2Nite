@@ -13,9 +13,9 @@ function withCitizen(game:GameState,id:string,patch:Partial<GameState['citizens'
 }
 
 describe('citizen hydration status',()=>{
-  it('starts schema v12 citizens hydrated with no desert travel debt',()=>{
+  it('starts schema v13 citizens hydrated with no desert travel debt',()=>{
     const game=createInitialGame(123,2)
-    expect(game.schemaVersion).toBe(12)
+    expect(game.schemaVersion).toBe(13)
     expect(game.citizens.every((citizen)=>citizen.status.hydration==='normal'&&citizen.status.desertStepsToday===0)).toBe(true)
   })
 
