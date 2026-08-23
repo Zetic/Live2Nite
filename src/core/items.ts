@@ -26,7 +26,7 @@ const resource=(type:ItemType,name:string,purpose:string,capabilities:ItemCapabi
 const container=(type:ItemType,name:string,purpose:string,state?:ItemStateSchema):ItemDefinition=>def({type,name,purpose,category:'container',displayCategory:'containers',capabilities:state?.contents?['container','stateful_container']:['container'],state,source:'MYHORDES_CURRENT'})
 const sourceWeapon=(type:ItemType,name:string,purpose:string):ItemDefinition=>def({type,name,purpose,category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'})
 const brokenSourceWeapon=(type:ItemType,name:string):ItemDefinition=>def({type,name:`Broken ${name}`,purpose:`A broken ${name}. Repair it anywhere with a Repair Kit or Kwik-Fix.`,category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'MYHORDES_CURRENT'})
-const sourceFood=(type:ItemType,name:string):ItemDefinition=>def({type,name,purpose:'Ordinary MyHordes food. Eating restores the normal daily food AP refresh and consumes the item.',category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'MYHORDES_CURRENT',consumableKind:'food'})
+const sourceFood=(type:ItemType,name:string,purpose='Ordinary MyHordes food. Eating restores the normal daily food AP refresh and consumes the item.'):ItemDefinition=>def({type,name,purpose,category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'MYHORDES_CURRENT',consumableKind:'food'})
 
 export const ITEMS:Record<ItemType,ItemDefinition>={
   rotten_log:def({type:'rotten_log',name:'Rotting Log',purpose:'Low-quality resource found abundantly in depleted zones. The Workshop converts it into a Twisted Plank.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
@@ -84,6 +84,8 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   soft_crisps:sourceFood('soft_crisps','Packet of Soft Crisps'),
   can:def({type:'can',name:'Can',purpose:'Closed MyHordes food can. Open it with a Saw Tool, Can Opener, Screwdriver, or Swiss Army Knife before eating.',category:'container',displayCategory:'food',capabilities:['container'],source:'MYHORDES_CURRENT'}),
   open_can:sourceFood('open_can','Open Can'),
+  vegetable:sourceFood('vegetable','Vegetable','MyHordes Vegetable. Eating follows the ordinary 6 AP food action.'),
+  tasty_looking_steak:sourceFood('tasty_looking_steak','Tasty-looking Steak','Higher-value MyHordes food. Eating uses the source 7 AP food action.'),
   old_door:def({type:'old_door',name:'Old Door',purpose:'Defensive object: +2 town defense in the Bank, or +1 personal defense when stored at Home.',category:'defense',displayCategory:'defences',capabilities:['defense'],source:'DIE2NITE_ARCHIVE',bankDefense:2,homeDefense:1}),
   water_bomb:def({type:'water_bomb',name:'Water Bomb',purpose:'Single-use weapon. While outside and not exhausted, it kills 1–5 zombies without spending AP. It can be made from a Plastic Bag and Water Ration.',category:'weapon',displayCategory:'armoury',capabilities:['weapon'],source:'DIE2NITE_ARCHIVE'}),
   human_bone:def({type:'human_bone',name:'Human Bone',purpose:'Breakable improvised weapon and a source-valid opener for some containers.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
