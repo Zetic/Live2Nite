@@ -74,10 +74,11 @@ export function chooseReconTarget(state:GameState,citizenId:string,excluded=new 
   const missionTargets=new Set(Object.values(state.botMissions).map((mission)=>`${mission.target.x},${mission.target.y}`))
   const candidates=Object.values(state.world.zones).filter((zone)=>{
     if(!zone.discovered||distanceToTown(zone.x,zone.y)===0||excluded.has(`${zone.x},${zone.y}`))return false
+    if(distanceToTown(zone.x,zone.y)>AI_TUNING.routineReconMaxDistance)return false
     return knowledge.zone(zone.x,zone.y)?.freshness!=='fresh'
   })
   if(!candidates.length)return null
-  const preferredRadius=3+(citizenNumber(citizenId)%5)
+  const preferredRadius=3+(citizenNumber(citizenId)%4)
   return [...candidates].sort((a,b)=>{
     const score=(zone:WorldZone)=>{
       const known=knowledge.zone(zone.x,zone.y)
