@@ -27,7 +27,6 @@ export class BasicBotController implements AgentController {
     const actions = getLegalActions(game, citizenId)
     if (!actions.length) return null
     const mission = game.botMissions[citizenId] ?? null
-    const plan = planExpedition(game, citizenId)
 
     if (citizen.camping.hidden) return null
 
@@ -37,6 +36,9 @@ export class BasicBotController implements AgentController {
     if (hydration) return hydration
 
     if (citizen.location.type === 'town') {
+      // Expedition planning is only needed in town for unload/loadout decisions. Avoid
+      // computing it on every zero-AP field-search step later in the controller.
+      const plan = planExpedition(game, citizenId)
       const unload = unloadAction(citizen, actions, plan, mission?.phase === 'unload')
       if (unload) return unload
       if (mission?.phase === 'unload') return null
@@ -109,6 +111,13 @@ export class BasicBotController implements AgentController {
       return null
     }
 
+    // Rescue control is a genuine emergency. Free scavenging must never delay the weapon
+    // action that turns fragile control into a safe extraction window.
+    if(mission?.role==='rescue'&&zoneControlState(game,citizen.location.x,citizen.location.y)==='fragile'){
+      const weapon=bestWeaponAction(citizen,actions)
+      if(weapon)return weapon
+    }
+
     // Every controlled field tile gets a free-action pass before another movement AP is
     // spent. Scouts, gatherers, rescuers and returning citizens all inspect the ground,
     // search normal/depleted zones, and make contextual pickup/swap/cache decisions.
@@ -126,18 +135,16 @@ export class BasicBotController implements AgentController {
       return controlAwareStepTowardTown(game, citizen, actions)
     }
 
+    // The expensive route/loadout plan is deferred until all zero-AP opportunities on
+    // this tile are exhausted. Route scavenging can therefore add several useful events
+    // without recalculating the entire expedition for each one.
+    const plan = planExpedition(game, citizenId)
     if (!plan) return controlAwareStepTowardTown(game, citizen, actions)
     const refill = refillAction(citizen,actions,plan.route.length+plan.expectedTaskAp+mission.safetyReserve+(plan.campingPlanned?0:plan.returnAp))
     if (refill) return refill
 
     if (mission.phase === 'operate') {
-      if (mission.role === 'rescue') {
-        if(zoneControlState(game,citizen.location.x,citizen.location.y)==='fragile'){
-          const weapon=bestWeaponAction(citizen,actions)
-          if(weapon)return weapon
-        }
-        return null
-      }
+      if (mission.role === 'rescue') return null
       if (mission.role === 'excavator') {
         const excavate = pick(actions, 'EXCAVATE_SPECIAL_SITE')
         if (excavate) return excavate
