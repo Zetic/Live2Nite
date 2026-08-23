@@ -11,6 +11,7 @@ Live2Nite is still in rapid pre-release development. Current-schema persistence 
 - Do not add elaborate backward-migration code unless it is cheap, directly needed for the current change, or explicitly requested.
 - If an old save cannot be represented safely, prefer rejecting it clearly as incompatible rather than guessing or silently corrupting state.
 - Existing migration code may remain when already implemented and well-tested, but maintaining historical migration completeness is not a merge requirement during this phase.
+- A PR should not remain draft solely because backward migration coverage is incomplete.
 - Revisit and tighten backward-save guarantees once Live2Nite reaches externally distributed releases or the project explicitly declares a compatibility baseline.
 
 ## Testing priority
