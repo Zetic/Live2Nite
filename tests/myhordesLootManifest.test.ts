@@ -40,13 +40,14 @@ describe('pinned MyHordes loot manifest',()=>{
     expect(MYHORDES_NORMAL_LOOT_MAPPING['rsc_pack_3_#00']).toEqual({type:'resource_pack',state:{contents:3}})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['watergun_empty_#00']).toEqual({type:'water_pistol',state:{charges:0}})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['pilegun_empty_#00']).toEqual({type:'battery_launcher',state:{charges:0}})
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['saw_tool_part_#00']).toEqual({type:'saw_tool_part'})
   })
 
   it('keeps still-unmapped ordinary ids visible instead of dropping them',()=>{
     const pending=new Set(unmappedOrdinarySourceLootIds())
-    expect(pending.has('saw_tool_part_#00')).toBe(true)
     expect(pending.has('food_noodles_#00')).toBe(true)
     expect(pending.has('drug_#00')).toBe(true)
     expect(pending.has('chair_basic_#00')).toBe(true)
+    expect(pending.has('jerrycan_#00')).toBe(true)
   })
 })
