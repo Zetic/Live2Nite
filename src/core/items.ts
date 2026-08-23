@@ -82,6 +82,8 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   dried_chewing_gum:sourceFood('dried_chewing_gum','Dried Chewing Gum'),
   stale_tart:sourceFood('stale_tart','Stale Tart'),
   soft_crisps:sourceFood('soft_crisps','Packet of Soft Crisps'),
+  can:def({type:'can',name:'Can',purpose:'Closed MyHordes food can. Open it with a Saw Tool, Can Opener, Screwdriver, or Swiss Army Knife before eating.',category:'container',displayCategory:'food',capabilities:['container'],source:'MYHORDES_CURRENT'}),
+  open_can:sourceFood('open_can','Open Can'),
   old_door:def({type:'old_door',name:'Old Door',purpose:'Defensive object: +2 town defense in the Bank, or +1 personal defense when stored at Home.',category:'defense',displayCategory:'defences',capabilities:['defense'],source:'DIE2NITE_ARCHIVE',bankDefense:2,homeDefense:1}),
   water_bomb:def({type:'water_bomb',name:'Water Bomb',purpose:'Single-use weapon. While outside and not exhausted, it kills 1–5 zombies without spending AP. It can be made from a Plastic Bag and Water Ration.',category:'weapon',displayCategory:'armoury',capabilities:['weapon'],source:'DIE2NITE_ARCHIVE'}),
   human_bone:def({type:'human_bone',name:'Human Bone',purpose:'Breakable improvised weapon and a source-valid opener for some containers.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
