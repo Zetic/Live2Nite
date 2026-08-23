@@ -41,7 +41,7 @@ export function App() {
   const [game, setGame] = useState<GameState>(() => createInitialGame(1))
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [screen, setScreen] = useState<GameScreen>('home')
+  const [screen, setScreen] = useState<GameScreen>('chronicle')
   const [controlledCitizenId, setControlledCitizenId] = useState('c01')
   useEffect(() => { repository.load().then((saved) => setGame(saved ?? createInitialGame(newSeed()))).catch(() => setGame(createInitialGame(newSeed()))).finally(() => setLoaded(true)) }, [])
   useEffect(() => { if (loaded) void repository.save(game) }, [game, loaded])
@@ -86,7 +86,7 @@ export function App() {
     try { setGame(advanceToHour(game,hour,botController,controlledCitizenId)); setError(null) }
     catch (caught) { setError(caught instanceof InvalidTimeAdvanceError ? caught.message : 'Time advance failed.') }
   }
-  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setScreen('home'); setError(null) }
+  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setScreen('chronicle'); setError(null) }
   const controlCitizen = (citizenId: string) => { setControlledCitizenId(citizenId); setError(null) }
 
   if (!loaded) return <main className="shell loading-shell"><p>Opening the town gates…</p></main>
