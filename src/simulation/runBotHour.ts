@@ -1,9 +1,10 @@
 import { createAgentDecisionContext } from '../agents/AgentDecisionContext'
 import type { AgentController } from '../agents/AgentController'
 import { AI_TUNING } from '../agents/AiTuning'
+import { commitmentForCitizen, gateBackupCitizenId, gatePrimaryCitizenId, planTownCoordination, reservedApForCitizen } from '../agents/coordination/TownCoordination'
 import { planExpedition } from '../agents/planning/ExpeditionPlanner'
 import { missionCompleteAtTown, nextMissionLifecycleEvent } from '../agents/planning/MissionLifecycle'
-import { isDedicatedRescueReserve, planTownMissionAssignments } from '../agents/planning/TownMissionPlanner'
+import { planTownMissionAssignments } from '../agents/planning/TownMissionPlanner'
 import { chooseTownWork } from '../agents/townWork'
 import { getLegalActions } from '../core/actions'
 import { executeCommand } from '../core/commands'
@@ -26,9 +27,11 @@ export function chooseHourlyObjective(state: GameState, citizenId: string): Hour
     return 'mission'
   }
   if (citizen.location.type === 'world') return 'return_home'
-  const dedicated = isDedicatedRescueReserve(state, citizenId)
-  if (dedicated && citizen.ap <= DEDICATED_RESCUE_AP_FLOOR) return 'reserve'
-  if (chooseTownWork(state, citizen, getLegalActions(state, citizenId))) return 'town_work'
+
+  const commitment=commitmentForCitizen(state,citizenId)
+  if(commitment&&(commitment.kind==='gate_primary'||commitment.kind==='gate_backup')&&citizen.ap<=reservedApForCitizen(state,citizenId))return'reserve'
+  if(commitment?.kind==='construction'&&chooseTownWork(state,citizen,getLegalActions(state,citizenId)))return'town_work'
+  if(state.clock.hour>=AI_TUNING.townApDumpHour&&chooseTownWork(state,citizen,getLegalActions(state,citizenId)))return'town_work'
   return 'reserve'
 }
 
@@ -54,9 +57,31 @@ function runTemporaryExtractionPass(state:GameState,controller:AgentController,c
   return nextState
 }
 
+function gateCloser(state:GameState,controlledCitizenId?:string){
+  const preferred=[gatePrimaryCitizenId(state),gateBackupCitizenId(state)].filter((id):id is string=>Boolean(id))
+  const eligible=(citizenId:string)=>{
+    const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
+    return Boolean(citizen
+      && citizen.id!==controlledCitizenId
+      && citizen.controller==='basic-bot'
+      && citizen.alive
+      && citizen.location.type==='town'
+      && getLegalActions(state,citizen.id).some((action)=>action.type==='CLOSE_GATE'))
+  }
+  for(const citizenId of preferred)if(eligible(citizenId))return state.citizens.find((citizen)=>citizen.id===citizenId)??null
+  return state.citizens.find((citizen)=>eligible(citizen.id))??null
+}
+
 export function runBotHour(state: GameState, controller: AgentController, controlledCitizenId?: string): GameState {
   if (state.clock.phase !== 'day') return state
   let nextState = state
+
+  // Forum-like public commitments are posted first. Mission planning then sees which
+  // citizens already volunteered for gate/construction duties instead of relying on a
+  // hidden fixed reserve or treating all possible town work as mandatory.
+  const coordination=planTownCoordination(nextState,controlledCitizenId)
+  if(coordination.length)nextState=applyEvents(nextState,coordination)
+
   const assignments = planTownMissionAssignments(nextState, controlledCitizenId)
   if (assignments.length) nextState = applyEvents(nextState, assignments)
 
@@ -75,7 +100,7 @@ export function runBotHour(state: GameState, controller: AgentController, contro
 
       const objective = chooseHourlyObjective(nextState, startingCitizen.id)
       if (objective === 'idle') break
-      if (objective === 'reserve' && isDedicatedRescueReserve(nextState, startingCitizen.id)) break
+      if(objective==='reserve'&&reservedApForCitizen(nextState,startingCitizen.id)>=nextState.citizens.find((citizen)=>citizen.id===startingCitizen.id)!.ap)break
 
       const beforeEvents = nextState.events.length
       const command = controller.decide(createAgentDecisionContext(nextState), startingCitizen.id)
@@ -113,12 +138,7 @@ export function runBotHour(state: GameState, controller: AgentController, contro
   nextState=runTemporaryExtractionPass(nextState,controller,controlledCitizenId)
 
   if (state.clock.hour === 23 && nextState.town.gateOpen) {
-    const closer = nextState.citizens.find((citizen) =>
-      citizen.id !== controlledCitizenId
-      && citizen.controller === 'basic-bot'
-      && citizen.alive
-      && citizen.location.type === 'town'
-      && getLegalActions(nextState, citizen.id).some((action) => action.type === 'CLOSE_GATE'))
+    const closer=gateCloser(nextState,controlledCitizenId)
     if (closer) {
       const close = getLegalActions(nextState, closer.id).find((action) => action.type === 'CLOSE_GATE')
       if (close) nextState = executeCommand(nextState, close).state
