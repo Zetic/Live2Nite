@@ -51,7 +51,13 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CONSTRUCTION_COMPLETED':{let bank=state.town.bank;for(const[type,amount]of Object.entries(event.consumed))bank=removeBankItems(bank,type as ItemType,amount??0);const waterBonus=completionWaterBonus(event.projectId);const zones=revealsAllTerrain(event.projectId)?Object.fromEntries(Object.entries(state.world.zones).map(([key,zone])=>[key,{...zone,discovered:true}])):state.world.zones;return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.projectId!==event.projectId)},town:{...state.town,well:{water:state.town.well.water+waterBonus},bank,construction:{...state.town.construction,[event.projectId]:{...state.town.construction[event.projectId],completed:true}}},world:zones===state.world.zones?state.world:{...state.world,zones}}}
     case 'CONSTRUCTION_EXPIRED':{const project=state.town.construction[event.projectId];if(!project)return state;return{...state,town:{...state.town,construction:{...state.town.construction,[event.projectId]:{...project,apContributed:0,completed:false}}}}}
     case 'CONSTRUCTION_GENERATED_ITEM':{const items=generatedItems(state,event.itemType,event.amount);return{...state,nextItemId:state.nextItemId+items.length,town:{...state.town,bank:[...state.town.bank,...items]}}}
-    case 'WORKSHOP_CONVERTED':{let bank=removeBankItems(state.town.bank,event.input,event.inputCount);const outputs=generatedItems(state,event.output,event.outputCount);bank=[...bank,...outputs];return{...state,nextItemId:state.nextItemId+outputs.length,town:{...state.town,bank}}}
+    case 'WORKSHOP_CONVERTED':{
+      let bank=state.town.bank
+      const inputs=event.inputs??{[event.input]:event.inputCount}
+      for(const[type,count]of Object.entries(inputs))bank=removeBankItems(bank,type as ItemType,count??0)
+      const outputs=generatedItems(state,event.output,event.outputCount);bank=[...bank,...outputs]
+      return{...state,rngState:event.rngStateAfter??state.rngState,nextItemId:state.nextItemId+outputs.length,town:{...state.town,bank}}
+    }
     case 'COORDINATION_COMMITMENT_POSTED':return{...state,coordination:{commitments:[...state.coordination.commitments.filter((commitment)=>commitment.id!==event.commitment.id&&commitment.citizenId!==event.commitment.citizenId),event.commitment]}}
     case 'COORDINATION_COMMITMENT_CLEARED':return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.id!==event.commitmentId)}}
     case 'BOT_MISSION_ASSIGNED':return{...state,botMissions:{...state.botMissions,[event.citizenId]:event.mission}}
