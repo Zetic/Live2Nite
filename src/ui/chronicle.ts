@@ -33,12 +33,15 @@ export function chronicleCategory(event: GameEvent): ChronicleCategory {
     case 'CAMP_IMPROVED': case 'CAMP_IMPROVEMENTS_DECAYED': case 'CITIZEN_HIDING_SET': case 'CAMPING_RESOLVED': return 'camping'
     case 'ZONE_CONTROL_LOST': case 'TEMPORARY_CONTROL_GRANTED': case 'TEMPORARY_CONTROL_EXPIRED': case 'ZONE_CONTROL_RESTORED': case 'CITIZEN_STATUS_CHANGED': case 'CITIZEN_DIED': return 'survival'
     case 'WORLD_ZOMBIES_EVOLVED': case 'NIGHT_RESOLVED': case 'DAY_STARTED': return 'night'
-    case 'GATE_SET': return 'town'
+    case 'GATE_SET': case 'COORDINATION_COMMITMENT_POSTED': case 'COORDINATION_COMMITMENT_CLEARED': return 'town'
     case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'HOME_UPGRADED': return 'home'
     case 'AP_SPENT': case 'TIME_ADVANCED': return 'system'
   }
 }
 
-export function eventCitizenId(event: GameEvent): string | null {return 'citizenId' in event && typeof event.citizenId === 'string' && event.citizenId!=='system' ? event.citizenId : null}
+export function eventCitizenId(event: GameEvent): string | null {
+  if(event.type==='COORDINATION_COMMITMENT_POSTED')return event.commitment.citizenId
+  return 'citizenId' in event && typeof event.citizenId === 'string' && event.citizenId!=='system' ? event.citizenId : null
+}
 export function filterChronicleEvents(events: readonly GameEvent[], filters: ChronicleFilters): GameEvent[] {const selectedCategories=new Set(filters.categories);return events.filter((event)=>{if(filters.mode==='highlights'&&!isHighlightEvent(event))return false;if(filters.day!==null&&event.day!==filters.day)return false;if(filters.citizenId!==null&&eventCitizenId(event)!==filters.citizenId)return false;if(selectedCategories.size>0&&!selectedCategories.has(chronicleCategory(event)))return false;return true})}
 export function availableChronicleDays(events: readonly GameEvent[]): number[] {return[...new Set(events.map((event)=>event.day))].sort((a,b)=>b-a)}
