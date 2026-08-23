@@ -3,6 +3,7 @@ import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
 import { DEPLETED_SCAVENGE_LOOT_POOL, NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
+import { MYHORDES_DEPLETED_ZONE_LOOT } from '../src/core/scavengeLoot'
 import type { GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
 import { availableScreens, FACILITY_SLOT_COUNT, facilitySlots, PRIMARY_SCREENS } from '../src/ui/navigation'
@@ -52,6 +53,10 @@ describe('undepleted and depleted scavenging', () => {
     expect(NORMAL_SCAVENGE_LOOT_POOL).not.toContain('rotten_log')
     expect(NORMAL_SCAVENGE_LOOT_POOL).not.toContain('scrap_metal')
     expect(DEPLETED_SCAVENGE_LOOT_POOL.every((type) => type === 'rotten_log' || type === 'scrap_metal')).toBe(true)
+    expect(MYHORDES_DEPLETED_ZONE_LOOT.entries.map((entry)=>[entry.items[0]?.type,entry.weight])).toEqual([
+      ['rotten_log',20],
+      ['scrap_metal',12],
+    ])
     expect(Object.values(game.world.zones).every((zone) => zone.hiddenLoot.every((type) => type !== 'rotten_log' && type !== 'scrap_metal'))).toBe(true)
   })
 
@@ -64,17 +69,19 @@ describe('undepleted and depleted scavenging', () => {
     expect(result.state.world.zones[key].searchesRemaining).toBe(0)
   })
 
-  it('lets a citizen comb a depleted zone once for Workshop feedstock', () => {
+  it('lets a citizen comb a depleted zone once using the source-weighted table', () => {
     let game = outsideAt(createInitialGame(456, 2), 1, 0)
     const key = zoneKey(1, 0)
     game = { ...game, world: { ...game.world, zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 0, searchesRemaining: 0, hiddenLoot: [], searchedBy: ['c01'], depletedSearchedBy: [] } } } }
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'SEARCH_ZONE')).toBe(true)
+    const originalRng=game.rngState
     const result = executeCommand(game, command(game, 'c01', 'SEARCH_ZONE'))
     const searched = result.events.find((event) => event.type === 'ZONE_SEARCHED')
     expect(searched?.type).toBe('ZONE_SEARCHED')
     if (searched?.type === 'ZONE_SEARCHED') {
       expect(searched.mode).toBe('depleted')
       expect(['rotten_log', 'scrap_metal']).toContain(searched.item?.type)
+      expect(searched.rngStateAfter).not.toBe(originalRng)
     }
     expect(result.state.world.zones[key].depletedSearchedBy).toContain('c01')
     expect(getLegalActions(result.state, 'c01').some((action) => action.type === 'SEARCH_ZONE')).toBe(false)
