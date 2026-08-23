@@ -1,3 +1,6 @@
+import type { ConstructionId } from './constructionIds'
+export type { ConstructionId } from './constructionIds'
+
 export type CitizenControllerKind = 'human' | 'basic-bot'
 
 export type ItemType =
@@ -27,7 +30,6 @@ export type ItemType =
   | 'box_of_matches'
   | 'pharmaceutical_products'
 
-export type ConstructionId = 'workshop' | 'watchtower' | 'pump' | 'wall_upgrade' | 'portal_lock' | 'search_tower'
 export type WorkshopRecipeId =
   | 'logs_to_planks'
   | 'scrap_to_iron'
@@ -139,6 +141,7 @@ export interface ConstructionProjectState { id: ConstructionId; apContributed: n
 export interface TownWellState { water: number }
 export interface TownState {
   gateOpen: boolean
+  /** Bootstrap/static defense only. Bank, construction, and home contributions are derived. */
   defense: number
   bank: Partial<Record<ItemType, number>>
   construction: Record<ConstructionId, ConstructionProjectState>
@@ -164,7 +167,7 @@ export interface NightReport {
 export interface WorldZombieChange { zoneKey:string; before:number; after:number }
 
 export interface GameState {
-  schemaVersion: 12
+  schemaVersion: 13
   gameId: string
   seed: number
   rngState: number
@@ -243,6 +246,8 @@ export type GameEvent = (
   | { type: 'HOME_UPGRADED'; day: number; citizenId: string; from: HomeLevel; to: HomeLevel; defenseAfter: number }
   | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }
   | { type: 'CONSTRUCTION_COMPLETED'; day: number; citizenId: string; projectId: ConstructionId; consumed: Partial<Record<ItemType, number>>; defenseBonus: number }
+  | { type: 'CONSTRUCTION_EXPIRED'; day:number; projectId:ConstructionId }
+  | { type: 'CONSTRUCTION_GENERATED_ITEM'; day:number; projectId:ConstructionId; itemType:ItemType; amount:number }
   | { type: 'WORKSHOP_CONVERTED'; day: number; citizenId: string; recipeId: WorkshopRecipeId; input: ItemType; inputCount: number; output: ItemType; outputCount: number }
   | { type: 'BOT_MISSION_ASSIGNED'; day: number; citizenId: string; mission: BotMissionAssignment }
   | { type: 'BOT_MISSION_PHASE_SET'; day: number; citizenId: string; missionId: string; phase: BotMissionPhase }
