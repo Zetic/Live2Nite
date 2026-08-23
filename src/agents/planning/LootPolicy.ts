@@ -10,14 +10,16 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
   nuts_and_bolts:92,copper_pipe:86,wire_reel:82,duct_tape:78,compact_detonator:96,semtex:100,electronic_component:90,laser_diode:96,telescope:94,convex_lens:72,battery:70,empty_oil_can:64,
   mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,guitar:66,table:70,chicken:62,wire_mesh:72,grain_sack:58,
   tool_bag:78,kwik_fix:82,plastic_bag:36,engine_incomplete:86,engine:90,claymore:94,torch:48,battery_launcher:74,
-  water_ration:62,food:52,old_door:58,water_bomb:70,machete:72,serrated_knife:66,staff:50,pathetic_penknife:40,human_bone:58,doggy_bag:48,citizen_welcome_pack:42,pharmaceutical_products:72,box_of_matches:22,
+  water_ration:62,food:52,mouldy_twinkies:52,half_eaten_chicken_wings:52,rancid_shortbread_pack:52,out_of_date_jaffa_cakes:52,dried_chewing_gum:52,stale_tart:52,soft_crisps:52,
+  old_door:58,water_bomb:70,machete:72,serrated_knife:66,staff:50,pathetic_penknife:40,human_bone:58,doggy_bag:58,citizen_welcome_pack:42,pharmaceutical_products:72,box_of_matches:22,
   adjustable_spanner:62,screwdriver:54,swiss_army_knife:52,box_cutter:60,chain:60,can_opener:58,
   broken_machete:20,broken_serrated_knife:18,broken_staff:26,broken_pathetic_penknife:14,broken_human_bone:12,
   broken_adjustable_spanner:18,broken_screwdriver:16,broken_swiss_army_knife:16,broken_box_cutter:16,broken_chain:18,broken_can_opener:14,
   water_pistol:68,water_cooler_bottle:66,repair_kit:84,
 }
 
-function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if(!mission)return 0;if(mission.purpose==='gather_construction'&&['raw','construction','misc','container'].includes(ITEMS[type].category))return 24;if(mission.purpose==='gather_food'&&['food','grain_sack','chicken','food_box'].includes(type))return 35;if(mission.purpose==='gather_medical'&&['pharmaceutical_products','duct_tape','kwik_fix','repair_kit','toolbox'].includes(type))return 35;if((mission.purpose==='gather_weapons'||mission.purpose==='rescue')&&isWeapon(type))return 28;return 0}
+function isFood(type:ItemType):boolean{return ITEMS[type].consumableKind==='food'}
+function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if(!mission)return 0;if(mission.purpose==='gather_construction'&&['raw','construction','misc','container'].includes(ITEMS[type].category))return 24;if(mission.purpose==='gather_food'&&(isFood(type)||['grain_sack','chicken','food_box','doggy_bag'].includes(type)))return 35;if(mission.purpose==='gather_medical'&&['pharmaceutical_products','duct_tape','kwik_fix','repair_kit','toolbox'].includes(type))return 35;if((mission.purpose==='gather_weapons'||mission.purpose==='rescue')&&isWeapon(type))return 28;return 0}
 function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null):number{
   let score=BASE_LOOT_VALUE[type]+missionBonus(mission,type);const directlyMissing=needs.missingConstruction[type]??0
   if(directlyMissing>0)score+=70+Math.min(28,directlyMissing*4)
@@ -31,15 +33,15 @@ function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:Bo
   if((type==='copper_pipe'||type==='convex_lens')&&(needs.missingConstruction.telescope??0)>0)score+=34
   if(['wire_reel','empty_oil_can','broken_staff'].includes(type)&&(needs.missingConstruction.guitar??0)>0)score+=30
   if((type==='construction_kit'||type==='resource_pack')&&Object.keys(needs.missingConstruction).length>0)score+=28
-  if(type==='food'&&needs.foodLow)score+=45
-  if(type==='food_box'&&needs.foodLow)score+=55
+  if(isFood(type)&&needs.foodLow)score+=45
+  if((type==='food_box'||type==='doggy_bag')&&needs.foodLow)score+=55
   if(isWeapon(type)&&needs.weaponsLow)score+=35
   if(type==='water_ration'){if(citizen.status.hydration!=='normal')score+=90;else if(!citizen.daily.drank&&citizen.status.desertStepsToday>=6)score+=45;if(needs.waterPerCitizen<1)score+=55;else if(needs.waterPerCitizen<2)score+=24}
   if(type==='old_door'&&(needs.defense.pressure==='critical'||needs.defense.pressure==='shortfall'))score+=45
   return score
 }
 export function lootScore(state:GameState,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null=null):number{return scoreWithNeeds(evaluateTownNeeds(state),citizen,type,mission)}
-function isProtectedCarry(state:GameState,citizen:Citizen,item:ItemInstance,mission:BotMissionAssignment|null):boolean{if(item.type==='water_ration')return citizen.status.hydration!=='normal'||(!citizen.daily.drank&&(citizen.status.desertStepsToday>=6||(citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)));if(item.type==='food'&&!citizen.daily.ate&&citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)return true;if(isWeapon(item.type)){const workingWeapons=citizen.inventory.filter((candidate)=>isWeapon(candidate.type));return workingWeapons.length<=1&&(mission?.purpose==='rescue'||mission?.purpose==='gather_weapons')}return false}
+function isProtectedCarry(state:GameState,citizen:Citizen,item:ItemInstance,mission:BotMissionAssignment|null):boolean{if(item.type==='water_ration')return citizen.status.hydration!=='normal'||(!citizen.daily.drank&&(citizen.status.desertStepsToday>=6||(citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)));if(isFood(item.type)&&!citizen.daily.ate&&citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)return true;if(isWeapon(item.type)){const workingWeapons=citizen.inventory.filter((candidate)=>isWeapon(candidate.type));return workingWeapons.length<=1&&(mission?.purpose==='rescue'||mission?.purpose==='gather_weapons')}return false}
 function pickupAction(actions:GameCommand[],itemId:string):GameCommand|null{return actions.find((action)=>action.type==='PICK_UP_ITEM'&&action.itemId===itemId)??null}
 function dropAction(actions:GameCommand[],itemId:string):GameCommand|null{return actions.find((action)=>action.type==='DROP_ITEM'&&action.itemId===itemId)??null}
 export function opportunisticFieldAction(state:GameState,citizen:Citizen,actions:GameCommand[],mission:BotMissionAssignment|null):GameCommand|null{
