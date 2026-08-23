@@ -1,18 +1,17 @@
 import { useState } from 'react'
 import { HOME_IMPROVEMENTS, HOME_LEVEL_ORDER, HOME_LEVELS, homeName, personalDefense } from '../../core/home'
 import { itemName } from '../../core/items'
-import type { GameCommand, GameState, HomeImprovementId, ItemType } from '../../core/types'
+import type { GameCommand, GameEvent, GameState, HomeImprovementId, ItemInstance, ItemType } from '../../core/types'
+import { ContextRegister } from './ContextRegister'
 import { ItemActionMenu, ItemStrip } from './InventoryItems'
 
 type HomeTab='inventory'|'upgrades'|'improvements'
-
-function commandFor(actions: GameCommand[], type: GameCommand['type'], itemId: string): GameCommand | undefined {
-  return actions.find((action) => action.type === type && 'itemId' in action && action.itemId === itemId)
-}
+function commandFor(actions: GameCommand[], type: GameCommand['type'], itemId: string): GameCommand | undefined {return actions.find((action) => action.type === type && 'itemId' in action && action.itemId === itemId)}
 function improvementCommand(actions:GameCommand[],id:HomeImprovementId):GameCommand|undefined{return actions.find((action)=>action.type==='BUILD_HOME_IMPROVEMENT'&&action.improvementId===id)}
-function resourceText(resources:Partial<Record<ItemType,number>>):string{
-  const entries=Object.entries(resources) as Array<[ItemType,number|undefined]>
-  return entries.length?entries.map(([type,count])=>`${itemName(type)} × ${count??0}`).join(' · '):'No materials'
+function resourceText(resources:Partial<Record<ItemType,number>>):string{const entries=Object.entries(resources) as Array<[ItemType,number|undefined]>;return entries.length?entries.map(([type,count])=>`${itemName(type)} × ${count??0}`).join(' · '):'No materials'}
+function homeRegisterEvent(event:GameEvent,citizenId:string):boolean{
+  if(!('citizenId'in event)||event.citizenId!==citizenId)return false
+  return ['ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','CONTAINER_OPENED','CONSTRUCTION_KIT_OPENED','ITEM_CONSUMED','HOME_UPGRADED','HOME_IMPROVEMENT_BUILT'].includes(event.type)
 }
 
 export function HomeView({ game, citizenId, legalActions, act }: {game:GameState;citizenId:string;legalActions:GameCommand[];act:(command:GameCommand|undefined)=>void}) {
@@ -25,16 +24,13 @@ export function HomeView({ game, citizenId, legalActions, act }: {game:GameState
   const nextLevel=currentIndex<HOME_LEVEL_ORDER.length-1?HOME_LEVEL_ORDER[currentIndex+1]:null
   const nextDefinition=nextLevel?HOME_LEVELS[nextLevel]:null
   const defenseTooltip=`Total defense protecting this home during a breach. Structure: ${structuralDefense}. Defensive objects and installed improvements are included here.`
-
   const toHome=(itemId:string)=>commandFor(legalActions,'MOVE_ITEM_TO_HOME',itemId)
   const toRucksack=(itemId:string)=>commandFor(legalActions,'MOVE_ITEM_TO_RUCKSACK',itemId)
+  const actionableItems=[...player.inventory,...player.home.storage]
+  const itemSource=(item:ItemInstance)=>player.home.storage.some((stored)=>stored.id===item.id)?'Chest':'Rucksack'
 
   return <section className="panel screen-panel home-screen">
-    <div className="panel-heading">
-      <div><p className="section-kicker">{player.controller==='human'?'Your home':player.name}</p><h2>{homeName(player.home.level)}</h2></div>
-      <div className="home-defense-compact" title={defenseTooltip}><span>Defense</span><strong>{currentDefense}</strong></div>
-    </div>
-
+    <div className="panel-heading"><div><p className="section-kicker">{player.controller==='human'?'Your home':player.name}</p><h2>{homeName(player.home.level)}</h2></div><div className="home-defense-compact" title={defenseTooltip}><span>Defense</span><strong>{currentDefense}</strong></div></div>
     <div className="home-tabs" role="tablist" aria-label="Home view">
       <button className={tab==='inventory'?'active':''} aria-selected={tab==='inventory'} onClick={()=>setTab('inventory')}><strong>Inventory & Actions</strong><small>Rucksack and chest</small></button>
       <button className={tab==='upgrades'?'active':''} aria-selected={tab==='upgrades'} onClick={()=>setTab('upgrades')}><strong>Building Upgrades</strong><small>Permanent home level</small></button>
@@ -43,19 +39,10 @@ export function HomeView({ game, citizenId, legalActions, act }: {game:GameState
 
     {tab==='inventory'&&<>
       <div className="compact-home-inventory">
-        <section className="inventory-surface">
-          <div className="inventory-heading"><h3>Rucksack</h3><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div>
-          <ItemStrip items={player.inventory} capacity={player.inventoryCapacity} disabledForItem={(item)=>!toHome(item.id)} onItemClick={(item)=>act(toHome(item.id))} extraTooltip={(item)=>toHome(item.id)?'Click to store in your chest.':'Chest is full or this item cannot be stored right now.'}/>
-        </section>
-        <section className="inventory-surface">
-          <div className="inventory-heading"><h3>Chest</h3><span className="micro-stat">{player.home.storage.length}/{player.home.storageCapacity}</span></div>
-          <ItemStrip items={player.home.storage} capacity={player.home.storageCapacity} disabledForItem={(item)=>!toRucksack(item.id)} onItemClick={(item)=>act(toRucksack(item.id))} extraTooltip={(item)=>toRucksack(item.id)?'Click to pack into your rucksack.':'Rucksack is full or this item cannot be packed right now.'}/>
-        </section>
+        <section className="inventory-surface"><div className="inventory-heading"><h3>Rucksack</h3><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div><ItemStrip items={player.inventory} capacity={player.inventoryCapacity} disabledForItem={(item)=>!toHome(item.id)} onItemClick={(item)=>act(toHome(item.id))} extraTooltip={(item)=>toHome(item.id)?'Click to store in your chest.':'Chest is full or this item cannot be stored right now.'}/></section>
+        <section className="inventory-surface"><div className="inventory-heading"><h3>Chest</h3><span className="micro-stat">{player.home.storage.length}/{player.home.storageCapacity}</span></div><ItemStrip items={player.home.storage} capacity={player.home.storageCapacity} disabledForItem={(item)=>!toRucksack(item.id)} onItemClick={(item)=>act(toRucksack(item.id))} extraTooltip={(item)=>toRucksack(item.id)?'Click to pack into your rucksack.':'Rucksack is full or this item cannot be packed right now.'}/></section>
       </div>
-      <section className="inventory-actions-block">
-        <div className="inventory-heading"><h3>My Actions</h3><span className="micro-stat">rucksack items</span></div>
-        <ItemActionMenu items={player.inventory} actions={legalActions} act={act}/>
-      </section>
+      <section className="inventory-actions-block"><div className="inventory-heading"><h3>My Actions</h3><span className="micro-stat">rucksack + chest</span></div><ItemActionMenu items={actionableItems} actions={legalActions} act={act} sourceForItem={itemSource}/></section>
     </>}
 
     {tab==='upgrades'&&<div className="home-upgrade-layout">
@@ -63,9 +50,7 @@ export function HomeView({ game, citizenId, legalActions, act }: {game:GameState
       <section className="home-level-table"><div className="home-level-row header"><span>Level</span><span>Home</span><span>Defense</span><span>AP</span></div>{HOME_LEVEL_ORDER.map((level,index)=>{const def=HOME_LEVELS[level];return <div key={level} className={`home-level-row ${index===currentIndex?'current':''} ${index<currentIndex?'complete':''}`}><span>{index}</span><strong>{def.name}</strong><span>{def.defense}</span><span>{def.apCost||'—'}</span></div>})}</section>
     </div>}
 
-    {tab==='improvements'&&<div className="home-improvements-list">
-      <p className="adaptation-note">Fence, Reinforcements and More Storage are reconstructed from historical Home/Hero improvements. Until the Hero system is implemented, Live2Nite temporarily exposes these supported works to ordinary citizens.</p>
-      {(Object.keys(HOME_IMPROVEMENTS) as HomeImprovementId[]).map((id)=>{const def=HOME_IMPROVEMENTS[id];const level=player.home.improvements[id]??0;const next=level<def.maxLevel?level+1:null;const action=improvementCommand(legalActions,id);return <article className="home-improvement-card" key={id}><div><p className="section-kicker">Level {level}/{def.maxLevel}</p><h3>{def.name}</h3><p>{def.description}</p>{next!==null&&<small>{def.apCost(next)} AP · {resourceText(def.resources(next))}</small>}</div><div className="home-improvement-effect"><strong>{def.defensePerLevel?`+${def.defensePerLevel} defense / level`:`+${def.storagePerLevel} chest slot / level`}</strong>{next!==null?<button disabled={!action} onClick={()=>act(action)}>Build level {next}</button>:<span className="facility-status online">MAX</span>}</div></article>})}
-    </div>}
+    {tab==='improvements'&&<div className="home-improvements-list"><p className="adaptation-note">Fence, Reinforcements and More Storage are reconstructed from historical Home/Hero improvements. Until the Hero system is implemented, Live2Nite temporarily exposes these supported works to ordinary citizens.</p>{(Object.keys(HOME_IMPROVEMENTS) as HomeImprovementId[]).map((id)=>{const def=HOME_IMPROVEMENTS[id];const level=player.home.improvements[id]??0;const next=level<def.maxLevel?level+1:null;const action=improvementCommand(legalActions,id);return <article className="home-improvement-card" key={id}><div><p className="section-kicker">Level {level}/{def.maxLevel}</p><h3>{def.name}</h3><p>{def.description}</p>{next!==null&&<small>{def.apCost(next)} AP · {resourceText(def.resources(next))}</small>}</div><div className="home-improvement-effect"><strong>{def.defensePerLevel?`+${def.defensePerLevel} defense / level`:`+${def.storagePerLevel} chest slot / level`}</strong>{next!==null?<button disabled={!action} onClick={()=>act(action)}>Build level {next}</button>:<span className="facility-status online">MAX</span>}</div></article>})}</div>}
+    <ContextRegister game={game} title={`${player.name}'s Home Register`} matches={(event)=>homeRegisterEvent(event,player.id)}/>
   </section>
 }
