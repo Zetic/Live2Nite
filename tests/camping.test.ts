@@ -21,9 +21,9 @@ function outsideAt(game:GameState,citizenId:string,x:number,y:number):GameState{
 function mission(targetX=4,phase:BotMissionAssignment['phase']='camp',allowsCamping=true,overnightPlanned?:boolean):BotMissionAssignment{return{missionId:'overnight-test',role:'scout',purpose:'explore',target:{x:targetX,y:0},targetLabel:`Scout [${targetX},0]`,reason:'test',phase,assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false,allowsCamping,...(overnightPlanned===undefined?{}:{overnightPlanned})}}
 
 describe('camping and overnight survival',()=>{
-  it('starts schema v14 with camping state and campsite state initialized',()=>{
+  it('starts schema v15 with camping state and campsite state initialized',()=>{
     const game=createInitialGame(123,2)
-    expect(game.schemaVersion).toBe(14)
+    expect(game.schemaVersion).toBe(15)
     expect(game.citizens.every((citizen)=>citizen.camping.hidden===false&&citizen.camping.nightsSurvived===0)).toBe(true)
     expect(Object.values(game.world.zones).every((zone)=>zone.campImprovements===0)).toBe(true)
   })

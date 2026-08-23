@@ -9,6 +9,7 @@ import { packageSharingAction, prepareLoadout, refillAction, unloadAction } from
 import { campingAction, hydrationAction } from './actions/SurvivalActions'
 import { carried, pick } from './actions/actionSelectors'
 import { commitmentForCitizen, committedConstructionProject, reservedApForCitizen } from './coordination/TownCoordination'
+import { publicDefenseAssessment } from './planning/TownDefenseStrategy'
 import { planExpedition } from './planning/ExpeditionPlanner'
 import { missionSafety } from './planning/MissionLifecycle'
 import { nextDirectionToward } from './planning/RoutePlanner'
@@ -53,7 +54,9 @@ export class BasicBotController implements AgentController {
         }
         const townWork = chooseTownWork(game, citizen, actions)
         const gateVolunteer=commitment?.kind==='gate_primary'||commitment?.kind==='gate_backup'
-        if (townWork && (commitment?.kind==='construction'||(gateVolunteer&&citizen.ap>reservedAp)||game.clock.hour>=AI_TUNING.townApDumpHour)) return townWork
+        const pressure=publicDefenseAssessment(game).pressure
+        const urgentDefense=pressure==='critical'||pressure==='shortfall'
+        if (townWork && (commitment?.kind==='construction'||(gateVolunteer&&citizen.ap>reservedAp)||urgentDefense||game.clock.hour>=AI_TUNING.townApDumpHour)) return townWork
       }
 
       if (!mission) {
@@ -76,8 +79,6 @@ export class BasicBotController implements AgentController {
 
     const control = zoneControl(game, citizen.location.x, citizen.location.y)
     if (control.trapped) {
-      // Temporary control is an extraction window. Do not waste it fighting unless
-      // movement is impossible; consume an available refill and get out immediately.
       if(temporaryControlActive(game,citizen.id)){
         const safety=missionSafety(game,citizenId)
         const refill=refillAction(citizen,actions,safety.returnAp)
@@ -94,9 +95,7 @@ export class BasicBotController implements AgentController {
       return null
     }
 
-    if (citizen.status.hydration !== 'normal' && !carried(citizen, 'water_ration')) {
-      return controlAwareStepTowardTown(game, citizen, actions)
-    }
+    if (citizen.status.hydration !== 'normal' && !carried(citizen, 'water_ration')) return controlAwareStepTowardTown(game, citizen, actions)
     if (!mission) return controlAwareStepTowardTown(game, citizen, actions)
     if (mission.phase === 'camp') return campingAction(game, citizen, actions)
 
@@ -108,20 +107,11 @@ export class BasicBotController implements AgentController {
     }
 
     if (!plan) return controlAwareStepTowardTown(game, citizen, actions)
-    const refill = refillAction(
-      citizen,
-      actions,
-      plan.route.length
-        + plan.expectedTaskAp
-        + mission.safetyReserve
-        + (plan.campingPlanned ? 0 : plan.returnAp),
-    )
+    const refill = refillAction(citizen,actions,plan.route.length+plan.expectedTaskAp+mission.safetyReserve+(plan.campingPlanned?0:plan.returnAp))
     if (refill) return refill
 
     if (mission.phase === 'operate') {
       if (mission.role === 'rescue') {
-        // If the rescue team only barely controls the zone, reduce the threat until a
-        // protected citizen can leave without immediately trapping the responders.
         if(zoneControlState(game,citizen.location.x,citizen.location.y)==='fragile'){
           const weapon=bestWeaponAction(citizen,actions)
           if(weapon)return weapon
@@ -142,11 +132,7 @@ export class BasicBotController implements AgentController {
     }
 
     if (citizen.ap <= 0) return null
-    const direction = nextDirectionToward(
-      game,
-      { x: citizen.location.x, y: citizen.location.y },
-      mission.target,
-    )
+    const direction = nextDirectionToward(game,{ x: citizen.location.x, y: citizen.location.y },mission.target)
     if (direction) {
       const action=controlAwareMove(game,citizen,actions,direction,false)
       if(action)return action

@@ -1,5 +1,6 @@
-import { bankDefenseMultiplier, constructionTownDefense, constructionTownDefenseMultiplier, homeContributionRatio, homeDefenseBonus } from './construction'
-import { bankDefenseFor, homeDefenseFor } from './items'
+import { bankDefenseMultiplier, constructionTownDefense, constructionTownDefenseMultiplier, homeContributionRatio } from './construction'
+import { contributableHomeDefense } from './home'
+import { bankDefenseFor } from './items'
 import type { GameState, ItemType } from './types'
 
 export function bankTownDefense(state:GameState):number{
@@ -7,11 +8,15 @@ export function bankTownDefense(state:GameState):number{
   return Math.floor(raw*bankDefenseMultiplier(state))
 }
 
+/**
+ * Historical Hordes-style home contribution: only structural/installed eligible home defense
+ * contributes to the town. Loose defensive objects kept in private chests protect that citizen
+ * during a breach but do not enter this pool. Circular Quarters can raise 40% to 80%.
+ */
 export function homeTownDefense(state:GameState):number{
-  const bonus=homeDefenseBonus(state)
   const raw=state.citizens
     .filter((citizen)=>citizen.alive&&citizen.location.type==='town')
-    .reduce((total,citizen)=>total+citizen.home.defense+bonus+citizen.home.storage.reduce((sum,item)=>sum+homeDefenseFor(item.type),0),0)
+    .reduce((total,citizen)=>total+contributableHomeDefense(citizen,state),0)
   return Math.floor(raw*homeContributionRatio(state))
 }
 

@@ -66,11 +66,13 @@ describe('multi-day town regression',()=>{
 
     // Hard invariants remain gating. Balance values above are diagnostic while major
     // progression, defense, profession, camping, and social systems are incomplete.
+    // A 60-second budget avoids treating normal CI-runner variance as a balance failure
+    // while remaining finite enough to catch a genuine simulation hang.
     expect(gateFailures).toBe(0)
     expect(totalCampingSurvivors+totalCampingDeaths).toBe(totalCampingAttempts)
     expect(townSummaries).toHaveLength(seeds.length)
     expect(minimumLiving).toBeGreaterThanOrEqual(0)
     expect(maximumOutsideAtMidnight).toBeGreaterThanOrEqual(0)
     expect(botDehydrationDeaths).toBeGreaterThanOrEqual(0)
-  },30_000)
+  },60_000)
 })

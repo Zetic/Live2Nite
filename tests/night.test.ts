@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
-import { totalTownDefense } from '../src/core/defense'
+import { homeTownDefense, totalTownDefense } from '../src/core/defense'
 import { personalDefense } from '../src/core/home'
 import { createInitialGame, resolveNight } from '../src/core/game'
 import { attackRangeForDay, attackStrengthForDay, watchtowerEstimate } from '../src/core/night'
@@ -33,19 +33,8 @@ describe('Home defense', () => {
     expect(getLegalActions(game, 'c01').some((candidate) => candidate.type === 'UPGRADE_HOME')).toBe(false)
   })
 
-  it('keeps home objects at full personal defense while only 40% contributes to shared town defense', () => {
+  it('keeps loose home-defense objects personal rather than contributing them to town defense', () => {
     let game = createInitialGame(101, 1)
-    game = {
-      ...game,
-      citizens: game.citizens.map((citizen) => citizen.id === 'c01'
-        ? { ...citizen, inventory: [{ id: 'door', type: 'old_door' }] }
-        : citizen),
-    }
-    const store = getLegalActions(game, 'c01').find((candidate) => candidate.type === 'MOVE_ITEM_TO_HOME' && candidate.itemId === 'door')
-    game = executeCommand(game, store!).state
-    expect(personalDefense(game.citizens[0])).toBe(1)
-    expect(totalTownDefense(game)).toBe(40)
-
     game = {
       ...game,
       citizens: game.citizens.map((citizen) => citizen.id === 'c01'
@@ -57,7 +46,32 @@ describe('Home defense', () => {
         : citizen),
     }
     expect(personalDefense(game.citizens[0])).toBe(3)
-    expect(totalTownDefense(game)).toBe(41)
+    expect(homeTownDefense(game)).toBe(0)
+    expect(totalTownDefense(game)).toBe(40)
+  })
+
+  it('contributes 40% of eligible structural home defense and 80% with Circular Quarters', () => {
+    let game = createInitialGame(102, 1)
+    game = {
+      ...game,
+      citizens: game.citizens.map((citizen) => ({ ...citizen, home: { ...citizen.home, level: 'house', defense: 16 } })),
+    }
+    expect(homeTownDefense(game)).toBe(6)
+    expect(totalTownDefense(game)).toBe(46)
+
+    game = {
+      ...game,
+      town: {
+        ...game.town,
+        construction: {
+          ...game.town.construction,
+          workshop: { ...game.town.construction.workshop, completed: true, apContributed: 25 },
+          circular_quarters: { ...game.town.construction.circular_quarters, completed: true, apContributed: 60 },
+        },
+      },
+    }
+    expect(homeTownDefense(game)).toBe(12)
+    expect(totalTownDefense(game)).toBe(52)
   })
 })
 
@@ -69,14 +83,15 @@ describe('Watchtower and horde strength', () => {
     expect(strength).toBeLessThanOrEqual(29)
   })
 
-  it('only exposes an estimate after the Watchtower is built and the range contains the deterministic attack', () => {
+  it('only exposes an estimate after the Watchtower is built and never exposes the hidden exact attack', () => {
     const initial = createInitialGame(222, 4)
     expect(watchtowerEstimate(initial)).toBeNull()
     const game = withWatchtower(initial)
     const estimate = watchtowerEstimate(game)!
-    expect(estimate.actual).toBe(attackStrengthForDay(game.seed, game.day))
-    expect(estimate.min).toBeLessThanOrEqual(estimate.actual)
-    expect(estimate.max).toBeGreaterThanOrEqual(estimate.actual)
+    const actual = attackStrengthForDay(game.seed, game.day)
+    expect('actual' in estimate).toBe(false)
+    expect(estimate.min).toBeLessThanOrEqual(actual)
+    expect(estimate.max).toBeGreaterThanOrEqual(actual)
   })
 })
 

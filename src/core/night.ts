@@ -13,7 +13,7 @@ import { worldZombieEvolutionEvent } from './worldEvolution'
 
 export interface AttackRange { min:number; max:number; basis:'historical-sample'|'extrapolated' }
 export interface WatchtowerForecast { day:number; min:number; max:number; basis:AttackRange['basis'] }
-export interface WatchtowerEstimate { min:number; max:number; actual:number; townDefense:number; basis:AttackRange['basis']; tomorrow?:WatchtowerForecast }
+export interface WatchtowerEstimate { min:number; max:number; townDefense:number; basis:AttackRange['basis']; tomorrow?:WatchtowerForecast }
 const HISTORICAL_RANGES:Record<number,readonly[number,number]>={1:[21,29],2:[25,84],3:[57,124],4:[92,227],5:[160,300],6:[217,450],7:[290,493],8:[357,651],9:[468,801],10:[611,901]}
 export function attackRangeForDay(day:number):AttackRange{const historical=HISTORICAL_RANGES[Math.max(1,Math.floor(day))];if(historical)return{min:historical[0],max:historical[1],basis:'historical-sample'};const steps=Math.max(1,Math.floor(day)-10);const growth=Math.pow(1.15,steps);return{min:Math.round(611*growth),max:Math.round(901*growth),basis:'extrapolated'}}
 function isolatedNightSeed(seed:number,day:number,salt:number):number{const mixed=((seed>>>0)^Math.imul(day+1,0x9e3779b1)^salt)>>>0;return mixed||1}
@@ -25,12 +25,16 @@ function estimateForDay(state:GameState,day:number,marginPercent:number):Watchto
   const margin=Math.max(3,Math.round(actual*(marginPercent/100)))
   return{day,min:Math.max(range.min,actual-margin),max:Math.min(range.max,actual+margin),actual,basis:range.basis}
 }
+/**
+ * Public Watchtower information deliberately omits the deterministic attack value used to
+ * construct the estimate envelope. UI and autonomous citizens receive the same min/max range.
+ */
 export function watchtowerEstimate(state:GameState):WatchtowerEstimate|null{
   const margin=watchtowerMarginPercent(state)
   if(margin===null)return null
   const today=estimateForDay(state,state.day,margin)
   const tomorrow=watchtowerForecastDays(state)>=2?estimateForDay(state,state.day+1,margin):null
-  return{min:today.min,max:today.max,actual:today.actual,townDefense:totalTownDefense(state),basis:today.basis,...(tomorrow?{tomorrow:{day:tomorrow.day,min:tomorrow.min,max:tomorrow.max,basis:tomorrow.basis}}:{})}
+  return{min:today.min,max:today.max,townDefense:totalTownDefense(state),basis:today.basis,...(tomorrow?{tomorrow:{day:tomorrow.day,min:tomorrow.min,max:tomorrow.max,basis:tomorrow.basis}}:{})}
 }
 
 function distributeBreachedZombies(state:GameState,zombiesInside:number):HomeAttackOutcome[]{const citizens=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town');if(zombiesInside<=0||citizens.length===0)return[];const assigned=new Map<string,number>();let rngState=isolatedNightSeed(state.seed,state.day,0x63d83595);for(let zombie=0;zombie<zombiesInside;zombie+=1){const roll=randomInt(rngState,0,citizens.length-1);rngState=roll.state;const citizen=citizens[roll.value];assigned.set(citizen.id,(assigned.get(citizen.id)??0)+1)}return citizens.flatMap((citizen)=>{const zombies=assigned.get(citizen.id)??0;if(zombies===0)return[];const defense=personalDefense(citizen,state);return[{citizenId:citizen.id,zombies,defense,survived:zombies<=defense}]})}

@@ -34,7 +34,7 @@ export function chronicleCategory(event: GameEvent): ChronicleCategory {
     case 'ZONE_CONTROL_LOST': case 'TEMPORARY_CONTROL_GRANTED': case 'TEMPORARY_CONTROL_EXPIRED': case 'ZONE_CONTROL_RESTORED': case 'CITIZEN_STATUS_CHANGED': case 'CITIZEN_DIED': return 'survival'
     case 'WORLD_ZOMBIES_EVOLVED': case 'NIGHT_RESOLVED': case 'DAY_STARTED': return 'night'
     case 'GATE_SET': case 'COORDINATION_COMMITMENT_POSTED': case 'COORDINATION_COMMITMENT_CLEARED': return 'town'
-    case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'HOME_UPGRADED': return 'home'
+    case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'HOME_UPGRADED': case 'HOME_IMPROVEMENT_BUILT': return 'home'
     case 'AP_SPENT': case 'TIME_ADVANCED': return 'system'
   }
 }

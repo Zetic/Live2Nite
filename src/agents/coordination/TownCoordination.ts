@@ -1,7 +1,8 @@
 import { getLegalActions } from '../../core/actions'
-import { CONSTRUCTIONS, constructionPriority, gateAutoCloseAtHour } from '../../core/construction'
+import { CONSTRUCTIONS, gateAutoCloseAtHour } from '../../core/construction'
 import type { Citizen, ConstructionId, CoordinationCommitment, GameEvent, GameState } from '../../core/types'
 import { citizenNumber } from '../AgentIdentity'
+import { publicDefenseAssessment, rankStrategicConstruction, type DefensePressure } from '../planning/TownDefenseStrategy'
 
 export const GATE_PRIMARY_TASK = 'gate:primary'
 export const GATE_BACKUP_TASK = 'gate:backup'
@@ -52,8 +53,6 @@ export function constructionVolunteerCount(state: GameState, projectId: Construc
 }
 
 function automaticGateCoverage(state: GameState): boolean {
-  // A simple lock only prevents reopening. Manual closers are unnecessary only once a
-  // completed construction actually auto-closes the gate at the final pre-attack hour.
   return gateAutoCloseAtHour(state, 23)
 }
 
@@ -90,20 +89,17 @@ function post(
   }
 }
 
-function buildableProjectsForCitizen(state: GameState, citizenId: string): ConstructionId[] {
+function constructionProjectsAvailableTo(state: GameState, citizenId: string): ConstructionId[] {
   return getLegalActions(state, citizenId)
     .filter((action): action is Extract<ReturnType<typeof getLegalActions>[number], { type: 'CONTRIBUTE_CONSTRUCTION' }> => action.type === 'CONTRIBUTE_CONSTRUCTION')
     .map((action) => action.projectId)
-    .sort((left, right) => constructionPriority(state, right) - constructionPriority(state, left))
 }
 
-function desiredConstructionVolunteers(state: GameState, projectId: ConstructionId): number {
+function desiredConstructionVolunteers(state: GameState, projectId: ConstructionId, pressure: DefensePressure): number {
   const definition = CONSTRUCTIONS[projectId]
   const project = state.town.construction[projectId]
   const remainingLabor = Math.max(0, definition.apCost - (project?.apContributed ?? 0))
-  const urgentDefense = Boolean(state.lastNight?.breached)
-    || Boolean(state.lastNight && state.lastNight.attackStrength > state.lastNight.effectiveDefense)
-  const base = urgentDefense ? 8 : state.clock.hour >= 18 ? 6 : 4
+  const base = pressure === 'critical' ? 10 : pressure === 'shortfall' ? 8 : state.clock.hour >= 18 ? 6 : 4
   return Math.max(1, Math.min(base, remainingLabor))
 }
 
@@ -131,19 +127,22 @@ export function planTownCoordination(state: GameState, controlledCitizenId?: str
 
   for (const commitment of state.coordination.commitments) {
     if (!retained.has(commitment.id)) {
-      events.push({
-        type: 'COORDINATION_COMMITMENT_CLEARED',
-        day: state.day,
-        hour: state.clock.hour,
-        commitmentId: commitment.id,
-        reason: 'expired',
-      })
+      events.push({ type: 'COORDINATION_COMMITMENT_CLEARED', day: state.day, hour: state.clock.hour, commitmentId: commitment.id, reason: 'expired' })
     }
   }
 
   const working = [...active]
   const candidates = volunteerOrder(state, controlledCitizenId)
   const hasCommitment = (citizenId: string) => working.some((commitment) => commitment.citizenId === citizenId)
+  const assessment = publicDefenseAssessment(state)
+
+  // Construction legality is public town state and is identical for ordinary town citizens
+  // with AP remaining. Rank the current frontier once instead of rescoring it for every bot.
+  const constructionCandidate = candidates.find((citizen) => citizen.ap > 0)
+  const rankedProjects = constructionCandidate
+    ? rankStrategicConstruction(state, constructionProjectsAvailableTo(state, constructionCandidate.id), assessment)
+    : []
+  const projectId = rankedProjects[0] ?? null
 
   if (!automaticGateCoverage(state)) {
     if (!working.some((commitment) => commitment.kind === 'gate_primary')) {
@@ -164,14 +163,12 @@ export function planTownCoordination(state: GameState, controlledCitizenId?: str
     }
   }
 
-  // Citizens volunteer for one hour of construction at a time. Once enough volunteers
-  // have publicly claimed the current job, later citizens remain free to seek field work.
+  if (!projectId) return events
+  const desired = desiredConstructionVolunteers(state, projectId, assessment.pressure)
   for (const citizen of candidates) {
     if (hasCommitment(citizen.id) || citizen.ap <= 0 || citizen.status.hydration !== 'normal') continue
-    const projectId = buildableProjectsForCitizen(state, citizen.id)[0]
-    if (!projectId) continue
     const current = working.filter((commitment) => commitment.kind === 'construction' && commitment.projectId === projectId).length
-    if (current >= desiredConstructionVolunteers(state, projectId)) continue
+    if (current >= desired) break
     const event = post(
       state,
       citizen,

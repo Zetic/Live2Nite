@@ -1,9 +1,9 @@
 import { CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { CONSTRUCTION_ORDER, CONSTRUCTIONS, gateLockedAtHour, wellDailyWithdrawals } from './construction'
-import { HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
+import { HOME_IMPROVEMENTS, hasPersonalMaterials, improvementNextLevel, nextHomeDefinition } from './home'
 import { consumableKind, isContainer } from './items'
-import type { Citizen, ConstructionId, GameCommand, GameState, ItemInstance, ItemStorage, ItemType } from './types'
+import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage, ItemType } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, zoneControl } from './world'
 import { WORKSHOP_RECIPE_ORDER, canRunWorkshopRecipe, workshopRecipeApCost } from './workshop'
 
@@ -64,7 +64,18 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
       const waterTaken=Number(citizen.daily.waterTaken)+Number(Boolean(citizen.daily.bonusWaterTaken))
       if (waterTaken<wellDailyWithdrawals(state) && state.town.well.water > 0) actions.push({ type: 'TAKE_WATER', citizenId })
     }
-    if (nextHomeLevel(citizen.home.level) && citizen.ap >= HOME_UPGRADE_AP_COST) actions.push({ type: 'UPGRADE_HOME', citizenId })
+
+    const nextHome=nextHomeDefinition(citizen.home.level)
+    if(nextHome&&citizen.home.upgradedDay!==state.day&&citizen.ap>=nextHome.apCost&&hasPersonalMaterials(citizen,nextHome.resources))actions.push({type:'UPGRADE_HOME',citizenId})
+    if(citizen.home.level!=='camp_bed'){
+      for(const improvementId of Object.keys(HOME_IMPROVEMENTS) as HomeImprovementId[]){
+        const nextLevel=improvementNextLevel(citizen,improvementId)
+        if(nextLevel===null)continue
+        const definition=HOME_IMPROVEMENTS[improvementId]
+        if(citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})
+      }
+    }
+
     if (citizen.ap >= CONSTRUCTION_AP_COST) {
       for (const projectId of constructionFrontier(state)) if(hasProjectMaterials(state,projectId))actions.push({ type: 'CONTRIBUTE_CONSTRUCTION', citizenId, projectId })
     }

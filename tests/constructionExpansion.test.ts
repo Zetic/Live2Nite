@@ -131,16 +131,16 @@ describe('construction effects', () => {
 })
 
 describe('stable facility navigation', () => {
-  it('keeps the seven primary destinations fixed and reserves six facility slots', () => {
+  it('keeps Town Records first while reserving six facility slots', () => {
     const initial = createInitialGame(1907, 2)
     expect(PRIMARY_SCREENS.map((screen) => screen.id)).toEqual([
+      'chronicle',
       'home',
       'well',
       'bank',
       'construction',
       'world',
       'citizens',
-      'chronicle',
     ])
     expect(facilitySlots(initial)).toEqual(Array(FACILITY_SLOT_COUNT).fill(null))
 
