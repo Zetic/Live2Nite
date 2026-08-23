@@ -18,6 +18,7 @@ function sameCommand(left: GameCommand, right: GameCommand): boolean {
   if (left.type !== right.type || left.citizenId !== right.citizenId) return false
   if (left.type === 'MOVE' && right.type === 'MOVE') return left.direction === right.direction
   if (left.type === 'PICK_UP_ITEM' && right.type === 'PICK_UP_ITEM') return left.itemId === right.itemId
+  if (left.type === 'DROP_ITEM' && right.type === 'DROP_ITEM') return left.itemId === right.itemId
   if (left.type === 'USE_WEAPON' && right.type === 'USE_WEAPON') return left.itemId === right.itemId
   if (left.type === 'DEPOSIT_ITEM' && right.type === 'DEPOSIT_ITEM') return left.itemId === right.itemId
   if (left.type === 'WITHDRAW_BANK_ITEM' && right.type === 'WITHDRAW_BANK_ITEM') return left.itemType === right.itemType
@@ -166,6 +167,14 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
       const key = zoneKey(citizen.location.x, citizen.location.y)
       const item = state.world.zones[key].groundItems.find((candidate) => candidate.id === command.itemId)!
       events.push({ type: 'ITEM_PICKED_UP', day: state.day, citizenId: command.citizenId, zoneKey: key, item })
+      break
+    }
+    case 'DROP_ITEM': {
+      if (citizen.location.type !== 'world') throw new InvalidCommandError('Citizen is not outside')
+      const key = zoneKey(citizen.location.x, citizen.location.y)
+      const item = citizen.inventory.find((candidate) => candidate.id === command.itemId)
+      if (!item) throw new InvalidCommandError(`Missing carried item ${command.itemId}`)
+      events.push({ type: 'ITEM_DROPPED', day: state.day, citizenId: command.citizenId, zoneKey: key, item })
       break
     }
     case 'ATTACK_BAREHANDED': {
