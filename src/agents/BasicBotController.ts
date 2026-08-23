@@ -52,7 +52,8 @@ export class BasicBotController implements AgentController {
           if(contribution)return contribution
         }
         const townWork = chooseTownWork(game, citizen, actions)
-        if (townWork && (commitment?.kind==='construction'||game.clock.hour>=AI_TUNING.townApDumpHour)) return townWork
+        const gateVolunteer=commitment?.kind==='gate_primary'||commitment?.kind==='gate_backup'
+        if (townWork && (commitment?.kind==='construction'||(gateVolunteer&&citizen.ap>reservedAp)||game.clock.hour>=AI_TUNING.townApDumpHour)) return townWork
       }
 
       if (!mission) {
