@@ -1,9 +1,6 @@
-import { ITEMS, ITEM_TYPES, itemName, itemPurpose } from '../../core/items'
-import type { GameCommand, GameState, ItemType } from '../../core/types'
-
-const STANDARD_BANK_TYPES = new Set<ItemType>([
-  'rotten_log','scrap_metal','twisted_plank','wrought_iron','unshaped_concrete_block','water_ration','food','old_door','water_bomb',
-])
+import { ITEM_TYPES } from '../../core/items'
+import type { GameCommand, GameState } from '../../core/types'
+import { BANK_SECTIONS, ItemButton, ItemStrip } from './InventoryItems'
 
 export function BankView({ game, citizenId, legalActions, act }: {
   game: GameState
@@ -14,37 +11,37 @@ export function BankView({ game, citizenId, legalActions, act }: {
   const player = game.citizens.find((citizen) => citizen.id === citizenId) ?? game.citizens[0]
   const deposits = legalActions.filter((action): action is Extract<GameCommand,{type:'DEPOSIT_ITEM'}> => action.type === 'DEPOSIT_ITEM')
   const withdrawals = legalActions.filter((action): action is Extract<GameCommand,{type:'WITHDRAW_BANK_ITEM'}> => action.type === 'WITHDRAW_BANK_ITEM')
-  const visibleBankTypes = ITEM_TYPES.filter((type) => STANDARD_BANK_TYPES.has(type) || (game.town.bank[type] ?? 0) > 0)
-  const totalItems = ITEM_TYPES.reduce((sum, type) => sum + (game.town.bank[type] ?? 0), 0)
+  const visibleBankTypes = ITEM_TYPES.filter((type) => (game.town.bank[type] ?? 0) > 0)
+  const totalItems = visibleBankTypes.reduce((sum, type) => sum + (game.town.bank[type] ?? 0), 0)
+
+  const depositItem=(itemId:string)=>act(deposits.find((candidate)=>candidate.itemId===itemId))
 
   return <section className="panel screen-panel">
     <div className="panel-heading">
-      <div><p className="section-kicker">Shared town storage</p><h2>The Bank</h2><p className="section-note">Construction draws from the bank. The controlled citizen may deposit carried finds or withdraw shared items into an open rucksack slot.</p></div>
+      <div><p className="section-kicker">Shared town storage</p><h2>The Bank</h2><p className="section-note">Click a carried item to deposit it. Click a Bank item to take one into an open rucksack slot.</p></div>
       <span className="panel-count">{totalItems} items</span>
     </div>
 
-    <section className="town-section split-section bank-screen-grid">
-      <div>
-        <h3>{player.name} · Rucksack <span className="heading-count">{player.inventory.length}/{player.inventoryCapacity}</span></h3>
-        <p className="section-note">Deposit expedition finds here to make them available to the entire town.</p>
-        {player.inventory.length === 0
-          ? <p className="empty-state">Nothing carried.</p>
-          : <div className="item-list">{player.inventory.map((item) => {
-              const command = deposits.find((candidate) => candidate.itemId === item.id)
-              return <button key={item.id} onClick={() => act(command)}>Deposit {itemName(item.type)} <small>0 AP</small></button>
-            })}</div>}
+    <section className="town-section compact-inventory-layout">
+      <div className="inventory-surface">
+        <div className="inventory-heading"><h3>{player.name} · Rucksack</h3><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div>
+        <ItemStrip items={player.inventory} capacity={player.inventoryCapacity} onItemClick={(item)=>depositItem(item.id)} extraTooltip={()=> 'Click to deposit in the Bank.'}/>
       </div>
-      <div>
-        <h3>Shared Inventory</h3>
-        <div className="bank-grid">{visibleBankTypes.map((type) => {
-          const count = game.town.bank[type] ?? 0
-          const withdraw = withdrawals.find((action) => action.itemType === type)
-          return <article className={`bank-item category-${ITEMS[type].category}`} key={type}>
-            <div><span>{itemName(type)}</span><strong>×{count}</strong></div>
-            <small>{itemPurpose(type)}</small>
-            {count > 0 && <button className="bank-take" disabled={!withdraw} onClick={() => act(withdraw)}>Take one</button>}
-          </article>
-        })}</div>
+
+      <div className="inventory-surface">
+        <div className="inventory-heading"><h3>Shared Inventory</h3><span className="micro-stat">click to withdraw</span></div>
+        {visibleBankTypes.length===0?<span className="compact-empty">The Bank is empty.</span>:BANK_SECTIONS.map((section)=>{
+          const types=visibleBankTypes.filter(section.matches)
+          if(!types.length)return null
+          return <section className="bank-category" key={section.id}>
+            <div className="bank-category-title">{section.label}</div>
+            <div className="stacked-item-grid">{types.map((type)=>{
+              const count=game.town.bank[type]??0
+              const withdraw=withdrawals.find((action)=>action.itemType===type)
+              return <ItemButton key={type} type={type} count={count} disabled={!withdraw} onClick={()=>act(withdraw)} extraTooltip={withdraw?'Click to take one.':'Rucksack is full or this item cannot be taken right now.'}/>
+            })}</div>
+          </section>
+        })}
       </div>
     </section>
   </section>
