@@ -4,6 +4,8 @@ export const ITEM_TYPE_IDS = [
   'metal_support','patchwork_beam','sheet_metal','bag_of_damp_grass','belt','compact_detonator','convex_lens','copper_pipe','duct_tape','earplugs','electronic_component','empty_oil_can','nuts_and_bolts','laser_diode','semtex','telescope','wire_reel','broken_electronic_device','mechanism',
   // Additional current-MyHordes construction inputs used by direct equivalents in the town tree.
   'meaty_bone','human_flesh','poison_gland','working_radio','guitar','table','chicken','wire_mesh','grain_sack',
+  // Portable-combination inputs and useful outputs implemented in the combination pass.
+  'tool_bag','kwik_fix','plastic_bag','engine_incomplete','engine','claymore','torch','battery_launcher',
   // Stateful foundation representatives retained from v16.
   'water_pistol','water_cooler_bottle','repair_kit',
 ] as const
