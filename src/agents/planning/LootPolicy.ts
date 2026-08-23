@@ -7,7 +7,7 @@ import { evaluateTownNeeds, type TownNeeds } from './TownNeeds'
 const BASE_LOOT_VALUE:Record<ItemType,number>={
   construction_kit:105,twisted_plank:72,wrought_iron:72,patchwork_beam:82,metal_support:86,sheet_metal:80,unshaped_concrete_block:76,rotten_log:38,scrap_metal:38,
   nuts_and_bolts:92,copper_pipe:86,wire_reel:82,duct_tape:78,compact_detonator:96,semtex:100,electronic_component:90,laser_diode:96,telescope:94,convex_lens:72,battery:70,empty_oil_can:64,
-  mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,guitar:66,table:70,chicken:62,wire_mesh:72,grain_sack:58,
+  mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,guitar:66,table:70,chicken:62,wire_mesh:72,grain_sack:58,
   tool_bag:78,kwik_fix:82,plastic_bag:36,engine_incomplete:86,engine:90,claymore:94,torch:48,battery_launcher:74,
   water_ration:62,food:52,old_door:58,water_bomb:70,machete:68,serrated_knife:58,staff:50,pathetic_penknife:43,human_bone:36,doggy_bag:48,citizen_welcome_pack:42,pharmaceutical_products:72,box_of_matches:22,
   broken_machete:20,broken_serrated_knife:18,broken_staff:26,broken_pathetic_penknife:14,broken_human_bone:12,water_pistol:68,water_cooler_bottle:66,repair_kit:84,
@@ -21,6 +21,7 @@ function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:Bo
   if(type==='scrap_metal'&&((needs.missingConstruction.wrought_iron??0)>0||(needs.missingConstruction.metal_support??0)>0))score+=36
   if(type==='twisted_plank'&&(needs.missingConstruction.patchwork_beam??0)>0)score+=24
   if(type==='wrought_iron'&&(needs.missingConstruction.metal_support??0)>0)score+=24
+  if(type==='bag_of_cement'&&(needs.missingConstruction.unshaped_concrete_block??0)>0)score+=40
   if(type==='broken_electronic_device'&&Object.keys(needs.missingConstruction).some((key)=>['electronic_component','nuts_and_bolts','battery','compact_detonator'].includes(key)))score+=30
   if(type==='mechanism'&&Object.keys(needs.missingConstruction).some((key)=>['wrought_iron','nuts_and_bolts','copper_pipe'].includes(key)))score+=30
   if((type==='copper_pipe'||type==='convex_lens')&&(needs.missingConstruction.telescope??0)>0)score+=34
