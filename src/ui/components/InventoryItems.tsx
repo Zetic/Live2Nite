@@ -31,7 +31,7 @@ export function ItemButton({type,count,disabled,onClick,extraTooltip,className='
   const tooltip=itemTooltip(type,extraTooltip)
   return <button
     type="button"
-    className={`compact-item-button category-${ITEMS[type].category} ${className}`.trim()}
+    className={`compact-item-button category-${ITEMS[type].category} ${onClick?'':'static-item'} ${className}`.trim()}
     disabled={disabled}
     onClick={onClick}
     data-tooltip={tooltip}
@@ -54,25 +54,31 @@ function commandFor(actions:readonly GameCommand[],type:GameCommand['type'],item
   return actions.find((action)=>action.type===type&&'itemId'in action&&action.itemId===itemId)
 }
 
+type ActionEntry={key:string;label:string;detail:string;command:GameCommand}
+function actionButtons(entries:ActionEntry[],act:(command:GameCommand|undefined)=>void){return entries.map((entry)=><button key={entry.key} onClick={()=>act(entry.command)}><span>{entry.label}</span><small>{entry.detail}</small></button>)}
+
 export function ItemActionMenu({items,actions,act,includePickup=false,groundItems=[]}:{items:readonly ItemInstance[];actions:readonly GameCommand[];act:(command:GameCommand|undefined)=>void;includePickup?:boolean;groundItems?:readonly ItemInstance[]}) {
-  const entries:Array<{key:string;label:string;detail:string;command:GameCommand}> = []
+  const carried:Array<ActionEntry> = []
+  const ground:Array<ActionEntry> = []
   for(const item of items){
     const open=commandFor(actions,'OPEN_CONTAINER',item.id)
     const eat=commandFor(actions,'EAT_ITEM',item.id)
     const drink=commandFor(actions,'DRINK_ITEM',item.id)
     const weapon=commandFor(actions,'USE_WEAPON',item.id)
-    if(open)entries.push({key:`open-${item.id}`,label:`Open ${itemName(item.type)}`,detail:'Use carried item',command:open})
-    if(eat)entries.push({key:`eat-${item.id}`,label:`Eat ${itemName(item.type)}`,detail:'Use carried item',command:eat})
-    if(drink)entries.push({key:`drink-${item.id}`,label:`Drink ${itemName(item.type)}`,detail:'Use carried item',command:drink})
-    if(weapon)entries.push({key:`weapon-${item.id}`,label:`Use ${itemName(item.type)}`,detail:'Attack with carried weapon',command:weapon})
+    if(open)carried.push({key:`open-${item.id}`,label:`Open ${itemName(item.type)}`,detail:'Use carried item',command:open})
+    if(eat)carried.push({key:`eat-${item.id}`,label:`Eat ${itemName(item.type)}`,detail:'Use carried item',command:eat})
+    if(drink)carried.push({key:`drink-${item.id}`,label:`Drink ${itemName(item.type)}`,detail:'Use carried item',command:drink})
+    if(weapon)carried.push({key:`weapon-${item.id}`,label:`Use ${itemName(item.type)}`,detail:'Attack with carried weapon',command:weapon})
   }
   if(includePickup){
     for(const item of groundItems){
       const pickup=commandFor(actions,'PICK_UP_ITEM',item.id)
-      if(pickup)entries.push({key:`pickup-${item.id}`,label:`Pick up ${itemName(item.type)}`,detail:'Ground item · 0 AP',command:pickup})
+      if(pickup)ground.push({key:`pickup-${item.id}`,label:`Pick up ${itemName(item.type)}`,detail:'Ground item · 0 AP',command:pickup})
     }
   }
-  return <div className="item-action-menu">
-    {entries.length===0?<span className="compact-empty">No item actions available.</span>:entries.map((entry)=><button key={entry.key} onClick={()=>act(entry.command)}><span>{entry.label}</span><small>{entry.detail}</small></button>)}
+  if(carried.length===0&&ground.length===0)return <div className="item-action-menu"><span className="compact-empty">No item actions available.</span></div>
+  return <div className="item-action-groups">
+    {carried.length>0&&<section><span className="item-action-label">Carried Item Actions</span><div className="item-action-menu">{actionButtons(carried,act)}</div></section>}
+    {includePickup&&<section><span className="item-action-label">Ground Item Actions</span><div className="item-action-menu">{ground.length?actionButtons(ground,act):<span className="compact-empty">No ground item actions available.</span>}</div></section>}
   </div>
 }
