@@ -8,9 +8,10 @@ import { createInitialGame } from '../src/core/game'
 import type { GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
 import { advanceOneHour } from '../src/simulation/advanceTime'
+import { bankFromCounts } from './bankFixtures'
 
 const bots=new BasicBotController()
-function withWorkshopResources(game:GameState):GameState{return{...game,town:{...game.town,bank:{...game.town.bank,twisted_plank:10,wrought_iron:8}}}}
+function withWorkshopResources(game:GameState):GameState{return{...game,town:{...game.town,bank:bankFromCounts({twisted_plank:10,wrought_iron:8},'distributed-coordination')}}}
 
 describe('forum-like coordination primitives',()=>{
   it('posts one primary and one backup when the gate still needs manual closing',()=>{
