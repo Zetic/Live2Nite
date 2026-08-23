@@ -177,7 +177,7 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
         target:{x:target.x,y:target.y},
         targetLabel:`Volunteer ${choice.kind==='frontier'?'exploration':'recon'} [${target.x},${target.y}]`,
         reason:starved
-          ? 'Construction is blocked by missing resources, few citizens are outside, and I still have usable AP; I volunteered to push the search farther.'
+          ? 'Construction is blocked by missing resources, few citizens are outside, and I still have usable AP; exploring is better than waiting in town.'
           : 'Field coverage is thin and I still have usable AP; spending it on safe exploration is better than losing it at midnight.',
         desiredCitizens:1,
         priority:75,
