@@ -15,6 +15,7 @@ import { watchtowerEstimate } from '../src/core/night'
 import type { ConstructionId, GameState } from '../src/core/types'
 import { workshopRecipeApCost } from '../src/core/workshop'
 import { FACILITY_SLOT_COUNT, PRIMARY_SCREENS, facilitySlots } from '../src/ui/navigation'
+import { bankCount } from './bankFixtures'
 
 function complete(game: GameState, ...projectIds: ConstructionId[]): GameState {
   const construction = { ...game.town.construction }
@@ -123,9 +124,9 @@ describe('construction effects', () => {
 
   it('generates deterministic daily construction output at rollover', () => {
     let game = complete(createInitialGame(1906, 2), 'workshop', 'henhouse')
-    const before = game.town.bank.food ?? 0
+    const before = bankCount(game.town.bank,'food')
     game = resolveNight(game)
-    expect(game.town.bank.food).toBe(before + 3)
+    expect(bankCount(game.town.bank,'food')).toBe(before + 3)
     expect(game.events.some((event) => event.type === 'CONSTRUCTION_GENERATED_ITEM' && event.projectId === 'henhouse' && event.itemType === 'food' && event.amount === 3)).toBe(true)
   })
 })
