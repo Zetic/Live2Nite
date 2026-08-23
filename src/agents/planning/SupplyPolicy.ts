@@ -93,16 +93,19 @@ export function planLoadout(
   let potentialAp = citizen.ap
   let water = false
   let food = false
-  const hydrationEmergency = citizen.status.hydration !== 'normal'
+  const hydrationNeed = citizen.status.hydration !== 'normal'
   const policy = waterPolicyForState(state)
   const overnight = Boolean(options.overnight)
   const wellWaterAllowed = citizen.location.type === 'town'
-    && (hydrationEmergency || canUseWellForPurpose(state, citizen.id, purpose) || (overnight && policy !== 'critical'))
+    && (hydrationNeed || canUseWellForPurpose(state, citizen.id, purpose) || (overnight && policy !== 'critical'))
   const waterAccessible = hasWaterPotential(citizen, state)
     && (accessibleHas(citizen, 'water_ration')
       || (citizen.location.type === 'town' && ((state.town.bank.water_ration ?? 0) > 0 || wellWaterAllowed)))
 
-  if ((overnight || hydrationEmergency || requiredAp > potentialAp) && waterAccessible) {
+  // A thirsty citizen may carry water and deliberately consume it later, after current AP
+  // has been spent. That future refill still counts as expedition capacity; it is not a
+  // reason to drink at 6/6 before leaving town.
+  if ((overnight || hydrationNeed || requiredAp > potentialAp) && waterAccessible) {
     water = true
     if (waterCanRefreshAp(citizen)) potentialAp += citizen.maxAp
   }
@@ -132,7 +135,9 @@ export function planLoadout(
 }
 
 export function shouldUseRefill(citizen: Citizen, remainingRequiredAp: number, kind: 'food' | 'water'): boolean {
-  if (kind === 'water' && citizen.status.hydration !== 'normal') return true
+  // Dehydration is immediately dangerous and water cannot provide the ordinary AP refresh
+  // while Dehydrated anyway. Ordinary Thirst does not justify burning a refill at high AP.
+  if (kind === 'water' && citizen.status.hydration === 'dehydrated') return true
   if (kind === 'food' && citizen.daily.ate) return false
   if (kind === 'water' && citizen.daily.drank) return false
   return citizen.ap <= 1 && remainingRequiredAp > citizen.ap
