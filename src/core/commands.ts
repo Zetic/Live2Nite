@@ -9,7 +9,7 @@ import { randomInt } from './rng'
 import { travelHydrationTransition, waterConsumptionOutcome } from './status'
 import type { Citizen, GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, SearchMode } from './types'
 import { citizensInZone, getZone, moveCoordinates, zoneControl, zoneKey } from './world'
-import { WORKSHOP_RECIPES, workshopRecipeApCost } from './workshop'
+import { WORKSHOP_RECIPES, resolveWorkshopRecipeOutput, workshopRecipeApCost, workshopRecipeInputs } from './workshop'
 
 export interface CommandResult { state:GameState; events:GameEvent[] }
 export class InvalidCommandError extends Error {}
@@ -92,7 +92,15 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     case 'UPGRADE_HOME':{const target=nextHomeDefinition(citizen.home.level);if(!target)throw new InvalidCommandError('No home upgrade is currently available');events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:target.apCost},{type:'HOME_UPGRADED',day:state.day,citizenId:command.citizenId,from:citizen.home.level,to:target.level,defenseAfter:target.defense,consumed:target.resources});break}
     case 'BUILD_HOME_IMPROVEMENT':{const nextLevel=improvementNextLevel(citizen,command.improvementId);if(nextLevel===null)throw new InvalidCommandError('Home improvement is already complete');const definition=HOME_IMPROVEMENTS[command.improvementId];const defenseAfter=citizen.home.defense+homeImprovementDefense(citizen)+definition.defensePerLevel;const storageCapacityAfter=citizen.home.storageCapacity+definition.storagePerLevel;events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:definition.apCost(nextLevel)},{type:'HOME_IMPROVEMENT_BUILT',day:state.day,citizenId:command.citizenId,improvementId:command.improvementId,level:nextLevel,consumed:definition.resources(nextLevel),defenseAfter,storageCapacityAfter});break}
     case 'CONTRIBUTE_CONSTRUCTION':{const definition=CONSTRUCTIONS[command.projectId];const project=state.town.construction[command.projectId];const amount=Math.min(CONSTRUCTION_AP_COST,definition.apCost-project.apContributed);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount},{type:'CONSTRUCTION_AP_CONTRIBUTED',day:state.day,citizenId:command.citizenId,projectId:command.projectId,amount});if(project.apContributed+amount>=definition.apCost)events.push({type:'CONSTRUCTION_COMPLETED',day:state.day,citizenId:command.citizenId,projectId:command.projectId,consumed:definition.resources,defenseBonus:0});break}
-    case 'WORKSHOP_CONVERT':{const recipe=WORKSHOP_RECIPES[command.recipeId];events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:workshopRecipeApCost(state,command.recipeId)},{type:'WORKSHOP_CONVERTED',day:state.day,citizenId:command.citizenId,recipeId:command.recipeId,input:recipe.input,inputCount:recipe.inputCount,output:recipe.output,outputCount:recipe.outputCount});break}
+    case 'WORKSHOP_CONVERT':{
+      const recipe=WORKSHOP_RECIPES[command.recipeId]
+      const outcome=resolveWorkshopRecipeOutput(state.rngState,command.recipeId)
+      events.push(
+        {type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:workshopRecipeApCost(state,command.recipeId)},
+        {type:'WORKSHOP_CONVERTED',day:state.day,citizenId:command.citizenId,recipeId:command.recipeId,input:recipe.input,inputCount:recipe.inputCount,inputs:workshopRecipeInputs(command.recipeId),output:outcome.output,outputCount:outcome.outputCount,rngStateAfter:outcome.rngStateAfter},
+      )
+      break
+    }
   }
   const stampedEvents:GameEvent[]=events.map((event)=>({...event,hour:state.clock.hour}))
   return{state:applyEvents(state,stampedEvents),events:stampedEvents}
