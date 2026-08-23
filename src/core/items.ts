@@ -17,11 +17,13 @@ export interface ItemDefinition {
   bankDefense?: number
   homeDefense?: number
   consumableKind?: ConsumableKind
+  /** Legacy simple pool retained until all containers are migrated to openables.ts. */
   containerPool?: ItemType[]
 }
 
 const def=(value:ItemDefinition):ItemDefinition=>value
 const resource=(type:ItemType,name:string,purpose:string,capabilities:ItemCapability[]=['component']):ItemDefinition=>def({type,name,purpose,category:'misc',displayCategory:'resources',capabilities,source:'MYHORDES_CURRENT'})
+const container=(type:ItemType,name:string,purpose:string,state?:ItemStateSchema):ItemDefinition=>def({type,name,purpose,category:'container',displayCategory:'containers',capabilities:state?.contents?['container','stateful_container']:['container'],state,source:'MYHORDES_CURRENT'})
 
 export const ITEMS:Record<ItemType,ItemDefinition>={
   rotten_log:def({type:'rotten_log',name:'Rotting Log',purpose:'Low-quality resource found abundantly in depleted zones. The Workshop converts it into a Twisted Plank.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
@@ -32,9 +34,8 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   metal_support:def({type:'metal_support',name:'Metal Support',purpose:'Advanced metal construction material produced from Wrought Iron or recovered while scavenging.',category:'construction',displayCategory:'resources',capabilities:['construction_material'],source:'MYHORDES_CURRENT'}),
   sheet_metal:def({type:'sheet_metal',name:'Sheet Metal',purpose:'Scarce construction supply used by defensive and mechanical projects.',category:'construction',displayCategory:'resources',capabilities:['construction_material','component','defense'],source:'MYHORDES_CURRENT'}),
   unshaped_concrete_block:def({type:'unshaped_concrete_block',name:'Unshaped Concrete Block',purpose:'Heavy construction material used by advanced fortifications. It can be mixed anywhere from a Bag of Cement and a Water Ration.',category:'construction',displayCategory:'resources',capabilities:['construction_material','defense'],source:'MYHORDES_CURRENT'}),
-
   bag_of_damp_grass:resource('bag_of_damp_grass','Bag of Damp Grass','Scarce supply used by combinations and specialist projects.'),
-  bag_of_cement:resource('bag_of_cement','Bag of Cement','Construction supply found while scavenging. Combine it with a Water Ration to make an Unshaped Concrete Block.', ['component','raw_material']),
+  bag_of_cement:resource('bag_of_cement','Bag of Cement','Construction supply found while scavenging. Combine it with a Water Ration to make an Unshaped Concrete Block.',['component','raw_material']),
   battery:resource('battery','Battery','Electrical supply used by electronic construction and reloadable equipment.'),
   belt:resource('belt','Belt','Mechanical supply used by tensioned and launching mechanisms.'),
   compact_detonator:resource('compact_detonator','Compact Detonator','Scarce explosive component used by demolition, combinations and hydraulic projects.'),
@@ -46,12 +47,11 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   empty_oil_can:resource('empty_oil_can','Empty Oil Can','Mechanical container used by hydraulic constructions and the Makeshift Guitar combination.'),
   nuts_and_bolts:resource('nuts_and_bolts','Handful of Nuts and Bolts','High-value mechanical fasteners used by many advanced constructions and combinations.'),
   laser_diode:resource('laser_diode','Laser Diode','Rare electronic/optical component used by advanced detection and water-defense systems.'),
-  semtex:resource('semtex','Semtex','Rare explosive supply used by demolition and high-end construction.', ['component','construction_material']),
+  semtex:resource('semtex','Semtex','Rare explosive supply used by demolition and high-end construction.',['component','construction_material']),
   telescope:resource('telescope','Telescope','Portable combination result made from a Copper Pipe and Convex Lens; required by advanced observation structures.'),
   wire_reel:resource('wire_reel','Wire Reel','Electrical/mechanical supply used by traps, defenses and portable equipment assembly.'),
   broken_electronic_device:def({type:'broken_electronic_device',name:'Broken Electronic Device',purpose:'Unprocessed salvage. The Workshop dismantles it into a useful electronic or mechanical supply.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
   mechanism:def({type:'mechanism',name:'Mechanism',purpose:'Unprocessed mechanical salvage. The Workshop dismantles it into metal, fasteners or pipe.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
-
   meaty_bone:resource('meaty_bone','Meaty Bone','Organic construction supply used as bait in current MyHordes construction costs.'),
   human_flesh:resource('human_flesh','Human Flesh','Organic supply used by a small number of current construction projects.'),
   poison_gland:resource('poison_gland','Poison Gland','Toxic component used by the neurotoxin construction.'),
@@ -61,7 +61,6 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   chicken:resource('chicken','Chicken','Living supply required by the Henhouse construction.'),
   wire_mesh:resource('wire_mesh','Wire Mesh','Fencing supply required by livestock and filtration constructions.'),
   grain_sack:resource('grain_sack','Grain Sack','Agricultural supply used by food-production constructions.'),
-
   tool_bag:def({type:'tool_bag',name:'Tool Bag',purpose:'Incomplete repair equipment used with Duct Tape, Nuts & Bolts and a Twisted Plank to assemble a Repair Kit.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   kwik_fix:def({type:'kwik_fix',name:'Kwik-Fix',purpose:'Single-use portable repair supply. Combine it with a broken item for 1 AP to repair that item.',category:'misc',displayCategory:'miscellaneous',capabilities:['repairable'],source:'MYHORDES_CURRENT'}),
   plastic_bag:def({type:'plastic_bag',name:'Plastic Bag',purpose:'Simple container component that can be filled with a Water Ration to make a Water Bomb.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
@@ -70,8 +69,7 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   claymore:def({type:'claymore',name:'Claymore Mine',purpose:'Portable explosive assembled from Wire Reel, Semtex, Nuts & Bolts and Duct Tape. It is a single-use field weapon.',category:'weapon',displayCategory:'armoury',capabilities:['weapon'],source:'MYHORDES_CURRENT'}),
   torch:def({type:'torch',name:'Torch',purpose:'Portable combination made from Box of Matches and a Rotting Log.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   battery_launcher:def({type:'battery_launcher',name:'Battery Launcher 1-ITF',purpose:'Reloadable improvised weapon recovered empty from electronic salvage. Combine with a Battery to load one shot.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','charge_bearing'],state:{charges:{min:0,max:1,initial:0}},source:'MYHORDES_CURRENT'}),
-
-  construction_kit:def({type:'construction_kit',name:'Construction Kit',purpose:'Open it to recover two basic construction-ready materials.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE'}),
+  construction_kit:def({type:'construction_kit',name:'Construction Kit',purpose:'Legacy Live2Nite container retained for save compatibility while MyHordes Resource Packs replace its acquisition role.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE'}),
   water_ration:def({type:'water_ration',name:'Water Ration',purpose:'Drinking treats hydration and can refresh AP once per day when AP is missing. It also refills several portable items.',category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'DIE2NITE_ARCHIVE',consumableKind:'water'}),
   food:def({type:'food',name:'Mouldy Ham Sandwich',purpose:'Ordinary food. Eating can refresh AP once per day when AP is missing.',category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'DIE2NITE_ARCHIVE',consumableKind:'food'}),
   old_door:def({type:'old_door',name:'Old Door',purpose:'Defensive object: +2 town defense in the Bank, or +1 personal defense when stored at Home.',category:'defense',displayCategory:'defences',capabilities:['defense'],source:'DIE2NITE_ARCHIVE',bankDefense:2,homeDefense:1}),
@@ -86,25 +84,31 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   broken_serrated_knife:def({type:'broken_serrated_knife',name:'Broken Serrated Knife',purpose:'A broken weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'DIE2NITE_ARCHIVE'}),
   machete:def({type:'machete',name:'Machete',purpose:'Reliable breakable weapon that kills two zombies on a successful strike.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'DIE2NITE_ARCHIVE'}),
   broken_machete:def({type:'broken_machete',name:'Broken Machete',purpose:'A broken weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'DIE2NITE_ARCHIVE'}),
-  doggy_bag:def({type:'doggy_bag',name:'Doggy Bag',purpose:'Starter food package. Open it to reveal one ordinary food item.',category:'container',displayCategory:'food',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['food']}),
-  citizen_welcome_pack:def({type:'citizen_welcome_pack',name:"Citizen's Welcome Pack",purpose:'Starter package using a small verified pool of common welcome-pack contents.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['battery','box_of_matches','pharmaceutical_products']}),
+  doggy_bag:def({type:'doggy_bag',name:'Doggy Bag',purpose:'Starter food package. It is being migrated onto the source-backed openable system.',category:'container',displayCategory:'food',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['food']}),
+  citizen_welcome_pack:def({type:'citizen_welcome_pack',name:"Citizen's Welcome Pack",purpose:'Starter package retained while its source-backed output catalogue is expanded.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['battery','box_of_matches','pharmaceutical_products']}),
   box_of_matches:def({type:'box_of_matches',name:'Box of Matches',purpose:'A utility component found in the desert and Welcome Packs. Combine with a Rotting Log to make a Torch.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'DIE2NITE_ARCHIVE'}),
   pharmaceutical_products:def({type:'pharmaceutical_products',name:'Pharmaceutical Products',purpose:'Medical/chemical supply also consumed by several current constructions.',category:'misc',displayCategory:'pharmacy',capabilities:['component','medical'],source:'MYHORDES_CURRENT'}),
-
   water_pistol:def({type:'water_pistol',name:'Water Pistol',purpose:'Three-shot water weapon. Each attack spends one charge; combine an empty/part-used pistol with a Water Ration to restore three shots.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','charge_bearing'],state:{charges:{min:0,max:3,initial:3}},source:'MYHORDES_CURRENT'}),
   water_cooler_bottle:def({type:'water_cooler_bottle',name:'Water Cooler Bottle',purpose:'Multi-ration water container. Drinking spends one stored ration; combine with Water Rations one at a time up to three.',category:'consumable',displayCategory:'food',capabilities:['consumable','charge_bearing'],state:{charges:{min:0,max:3,initial:3},contamination:{initial:'clean'}},source:'MYHORDES_CURRENT',consumableKind:'water'}),
   repair_kit:def({type:'repair_kit',name:'Repair Kit',purpose:'Portable repair tool. Repairing a broken item costs 1 AP and damages the kit; a damaged kit is restored at the Workshop.',category:'misc',displayCategory:'miscellaneous',capabilities:['repairable'],state:{condition:{initial:'intact'}},source:'MYHORDES_CURRENT'}),
+  resource_pack:container('resource_pack','Resource Pack','MyHordes material pack. Each opening yields one Twisted Plank or Wrought Iron and reduces the remaining contents until the pack is empty.',{contents:{min:1,max:3,initial:2}}),
+  toolbox:container('toolbox','Toolbox','Source-backed container of mechanical, pharmaceutical, explosive and repair supplies.'),
+  metal_chest:container('metal_chest','Metal Chest','Source-backed chest. Its full medical/drug output dependency chain is being completed in Part 2.'),
+  xl_chest:container('xl_chest','XL Chest','Rare source-backed container for advanced equipment parts. Part 2 follows each output into its complete equipment chain.'),
+  food_box:container('food_box','Food Box','Source-backed food container. Part 2 follows its outputs into the proper food mechanics.'),
+  decoration_box:container('decoration_box','Decoration Box','Source-backed furniture container.'),
+  safe:container('safe','Safe','Rare source-backed container opened through repeated 1 AP attempts; successful opening yields high-value equipment or components.'),
 }
 
 export const ITEM_TYPES:ItemType[]=Object.keys(ITEMS) as ItemType[]
 
+/** Legacy arrays retained temporarily for callers/tests while weighted tables replace acquisition. */
 export const NORMAL_SCAVENGE_LOOT_POOL:ItemType[]=[
   'twisted_plank','twisted_plank','twisted_plank','twisted_plank','twisted_plank',
   'wrought_iron','wrought_iron','wrought_iron','wrought_iron','wrought_iron',
-  'construction_kit','construction_kit','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
+  'resource_pack','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
   'human_bone','human_bone','pathetic_penknife','staff','serrated_knife','water_bomb','battery','box_of_matches','pharmaceutical_products',
-  // Construction/combination supplies are intentionally rarer than the basic resource stream.
-  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag',
+  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag','toolbox',
 ]
 export const DEPLETED_SCAVENGE_LOOT_POOL:ItemType[]=['rotten_log','rotten_log','rotten_log','scrap_metal','scrap_metal','scrap_metal']
 
@@ -113,6 +117,7 @@ export function defaultItemState(type:ItemType):ItemState{
   if(!schema)return{}
   const state:ItemState={}
   if(schema.charges)state.charges=schema.charges.initial
+  if(schema.contents)state.contents=schema.contents.initial
   if(schema.condition)state.condition=schema.condition.initial
   if(schema.contamination)state.contamination=schema.contamination.initial
   if(schema.powered)state.powered=schema.powered.initial
@@ -125,6 +130,7 @@ export function normalizeItemState(type:ItemType,input:ItemState|undefined):Item
   const base=defaultItemState(type)
   const next:ItemState={...base,...input}
   if(schema.charges){const value=typeof next.charges==='number'?next.charges:schema.charges.initial;next.charges=Math.min(schema.charges.max,Math.max(schema.charges.min,Math.trunc(value)))}else delete next.charges
+  if(schema.contents){const value=typeof next.contents==='number'?next.contents:schema.contents.initial;next.contents=Math.min(schema.contents.max,Math.max(schema.contents.min,Math.trunc(value)))}else delete next.contents
   if(!schema.condition)delete next.condition
   if(!schema.contamination)delete next.contamination
   if(!schema.powered)delete next.powered
@@ -136,6 +142,7 @@ export function itemStackKey(item:ItemInstance):string{return`${item.type}:${JSO
 export function itemStateLabel(item:ItemInstance):string{
   const state=normalizeItemState(item.type,item.state);const parts:string[]=[]
   if(state.charges!==undefined)parts.push(`${state.charges} ${state.charges===1?'charge':'charges'}`)
+  if(state.contents!==undefined)parts.push(`${state.contents} ${state.contents===1?'item':'items'} remaining`)
   if(state.condition&&state.condition!=='intact')parts.push(state.condition)
   if(state.contamination&&state.contamination!=='clean')parts.push(state.contamination)
   if(state.assembly&&state.assembly!=='complete')parts.push(state.assembly)
