@@ -51,17 +51,41 @@ This specifically removes the previous deadlock:
 
 ## Field volunteering and AP utilization
 
-Field missions remain individual claims. The planner first handles rescue, baseline scouting and known useful opportunities. If the town is resource-starved and field coverage remains thin, additional citizens with at least 4 AP can independently volunteer for exploration before the fallback cutoff.
+AP is a perishable personal resource. A citizen does not need a hidden overseer to know that carrying 6 unused AP toward midnight while few people are outside is wasteful.
 
-Resource starvation prefers unknown frontier targets rather than endlessly refreshing nearby stale zones. A citizen is not sent merely to burn AP if the return budget is unsafe; all normal expedition feasibility and return-solvency rules still apply.
+Field missions remain individual public claims. The planner first handles rescue, baseline scouting and known useful opportunities. On later days, citizens with substantial remaining AP can independently volunteer when the publicly visible field population is thin. Resource-starved towns tolerate more volunteers because missing construction materials are themselves a public reason to leave town.
 
-Nearby depleted zones also become legitimate low-risk construction-salvage missions. They can produce Rotting Logs/Scrap Metal for Workshop conversion even after ordinary search is exhausted.
+The generic hidden town reserve is intentionally small; explicit primary/backup gate commitments provide the important human-like coverage. Day 1 retains a staged opening, while later days allow a larger field presence without sending everybody out in one batch. Per-hour assignment limits, mission claims and individual route feasibility continue to prevent a mass gate flood.
+
+Unknown frontier expansion is preferred while reachable territory remains. Stale recon remains useful when no suitable frontier target exists. A citizen is never sent merely to burn AP if the same-day return budget is unsafe; normal expedition feasibility and return-solvency rules still apply.
+
+Nearby depleted zones are also legitimate low-risk construction-salvage missions. They can produce Rotting Logs/Scrap Metal for Workshop conversion even after ordinary search is exhausted.
+
+## Consumable AP discipline
+
+Food and water are stored future AP, so autonomous citizens treat them as more valuable than current AP that will disappear at midnight.
+
+The default ordering is:
+
+`spend safe current AP -> consume refill when AP is low -> spend refreshed AP`.
+
+Ordinary Thirst does not override that ordering. A Thirsty citizen may carry water on an expedition and remain eligible for field volunteering, then drink after current AP has been spent. Dehydration remains an immediate survival exception and is treated as soon as water is available.
+
+Late in the day, a Thirsty citizen with no remaining productive AP sink may finally treat before the attack even if the refill cannot be used efficiently. That is a survival fallback, not normal economic behavior.
+
+This policy applies only to autonomous decision-making. The legal action surface still permits a human player to consume a ration whenever the game rules allow it.
 
 ## Late-day AP dumping
 
-AP is perishable daily labor, but zeroing AP is not an absolute objective. During the earlier day, uncommitted citizens may remain available for field volunteering. From the configured late-day threshold onward, citizens without missions can use legal town work as an AP sink while still respecting any gate AP reservation.
+Earlier in the day, citizens preserve flexibility for scouting, rescue and newly discovered opportunities. Town AP sinks become increasingly attractive as the field-dispatch window closes.
+
+Once the configured aggressive late window begins, a citizen with legal safe town work can perform repeated work in the same hour down to a genuine reserved-AP floor rather than spending one AP and carrying the rest into midnight. A gate volunteer still preserves the AP promised by their public commitment.
 
 Current town sinks include construction, Workshop conversion and home reinforcement. Future Watchtower/forum/facility actions can extend this without changing the coordination model.
+
+## Diagnostics
+
+Multi-day simulation telemetry reports unused bot AP and the number of full-AP bots at midnight in addition to survival, Well, camping and gate metrics. Those AP values remain balance telemetry while the economy is evolving, but focused regressions gate known pathological behavior such as consuming water at full AP solely to clear ordinary Thirst.
 
 ## Future forum integration
 
