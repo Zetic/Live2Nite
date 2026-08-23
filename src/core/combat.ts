@@ -24,11 +24,20 @@ export const WEAPONS:Partial<Record<ItemType,WeaponDefinition>>={
   water_pistol:{itemType:'water_pistol',minKills:1,maxKills:1,killChancePercent:100,consumesOnUse:false,usesCharges:true,apCost:0,requiresPositiveAp:true,confidence:'approximate'},
   battery_launcher:{itemType:'battery_launcher',minKills:1,maxKills:1,killChancePercent:100,consumesOnUse:false,usesCharges:true,apCost:0,requiresPositiveAp:true,confidence:'approximate'},
   claymore:{itemType:'claymore',minKills:2,maxKills:5,killChancePercent:100,consumesOnUse:true,apCost:0,requiresPositiveAp:true,confidence:'approximate'},
-  human_bone:{itemType:'human_bone',minKills:1,maxKills:1,killChancePercent:30,consumesOnUse:false,breakChancePercent:50,brokenType:'broken_human_bone',apCost:0,requiresPositiveAp:true,confidence:'approximate'},
-  pathetic_penknife:{itemType:'pathetic_penknife',minKills:1,maxKills:1,killChancePercent:30,consumesOnUse:false,breakChancePercent:50,brokenType:'broken_pathetic_penknife',apCost:0,requiresPositiveAp:true,confidence:'approximate'},
-  staff:{itemType:'staff',minKills:1,maxKills:1,killChancePercent:50,consumesOnUse:false,breakChancePercent:40,brokenType:'broken_staff',apCost:0,requiresPositiveAp:true,confidence:'approximate'},
-  serrated_knife:{itemType:'serrated_knife',minKills:1,maxKills:1,killChancePercent:50,consumesOnUse:false,breakChancePercent:33,brokenType:'broken_serrated_knife',apCost:0,requiresPositiveAp:true,confidence:'approximate'},
-  machete:{itemType:'machete',minKills:2,maxKills:2,killChancePercent:100,consumesOnUse:false,breakChancePercent:20,brokenType:'broken_machete',apCost:0,requiresPositiveAp:true,confidence:'approximate'},
+
+  // Current MyHordes throw_b_* actions. Source break/kill groups are exact where unambiguous.
+  human_bone:{itemType:'human_bone',minKills:1,maxKills:1,killChancePercent:100,consumesOnUse:false,breakChancePercent:80,brokenType:'broken_human_bone',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  pathetic_penknife:{itemType:'pathetic_penknife',minKills:1,maxKills:1,killChancePercent:15,consumesOnUse:false,breakChancePercent:45,brokenType:'broken_pathetic_penknife',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  // The generated 5.1.1 staff break group has inconsistent weights (60/60), so retain the adapted break value pending current-source audit.
+  staff:{itemType:'staff',minKills:1,maxKills:1,killChancePercent:40,consumesOnUse:false,breakChancePercent:40,brokenType:'broken_staff',apCost:0,requiresPositiveAp:true,confidence:'approximate'},
+  serrated_knife:{itemType:'serrated_knife',minKills:1,maxKills:1,killChancePercent:100,consumesOnUse:false,breakChancePercent:33,brokenType:'broken_serrated_knife',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  machete:{itemType:'machete',minKills:2,maxKills:2,killChancePercent:100,consumesOnUse:false,breakChancePercent:25,brokenType:'broken_machete',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  adjustable_spanner:{itemType:'adjustable_spanner',minKills:1,maxKills:1,killChancePercent:33,consumesOnUse:false,breakChancePercent:20,brokenType:'broken_adjustable_spanner',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  screwdriver:{itemType:'screwdriver',minKills:1,maxKills:1,killChancePercent:20,consumesOnUse:false,breakChancePercent:40,brokenType:'broken_screwdriver',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  swiss_army_knife:{itemType:'swiss_army_knife',minKills:1,maxKills:1,killChancePercent:15,consumesOnUse:false,breakChancePercent:50,brokenType:'broken_swiss_army_knife',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  box_cutter:{itemType:'box_cutter',minKills:1,maxKills:1,killChancePercent:60,consumesOnUse:false,breakChancePercent:70,brokenType:'broken_box_cutter',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  chain:{itemType:'chain',minKills:1,maxKills:1,killChancePercent:50,consumesOnUse:false,breakChancePercent:25,brokenType:'broken_chain',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  can_opener:{itemType:'can_opener',minKills:1,maxKills:1,killChancePercent:50,consumesOnUse:false,breakChancePercent:100,brokenType:'broken_can_opener',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
 }
 
 export function weaponDefinition(type:ItemType):WeaponDefinition|null{return WEAPONS[type]??null}
