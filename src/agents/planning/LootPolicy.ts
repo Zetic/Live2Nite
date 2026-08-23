@@ -2,8 +2,7 @@ import { isWeapon } from '../../core/combat'
 import { ITEMS } from '../../core/items'
 import type { BotMissionAssignment, Citizen, GameCommand, GameState, ItemInstance, ItemType } from '../../core/types'
 import { distanceToTown, zoneKey } from '../../core/world'
-import { evaluateTownNeeds } from './TownNeeds'
-import { publicDefenseAssessment } from './TownDefenseStrategy'
+import { evaluateTownNeeds, type TownNeeds } from './TownNeeds'
 
 const BASE_LOOT_VALUE: Record<ItemType, number> = {
   construction_kit: 105,
@@ -42,8 +41,7 @@ function missionBonus(mission: BotMissionAssignment | null, type: ItemType): num
   return 0
 }
 
-export function lootScore(state: GameState, citizen: Citizen, type: ItemType, mission: BotMissionAssignment | null = null): number {
-  const needs = evaluateTownNeeds(state)
+function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null):number {
   let score = BASE_LOOT_VALUE[type] + missionBonus(mission, type)
 
   const directlyMissing = needs.missingConstruction[type] ?? 0
@@ -61,11 +59,12 @@ export function lootScore(state: GameState, citizen: Citizen, type: ItemType, mi
     else if (needs.waterPerCitizen < 2) score += 24
   }
 
-  if (type === 'old_door') {
-    const pressure = publicDefenseAssessment(state).pressure
-    if (pressure === 'critical' || pressure === 'shortfall') score += 45
-  }
+  if (type === 'old_door' && (needs.defense.pressure === 'critical' || needs.defense.pressure === 'shortfall')) score += 45
   return score
+}
+
+export function lootScore(state: GameState, citizen: Citizen, type: ItemType, mission: BotMissionAssignment | null = null): number {
+  return scoreWithNeeds(evaluateTownNeeds(state),citizen,type,mission)
 }
 
 function isProtectedCarry(state: GameState, citizen: Citizen, item: ItemInstance, mission: BotMissionAssignment | null): boolean {
@@ -89,39 +88,10 @@ function dropAction(actions: GameCommand[], itemId: string): GameCommand | null 
   return actions.find((action) => action.type === 'DROP_ITEM' && action.itemId === itemId) ?? null
 }
 
-function bestGroundItem(state: GameState, citizen: Citizen, mission: BotMissionAssignment | null): ItemInstance | null {
-  if (citizen.location.type !== 'world') return null
-  const zone = state.world.zones[zoneKey(citizen.location.x,citizen.location.y)]
-  if (!zone?.groundItems.length) return null
-  return [...zone.groundItems].sort((a,b) => lootScore(state,citizen,b.type,mission) - lootScore(state,citizen,a.type,mission))[0] ?? null
-}
-
-function lowestDroppableCarry(state: GameState, citizen: Citizen, mission: BotMissionAssignment | null): ItemInstance | null {
-  const candidates = citizen.inventory.filter((item) => !isProtectedCarry(state,citizen,item,mission))
-  return [...candidates].sort((a,b) => lootScore(state,citizen,a.type,mission) - lootScore(state,citizen,b.type,mission))[0] ?? null
-}
-
-function relayCacheCandidate(state: GameState, citizen: Citizen, mission: BotMissionAssignment | null): ItemInstance | null {
-  if (!mission || mission.emergency || mission.phase !== 'outbound' || citizen.location.type !== 'world') return null
-  const distance = distanceToTown(citizen.location.x,citizen.location.y)
-  const targetDistance = distanceToTown(mission.target.x,mission.target.y)
-  if (distance < 1 || distance > 3 || targetDistance <= distance + 1) return null
-  if (citizen.inventory.length < citizen.inventoryCapacity - 1) return null
-
-  const cacheable = citizen.inventory.filter((item) => {
-    if (isProtectedCarry(state,citizen,item,mission)) return false
-    const category = ITEMS[item.type].category
-    if (!['raw','construction','defense','misc','broken_weapon'].includes(category)) return false
-    const value = lootScore(state,citizen,item.type,mission)
-    return value >= 18 && value < 90
-  })
-  return [...cacheable].sort((a,b) => lootScore(state,citizen,a.type,mission) - lootScore(state,citizen,b.type,mission))[0] ?? null
-}
-
 /**
- * Free field actions happen before another movement AP is spent. This is deliberately
- * mission-agnostic: the mission is the primary reason for the trip, not permission to
- * ignore obvious zero-AP value on the route.
+ * Free field actions happen before another movement AP is spent. Town-need context is
+ * evaluated once per decision so frequent zero-AP searches/pickups do not repeatedly run
+ * the strategic construction/defense scorer while comparing individual rucksack items.
  */
 export function opportunisticFieldAction(
   state: GameState,
@@ -130,10 +100,15 @@ export function opportunisticFieldAction(
   mission: BotMissionAssignment | null,
 ): GameCommand | null {
   if (citizen.location.type !== 'world') return null
+  const needs=evaluateTownNeeds(state)
+  const score=(type:ItemType)=>scoreWithNeeds(needs,citizen,type,mission)
+  const zone = state.world.zones[zoneKey(citizen.location.x,citizen.location.y)]
+  const ground = zone?.groundItems.length
+    ? [...zone.groundItems].sort((a,b)=>score(b.type)-score(a.type))[0]??null
+    : null
 
-  const ground = bestGroundItem(state,citizen,mission)
   if (ground) {
-    const groundValue = lootScore(state,citizen,ground.type,mission)
+    const groundValue = score(ground.type)
     if (citizen.inventory.length < citizen.inventoryCapacity) {
       // Keep deeper-expedition capacity instead of immediately picking a relay item back
       // up after deliberately caching it. High-value finds still override that reserve.
@@ -143,8 +118,9 @@ export function opportunisticFieldAction(
         if (pickup) return pickup
       }
     } else {
-      const lowest = lowestDroppableCarry(state,citizen,mission)
-      if (lowest && groundValue >= lootScore(state,citizen,lowest.type,mission) + 15) {
+      const candidates=citizen.inventory.filter((item)=>!isProtectedCarry(state,citizen,item,mission))
+      const lowest=[...candidates].sort((a,b)=>score(a.type)-score(b.type))[0]??null
+      if (lowest && groundValue >= score(lowest.type) + 15) {
         const drop = dropAction(actions,lowest.id)
         if (drop) return drop
       }
@@ -162,16 +138,29 @@ export function opportunisticFieldAction(
   // Outbound citizens may leave middling town-useful materials in a safe near-town cell
   // to preserve capacity for deeper finds. Returning citizens naturally collect these
   // caches because the ground-pickup pass above also runs on the return route.
-  const cache = relayCacheCandidate(state,citizen,mission)
-  if (cache) return dropAction(actions,cache.id)
+  if(mission&&!mission.emergency&&mission.phase==='outbound'){
+    const distance=distanceToTown(citizen.location.x,citizen.location.y)
+    const targetDistance=distanceToTown(mission.target.x,mission.target.y)
+    if(distance>=1&&distance<=3&&targetDistance>distance+1&&citizen.inventory.length>=citizen.inventoryCapacity-1){
+      const cacheable=citizen.inventory.filter((item)=>{
+        if(isProtectedCarry(state,citizen,item,mission))return false
+        const category=ITEMS[item.type].category
+        const value=score(item.type)
+        return ['raw','construction','defense','misc','broken_weapon'].includes(category)&&value>=18&&value<90
+      })
+      const cache=[...cacheable].sort((a,b)=>score(a.type)-score(b.type))[0]??null
+      if(cache)return dropAction(actions,cache.id)
+    }
+  }
   return null
 }
 
 export function shouldReturnWithHaul(state: GameState, citizen: Citizen, mission: BotMissionAssignment): boolean {
   if (citizen.location.type !== 'world' || mission.emergency || mission.phase === 'return' || mission.phase === 'camp') return false
+  const needs=evaluateTownNeeds(state)
   const valuable = citizen.inventory
     .filter((item) => !['consumable','weapon'].includes(ITEMS[item.type].category))
-    .map((item) => lootScore(state,citizen,item.type,mission))
+    .map((item) => scoreWithNeeds(needs,citizen,item.type,mission))
     .sort((a,b) => b-a)
   if (!valuable.length) return false
   if (valuable[0] >= 130 && distanceToTown(citizen.location.x,citizen.location.y) >= 2) return true
