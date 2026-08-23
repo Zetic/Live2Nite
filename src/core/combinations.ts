@@ -37,6 +37,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
   assemble_engine:recipe({id:'assemble_engine',name:'Assemble Engine',category:'assemble',apCost:0,inputs:[{type:'engine_incomplete'},{type:'duct_tape'},{type:'nuts_and_bolts'},{type:'wrought_iron'},{type:'compact_detonator'},{type:'human_bone'}],outputType:'engine',summary:'Incomplete Engine + Duct Tape + Nuts & Bolts + Wrought Iron + Compact Detonator + Human Bone → Engine',source:'MYHORDES_CURRENT'}),
   assemble_claymore:recipe({id:'assemble_claymore',name:'Assemble Claymore Mine',category:'assemble',apCost:0,inputs:[{type:'wire_reel'},{type:'semtex'},{type:'nuts_and_bolts'},{type:'duct_tape'}],outputType:'claymore',summary:'Wire Reel + Semtex + Nuts & Bolts + Duct Tape → Claymore Mine',source:'MYHORDES_CURRENT'}),
   assemble_torch:recipe({id:'assemble_torch',name:'Make Torch',category:'assemble',apCost:0,inputs:[{type:'box_of_matches'},{type:'rotten_log'}],outputType:'torch',summary:'Box of Matches + Rotting Log → Torch',source:'MYHORDES_CURRENT'}),
+  mix_concrete:recipe({id:'mix_concrete',name:'Mix Concrete Block',category:'assemble',apCost:0,inputs:[{type:'bag_of_cement'},{type:'water_ration'}],outputType:'unshaped_concrete_block',summary:'Bag of Cement + Water Ration → Unshaped Concrete Block',source:'MYHORDES_CURRENT'}),
   fill_water_bomb:recipe({id:'fill_water_bomb',name:'Fill Water Bomb',category:'assemble',apCost:0,inputs:[{type:'plastic_bag'},{type:'water_ration'}],outputType:'water_bomb',summary:'Plastic Bag + Water Ration → Water Bomb',source:'MYHORDES_CURRENT'}),
 
   reload_water_pistol:recipe({id:'reload_water_pistol',name:'Reload Water Pistol',category:'reload',apCost:0,inputs:[{type:'water_pistol',chargesBelow:3},{type:'water_ration'}],outputType:'water_pistol',summary:'Water Pistol + Water Ration → 3 shots',source:'MYHORDES_CURRENT'}),
@@ -56,7 +57,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
 }
 
 export const COMBINATION_RECIPE_ORDER:CombinationRecipeId[]=[
-  'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','fill_water_bomb',
+  'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','mix_concrete','fill_water_bomb',
   'reload_water_pistol','refill_water_cooler','reload_battery_launcher',
   'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete',
   'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete',
