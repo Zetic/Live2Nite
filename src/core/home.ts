@@ -1,5 +1,5 @@
 import { homeDefenseBonus } from './construction'
-import { homeDefenseFor } from './items'
+import { createItemInstance, homeDefenseFor } from './items'
 import type { Citizen, CitizenDailyState, CitizenHome, GameState, HomeImprovementId, HomeLevel, ItemType } from './types'
 
 export const BASE_HOME_STORAGE = 4
@@ -90,8 +90,8 @@ export function createStarterHome(citizenId: string): CitizenHome {
     defense: HOME_LEVELS.camp_bed.defense,
     storageCapacity: BASE_HOME_STORAGE,
     storage: [
-      { id: `starter-${citizenId}-doggy`, type: 'doggy_bag' },
-      { id: `starter-${citizenId}-welcome`, type: 'citizen_welcome_pack' },
+      createItemInstance(`starter-${citizenId}-doggy`, 'doggy_bag'),
+      createItemInstance(`starter-${citizenId}-welcome`, 'citizen_welcome_pack'),
     ],
     upgradedDay:null,
     improvements:{reinforcements:0,fence:0,storage:0},
@@ -128,16 +128,28 @@ export function contributableHomeDefense(citizen:Citizen,state?:GameState):numbe
   return citizen.home.defense+homeImprovementDefense(citizen)+(state?homeDefenseBonus(state):0)
 }
 
-export function personalDefense(citizen: Citizen, state?: GameState): number {
-  return contributableHomeDefense(citizen,state)
-    + citizen.home.storage.reduce((sum, item) => sum + homeDefenseFor(item.type), 0)
+export function personalHomeDefense(citizen:Citizen,state?:GameState):number {
+  const loose=citizen.home.storage.reduce((sum,item)=>sum+homeDefenseFor(item.type),0)
+  return contributableHomeDefense(citizen,state)+loose
 }
 
 export function improvementNextLevel(citizen:Citizen,id:HomeImprovementId):number|null {
   const current=citizen.home.improvements?.[id]??0
-  return current<HOME_IMPROVEMENTS[id].maxLevel?current+1:null
+  return current>=HOME_IMPROVEMENTS[id].maxLevel?null:current+1
 }
 
-export function improvementStorageCapacity(citizen:Citizen):number {
-  return BASE_HOME_STORAGE+(citizen.home.improvements?.storage??0)*HOME_IMPROVEMENTS.storage.storagePerLevel
+export function hasPersonalImprovementMaterials(citizen:Citizen,id:HomeImprovementId):boolean {
+  const next=improvementNextLevel(citizen,id)
+  return next!==null&&hasPersonalMaterials(citizen,HOME_IMPROVEMENTS[id].resources(next))
+}
+
+export function consumePersonalResources(citizen:Citizen,resources:Partial<Record<ItemType,number>>):Citizen {
+  let inventory=[...citizen.inventory]
+  let storage=[...citizen.home.storage]
+  for(const[type,amount]of Object.entries(resources)){
+    let remaining=amount??0
+    inventory=inventory.filter((item)=>{if(item.type===type&&remaining>0){remaining-=1;return false}return true})
+    storage=storage.filter((item)=>{if(item.type===type&&remaining>0){remaining-=1;return false}return true})
+  }
+  return{...citizen,inventory,home:{...citizen.home,storage}}
 }
