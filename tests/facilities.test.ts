@@ -6,6 +6,7 @@ import { DEPLETED_SCAVENGE_LOOT_POOL, NORMAL_SCAVENGE_LOOT_POOL } from '../src/c
 import type { GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
 import { availableScreens, FACILITY_SLOT_COUNT, facilitySlots, PRIMARY_SCREENS } from '../src/ui/navigation'
+import { bankFromCounts } from './bankFixtures'
 
 function command(game: GameState, citizenId: string, type: ReturnType<typeof getLegalActions>[number]['type']) {
   const action = getLegalActions(game, citizenId).find((candidate) => candidate.type === type)
@@ -37,9 +38,9 @@ describe('facility navigation', () => {
 })
 
 describe('undepleted and depleted scavenging', () => {
-  it('starts schema v15 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
+  it('starts schema v16 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
     const game = createInitialGame(123, 2)
-    expect(game.schemaVersion).toBe(15)
+    expect(game.schemaVersion).toBe(16)
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
@@ -82,7 +83,7 @@ describe('undepleted and depleted scavenging', () => {
 describe('Workshop gating', () => {
   it('does not expose Workshop conversion commands before construction is complete', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: { rotten_log: 2, scrap_metal: 2 } } }
+    game = { ...game, town: { ...game.town, bank: bankFromCounts({ rotten_log: 2, scrap_metal: 2 },'facility-workshop') } }
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'WORKSHOP_CONVERT')).toBe(false)
     game = { ...game, town: { ...game.town, construction: { ...game.town.construction, workshop: { id: 'workshop', completed: true, apContributed: 25 } } } }
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'WORKSHOP_CONVERT')).toBe(true)
