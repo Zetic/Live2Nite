@@ -4,7 +4,7 @@ import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
 import { createItemInstance, normalizeItemState } from '../src/core/items'
 import { OPENABLES } from '../src/core/openables'
-import type { GameCommand, GameState, ItemInstance } from '../src/core/types'
+import type { GameCommand, GameState, ItemInstance, ItemType } from '../src/core/types'
 
 function withInventory(items:ItemInstance[],seed=9101):GameState{
   const game=createInitialGame(seed,1)
@@ -58,19 +58,21 @@ describe('source-backed openables',()=>{
     expect(resolved.citizens[0].inventory.some((item)=>item.id==='pack')).toBe(false)
   })
 
-  it('uses source-valid reusable opener items for Toolbox without consuming the opener',()=>{
+  it('requires a source-valid reusable opener for Toolbox and does not consume it',()=>{
     const toolbox=createItemInstance('toolbox','toolbox')
-    const locked=withInventory([toolbox])
-    expect(openAction(locked,'toolbox')).toBeUndefined()
+    expect(openAction(withInventory([toolbox]),'toolbox')).toBeUndefined()
 
-    let game=withInventory([toolbox,createItemInstance('staff','staff')],9102)
-    const action=openAction(game,'toolbox')
-    expect(action).toBeDefined()
-    game=executeCommand(game,action!).state
-    expect(game.citizens[0].inventory.some((item)=>item.id==='toolbox')).toBe(false)
-    expect(game.citizens[0].inventory.some((item)=>item.id==='staff'&&item.type==='staff')).toBe(true)
-    expect(game.citizens[0].inventory).toHaveLength(2)
-    expect(['pharmaceutical_products','semtex','nuts_and_bolts','kwik_fix','copper_pipe','battery']).toContain(game.citizens[0].inventory.find((item)=>item.id!=='staff')?.type)
+    const implementedSourceOpeners:ItemType[]=['human_bone','machete','pathetic_penknife','serrated_knife','staff']
+    for(const openerType of implementedSourceOpeners){
+      let game=withInventory([toolbox,createItemInstance('opener',openerType)],9102)
+      const action=openAction(game,'toolbox')
+      expect(action,`${openerType} should open Toolbox`).toBeDefined()
+      game=executeCommand(game,action!).state
+      expect(game.citizens[0].inventory.some((item)=>item.id==='toolbox')).toBe(false)
+      expect(game.citizens[0].inventory.some((item)=>item.id==='opener'&&item.type===openerType)).toBe(true)
+      expect(game.citizens[0].inventory).toHaveLength(2)
+      expect(['pharmaceutical_products','semtex','nuts_and_bolts','kwik_fix','copper_pipe','battery']).toContain(game.citizens[0].inventory.find((item)=>item.id!=='opener')?.type)
+    }
   })
 
   it('keeps the exact MyHordes Toolbox weights in the source table',()=>{
