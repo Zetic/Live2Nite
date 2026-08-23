@@ -1,5 +1,6 @@
 import { removeBankItemById, removeBankItems } from './bank'
 import { completionWaterBonus, revealsAllTerrain } from './construction'
+import { foodApTarget } from './food'
 import { createItemInstance, normalizeItemState } from './items'
 import { zoneKey } from './world'
 import type { Citizen, CombinationEventOutput, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, PersonalItemStorage } from './types'
@@ -16,6 +17,11 @@ function generatedItems(state:GameState,type:ItemType,count:number):ItemInstance
 function removePersonalIds(citizen:Citizen,ids:Set<string>):Citizen{return{...citizen,inventory:citizen.inventory.filter((item)=>!ids.has(item.id)),home:{...citizen.home,storage:citizen.home.storage.filter((item)=>!ids.has(item.id))}}}
 function addCombinationOutputs(citizen:Citizen,outputs:CombinationEventOutput[]):Citizen{let inventory=[...citizen.inventory];let storage=[...citizen.home.storage];for(const output of outputs){if(output.storage==='inventory')inventory.push(output.item);else storage.push(output.item)}return{...citizen,inventory,home:{...citizen.home,storage}}}
 function withCharges(item:ItemInstance,charges:number):ItemInstance{return createItemInstance(item.id,item.type,{...normalizeItemState(item.type,item.state),charges})}
+function restoredAp(citizen:Citizen,item:ItemInstance,kind:'food'|'water',restoresAp:boolean):number{
+  if(!restoresAp)return citizen.ap
+  const target=kind==='food'?foodApTarget(item.type,citizen.maxAp):citizen.maxAp
+  return Math.max(citizen.ap,target)
+}
 function resolveOpenedItems(items:ItemInstance[],event:Extract<GameEvent,{type:'OPENABLE_RESOLVED'}>):ItemInstance[]{
   const without=items.filter((item)=>item.id!==event.container.id)
   const base=event.containerAfter?[...without,event.containerAfter]:without
@@ -72,9 +78,9 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
         const charged=withCharges(event.item,event.chargesAfter)
         if(event.source==='ground'&&event.zoneKey)world=replaceGround(state,event.zoneKey,(items)=>items.map((item)=>item.id===event.item.id?charged:item))
         else citizens=replaceCitizen(state,event.citizenId,(citizen)=>replaceStoredItem(citizen,charged,event.source as PersonalItemStorage))
-        citizens=citizens.map((citizen)=>citizen.id===event.citizenId?{...citizen,ap:event.restoresAp?citizen.maxAp:citizen.ap,daily:event.kind==='food'?{...citizen.daily,ate:true}:{...citizen.daily,drank:true}}:citizen)
+        citizens=citizens.map((citizen)=>citizen.id===event.citizenId?{...citizen,ap:restoredAp(citizen,event.item,event.kind,event.restoresAp),daily:event.kind==='food'?{...citizen.daily,ate:true}:{...citizen.daily,drank:true}}:citizen)
       }else{
-        citizens=replaceCitizen(state,event.citizenId,(citizen)=>{const withoutItem=removeStoredItem(citizen,event.item.id,event.source);return{...withoutItem,ap:event.restoresAp?withoutItem.maxAp:withoutItem.ap,daily:event.kind==='food'?{...withoutItem.daily,ate:true}:{...withoutItem.daily,drank:true}}})
+        citizens=replaceCitizen(state,event.citizenId,(citizen)=>{const withoutItem=removeStoredItem(citizen,event.item.id,event.source);return{...withoutItem,ap:restoredAp(withoutItem,event.item,event.kind,event.restoresAp),daily:event.kind==='food'?{...withoutItem.daily,ate:true}:{...withoutItem.daily,drank:true}}})
         if(event.source==='ground'&&event.zoneKey)world=replaceGround(state,event.zoneKey,(items)=>items.filter((item)=>item.id!==event.item.id))
       }
       return{...state,citizens,world}
