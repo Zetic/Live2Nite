@@ -16,6 +16,11 @@ function generatedItems(state:GameState,type:ItemType,count:number):ItemInstance
 function removePersonalIds(citizen:Citizen,ids:Set<string>):Citizen{return{...citizen,inventory:citizen.inventory.filter((item)=>!ids.has(item.id)),home:{...citizen.home,storage:citizen.home.storage.filter((item)=>!ids.has(item.id))}}}
 function addCombinationOutputs(citizen:Citizen,outputs:CombinationEventOutput[]):Citizen{let inventory=[...citizen.inventory];let storage=[...citizen.home.storage];for(const output of outputs){if(output.storage==='inventory')inventory.push(output.item);else storage.push(output.item)}return{...citizen,inventory,home:{...citizen.home,storage}}}
 function withCharges(item:ItemInstance,charges:number):ItemInstance{return createItemInstance(item.id,item.type,{...normalizeItemState(item.type,item.state),charges})}
+function resolveOpenedItems(items:ItemInstance[],event:Extract<GameEvent,{type:'OPENABLE_RESOLVED'}>):ItemInstance[]{
+  const without=items.filter((item)=>item.id!==event.container.id)
+  const base=event.containerAfter?[...without,event.containerAfter]:without
+  return[...base,...event.outputs]
+}
 
 function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
   switch(event.type){
@@ -54,6 +59,10 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'ITEM_WITHDRAWN':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item]})),town:{...state.town,bank:removeBankItemById(state.town.bank,event.item.id)}}
     case 'ITEM_MOVED_TO_HOME':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id),home:{...citizen.home,storage:[...citizen.home.storage,event.item]}}))}
     case 'ITEM_MOVED_TO_RUCKSACK':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item],home:{...citizen.home,storage:citizen.home.storage.filter((item)=>item.id!==event.item.id)}}))}
+    case 'OPENABLE_RESOLVED':{
+      if(event.source==='ground'&&event.zoneKey)return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,world:replaceGround(state,event.zoneKey,(items)=>resolveOpenedItems(items,event))}
+      return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,citizens:replaceCitizen(state,event.citizenId,(citizen)=>event.source==='inventory'?{...citizen,inventory:resolveOpenedItems(citizen.inventory,event)}:{...citizen,home:{...citizen.home,storage:resolveOpenedItems(citizen.home.storage,event)}})}
+    }
     case 'CONTAINER_OPENED':{if(event.source==='ground'&&event.zoneKey)return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+1,world:replaceGround(state,event.zoneKey,(items)=>[...items.filter((item)=>item.id!==event.containerId),event.output])};return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+1,citizens:replaceCitizen(state,event.citizenId,(citizen)=>event.source==='inventory'?{...citizen,inventory:[...citizen.inventory.filter((item)=>item.id!==event.containerId),event.output]}:{...citizen,home:{...citizen.home,storage:[...citizen.home.storage.filter((item)=>item.id!==event.containerId),event.output]}})}}
     case 'CONSTRUCTION_KIT_OPENED':{if(event.source==='ground'&&event.zoneKey)return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,world:replaceGround(state,event.zoneKey,(items)=>[...items.filter((item)=>item.id!==event.containerId),...event.outputs])};return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,citizens:replaceCitizen(state,event.citizenId,(citizen)=>event.source==='inventory'?{...citizen,inventory:[...citizen.inventory.filter((item)=>item.id!==event.containerId),...event.outputs]}:{...citizen,home:{...citizen.home,storage:[...citizen.home.storage.filter((item)=>item.id!==event.containerId),...event.outputs]}})}}
     case 'WATER_TAKEN':return{...state,nextItemId:state.nextItemId+1,town:{...state.town,well:{water:Math.max(0,state.town.well.water-1)}},citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item],daily:citizen.daily.waterTaken?{...citizen.daily,bonusWaterTaken:true}:{...citizen.daily,waterTaken:true}}))}
