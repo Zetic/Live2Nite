@@ -2,6 +2,7 @@ import { specialSiteCode, specialSiteName } from '../../core/specialSites'
 import type { GameState } from '../../core/types'
 import { citizensInZone, zoneControlState, zoneKey } from '../../core/world'
 import { createAgentWorldKnowledge } from '../../agents/WorldKnowledge'
+import '../worldMap.css'
 
 function intelLabel(game:GameState,x:number,y:number):string{
   const known=createAgentWorldKnowledge(game).zone(x,y)
