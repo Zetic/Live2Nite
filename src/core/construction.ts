@@ -1,3 +1,4 @@
+import { bankCount } from './bank'
 import { CONSTRUCTION_IDS } from './constructionIds'
 import type { ConstructionId, ConstructionProjectState, GameState, ItemType } from './types'
 
@@ -166,7 +167,7 @@ export function constructionUnlocked(state: GameState, projectId: ConstructionId
 export function hasRequiredMaterials(state: GameState, projectId: ConstructionId): boolean {
   if (!constructionUnlocked(state, projectId)) return false
   const definition = CONSTRUCTIONS[projectId]
-  return Object.entries(definition.resources).every(([type, required]) => (state.town.bank[type as ItemType] ?? 0) >= (required ?? 0))
+  return Object.entries(definition.resources).every(([type, required]) => bankCount(state,type as ItemType) >= (required ?? 0))
 }
 
 export function missingMaterials(state: GameState, projectId: ConstructionId): Partial<Record<ItemType, number>> {
@@ -174,7 +175,7 @@ export function missingMaterials(state: GameState, projectId: ConstructionId): P
   const missing: Partial<Record<ItemType, number>> = {}
   for (const [type, required] of Object.entries(definition.resources)) {
     const itemType = type as ItemType
-    const count = Math.max(0, (required ?? 0) - (state.town.bank[itemType] ?? 0))
+    const count = Math.max(0, (required ?? 0) - bankCount(state,itemType))
     if (count > 0) missing[itemType] = count
   }
   return missing

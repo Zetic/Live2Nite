@@ -9,6 +9,7 @@ import { searchTowerReplenishmentEvents } from '../src/core/night'
 import type { GameCommand, GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
 import { advanceOneHour, advanceToHour } from '../src/simulation/advanceTime'
+import { bankCount, bankFromCounts } from './bankFixtures'
 
 const bots = new BasicBotController()
 
@@ -72,7 +73,7 @@ describe('early-game progression', () => {
   it('Pump construction adds ten water and permits a second daily well withdrawal', () => {
     let game = createInitialGame(5678,1)
     const before = game.town.well.water
-    game = { ...game, town: { ...game.town, bank:{twisted_plank:8,wrought_iron:1}, construction:{...game.town.construction,pump:{...game.town.construction.pump,apContributed:24}} } }
+    game = { ...game, town: { ...game.town, bank:bankFromCounts({twisted_plank:8,wrought_iron:1},'pump'), construction:{...game.town.construction,pump:{...game.town.construction.pump,apContributed:24}} } }
     game = executeCommand(game,projectCommand(game,'c01','pump')).state
     expect(game.town.construction.pump.completed).toBe(true)
     expect(game.town.well.water).toBe(before+10)
@@ -113,8 +114,8 @@ describe('Day-1 economy benchmark', () => {
       let game = createInitialGame(seed,40)
       game = advanceToHour(game,0,bots,'c01')
       if (game.town.construction.workshop.completed) workshops += 1
-      totalBankPlanks += game.town.bank.twisted_plank ?? 0
-      totalBankIron += game.town.bank.wrought_iron ?? 0
+      totalBankPlanks += bankCount(game.town.bank,'twisted_plank')
+      totalBankIron += bankCount(game.town.bank,'wrought_iron')
       totalWorkshopLabor += game.town.construction.workshop.apContributed
       totalOutsideAtMidnight += game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world').length
       totalNormalSearches += game.events.filter((event) => event.type === 'ZONE_SEARCHED' && event.mode === 'normal').length

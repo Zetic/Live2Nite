@@ -34,13 +34,14 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - coordinated town mission board prevents every citizen independently becoming a scout
 - a small scout cohort creates route/zombie/resource knowledge before later gather/excavation missions are staffed
 - new field assignments are staggered across hours
-- three protected reserve citizens support emergency response; one is kept off field missions as a final night-gate reserve
+- public gate/backup/construction commitments coordinate citizens without a hidden town-wide AP overseer
 - field missions persist through `prepare -> outbound -> operate -> return -> unload`, with an optional `camp` phase for intentional overnight expeditions
 - ordinary expeditions continuously reserve enough carried AP/refill capacity for a safe trip home
 - distant missions can deliberately become multi-day expeditions when a same-day round trip is infeasible and the citizen can provision an overnight plan
 - rescue missions remain same-day emergency missions and do not intentionally camp
 - town construction shortages drive targeted frontier/resource expeditions
 - route planning spreads citizens across longer-range targets instead of repeatedly hugging the gate
+- opportunistic field scavenging searches eligible traversed zones, picks up useful ground items, and can create relay caches
 - open/close town gate for 1 AP from the World Beyond screen
 - seeded 14 × 13 World Beyond prototype map
 - 12 deterministic special sites per generated map
@@ -57,33 +58,38 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - depleted-zone Rotting Log / Scrap Metal feedstock
 - Construction Kits and construction-ready Workshop materials available from early scavenging
 - 4-slot ordinary rucksack
-- shared Bank deposits and withdrawals, including defensive objects, weapons, food, and expedition supplies
+- shared Bank stores real item instances so identity and persistent item state survive deposits/withdrawals
+- canonical item definitions support display categories, capabilities, charges, condition, contamination, powered state, and assembly state for future content
 - original-style 2 human CP vs. 1 zombie CP zone control
 - zombie combat can reduce control and free a trapped citizen immediately
 - bare-handed combat plus Human Bone, Pathetic Penknife, Staff, Serrated Knife, Machete, and Water Bomb weapon tiers
 - breakable field weapons produce broken items for the current Workshop repair prototype
 - shared Construction Sites with persistent AP progress
-- current construction catalog: Workshop, Watchtower, Pump, Wall Upgrade V1, Portal Lock, and Search Tower
+- broad data-driven construction tree with Workshop, Watchtower, Pump, Wall, Portal, Foundations, and Sanctuary branches
 - Workshop material processing and current repair recipes
 - Watchtower horde-estimate screen
 - Search Tower nightly depleted-zone replenishment prototype
-- facility-based Home / Well / Bank / Construction / Workshop / Watchtower / World Beyond / Citizens / Chronicle UI
+- compact inventory UI with contextual item actions and screen-specific registers
 - nightly breaches distribute zombies across surviving citizens; personal home defense decides who survives
 - bots use the same legal actions for scavenging, excavation/search, supply preparation, rescue, construction, Workshop work, home upgrades, combat, hydration treatment, camping preparation, hiding, and returns
 - command/event-driven game core
 - legal-action API shared by humans and bots
 - seeded deterministic simulation
-- IndexedDB autosave with schema migration
+- IndexedDB autosave using the current schema
 - GitHub Pages deployment workflow
 - Vitest simulation, Day-1 economy, and multi-day survival regression tests
 
 Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). The first ten nightly attack ranges are anchored to surviving English Die2Nite sample data. Special-zone identities, the broad early combat model, two-hour ordinary autosearch, hydration chain, and the broad camping lifecycle/risk factors have surviving English references. Live2Nite's exact special-site count, current excavation requirements, loot weights, mission staffing, reserve policies, safety margins, water-conservation bands, several construction costs/effects, weapon break probabilities, exact camping probability coefficients, campsite-degradation amount, and autonomous expedition heuristics remain explicit adaptations.
 
-Hydration/status evidence is recorded in [`docs/die2nite-reference/status-hydration.md`](docs/die2nite-reference/status-hydration.md), and camping evidence/uncertainties are recorded in [`docs/die2nite-reference/camping.md`](docs/die2nite-reference/camping.md). Later wound/infection/terror/addiction statuses, higher home upgrades, broader weapon/reload/ammunition systems, camping-specific equipment, tomb searching, a larger special-zone catalog, and the deeper construction tree remain deferred reconstruction areas.
+Hydration/status evidence is recorded in [`docs/die2nite-reference/status-hydration.md`](docs/die2nite-reference/status-hydration.md), and camping evidence/uncertainties are recorded in [`docs/die2nite-reference/camping.md`](docs/die2nite-reference/camping.md). Later wound/infection/terror/addiction statuses, broader weapon/reload/ammunition systems, camping-specific equipment, tomb searching, a larger special-zone catalog, and deeper item/content fidelity remain deferred reconstruction areas.
 
 The clock/fast-forward and autonomous mission-planning systems are **Live2Nite single-player simulation interfaces**, not claims that the original browser game used player-controlled hourly ticks or these AI heuristics. They exist so autonomous citizens can evolve over a day while preserving the original-style AP economy: actions do not themselves consume clock hours.
 
-The citizen-control switcher and AI mission readout are development aids rather than permanent game mechanics. Control selection is kept out of authoritative save state. Active bot mission assignments, citizen hydration state, camping history, and campsite improvements are persisted because they affect multi-hour and multi-day gameplay.
+The citizen-control switcher and AI mission readout are development aids rather than permanent game mechanics. Control selection is kept out of authoritative save state. Active bot mission assignments, citizen hydration state, camping history, campsite improvements, coordination commitments, and item instance state are persisted because they affect multi-hour and multi-day gameplay.
+
+## Development save compatibility
+
+Live2Nite is still in rapid pre-release development. The current save schema must save and reload correctly, but older development saves are **not** guaranteed to migrate forward after schema-breaking changes. Starting a new town after a schema bump is acceptable during this phase. Backward migration completeness must not delay otherwise-correct gameplay or architecture work. See [`instructions.md`](instructions.md) for the project policy.
 
 ## Development
 
@@ -101,4 +107,4 @@ npm run build
 
 ## Architecture
 
-See [`docs/architecture.md`](docs/architecture.md).
+See [`docs/architecture.md`](docs/architecture.md). Stateful item architecture is documented in [`docs/item-economy.md`](docs/item-economy.md).

@@ -8,6 +8,7 @@ import type { ConstructionId, GameCommand, GameState, ItemType } from '../src/co
 import { STARTING_WELL_MAX, STARTING_WELL_MIN } from '../src/core/well'
 import { zoneControl, zoneKey } from '../src/core/world'
 import { advanceOneHour, advanceToHour } from '../src/simulation/advanceTime'
+import { bankCount, bankFromCounts } from './bankFixtures'
 
 const bots = new BasicBotController()
 
@@ -26,13 +27,13 @@ function itemCommand(game: GameState, citizenId: string, type: 'OPEN_CONTAINER'|
   if (!action) throw new Error(`Missing ${type} for ${itemId}`)
   return action
 }
-function withWorkshopResources(game: GameState): GameState {return { ...game, town: { ...game.town, bank: { ...game.town.bank, twisted_plank: 10, wrought_iron: 8, unshaped_concrete_block: 1 } } }}
+function withWorkshopResources(game: GameState): GameState {return { ...game, town: { ...game.town, bank: bankFromCounts({twisted_plank:10,wrought_iron:8,unshaped_concrete_block:1},'game-workshop') } }}
 function withInventory(game: GameState, types: ItemType[]): GameState {return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) } : citizen) }}
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v15 citizens at 1 AM with starter home, packages, hydration, camping, control, and coordination state', () => {
+  it('starts schema v16 citizens at 1 AM with starter home, packages, hydration, camping, control, and coordination state', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(15)
+    expect(game.schemaVersion).toBe(16)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
@@ -187,7 +188,7 @@ describe('World Beyond gameplay', () => {
     game = executeCommand(game, getLegalActions(game, 'c01').find((a) => a.type === 'MOVE' && a.direction === 'WEST')!).state
     game = executeCommand(game, command(game, 'c01', 'ENTER_TOWN')).state
     game = executeCommand(game, command(game, 'c01', 'DEPOSIT_ITEM')).state
-    expect(game.town.bank.scrap_metal).toBe(1)
+    expect(bankCount(game.town.bank,'scrap_metal')).toBe(1)
   })
 
   it('can withdraw a shared bank item and removes its derived bank-defense value', () => {
@@ -196,7 +197,7 @@ describe('World Beyond gameplay', () => {
     expect(game.town.defense).toBe(40)
     expect(totalTownDefense(game)).toBe(42)
     game = executeCommand(game, command(game,'c01','WITHDRAW_BANK_ITEM')).state
-    expect(game.town.bank.old_door).toBe(0)
+    expect(bankCount(game.town.bank,'old_door')).toBe(0)
     expect(totalTownDefense(game)).toBe(40)
     expect(game.citizens[0].inventory.some((item) => item.type === 'old_door')).toBe(true)
   })
@@ -210,7 +211,7 @@ describe('Town construction and Workshop', () => {
 
   it('retains materials while Workshop construction is incomplete', () => {
     let game = withWorkshopResources(createInitialGame(321, 2))
-    const before = { ...game.town.bank }
+    const before = [...game.town.bank]
     game = executeCommand(game, projectCommand(game,'c01','workshop')).state
     expect(game.town.construction.workshop.apContributed).toBe(1)
     expect(game.town.bank).toEqual(before)
@@ -221,24 +222,24 @@ describe('Town construction and Workshop', () => {
     game = { ...game, town: { ...game.town, construction: { ...game.town.construction, workshop: { ...game.town.construction.workshop, apContributed: 24 } } } }
     game = executeCommand(game, projectCommand(game,'c01','workshop')).state
     expect(game.town.construction.workshop.completed).toBe(true)
-    expect(game.town.bank.twisted_plank).toBe(0)
-    expect(game.town.bank.wrought_iron).toBe(0)
-    expect(game.town.bank.unshaped_concrete_block).toBe(1)
+    expect(bankCount(game.town.bank,'twisted_plank')).toBe(0)
+    expect(bankCount(game.town.bank,'wrought_iron')).toBe(0)
+    expect(bankCount(game.town.bank,'unshaped_concrete_block')).toBe(1)
   })
 
   it('converts 1 raw resource into 1 refined resource for 3 AP', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: { rotten_log: 1 }, construction: { ...game.town.construction, workshop: { id: 'workshop', apContributed: 25, completed: true } } } }
+    game = { ...game, town: { ...game.town, bank: bankFromCounts({rotten_log:1},'game-recipe'), construction: { ...game.town.construction, workshop: { id: 'workshop', apContributed: 25, completed: true } } } }
     const action = getLegalActions(game, 'c01').find((a) => a.type === 'WORKSHOP_CONVERT' && a.recipeId === 'logs_to_planks')!
     game = executeCommand(game, action).state
     expect(game.citizens[0].ap).toBe(3)
-    expect(game.town.bank.rotten_log).toBe(0)
-    expect(game.town.bank.twisted_plank).toBe(1)
+    expect(bankCount(game.town.bank,'rotten_log')).toBe(0)
+    expect(bankCount(game.town.bank,'twisted_plank')).toBe(1)
   })
 
   it('completing the Watchtower adds derived town defense without mutating the bootstrap base', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: { twisted_plank: 3, wrought_iron: 2 }, construction: { ...game.town.construction, watchtower: { id: 'watchtower', apContributed: 11, completed: false } } } }
+    game = { ...game, town: { ...game.town, bank: bankFromCounts({twisted_plank:3,wrought_iron:2},'watchtower'), construction: { ...game.town.construction, watchtower: { id: 'watchtower', apContributed: 11, completed: false } } } }
     game = executeCommand(game, projectCommand(game,'c01','watchtower')).state
     expect(game.town.construction.watchtower.completed).toBe(true)
     expect(game.town.defense).toBe(40)

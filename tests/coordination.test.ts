@@ -7,11 +7,12 @@ import { createInitialGame } from '../src/core/game'
 import type { BotMissionAssignment, GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
 import { advanceOneHour, advanceToHour } from '../src/simulation/advanceTime'
+import { bankFromCounts } from './bankFixtures'
 
 const bots=new BasicBotController()
 function clearPath(game:GameState,fromX:number,toX=0):GameState{const zones={...game.world.zones};for(let x=Math.min(fromX,toX);x<=Math.max(fromX,toX);x+=1){const key=zoneKey(x,0);zones[key]={...zones[key],discovered:true,zombies:0}}return{...game,world:{...game.world,zones}}}
 function mission(targetX:number,phase:BotMissionAssignment['phase']='outbound'):BotMissionAssignment{return{missionId:`test:${targetX}`,role:'scout',purpose:'explore',target:{x:targetX,y:0},targetLabel:`Scout [${targetX},0]`,reason:'test mission',phase,assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false}}
-function withWorkshopResources(game:GameState):GameState{return{...game,town:{...game.town,bank:{...game.town.bank,twisted_plank:10,wrought_iron:8}}}}
+function withWorkshopResources(game:GameState):GameState{return{...game,town:{...game.town,bank:bankFromCounts({twisted_plank:10,wrought_iron:8},'coordination')}}}
 
 describe('distributed citizen coordination',()=>{
   it('starts day one with staged scout teams instead of flooding all bots through the gate',()=>{

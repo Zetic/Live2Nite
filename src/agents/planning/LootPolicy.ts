@@ -30,6 +30,12 @@ const BASE_LOOT_VALUE: Record<ItemType, number> = {
   broken_staff: 16,
   broken_pathetic_penknife: 14,
   broken_human_bone: 12,
+  metal_support: 68,
+  patchwork_beam: 62,
+  sheet_metal: 58,
+  water_pistol: 64,
+  water_cooler_bottle: 66,
+  repair_kit: 60,
 }
 
 function missionBonus(mission: BotMissionAssignment | null, type: ItemType): number {

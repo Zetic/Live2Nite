@@ -1,5 +1,5 @@
 import { homeDefenseBonus } from './construction'
-import { homeDefenseFor } from './items'
+import { createItemInstance, homeDefenseFor } from './items'
 import type { Citizen, CitizenDailyState, CitizenHome, GameState, HomeImprovementId, HomeLevel, ItemType } from './types'
 
 export const BASE_HOME_STORAGE = 4
@@ -90,8 +90,8 @@ export function createStarterHome(citizenId: string): CitizenHome {
     defense: HOME_LEVELS.camp_bed.defense,
     storageCapacity: BASE_HOME_STORAGE,
     storage: [
-      { id: `starter-${citizenId}-doggy`, type: 'doggy_bag' },
-      { id: `starter-${citizenId}-welcome`, type: 'citizen_welcome_pack' },
+      createItemInstance(`starter-${citizenId}-doggy`, 'doggy_bag'),
+      createItemInstance(`starter-${citizenId}-welcome`, 'citizen_welcome_pack'),
     ],
     upgradedDay:null,
     improvements:{reinforcements:0,fence:0,storage:0},
