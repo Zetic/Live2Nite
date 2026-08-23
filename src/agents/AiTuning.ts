@@ -7,7 +7,7 @@ export const AI_TUNING = {
   assignmentCutoffHour: 22,
   scoutCutoffHour: 18,
   earlyScoutTarget: 4,
-  matureScoutTarget: 4,
+  matureScoutTarget: 2,
   earlyMapKnownZoneThreshold: 25,
   scoutTeamSize: 2,
   scoutSafetyReserve: 2,
@@ -21,6 +21,7 @@ export const AI_TUNING = {
   campingViabilityTargetPercent: 50,
   campingPlanningImprovementBudget: 3,
   staleIntelRoutePenalty: 1.5,
+  routineReconMaxDistance: 6,
   maxBotDecisionStepsPerHour: 64,
   maxReserveTownWorkStepsPerHour: 4,
 } as const
