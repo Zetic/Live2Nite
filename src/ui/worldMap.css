@@ -36,3 +36,4 @@
 .map-site-marker { top:1px; left:2px; color:#a9b8c0; }
 .map-rescue-marker { top:1px; right:2px; color:#efb070; }
 .map-depleted-marker { bottom:2px; right:2px; color:#b18c68; }
+.map-panel > p.map-key { display:none; }
