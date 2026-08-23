@@ -1,6 +1,7 @@
 import type { GameEvent, GameState } from '../../core/types'
 import { AI_TUNING } from '../AiTuning'
-import { chooseScoutTarget } from './RoutePlanner'
+import { isGateVolunteer } from '../coordination/TownCoordination'
+import { chooseFrontierTarget, chooseScoutTarget } from './RoutePlanner'
 import {
   acceptedAssignment,
   activeMissionCount,
@@ -14,6 +15,7 @@ import {
   normalCandidates,
 } from './AssignmentPolicy'
 import { knownNonTownZones, knownOpportunities, missionKey, type MissionOpportunity } from './MissionOpportunities'
+import { evaluateTownNeeds } from './TownNeeds'
 
 export {
   DEDICATED_RESCUE_RESERVE,
@@ -23,12 +25,22 @@ export {
   nightGateReserveCitizenId,
 } from './AssignmentPolicy'
 
+function resourceStarved(state: GameState): boolean {
+  const needs=evaluateTownNeeds(state)
+  return Boolean(needs.activeProject && Object.keys(needs.missingConstruction).length>0)
+}
+
 function scoutDesired(state: GameState): number {
   if (state.clock.hour >= AI_TUNING.scoutCutoffHour) return 0
   const discovered = knownNonTownZones(state).length
-  return discovered < AI_TUNING.earlyMapKnownZoneThreshold
+  const base=discovered < AI_TUNING.earlyMapKnownZoneThreshold
     ? AI_TUNING.earlyScoutTarget
     : AI_TUNING.matureScoutTarget
+  return resourceStarved(state)?base+AI_TUNING.resourceStarvationScoutBoost:base
+}
+
+function currentFieldClaims(state:GameState,pending:GameEvent[]):number{
+  return activeMissionCount(state)+pending.filter((event)=>event.type==='BOT_MISSION_ASSIGNED').length
 }
 
 export function planTownMissionAssignments(state: GameState, controlledCitizenId?: string): GameEvent[] {
@@ -40,11 +52,8 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
   const opportunities = knownOpportunities(state)
   const events: GameEvent[] = []
   const used = new Set<string>()
-  const dedicated = new Set(dedicatedRescueCitizenIds(state))
-  const gateReserve = nightGateReserveCitizenId(state)
   const rescueCandidates = allTownCandidates(state, controlledCitizenId)
-    .filter((citizen) => citizen.id !== gateReserve)
-    .sort((a, b) => Number(dedicated.has(b.id)) - Number(dedicated.has(a.id)))
+    .filter((citizen) => !isGateVolunteer(state,citizen.id))
 
   let rescueBudget = Math.min(AI_TUNING.maxRescueResponders, rescueCandidates.length)
   for (const opportunity of opportunities.filter((item) => item.emergency)) {
@@ -96,8 +105,9 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
     }
   }
 
-  // Scouting receives the first ordinary field budget. On later days these teams
-  // preferentially refresh stale productive/ruin routes before expanding the frontier.
+  // Scouting receives the first ordinary field budget. Public construction commitments
+  // already removed the citizens who volunteered to build this hour, so town work no
+  // longer acts as a blanket veto against everyone else leaving.
   const existingScouts = Object.values(state.botMissions)
     .filter((mission) => mission.role === 'scout' && mission.phase !== 'unload').length
     + events.filter((event) => event.type === 'BOT_MISSION_ASSIGNED' && event.mission.role === 'scout').length
@@ -136,6 +146,41 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
   for (const opportunity of opportunities.filter((item) => !item.emergency)) {
     if (newBudget <= 0) break
     assignOpportunity(opportunity)
+  }
+
+  // Distributed fallback: a citizen with usable AP can see that few people are outside,
+  // the Bank/construction is starving, and no public field claim covers the need. Those
+  // citizens volunteer for individual exploration instead of treating "no perfect mission"
+  // as a reason to sit in town. Resource starvation prefers new frontier information.
+  if(state.clock.hour<AI_TUNING.fallbackExplorationCutoffHour){
+    const starved=resourceStarved(state)
+    const desiredPresence=Math.ceil(livingBots*(starved?Math.max(0.30,AI_TUNING.minimumFieldPresenceFraction):AI_TUNING.minimumFieldPresenceFraction))
+    while(newBudget>0&&currentFieldClaims(state,events)<desiredPresence){
+      const citizen=candidates.find((candidate)=>!used.has(candidate.id)&&candidate.ap>=4)
+      if(!citizen)break
+      const frontier=starved?chooseFrontierTarget(state,citizen.id,assignedTargets):null
+      const choice=frontier?{zone:frontier,kind:'frontier' as const}:chooseScoutTarget(state,citizen.id,assignedTargets)
+      if(!choice)break
+      const target=choice.zone
+      const opportunity:MissionOpportunity={
+        missionId:`${missionKey('scout','explore',target.x,target.y)}:volunteer:${citizen.id}`,
+        role:'scout',
+        purpose:'explore',
+        target:{x:target.x,y:target.y},
+        targetLabel:`Volunteer ${choice.kind==='frontier'?'exploration':'recon'} [${target.x},${target.y}]`,
+        reason:starved
+          ? 'Construction is blocked by missing resources and field coverage is thin; I have usable AP, so exploring is better than waiting in town.'
+          : 'Few citizens are currently outside and I have safe usable AP, so I volunteered to improve the town map.',
+        desiredCitizens:1,
+        priority:70,
+        safetyReserve:AI_TUNING.scoutSafetyReserve,
+        emergency:false,
+      }
+      const before=events.length
+      assignOpportunity(opportunity)
+      if(events.length===before)break
+      assignedTargets.add(`${target.x},${target.y}`)
+    }
   }
 
   return events
