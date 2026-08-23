@@ -1,5 +1,5 @@
 import { getLegalActions } from '../../core/actions'
-import { CONSTRUCTIONS, constructionPriority, gateAutoCloseAtHour, gateLockedAtHour } from '../../core/construction'
+import { CONSTRUCTIONS, constructionPriority, gateAutoCloseAtHour } from '../../core/construction'
 import type { Citizen, ConstructionId, CoordinationCommitment, GameEvent, GameState } from '../../core/types'
 import { citizenNumber } from '../AgentIdentity'
 
@@ -52,7 +52,9 @@ export function constructionVolunteerCount(state: GameState, projectId: Construc
 }
 
 function automaticGateCoverage(state: GameState): boolean {
-  return gateAutoCloseAtHour(state, 23) || gateLockedAtHour(state, 23)
+  // A simple lock only prevents reopening. Manual closers are unnecessary only once a
+  // completed construction actually auto-closes the gate at the final pre-attack hour.
+  return gateAutoCloseAtHour(state, 23)
 }
 
 function commitmentId(state: GameState, citizenId: string, taskKey: string): string {
