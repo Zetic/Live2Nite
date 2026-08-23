@@ -37,10 +37,11 @@ describe('facility navigation', () => {
 })
 
 describe('undepleted and depleted scavenging', () => {
-  it('starts schema v13 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
+  it('starts schema v14 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
     const game = createInitialGame(123, 2)
-    expect(game.schemaVersion).toBe(13)
+    expect(game.schemaVersion).toBe(14)
     expect(game.botMissions).toEqual({})
+    expect(game.coordination.commitments).toEqual([])
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('twisted_plank')
     expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('wrought_iron')
