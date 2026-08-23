@@ -11,6 +11,7 @@ import { carried, pick } from './actions/actionSelectors'
 import { commitmentForCitizen, committedConstructionProject, reservedApForCitizen } from './coordination/TownCoordination'
 import { publicDefenseAssessment } from './planning/TownDefenseStrategy'
 import { planExpedition } from './planning/ExpeditionPlanner'
+import { opportunisticFieldAction } from './planning/LootPolicy'
 import { missionSafety } from './planning/MissionLifecycle'
 import { nextDirectionToward } from './planning/RoutePlanner'
 import { chooseTownWork } from './townWork'
@@ -45,6 +46,10 @@ export class BasicBotController implements AgentController {
       if(!mission&&reservedAp>=citizen.ap){
         const packages = packageSharingAction(citizen, actions, null, game.clock.hour)
         if (packages) return packages
+        const reservedHydration=hydrationAction(game,citizen,actions,{
+          forceThirstTreatment:game.clock.hour>=AI_TUNING.lateHydrationTreatmentHour,
+        })
+        if(reservedHydration)return reservedHydration
         return null
       }
 
@@ -104,6 +109,12 @@ export class BasicBotController implements AgentController {
       return null
     }
 
+    // Every controlled field tile gets a free-action pass before another movement AP is
+    // spent. Scouts, gatherers, rescuers and returning citizens all inspect the ground,
+    // search normal/depleted zones, and make contextual pickup/swap/cache decisions.
+    const opportunistic=opportunisticFieldAction(game,citizen,actions,mission)
+    if(opportunistic)return opportunistic
+
     if (citizen.status.hydration !== 'normal' && !carried(citizen, 'water_ration')) return controlAwareStepTowardTown(game, citizen, actions)
     if (!mission) return controlAwareStepTowardTown(game, citizen, actions)
     if (mission.phase === 'camp') return campingAction(game, citizen, actions)
@@ -127,16 +138,10 @@ export class BasicBotController implements AgentController {
         }
         return null
       }
-      const pickup = pick(actions, 'PICK_UP_ITEM')
-      if (pickup) return pickup
       if (mission.role === 'excavator') {
         const excavate = pick(actions, 'EXCAVATE_SPECIAL_SITE')
         if (excavate) return excavate
       }
-      const siteSearch = pick(actions, 'SEARCH_SPECIAL_SITE')
-      if (siteSearch) return siteSearch
-      const search = pick(actions, 'SEARCH_ZONE')
-      if (search) return search
       return null
     }
 
