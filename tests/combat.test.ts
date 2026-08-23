@@ -4,7 +4,7 @@ import { runBotHour } from '../src/agents/runBotHour'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
-import { NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
+import { createItemInstance, NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
 import type { GameCommand, GameState, ItemType } from '../src/core/types'
 import { zoneControl, zoneKey } from '../src/core/world'
 
@@ -54,6 +54,23 @@ describe('World Beyond combat', () => {
     expect(remaining).toBeGreaterThanOrEqual(0)
     expect(remaining).toBeLessThanOrEqual(4)
     expect(game.events.some((event) => event.type === 'COMBAT_RESOLVED' && event.method === 'water_bomb' && event.kills >= 1 && event.kills <= 5)).toBe(true)
+  })
+
+  it('depletes Water Pistol charges in place and disables the empty weapon',()=>{
+    let game=combatState('c01',3)
+    const pistol=createItemInstance('charged-pistol','water_pistol',{charges:2})
+    game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:[pistol]}:citizen)}
+    const beforeAp=game.citizens[0].ap
+    let use=getLegalActions(game,'c01').find((candidate)=>candidate.type==='USE_WEAPON'&&candidate.itemId==='charged-pistol')
+    expect(use).toBeTruthy()
+    game=executeCommand(game,use!).state
+    expect(game.citizens[0].inventory.find((item)=>item.id==='charged-pistol')?.state?.charges).toBe(1)
+    expect(game.citizens[0].ap).toBe(beforeAp)
+    use=getLegalActions(game,'c01').find((candidate)=>candidate.type==='USE_WEAPON'&&candidate.itemId==='charged-pistol')
+    expect(use).toBeTruthy()
+    game=executeCommand(game,use!).state
+    expect(game.citizens[0].inventory.find((item)=>item.id==='charged-pistol')?.state?.charges).toBe(0)
+    expect(getLegalActions(game,'c01').some((candidate)=>candidate.type==='USE_WEAPON'&&candidate.itemId==='charged-pistol')).toBe(false)
   })
 
   it('does not allow ordinary weapon use while exhausted', () => {
