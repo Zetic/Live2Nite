@@ -147,7 +147,7 @@ export function planLoadout(
   }
 
   const reservedLootSlots = Math.max(1, citizen.inventoryCapacity - supplies)
-  const hydrationReady=!routeHydrationNeed||water||citizen.daily.drank&&citizen.status.hydration==='normal'&&(options.desertStepsPlanned??0)<DESERT_STEPS_PER_HYDRATION_STAGE
+  const hydrationReady=!routeHydrationNeed||water
   return { water, food, weapon, weaponType, reservedLootSlots, potentialAp, wellWaterAllowed, hydrationReady }
 }
 
