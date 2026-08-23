@@ -1,16 +1,13 @@
 import { getLegalActions } from '../../core/actions'
 import type { BotMissionAssignment, Citizen, GameEvent, GameState } from '../../core/types'
 import { distanceToTown } from '../../core/world'
+import { citizenNumber } from '../AgentIdentity'
 import { AI_TUNING } from '../AiTuning'
 import { chooseTownWork } from '../townWork'
 import { planMission } from './ExpeditionPlanner'
 import type { MissionOpportunity } from './MissionOpportunities'
 
 export const DEDICATED_RESCUE_RESERVE = AI_TUNING.dedicatedRescueReserve
-
-function citizenNumber(citizenId: string): number {
-  return Number(citizenId.slice(1)) || 0
-}
 
 function returnByHour(citizenId: string): number {
   return AI_TUNING.returnHourBase + (citizenNumber(citizenId) % AI_TUNING.returnHourSpread)
