@@ -128,7 +128,16 @@ export function runBotHour(state: GameState, controller: AgentController, contro
 
       nextState = executeCommand(nextState, command).state
       const emitted = nextState.events.slice(beforeEvents)
-      if (objective === 'town_work' && emitted.some(meaningfulTownWork)) break
+      if (objective === 'town_work' && emitted.some(meaningfulTownWork)) {
+        const citizen=nextState.citizens.find((candidate)=>candidate.id===startingCitizen.id)
+        const reserved=reservedApForCitizen(nextState,startingCitizen.id)
+        const aggressive=nextState.clock.hour>=AI_TUNING.aggressiveTownApDumpHour
+        // Before the late window, one meaningful town action per hour preserves flexibility
+        // for later rescues/scouting. Once field dispatch is winding down, keep spending safe
+        // AP until the citizen reaches a real reserve instead of carrying it into midnight.
+        if(!aggressive||!citizen||citizen.ap<=reserved)break
+        continue
+      }
       if (objective === 'reserve') {
         reserveSteps += 1
         if (reserveSteps >= AI_TUNING.maxReserveTownWorkStepsPerHour) break
