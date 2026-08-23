@@ -104,8 +104,9 @@ export function runBotHour(state: GameState, controller: AgentController, contro
 
       const objective = chooseHourlyObjective(nextState, startingCitizen.id)
       if (objective === 'idle') break
-      if(objective==='reserve'&&reservedApForCitizen(nextState,startingCitizen.id)>=nextState.citizens.find((citizen)=>citizen.id===startingCitizen.id)!.ap)break
 
+      // A reserved AP floor limits AP-consuming work; it must not terminate the citizen's
+      // turn before zero-AP survival/inventory actions such as drinking water can run.
       const beforeEvents = nextState.events.length
       const command = controller.decide(createAgentDecisionContext(nextState), startingCitizen.id)
       if (!command) {
@@ -153,7 +154,7 @@ export function runBotHour(state: GameState, controller: AgentController, contro
   if (state.clock.hour === 23 && nextState.town.gateOpen) {
     const closer=gateCloser(nextState,controlledCitizenId)
     if (closer) {
-      const close = getLegalActions(nextState, closer.id).find((action) => action.type === 'CLOSE_GATE')
+      const close = getLegalActions(nextState, closer.id).find((action) => action.type==='CLOSE_GATE')
       if (close) nextState = executeCommand(nextState, close).state
     }
   }
