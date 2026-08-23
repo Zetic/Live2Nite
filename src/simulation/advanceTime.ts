@@ -8,6 +8,10 @@ import { runBotHour } from './runBotHour'
 
 export class InvalidTimeAdvanceError extends Error {}
 
+function temporaryControlExpiryEvents(state:GameState):GameEvent[]{
+  return state.citizens.flatMap((citizen)=>citizen.temporaryControl&&citizen.temporaryControl.grantedDay===state.day&&citizen.temporaryControl.grantedHour===state.clock.hour?[{type:'TEMPORARY_CONTROL_EXPIRED',day:state.day,hour:state.clock.hour,citizenId:citizen.id,zoneKey:citizen.temporaryControl.zoneKey} as GameEvent]:[])
+}
+
 export function advanceOneHour(
   state: GameState,
   controller: AgentController,
@@ -17,16 +21,17 @@ export function advanceOneHour(
   const currentHour = state.clock.hour
   const afterAutoSearch = runAutomaticSearches(state)
   const afterBots = runBotHour(afterAutoSearch, controller, controlledCitizenId)
+  const afterGraceExpiry=applyEvents(afterBots,temporaryControlExpiryEvents(afterBots))
   const toHour = nextClockHour(currentHour)
   const event: GameEvent = {
     type: 'TIME_ADVANCED',
-    day: afterBots.day,
+    day: afterGraceExpiry.day,
     hour: currentHour,
     fromHour: currentHour,
     toHour,
     phase: phaseForHour(toHour),
   }
-  return applyEvents(afterBots, [event])
+  return applyEvents(afterGraceExpiry, [event])
 }
 
 export function advanceToHour(
