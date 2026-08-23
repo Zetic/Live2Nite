@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { planTownCoordination } from '../src/agents/coordination/TownCoordination'
+import { BasicBotController } from '../src/agents/BasicBotController'
+import { gateBackupCitizenId, gatePrimaryCitizenId, planTownCoordination } from '../src/agents/coordination/TownCoordination'
 import { normalCandidates } from '../src/agents/planning/AssignmentPolicy'
 import { knownOpportunities } from '../src/agents/planning/MissionOpportunities'
 import { applyEvents } from '../src/core/events'
 import { createInitialGame } from '../src/core/game'
 import type { GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
+import { advanceOneHour } from '../src/simulation/advanceTime'
 
+const bots=new BasicBotController()
 function withWorkshopResources(game:GameState):GameState{return{...game,town:{...game.town,bank:{...game.town.bank,twisted_plank:10,wrought_iron:8}}}}
 
 describe('forum-like coordination primitives',()=>{
@@ -35,6 +38,20 @@ describe('forum-like coordination primitives',()=>{
     expect(builders.length).toBeGreaterThan(0)
     expect(builders.length).toBeLessThanOrEqual(4)
     expect(normalCandidates(state,'c01').length).toBeGreaterThan(0)
+  })
+
+  it('lets uncommitted citizens dump late-day AP into useful town work while gate volunteers keep one AP',()=>{
+    let game=withWorkshopResources(createInitialGame(7005,20))
+    game={...game,clock:{hour:18,phase:'day'}}
+    game=advanceOneHour(game,bots,'c01')
+    const contributions=game.events.filter((event)=>event.type==='CONSTRUCTION_AP_CONTRIBUTED'&&event.hour===18)
+    expect(contributions.length).toBeGreaterThan(6)
+    const primary=gatePrimaryCitizenId(game)
+    const backup=gateBackupCitizenId(game)
+    expect(primary).toBeTruthy()
+    expect(backup).toBeTruthy()
+    expect(game.citizens.find((citizen)=>citizen.id===primary)?.ap).toBeGreaterThanOrEqual(1)
+    expect(game.citizens.find((citizen)=>citizen.id===backup)?.ap).toBeGreaterThanOrEqual(1)
   })
 
   it('treats a nearby depleted safe zone as useful construction salvage',()=>{
