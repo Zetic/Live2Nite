@@ -21,6 +21,7 @@ export type CombinationRecipeId =
   | 'assemble_engine'
   | 'assemble_claymore'
   | 'assemble_torch'
+  | 'assemble_hacksaw'
   | 'mix_concrete'
   | 'fill_water_bomb'
   | 'reload_water_pistol'
