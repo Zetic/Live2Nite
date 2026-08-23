@@ -90,7 +90,7 @@ describe('field opportunism and hydration assurance',()=>{
   it('does not count an exhausted Well allowance as expedition water availability',()=>{
     let game=createInitialGame(8105,2)
     game=patchCitizen(game,'c02',{daily:{ate:false,drank:false,waterTaken:true},status:{hydration:'normal',desertStepsToday:8},inventory:[],home:{...game.citizens[1].home,storage:[]}})
-    game={...game,town:{...game.town,well:{water:50},bank:{}}}
+    game={...game,town:{...game.town,well:{water:50},bank:[]}}
     const citizen=game.citizens.find((candidate)=>candidate.id==='c02')!
     expect(wellAllowanceRemaining(game,citizen)).toBe(0)
     const loadout=planLoadout(game,citizen,'explore',4,0,{desertStepsPlanned:4})
