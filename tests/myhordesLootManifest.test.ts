@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MYHORDES_511_DEPLETED_SOURCE_LOOT, MYHORDES_511_NORMAL_SOURCE_LOOT, ordinaryNormalSourceLoot } from '../src/core/myhordesLootManifest'
+import { MYHORDES_NORMAL_LOOT_MAPPING, unmappedOrdinarySourceLootIds } from '../src/core/myhordesLootMapping'
 
 describe('pinned MyHordes loot manifest',()=>{
   it('keeps the exact depleted source table',()=>{
@@ -32,5 +33,20 @@ describe('pinned MyHordes loot manifest',()=>{
   it('does not duplicate raw source ids',()=>{
     const ids=MYHORDES_511_NORMAL_SOURCE_LOOT.map((entry)=>entry.sourceId)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('preserves source state when one Live2Nite type represents multiple MyHordes variants',()=>{
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['rsc_pack_2_#00']).toEqual({type:'resource_pack',state:{contents:2}})
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['rsc_pack_3_#00']).toEqual({type:'resource_pack',state:{contents:3}})
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['watergun_empty_#00']).toEqual({type:'water_pistol',state:{charges:0}})
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['pilegun_empty_#00']).toEqual({type:'battery_launcher',state:{charges:0}})
+  })
+
+  it('keeps still-unmapped ordinary ids visible instead of dropping them',()=>{
+    const pending=new Set(unmappedOrdinarySourceLootIds())
+    expect(pending.has('saw_tool_part_#00')).toBe(true)
+    expect(pending.has('food_noodles_#00')).toBe(true)
+    expect(pending.has('drug_#00')).toBe(true)
+    expect(pending.has('chair_basic_#00')).toBe(true)
   })
 })
