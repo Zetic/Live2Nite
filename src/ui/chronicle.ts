@@ -25,7 +25,7 @@ export function chronicleCategory(event: GameEvent): ChronicleCategory {
   switch (event.type) {
     case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': return 'bank'
     case 'COMBAT_RESOLVED': return 'combat'
-    case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': return 'scavenging'
+    case 'ZONE_DISCOVERED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'ITEM_DROPPED': return 'scavenging'
     case 'ZONE_OBSERVED': case 'CITIZEN_LOCATION_CHANGED': return 'travel'
     case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': return 'missions'
     case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'CONSTRUCTION_EXPIRED': case 'CONSTRUCTION_GENERATED_ITEM': case 'WORKSHOP_CONVERTED': return 'construction'
