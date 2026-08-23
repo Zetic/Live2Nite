@@ -19,6 +19,8 @@ Portable combinations use exact `ItemInstance` objects.
 - **World Beyond:** ingredients must all be in the Rucksack.
 - **Town Bank:** Bank items are never silently consumed by a portable combination. They must first be withdrawn into personal storage.
 
+Citizens doing town work can prepare a construction-relevant portable recipe by withdrawing its missing ingredients from the Bank through the normal legal action flow. The combination itself still consumes only the citizen's exact personal item instances.
+
 This preserves the normal command/event/reducer rule: `COMBINE_ITEMS -> ITEMS_COMBINED -> reducer`.
 
 ## Categories
@@ -33,9 +35,12 @@ Implemented source-backed combinations include:
 - Engine (incomplete) + Duct Tape + Handful of Nuts and Bolts + Wrought Iron + Compact Detonator + Human Bone -> Engine
 - Wire Reel + Semtex + Handful of Nuts and Bolts + Duct Tape -> Claymore Mine
 - Box of Matches + Rotting Log -> Torch
+- Bag of Cement + Water Ration -> Unshaped Concrete Block
 - Plastic Bag + Water Ration -> Water Bomb
 
 Assembly actions create a new physical object. Ingredients are consumed by exact instance ID.
+
+Bag of Cement is also source-backed as ordinary-zone scavenging loot (`ItemId.CONCRETE`, odds 17 in the pinned MyHordes item-drop dataset), so concrete blocks have a complete acquisition -> combination -> construction path rather than appearing only as finished loot.
 
 ### Reload / Refill
 
@@ -66,7 +71,7 @@ The Workshop is intentionally limited to three categories:
 2. **Dismantle** — salvage such as Broken Electronic Device and Mechanism.
 3. **Repair** — operations that specifically require Workshop tooling, currently damaged Repair Kit restoration.
 
-Telescope assembly and ordinary broken-weapon repair no longer appear in the Workshop.
+Telescope assembly, concrete mixing, and ordinary broken-weapon repair do not appear in the Workshop.
 
 ## Deferred recipes
 
