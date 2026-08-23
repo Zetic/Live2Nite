@@ -15,10 +15,10 @@ function command(game: GameState, citizenId: string, type: ReturnType<typeof get
 function outsideAt(game: GameState, x: number, y: number): GameState {return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, location: { type: 'world' as const, x, y } } : citizen) }}
 
 describe('facility navigation', () => {
-  it('keeps the primary navigation row fixed', () => {
+  it('keeps Town Records first in the primary navigation row', () => {
     const game=createInitialGame(123,2)
     const primary=PRIMARY_SCREENS.map((entry)=>entry.id)
-    expect(primary).toEqual(['home','well','bank','construction','world','citizens','chronicle'])
+    expect(primary).toEqual(['chronicle','home','well','bank','construction','world','citizens'])
     expect(availableScreens(game).map((entry)=>entry.id)).toEqual(primary)
     expect(primary).not.toContain('town')
   })
@@ -37,9 +37,9 @@ describe('facility navigation', () => {
 })
 
 describe('undepleted and depleted scavenging', () => {
-  it('starts schema v14 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
+  it('starts schema v15 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
     const game = createInitialGame(123, 2)
-    expect(game.schemaVersion).toBe(14)
+    expect(game.schemaVersion).toBe(15)
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
