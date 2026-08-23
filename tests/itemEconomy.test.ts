@@ -67,6 +67,17 @@ describe('schema v16 stateful item economy',()=>{
     expect(game.citizens.flatMap((citizen)=>citizen.home.storage).every((item)=>item.state!==undefined)).toBe(true)
   })
 
+  it('reloads current-schema stateful Bank objects without changing identity or state',()=>{
+    const game=createInitialGame(2604,1)
+    const pistol=createItemInstance('persist-v16-pistol','water_pistol',{charges:2})
+    const current={...game,town:{...game.town,bank:[...game.town.bank,pistol]}}
+    const loaded=migrateStoredGame(current as unknown as Record<string,unknown>)
+    const reloaded=loaded?.town.bank.find((item)=>item.id===pistol.id)
+    expect(loaded?.schemaVersion).toBe(16)
+    expect(reloaded).toEqual(pistol)
+    expect(reloaded?.state).toEqual({charges:2})
+  })
+
   it('materializes legacy Bank counts as unique normalized objects without colliding with existing IDs',()=>{
     const current=createInitialGame(2603,1)
     const existing=createItemInstance('i000007','water_pistol',{charges:1})
