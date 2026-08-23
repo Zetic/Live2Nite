@@ -1,5 +1,8 @@
 export const AI_TUNING = {
-  minimumTownReserveFraction: 0.15,
+  // Explicit primary/backup gate commitments now provide the important human-like town
+  // coverage. Keep only a very small generic floor instead of silently parking ~15% of
+  // the population in town all day.
+  minimumTownReserveFraction: 0.05,
   dedicatedRescueReserve: 0,
   maxRescueResponders: 5,
   dedicatedRescueApFloor: 1,
