@@ -95,7 +95,10 @@ export function allTownCandidates(state: GameState, controlledCitizenId?: string
 
 export function normalCandidates(state: GameState, controlledCitizenId?: string): Citizen[] {
   return allTownCandidates(state, controlledCitizenId)
-    .filter((citizen) => !commitmentForCitizen(state, citizen.id) && citizen.status.hydration === 'normal')
+    // Thirsty is a treatable expedition condition, not a reason to lose the whole day.
+    // The expedition planner can reserve/carry water and the citizen consumes it after
+    // spending current AP. Dehydrated remains excluded until immediate treatment occurs.
+    .filter((citizen) => !commitmentForCitizen(state, citizen.id) && citizen.status.hydration !== 'dehydrated')
 }
 
 export function assignmentEvent(state: GameState, citizen: Citizen, mission: BotMissionAssignment): GameEvent {
