@@ -1,9 +1,9 @@
 import { bankDefenseMultiplier, constructionTownDefense, constructionTownDefenseMultiplier, homeContributionRatio, homeDefenseBonus } from './construction'
-import { homeDefenseFor, bankDefenseFor } from './items'
-import type { GameState } from './types'
+import { bankDefenseFor, homeDefenseFor } from './items'
+import type { GameState, ItemType } from './types'
 
 export function bankTownDefense(state:GameState):number{
-  const raw=Object.entries(state.town.bank).reduce((sum,[type,count])=>sum+bankDefenseFor(type as keyof GameState['town']['bank'])*(count??0),0)
+  const raw=Object.entries(state.town.bank).reduce((sum,[type,count])=>sum+bankDefenseFor(type as ItemType)*(count??0),0)
   return Math.floor(raw*bankDefenseMultiplier(state))
 }
 
