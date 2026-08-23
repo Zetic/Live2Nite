@@ -63,7 +63,11 @@ function matchesState(item:ItemInstance,required:Partial<ItemState>|undefined):b
 export function workshopInputItems(state:GameState,recipeId:WorkshopRecipeId):ItemInstance[]{const recipe=WORKSHOP_RECIPES[recipeId];return state.town.bank.filter((item)=>item.type===recipe.input&&matchesState(item,recipe.inputState))}
 export function workshopRecipeStock(state:GameState,recipeId:WorkshopRecipeId):number{return workshopInputItems(state,recipeId).length}
 export function workshopRecipeInputItemIds(state:GameState,recipeId:WorkshopRecipeId):string[]{const recipe=WORKSHOP_RECIPES[recipeId];return workshopInputItems(state,recipeId).slice(0,recipe.inputCount).map((item)=>item.id)}
-export function workshopRecipeApCost(state:GameState,recipeId:WorkshopRecipeId):number{return Math.max(1,WORKSHOP_RECIPES[recipeId].apCost-workshopApDiscount(state))}
+export function carriedHacksawDiscount(state:GameState,citizenId:string|undefined):number{
+  if(!citizenId)return 0
+  return state.citizens.find((citizen)=>citizen.id===citizenId)?.inventory.some((item)=>item.type==='saw_tool')?1:0
+}
+export function workshopRecipeApCost(state:GameState,recipeId:WorkshopRecipeId,citizenId?:string):number{return Math.max(1,WORKSHOP_RECIPES[recipeId].apCost-workshopApDiscount(state)-carriedHacksawDiscount(state,citizenId))}
 export function canRunWorkshopRecipe(state:GameState,recipeId:WorkshopRecipeId):boolean{const recipe=WORKSHOP_RECIPES[recipeId];return state.town.construction.workshop.completed&&workshopRecipeStock(state,recipeId)>=recipe.inputCount}
 export function resolveWorkshopRecipeOutput(rngState:number,recipeId:WorkshopRecipeId):{output:ItemType;outputCount:number;outputState?:ItemState;preserveInputId?:boolean;rngStateAfter?:number}{
   const recipe=WORKSHOP_RECIPES[recipeId]
