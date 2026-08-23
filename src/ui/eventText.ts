@@ -13,7 +13,7 @@ export function citizenName(game: GameState, citizenId: string): string {
 export function describeEvent(event: GameEvent, game: GameState): string {
   switch (event.type) {
     case 'AP_SPENT': return `${citizenName(game,event.citizenId)} spent ${event.amount} AP.`
-    case 'GATE_SET': return `${citizenName(game,event.citizenId)} ${event.open?'opened':'closed'} the gate.`
+    case 'GATE_SET': return event.citizenId==='system'?`The Automatic Piston Lock ${event.open?'opened':'closed'} the gate.`:`${citizenName(game,event.citizenId)} ${event.open?'opened':'closed'} the gate.`
     case 'CITIZEN_LOCATION_CHANGED': return event.location.type==='town' ? `${citizenName(game,event.citizenId)} returned to town.` : `${citizenName(game,event.citizenId)} moved to [${event.location.x},${event.location.y}].`
     case 'CITIZEN_STATUS_CHANGED': {
       const name=citizenName(game,event.citizenId)
@@ -60,6 +60,8 @@ export function describeEvent(event: GameEvent, game: GameState): string {
     case 'HOME_UPGRADED': return `${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
     case 'CONSTRUCTION_AP_CONTRIBUTED': return `${citizenName(game,event.citizenId)} contributed ${event.amount} AP to ${CONSTRUCTIONS[event.projectId].name}.`
     case 'CONSTRUCTION_COMPLETED': return `${CONSTRUCTIONS[event.projectId].name} was completed by ${citizenName(game,event.citizenId)}.`
+    case 'CONSTRUCTION_EXPIRED': return `${CONSTRUCTIONS[event.projectId].name} was consumed during the attack and can be rebuilt.`
+    case 'CONSTRUCTION_GENERATED_ITEM': return `${CONSTRUCTIONS[event.projectId].name} produced ${event.amount} ${itemName(event.itemType)}${event.amount===1?'':'s'} for the Bank.`
     case 'WORKSHOP_CONVERTED': {
       const recipe=WORKSHOP_RECIPES[event.recipeId]
       return `${citizenName(game,event.citizenId)} used the Workshop: ${event.inputCount} ${itemName(recipe.input)} → ${event.outputCount} ${itemName(recipe.output)}.`
@@ -93,7 +95,7 @@ export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'sy
     case 'DAY_STARTED': case 'WORLD_ZOMBIES_EVOLVED': return 'night'
     case 'ZONE_DISCOVERED': case 'ZONE_OBSERVED': case 'ZONE_CONTROL_RESTORED': case 'TEMPORARY_CONTROL_GRANTED': case 'TEMPORARY_CONTROL_EXPIRED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': case 'CAMP_IMPROVED': case 'CAMP_IMPROVEMENTS_DECAYED': case 'CITIZEN_HIDING_SET': return 'world'
     case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'CONSTRUCTION_KIT_OPENED': case 'ITEM_CONSUMED': case 'HOME_UPGRADED': return 'home'
-    case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'WORKSHOP_CONVERTED': case 'GATE_SET': return 'town'
+    case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'CONSTRUCTION_EXPIRED': case 'CONSTRUCTION_GENERATED_ITEM': case 'WORKSHOP_CONVERTED': case 'GATE_SET': return 'town'
     default: return 'system'
   }
 }
