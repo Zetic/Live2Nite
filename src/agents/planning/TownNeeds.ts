@@ -1,6 +1,6 @@
 import { workingWeaponTypes } from '../../core/combat'
-import { missingMaterials, prioritizedConstruction } from '../../core/construction'
 import type { ConstructionId, GameState, ItemType } from '../../core/types'
+import { publicDefenseAssessment, strategicConstructionNeed, type PublicDefenseAssessment } from './TownDefenseStrategy'
 
 export interface TownNeeds {
   livingCitizens: number
@@ -10,6 +10,7 @@ export interface TownNeeds {
   foodLow: boolean
   weaponsLow: boolean
   waterPerCitizen: number
+  defense: PublicDefenseAssessment
 }
 
 function townWeaponCount(state: GameState): number {
@@ -18,8 +19,9 @@ function townWeaponCount(state: GameState): number {
 
 export function evaluateTownNeeds(state: GameState): TownNeeds {
   const livingCitizens = state.citizens.filter((citizen) => citizen.alive).length
-  const activeProject = prioritizedConstruction(state)[0] ?? null
-  const missingConstruction = activeProject ? missingMaterials(state, activeProject) : {}
+  const strategic=strategicConstructionNeed(state)
+  const activeProject = strategic.projectId
+  const missingConstruction = strategic.missing
   const primaryConstructionNeed = (Object.entries(missingConstruction)
     .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]?.[0] as ItemType | undefined) ?? null
   return {
@@ -30,5 +32,6 @@ export function evaluateTownNeeds(state: GameState): TownNeeds {
     foodLow: (state.town.bank.food ?? 0) < Math.max(2, Math.ceil(livingCitizens / 8)),
     weaponsLow: townWeaponCount(state) < Math.max(3, Math.ceil(livingCitizens / 8)),
     waterPerCitizen: livingCitizens > 0 ? state.town.well.water / livingCitizens : 0,
+    defense:publicDefenseAssessment(state),
   }
 }
