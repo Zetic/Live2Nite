@@ -4,6 +4,8 @@ import { executeCommand } from '../src/core/commands'
 import { CONSTRUCTIONS } from '../src/core/construction'
 import { MYHORDES_CURRENT_CONSTRUCTION_COSTS } from '../src/core/constructionEconomy'
 import { createInitialGame } from '../src/core/game'
+import { NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
+import { SPECIAL_SITES } from '../src/core/specialSites'
 import type { GameState, WorkshopRecipeId } from '../src/core/types'
 import { bankFromCounts, bankCount as countBank } from './bankFixtures'
 
@@ -32,6 +34,13 @@ describe('current MyHordes construction cost layer',()=>{
 
     expect(CONSTRUCTIONS.false_town.apCost).toBe(400)
     expect(CONSTRUCTIONS.false_town.resources).toEqual({nuts_and_bolts:15,twisted_plank:20,wrought_iron:20,patchwork_beam:20,metal_support:20})
+  })
+
+  it('keeps source-backed acquisition paths and Telescope recipe-only',()=>{
+    expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('human_flesh')
+    expect(NORMAL_SCAVENGE_LOOT_POOL).not.toContain('telescope')
+    const siteLoot=Object.values(SPECIAL_SITES).flatMap((site)=>site.lootPool)
+    expect(siteLoot).not.toContain('telescope')
   })
 })
 
