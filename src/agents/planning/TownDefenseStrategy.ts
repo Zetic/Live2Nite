@@ -17,8 +17,8 @@ export interface PublicDefenseAssessment {
   reason: string
 }
 
-function pressureFor(defense:number,min:number|null,max:number|null,gateOpen:boolean):DefensePressure{
-  if(gateOpen)return'critical'
+function pressureFor(defense:number,min:number|null,max:number|null,gateExposure:boolean):DefensePressure{
+  if(gateExposure)return'critical'
   if(min===null||max===null)return'uncertain'
   if(defense>=max)return'comfortable'
   if(defense<min){const gap=min-defense;return gap>=25||defense<min*0.8?'critical':'shortfall'}
@@ -29,16 +29,20 @@ function pressureFor(defense:number,min:number|null,max:number|null,gateOpen:boo
  * Public town threat model. It intentionally never calls attackStrengthForDay and therefore
  * cannot know tonight's deterministic horde value. Watchtower ranges are used when available;
  * otherwise citizens extrapolate conservatively from the previous public Night Report.
+ *
+ * The gate is routinely open for daytime expeditions, so that state is not treated as a defense
+ * emergency until the late pre-attack window. Gate volunteers remain responsible for closing it.
  */
 export function publicDefenseAssessment(state:GameState):PublicDefenseAssessment{
+  const gateExposure=state.town.gateOpen&&state.clock.hour>=22
   const tower=watchtowerEstimate(state)
   if(tower){
     const townDefense=tower.townDefense
-    const pressure=pressureFor(townDefense,tower.min,tower.max,state.town.gateOpen)
+    const pressure=pressureFor(townDefense,tower.min,tower.max,gateExposure)
     return{
       source:'watchtower',expectedMin:tower.min,expectedMax:tower.max,townDefense,
       marginLow:townDefense-tower.min,marginHigh:townDefense-tower.max,pressure,
-      reason:state.town.gateOpen?'The gate is open, so shared defense will not apply.':pressure==='comfortable'?'Current defense covers the full Watchtower estimate.':pressure==='critical'?'Current defense is below the Watchtower minimum by a dangerous margin.':pressure==='shortfall'?'Current defense is below the Watchtower minimum.':'Current defense covers part, but not all, of the Watchtower estimate.',
+      reason:gateExposure?'The gate is still open close to the attack, so shared defense is exposed.':pressure==='comfortable'?'Current defense covers the full Watchtower estimate.':pressure==='critical'?'Current defense is below the Watchtower minimum by a dangerous margin.':pressure==='shortfall'?'Current defense is below the Watchtower minimum.':'Current defense covers part, but not all, of the Watchtower estimate.',
     }
   }
 
@@ -48,14 +52,18 @@ export function publicDefenseAssessment(state:GameState):PublicDefenseAssessment
     // conservative planning anchor rather than reading the current hidden attack roll.
     const expectedMin=Math.max(1,state.lastNight.attackStrength)
     const expectedMax=Math.max(expectedMin,Math.ceil(expectedMin*1.35))
-    const pressure=pressureFor(townDefense,expectedMin,expectedMax,state.town.gateOpen)
+    const pressure=pressureFor(townDefense,expectedMin,expectedMax,gateExposure)
     return{
       source:'history',expectedMin,expectedMax,townDefense,
       marginLow:townDefense-expectedMin,marginHigh:townDefense-expectedMax,pressure,
-      reason:state.town.gateOpen?'The gate is open, so shared defense will not apply.':pressure==='comfortable'?'Defense exceeds the conservative range inferred from last night.':pressure==='critical'?'Defense is dangerously below the previous attack level.':pressure==='shortfall'?'Defense is below the previous attack level.':'Without a Watchtower, citizens are planning from last night and cannot be sure the town is safe.',
+      reason:gateExposure?'The gate is still open close to the attack, so shared defense is exposed.':pressure==='comfortable'?'Defense exceeds the conservative range inferred from last night.':pressure==='critical'?'Defense is dangerously below the previous attack level.':pressure==='shortfall'?'Defense is below the previous attack level.':'Without a Watchtower, citizens are planning from last night and cannot be sure the town is safe.',
     }
   }
-  return{source:'none',expectedMin:null,expectedMax:null,townDefense,marginLow:null,marginHigh:null,pressure:state.town.gateOpen?'critical':'uncertain',reason:state.town.gateOpen?'The gate is open, so shared defense will not apply.':'No Watchtower estimate or previous attack exists yet; tonight remains uncertain.'}
+  return{
+    source:'none',expectedMin:null,expectedMax:null,townDefense,marginLow:null,marginHigh:null,
+    pressure:gateExposure?'critical':'uncertain',
+    reason:gateExposure?'The gate is still open close to the attack, so shared defense is exposed.':'No Watchtower estimate or previous attack exists yet; tonight remains uncertain.',
+  }
 }
 
 function defensiveUtility(projectId:ConstructionId):boolean{
