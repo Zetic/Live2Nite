@@ -6,6 +6,7 @@ import { planTownMissionAssignments } from '../src/agents/planning/TownMissionPl
 import { createInitialGame } from '../src/core/game'
 import type { GameState } from '../src/core/types'
 import { runBotHour } from '../src/simulation/runBotHour'
+import { bankFromCounts } from './bankFixtures'
 
 const bots=new BasicBotController()
 
@@ -72,7 +73,7 @@ describe('bot AP utilization discipline',()=>{
       ...initial,
       day:2,
       clock:{hour:20,phase:'day'},
-      town:{...initial.town,bank:{...initial.town.bank,twisted_plank:10,wrought_iron:8}},
+      town:{...initial.town,bank:bankFromCounts({twisted_plank:10,wrought_iron:8},'ap-utilization')},
       coordination:{commitments:[{
         id:'late-work',
         citizenId:'c02',
