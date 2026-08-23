@@ -43,13 +43,11 @@ function missionBonus(mission: BotMissionAssignment | null, type: ItemType): num
 
 function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null):number {
   let score = BASE_LOOT_VALUE[type] + missionBonus(mission, type)
-
   const directlyMissing = needs.missingConstruction[type] ?? 0
   if (directlyMissing > 0) score += 70 + Math.min(20, directlyMissing * 4)
   if (type === 'rotten_log' && (needs.missingConstruction.twisted_plank ?? 0) > 0) score += 36
   if (type === 'scrap_metal' && (needs.missingConstruction.wrought_iron ?? 0) > 0) score += 36
   if (type === 'construction_kit' && Object.keys(needs.missingConstruction).length > 0) score += 28
-
   if (type === 'food' && needs.foodLow) score += 45
   if (isWeapon(type) && needs.weaponsLow) score += 35
   if (type === 'water_ration') {
@@ -58,7 +56,6 @@ function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:Bo
     if (needs.waterPerCitizen < 1) score += 55
     else if (needs.waterPerCitizen < 2) score += 24
   }
-
   if (type === 'old_door' && (needs.defense.pressure === 'critical' || needs.defense.pressure === 'shortfall')) score += 45
   return score
 }
@@ -83,16 +80,11 @@ function isProtectedCarry(state: GameState, citizen: Citizen, item: ItemInstance
 function pickupAction(actions: GameCommand[], itemId: string): GameCommand | null {
   return actions.find((action) => action.type === 'PICK_UP_ITEM' && action.itemId === itemId) ?? null
 }
-
 function dropAction(actions: GameCommand[], itemId: string): GameCommand | null {
   return actions.find((action) => action.type === 'DROP_ITEM' && action.itemId === itemId) ?? null
 }
 
-/**
- * Free field actions happen before another movement AP is spent. Town-need context is
- * evaluated once per decision so frequent zero-AP searches/pickups do not repeatedly run
- * the strategic construction/defense scorer while comparing individual rucksack items.
- */
+/** Free field actions happen before another movement AP is spent. */
 export function opportunisticFieldAction(
   state: GameState,
   citizen: Citizen,
@@ -100,8 +92,8 @@ export function opportunisticFieldAction(
   mission: BotMissionAssignment | null,
 ): GameCommand | null {
   if (citizen.location.type !== 'world') return null
-  const needs=evaluateTownNeeds(state)
-  const score=(type:ItemType)=>scoreWithNeeds(needs,citizen,type,mission)
+  let needs:TownNeeds|null=null
+  const score=(type:ItemType)=>scoreWithNeeds(needs??(needs=evaluateTownNeeds(state)),citizen,type,mission)
   const zone = state.world.zones[zoneKey(citizen.location.x,citizen.location.y)]
   const ground = zone?.groundItems.length
     ? [...zone.groundItems].sort((a,b)=>score(b.type)-score(a.type))[0]??null
@@ -110,8 +102,6 @@ export function opportunisticFieldAction(
   if (ground) {
     const groundValue = score(ground.type)
     if (citizen.inventory.length < citizen.inventoryCapacity) {
-      // Keep deeper-expedition capacity instead of immediately picking a relay item back
-      // up after deliberately caching it. High-value finds still override that reserve.
       const preserveTargetSlots = mission?.phase === 'outbound' && citizen.inventory.length >= citizen.inventoryCapacity - 2
       if (!preserveTargetSlots || groundValue >= 88 || mission?.phase === 'return') {
         const pickup = pickupAction(actions,ground.id)
@@ -127,17 +117,13 @@ export function opportunisticFieldAction(
     }
   }
 
-  // Search every safe eligible tile, including depleted tiles. Searches cost 0 AP and
-  // place their result on the ground, where the next decision can evaluate it against
-  // the current rucksack instead of blindly forcing a pickup.
+  // Search first when there is no better visible pickup. These free actions need no town
+  // strategic scoring at all, which keeps dense route scavenging cheap.
   const specialSearch = actions.find((action) => action.type === 'SEARCH_SPECIAL_SITE') ?? null
   if (specialSearch) return specialSearch
   const search = actions.find((action) => action.type === 'SEARCH_ZONE') ?? null
   if (search) return search
 
-  // Outbound citizens may leave middling town-useful materials in a safe near-town cell
-  // to preserve capacity for deeper finds. Returning citizens naturally collect these
-  // caches because the ground-pickup pass above also runs on the return route.
   if(mission&&!mission.emergency&&mission.phase==='outbound'){
     const distance=distanceToTown(citizen.location.x,citizen.location.y)
     const targetDistance=distanceToTown(mission.target.x,mission.target.y)
@@ -157,12 +143,10 @@ export function opportunisticFieldAction(
 
 export function shouldReturnWithHaul(state: GameState, citizen: Citizen, mission: BotMissionAssignment): boolean {
   if (citizen.location.type !== 'world' || mission.emergency || mission.phase === 'return' || mission.phase === 'camp') return false
+  const carried=citizen.inventory.filter((item)=>!['consumable','weapon'].includes(ITEMS[item.type].category))
+  if(!carried.length)return false
   const needs=evaluateTownNeeds(state)
-  const valuable = citizen.inventory
-    .filter((item) => !['consumable','weapon'].includes(ITEMS[item.type].category))
-    .map((item) => scoreWithNeeds(needs,citizen,item.type,mission))
-    .sort((a,b) => b-a)
-  if (!valuable.length) return false
+  const valuable=carried.map((item)=>scoreWithNeeds(needs,citizen,item.type,mission)).sort((a,b)=>b-a)
   if (valuable[0] >= 130 && distanceToTown(citizen.location.x,citizen.location.y) >= 2) return true
   return valuable.length >= 2 && valuable[0] + valuable[1] >= 210
 }
