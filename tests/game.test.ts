@@ -4,6 +4,7 @@ import { getLegalActions } from '../src/core/actions'
 import { executeCommand, InvalidCommandError } from '../src/core/commands'
 import { totalTownDefense } from '../src/core/defense'
 import { createInitialGame } from '../src/core/game'
+import { consumableKind } from '../src/core/items'
 import type { ConstructionId, GameCommand, GameState, ItemType } from '../src/core/types'
 import { STARTING_WELL_MAX, STARTING_WELL_MIN } from '../src/core/well'
 import { zoneControl, zoneKey } from '../src/core/world'
@@ -70,7 +71,7 @@ describe('Citizen homes, starter supplies, and well', () => {
     const beforeLength = game.citizens[0].home.storage.length
     game = executeCommand(game, itemCommand(game,'c01','OPEN_CONTAINER',bag.id)).state
     expect(game.citizens[0].home.storage).toHaveLength(beforeLength)
-    expect(game.citizens[0].home.storage.some((item) => item.type === 'food')).toBe(true)
+    expect(game.citizens[0].home.storage.some((item) => consumableKind(item.type) === 'food')).toBe(true)
     expect(game.citizens[0].home.storage.some((item) => item.type === 'doggy_bag')).toBe(false)
   })
 
