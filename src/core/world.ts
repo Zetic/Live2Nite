@@ -1,7 +1,17 @@
 import { NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
 import { SPECIAL_SITES, SPECIAL_SITE_ORDER } from './specialSites'
-import type { Direction, GameState, ItemType, SpecialSiteState, WorldState, WorldZone } from './types'
+import type {
+  Citizen,
+  Direction,
+  GameState,
+  ItemType,
+  SpecialSiteState,
+  WorldState,
+  WorldZone,
+  ZoneControlState,
+  ZoneIntelState,
+} from './types'
 
 export const WORLD_MIN_X = -7
 export const WORLD_MAX_X = 6
@@ -14,6 +24,7 @@ export const NORMAL_ZONE_SEARCH_MAX = 7
 export function zoneKey(x: number, y: number): string { return `${x},${y}` }
 export function isTownGateZone(x: number, y: number): boolean { return x === 0 && y === 0 }
 export function distanceToTown(x: number, y: number): number { return Math.abs(x) + Math.abs(y) }
+export function emptyZoneIntel():ZoneIntelState{return{observedZombies:null,lastObservedDay:null,lastObservedHour:null}}
 
 function generateSpecialSite(type: SpecialSiteState['type'], rngState: number): { site: SpecialSiteState; rngState: number } {
   const excavation = randomInt(rngState, 3, 7)
@@ -62,21 +73,19 @@ export function addSpecialSites(world: WorldState, seed: number): WorldState {
 
 export function createWorld(seed: number): { world: WorldState; rngState: number } {
   const zones: Record<string, WorldZone> = {}
+  const intel:Record<string,ZoneIntelState>={}
   let rngState = seed >>> 0 || 1
   for (let y = WORLD_MIN_Y; y <= WORLD_MAX_Y; y += 1) {
     for (let x = WORLD_MIN_X; x <= WORLD_MAX_X; x += 1) {
       const key = zoneKey(x, y)
       if (isTownGateZone(x, y)) {
         zones[key] = { x, y, discovered: true, zombies: 0, searchesRemaining: 0, searchedBy: [], depletedSearchedBy: [], hiddenLoot: [], groundItems: [], campImprovements: 0 }
+        intel[key]={observedZombies:0,lastObservedDay:1,lastObservedHour:1}
         continue
       }
       const distance = Math.abs(x) + Math.abs(y)
       const zombieRoll = randomInt(rngState, 0, Math.min(12, 2 + Math.floor(distance / 2)))
       rngState = zombieRoll.state
-      // Surviving play guidance describes one ordinary citizen commonly taking about
-      // twelve hours (~six two-hour autosearches) to exhaust a productive zone. The
-      // original server formula is not recovered, so Live2Nite uses a 5–7 envelope
-      // rather than the old 1–3 placeholder that starved the Day-1 economy.
       const searchRoll = randomInt(rngState, NORMAL_ZONE_SEARCH_MIN, NORMAL_ZONE_SEARCH_MAX)
       rngState = searchRoll.state
       const hiddenLoot: ItemType[] = []
@@ -86,9 +95,10 @@ export function createWorld(seed: number): { world: WorldState; rngState: number
         hiddenLoot.push(NORMAL_SCAVENGE_LOOT_POOL[lootRoll.value])
       }
       zones[key] = { x, y, discovered: false, zombies: zombieRoll.value, searchesRemaining: searchRoll.value, searchedBy: [], depletedSearchedBy: [], hiddenLoot, groundItems: [], campImprovements: 0 }
+      intel[key]=emptyZoneIntel()
     }
   }
-  const base: WorldState = { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minY: WORLD_MIN_Y, maxY: WORLD_MAX_Y, zones }
+  const base: WorldState = { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minY: WORLD_MIN_Y, maxY: WORLD_MAX_Y, zones, intel }
   return { world: addSpecialSites(base, seed), rngState }
 }
 
@@ -102,10 +112,48 @@ export function moveCoordinates(x: number, y: number, direction: Direction): { x
   }
 }
 
+export function citizensInZone(state:GameState,x:number,y:number):Citizen[]{return state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world'&&citizen.location.x===x&&citizen.location.y===y)}
+
 export function zoneControl(state: GameState, x: number, y: number): { humans: number; humanPoints: number; zombies: number; zombiePoints: number; trapped: boolean } {
-  const humans = state.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world' && citizen.location.x === x && citizen.location.y === y).length
+  const humans = citizensInZone(state,x,y).length
   const zombies = getZone(state.world, x, y)?.zombies ?? 0
   const humanPoints = humans * 2
   const zombiePoints = zombies
   return { humans, humanPoints, zombies, zombiePoints, trapped: zombiePoints > humanPoints }
+}
+
+export function temporaryControlActive(state:GameState,citizenId:string):boolean{
+  const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
+  if(!citizen?.alive||citizen.location.type!=='world'||!citizen.temporaryControl)return false
+  return citizen.temporaryControl.zoneKey===zoneKey(citizen.location.x,citizen.location.y)
+    && citizen.temporaryControl.grantedDay===state.day
+    && citizen.temporaryControl.grantedHour===state.clock.hour
+}
+
+export function departureWouldLoseControl(state:GameState,citizenId:string):boolean{
+  const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
+  if(!citizen?.alive||citizen.location.type!=='world')return false
+  const control=zoneControl(state,citizen.location.x,citizen.location.y)
+  if(control.trapped)return false
+  const remaining=Math.max(0,control.humans-1)
+  return remaining>0&&control.zombiePoints>remaining*2
+}
+
+export function zoneControlState(state:GameState,x:number,y:number,citizenId?:string):ZoneControlState{
+  const control=zoneControl(state,x,y)
+  if(!control.trapped){
+    const fragile=control.humans>1&&control.zombiePoints>(control.humans-1)*2
+    return fragile?'fragile':'secure'
+  }
+  if(citizenId&&temporaryControlActive(state,citizenId))return'temporary'
+  const residents=citizensInZone(state,x,y)
+  if(residents.some((citizen)=>temporaryControlActive(state,citizen.id)))return'temporary'
+  return'trapped'
+}
+
+export function canCitizenMoveFromZone(state:GameState,citizenId:string):boolean{
+  const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
+  if(!citizen||citizen.location.type!=='world')return false
+  const control=zoneControl(state,citizen.location.x,citizen.location.y)
+  return !control.trapped||temporaryControlActive(state,citizenId)
 }
