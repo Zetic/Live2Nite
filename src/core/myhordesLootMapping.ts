@@ -9,9 +9,9 @@ export interface MyHordesLootMapping {
 const mapped=(type:ItemType,state?:ItemState):MyHordesLootMapping=>({type,...(state?{state}:{})})
 
 /**
- * High-confidence source-id mappings whose Live2Nite item already has a meaningful gameplay
- * path. Missing ids are deliberately left missing: they are the Part 2 dependency backlog, not
- * candidates to silently prune from the final normal-zone table.
+ * High-confidence source-id -> Live2Nite identity mappings. This is intentionally distinct from
+ * "mechanics ready": some mapped containers/items still have downstream dependencies to close
+ * before the full normal-zone table can be activated.
  */
 export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHordesLootMapping>>>={
   'wood2_#00':mapped('twisted_plank'),
@@ -78,6 +78,6 @@ export function mappedOrdinaryNormalSourceLoot():Array<{source:MyHordesSourceLoo
   return result
 }
 
-export function pendingOrdinarySourceLootIds():string[]{
+export function unmappedOrdinarySourceLootIds():string[]{
   return ordinaryNormalSourceLoot().filter((source)=>!MYHORDES_NORMAL_LOOT_MAPPING[source.sourceId]).map((source)=>source.sourceId)
 }
