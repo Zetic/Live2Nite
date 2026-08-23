@@ -1,5 +1,6 @@
 import type { Direction, GameState, WorldZone } from '../../core/types'
 import { distanceToTown, getZone, moveCoordinates } from '../../core/world'
+import { citizenNumber } from '../AgentIdentity'
 import { createAgentWorldKnowledge, type AgentWorldKnowledge } from '../WorldKnowledge'
 
 export interface Coord { x: number; y: number }
@@ -58,7 +59,7 @@ export function frontierZones(state: GameState): WorldZone[] {
 }
 
 function sectorPenalty(citizenId: string, zone: WorldZone): number {
-  const sector = (Number(citizenId.slice(1)) || 0) % 4
+  const sector = citizenNumber(citizenId) % 4
   if (sector === 0) return zone.y >= 0 ? 0 : 5
   if (sector === 1) return zone.x >= 0 ? 0 : 5
   if (sector === 2) return zone.y <= 0 ? 0 : 5
@@ -76,7 +77,7 @@ export function chooseFrontierTarget(
     && !excluded.has(`${zone.x},${zone.y}`))
   if (!unknown.length) return null
 
-  const preferredRadius = 3 + ((Number(citizenId.slice(1)) || 0) % 4)
+  const preferredRadius = 3 + (citizenNumber(citizenId) % 4)
   return [...unknown].sort((a, b) => {
     const crowdA = state.citizens.filter((citizen) =>
       citizen.alive
