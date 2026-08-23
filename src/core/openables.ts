@@ -31,6 +31,7 @@ const MELEE_BOX_OPENERS:readonly ItemType[]=[
   'adjustable_spanner','box_cutter','human_bone','machete','pathetic_penknife','chain',
   'serrated_knife','staff','can_opener','screwdriver','swiss_army_knife',
 ]
+const MAIN_OPENERS:readonly ItemType[]=['saw_tool','can_opener','screwdriver','swiss_army_knife']
 
 const resourcePackTable:WeightedLootTable={
   id:'myhordes.resource_pack',
@@ -96,10 +97,9 @@ const canMorphTable:WeightedLootTable={
 export const OPENABLES:Partial<Record<ItemType,OpenableDefinition>>={
   resource_pack:{type:'resource_pack',source:'MYHORDES_CURRENT',mode:'remaining_contents',outputTable:resourcePackTable},
   doggy_bag:{type:'doggy_bag',source:'MYHORDES_CURRENT',mode:'consume',outputTable:doggyBagTable},
-  // MyHordes can_#00 uses the "main" opener family. Saw Tool is the remaining ordinary source
-  // opener dependency; these three already-live equivalents are reusable and not consumed.
-  can:{type:'can',source:'MYHORDES_CURRENT',mode:'consume',morphTo:'open_can',openableBy:['can_opener','screwdriver','swiss_army_knife'],outputTable:canMorphTable},
-  // chest_food_#00 and chest_tools_#00 both use the source "melee" opener family.
+  // MyHordes can_#00 uses the "main" opener family: Hacksaw, Can Opener, Screwdriver, Swiss Army Knife.
+  can:{type:'can',source:'MYHORDES_CURRENT',mode:'consume',morphTo:'open_can',openableBy:MAIN_OPENERS,outputTable:canMorphTable},
+  // chest_food_#00 and chest_tools_#00 use the distinct source "melee" opener family.
   food_box:{type:'food_box',source:'MYHORDES_CURRENT',mode:'consume',openableBy:MELEE_BOX_OPENERS,outputTable:foodBoxTable},
   // MyHordes CHEST_TOOLS.openableBy also includes CHAIR_BASIC, PC and HURLING_STICK. The first
   // two land with their own ordinary-item mechanics; HURLING_STICK remains event-gated.
