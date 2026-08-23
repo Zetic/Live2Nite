@@ -1,6 +1,6 @@
 import type { GameEvent, GameState } from '../../core/types'
 import { AI_TUNING } from '../AiTuning'
-import { chooseFrontierTarget } from './RoutePlanner'
+import { chooseScoutTarget } from './RoutePlanner'
 import {
   acceptedAssignment,
   activeMissionCount,
@@ -34,6 +34,9 @@ function scoutDesired(state: GameState): number {
 export function planTownMissionAssignments(state: GameState, controlledCitizenId?: string): GameEvent[] {
   if (state.clock.phase !== 'day' || state.clock.hour >= AI_TUNING.assignmentCutoffHour) return []
 
+  // Opportunities are intentionally captured before this hour's scouts execute. That
+  // means reconnaissance can unlock a larger party on a later hourly planning pass,
+  // not instantaneously in the same dispatch batch.
   const opportunities = knownOpportunities(state)
   const events: GameEvent[] = []
   const used = new Set<string>()
@@ -43,7 +46,7 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
     .filter((citizen) => citizen.id !== gateReserve)
     .sort((a, b) => Number(dedicated.has(b.id)) - Number(dedicated.has(a.id)))
 
-  let rescueBudget = Math.min(AI_TUNING.dedicatedRescueReserve, rescueCandidates.length)
+  let rescueBudget = Math.min(AI_TUNING.maxRescueResponders, rescueCandidates.length)
   for (const opportunity of opportunities.filter((item) => item.emergency)) {
     let remaining = Math.max(0, opportunity.desiredCitizens - existingForMission(state, opportunity.missionId))
     while (remaining > 0 && rescueBudget > 0) {
@@ -93,11 +96,8 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
     }
   }
 
-  for (const opportunity of opportunities.filter((item) => !item.emergency)) {
-    if (newBudget <= 0) break
-    assignOpportunity(opportunity)
-  }
-
+  // Scouting receives the first ordinary field budget. On later days these teams
+  // preferentially refresh stale productive/ruin routes before expanding the frontier.
   const existingScouts = Object.values(state.botMissions)
     .filter((mission) => mission.role === 'scout' && mission.phase !== 'unload').length
     + events.filter((event) => event.type === 'BOT_MISSION_ASSIGNED' && event.mission.role === 'scout').length
@@ -106,8 +106,9 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
   while (scoutsNeeded > 0 && newBudget > 0) {
     const citizen = candidates.find((candidate) => !used.has(candidate.id))
     if (!citizen) break
-    const target = chooseFrontierTarget(state, citizen.id, assignedTargets)
-    if (!target) break
+    const targetChoice = chooseScoutTarget(state, citizen.id, assignedTargets)
+    if (!targetChoice) break
+    const target=targetChoice.zone
     const missionId = missionKey('scout', 'explore', target.x, target.y)
     const teamSize = Math.min(AI_TUNING.scoutTeamSize, scoutsNeeded, newBudget)
     const opportunity: MissionOpportunity = {
@@ -115,10 +116,12 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
       role: 'scout',
       purpose: 'explore',
       target: { x: target.x, y: target.y },
-      targetLabel: `Scout [${target.x},${target.y}]`,
-      reason: 'A two-citizen scout team expands route and zombie knowledge before larger resource parties mobilize.',
+      targetLabel: `${targetChoice.kind==='recon'?'Recon':'Scout'} [${target.x},${target.y}]`,
+      reason: targetChoice.kind==='recon'
+        ? 'Refresh stale zombie intelligence along a useful route before larger parties mobilize.'
+        : 'Expand route and zombie knowledge into an unknown frontier sector.',
       desiredCitizens: teamSize,
-      priority: 80,
+      priority: targetChoice.kind==='recon'?110:80,
       safetyReserve: AI_TUNING.scoutSafetyReserve,
       emergency: false,
     }
@@ -128,6 +131,11 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
     if (added === 0) break
     assignedTargets.add(`${target.x},${target.y}`)
     scoutsNeeded -= added
+  }
+
+  for (const opportunity of opportunities.filter((item) => !item.emergency)) {
+    if (newBudget <= 0) break
+    assignOpportunity(opportunity)
   }
 
   return events
