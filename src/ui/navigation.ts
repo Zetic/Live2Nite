@@ -11,13 +11,13 @@ export interface ScreenDefinition {
 export interface FacilityScreenDefinition extends ScreenDefinition { projectId: ConstructionId }
 
 export const PRIMARY_SCREENS: readonly ScreenDefinition[] = [
+  { id: 'chronicle', label: 'Town Records', short: 'Bulletin, history & statistics' },
   { id: 'home', label: 'Home', short: 'Private storage', townOnly: true },
   { id: 'well', label: 'The Well', short: 'Daily water', townOnly: true },
   { id: 'bank', label: 'The Bank', short: 'Shared inventory', townOnly: true },
   { id: 'construction', label: 'Construction Sites', short: 'Town projects', townOnly: true },
   { id: 'world', label: 'World Beyond', short: 'Gate & expeditions' },
   { id: 'citizens', label: 'Citizens', short: 'Population' },
-  { id: 'chronicle', label: 'Town Records', short: 'History & statistics' },
 ]
 
 const FACILITY_DEFINITIONS: readonly FacilityScreenDefinition[] = [
