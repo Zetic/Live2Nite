@@ -69,15 +69,60 @@ Pinned MyHordes output weights:
 | Copper Pipe | 13 |
 | Battery | 12 |
 
-The generated source metadata lists Toolbox openers including Chair, PC, Adjustable Spanner, Cutter, Human Bone, CUTCUT, Small Knife, Chain, Knife, Staff, Can Opener, Screwdriver, Swiss Knife, and Hurling Stick. Human Bone and Staff are already implemented and therefore immediately provide legitimate opening paths; the remaining ordinary source tools are dependencies of the full normal-loot graph.
+The generated source metadata lists Toolbox openers including Chair, PC, Adjustable Spanner, Cutter, Human Bone, CUTCUT, Small Knife, Chain, Knife, Staff, Can Opener, Screwdriver, Swiss Knife, and Hurling Stick.
 
-The opener is not consumed by the MyHordes open action.
+The following ordinary source opener mappings are now implemented end-to-end and accepted by the Toolbox action:
+
+- `WRENCH` -> Adjustable Spanner;
+- `CUTTER` -> Box Cutter;
+- `BONE` -> Human Bone;
+- `CUTCUT` -> Machete;
+- `SMALL_KNIFE` -> Pathetic Penknife;
+- `CHAIN` -> Chain;
+- `KNIFE` -> Serrated Knife;
+- `STAFF` -> Staff;
+- `CAN_OPENER` -> Can Opener;
+- `SCREW` -> Screwdriver;
+- `SWISS_KNIFE` -> Swiss Army Knife.
+
+Chair and PC remain ordinary-item dependencies to close before the complete normal-zone table is activated. Hurling Stick is event-gated and is intentionally not promoted to ordinary loot. Toolbox openers are reusable; the opening action does not consume them.
+
+The new ordinary tool families are real breakable weapons rather than inert keys. Pinned generated MyHordes combat values currently represented as confirmed are:
+
+| Tool | Kill chance | Kills | Break chance |
+| --- | ---: | ---: | ---: |
+| Human Bone | 100% | 1 | 80% |
+| Pathetic Penknife | 15% | 1 | 45% |
+| Serrated Knife | 100% | 1 | 33% |
+| Machete | 100% | 2 | 25% |
+| Adjustable Spanner | 33% | 1 | 20% |
+| Screwdriver | 20% | 1 | 40% |
+| Swiss Army Knife | 15% | 1 | 50% |
+| Box Cutter | 60% | 1 | 70% |
+| Chain | 50% | 1 | 25% |
+| Can Opener | 50% | 1 | 100% |
+
+All have matching broken forms and portable Repair Kit / Kwik-Fix restoration paths. The generated 5.1.1 Staff break group is internally inconsistent (60/60); Staff therefore remains explicitly marked approximate until the current-source audit resolves it.
+
+### Citizen's Welcome Pack
+
+The pinned `spawn_c_chest` table is:
+
+| Output | Weight |
+| --- | ---: |
+| Shoe | 10 |
+| Battery | 20 |
+| Box of Matches | 25 |
+| Pharmaceutical Products | 25 |
+| Radio Cassette Player (empty/off) | 20 |
+
+Battery, matches and pharmaceutical products are already meaningful. The Shoe and Radio Cassette Player are being closed before this pack is migrated from its legacy simplified pool. The Shoe participates in MyHordes' EP progression, while the radio consumes a Battery to enter its powered form; these mechanics are dependencies, not entries to omit from the table.
 
 ## Activation policy
 
 A source table is activated when its ordinary dependency graph is mechanically meaningful. This is sequencing, not balance tuning and not permission to delete source entries.
 
-The depleted table is already closed (`WOOD_BAD` 20 / `METAL_BAD` 12), because Rotting Log and Scrap Metal both have Workshop processing paths.
+The depleted table is closed (`WOOD_BAD` 20 / `METAL_BAD` 12), because Rotting Log and Scrap Metal both have Workshop processing paths. Depleted-zone `SEARCH_ZONE` now resolves directly through this source-weighted table and advances deterministic RNG state.
 
 The full normal-zone table is activated only after its ordinary entries and downstream mechanics are implemented. During development, focused tests may inject newly implemented items directly before their complete acquisition layer is switched on.
 
