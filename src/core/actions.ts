@@ -113,6 +113,7 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
   }
 
   if (citizen.inventory.length < citizen.inventoryCapacity) for (const item of zone.groundItems) actions.push({ type: 'PICK_UP_ITEM', citizenId, itemId: item.id })
+  for (const item of citizen.inventory) actions.push({ type: 'DROP_ITEM', citizenId, itemId: item.id })
   if (zone.zombies > 0 && citizen.ap > 0) {
     for (const item of citizen.inventory) {
       const weapon = weaponDefinition(item.type)
