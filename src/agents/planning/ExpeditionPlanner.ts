@@ -49,16 +49,19 @@ export function planMission(state: GameState, citizenId: string, mission: BotMis
   // zombie reads go through WorldKnowledge so future stale-intel rules do not require
   // auditing every expedition calculation for authoritative-world leaks.
   const targetZombies = knownZombieCount(state, mission.target.x, mission.target.y) ?? 4
-  const roundTripLoadout = planLoadout(state, citizen, mission.purpose, roundTripRequiredAp, targetZombies)
-  const roundTripFeasible = roundTripLoadout.potentialAp >= roundTripRequiredAp
+  const roundTripLoadout = planLoadout(state, citizen, mission.purpose, roundTripRequiredAp, targetZombies, {
+    desertStepsPlanned: route.length + returnAp,
+  })
+  const roundTripFeasible = roundTripLoadout.potentialAp >= roundTripRequiredAp && roundTripLoadout.hydrationReady
   const overnightRequiredAp = route.length + expectedTaskAp + gateCost + mission.safetyReserve
   const overnightLoadout = mission.allowsCamping
-    ? planLoadout(state, citizen, mission.purpose, overnightRequiredAp, targetZombies, { overnight: true })
+    ? planLoadout(state, citizen, mission.purpose, overnightRequiredAp, targetZombies, { overnight: true, desertStepsPlanned: route.length })
     : roundTripLoadout
 
-  // Water already consumed today still counts as overnight hydration security. This
-  // lets a bot drink the ration it deliberately packed without invalidating its camp.
-  const overnightWaterReady = overnightLoadout.water || citizen.daily.drank
+  // Water already consumed today still counts as overnight hydration security only when
+  // the planned outbound travel does not create a new hydration requirement. Longer
+  // routes must actually carry another ration.
+  const overnightWaterReady = overnightLoadout.hydrationReady && (overnightLoadout.water || citizen.daily.drank)
   const overnightFeasible = Boolean(
     mission.allowsCamping
     && overnightWaterReady

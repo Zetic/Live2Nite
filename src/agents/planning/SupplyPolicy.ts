@@ -1,4 +1,6 @@
 import { isWeapon, weaponDefinition, workingWeaponTypes } from '../../core/combat'
+import { wellDailyWithdrawals } from '../../core/construction'
+import { DESERT_STEPS_PER_HYDRATION_STAGE } from '../../core/status'
 import type { BotMissionPurpose, Citizen, GameState, ItemType } from '../../core/types'
 import { citizenNumber } from '../AgentIdentity'
 import { evaluateTownNeeds } from './TownNeeds'
@@ -15,9 +17,10 @@ export interface ExpeditionLoadout {
   reservedLootSlots: number
   potentialAp: number
   wellWaterAllowed: boolean
+  hydrationReady: boolean
 }
 
-export interface LoadoutOptions { overnight?: boolean }
+export interface LoadoutOptions { overnight?: boolean; desertStepsPlanned?: number }
 
 export function waterPolicyForState(state: GameState): WaterPolicy {
   const ratio = evaluateTownNeeds(state).waterPerCitizen
@@ -49,14 +52,25 @@ function hasFoodPotential(citizen: Citizen, state: GameState): boolean {
       && (citizen.home.storage.some((item) => item.type === 'doggy_bag') || (state.town.bank.food ?? 0) > 0))
 }
 
+export function wellAllowanceRemaining(state:GameState,citizen:Citizen):number {
+  const taken=Number(citizen.daily.waterTaken)+Number(Boolean(citizen.daily.bonusWaterTaken))
+  return Math.max(0,wellDailyWithdrawals(state)-taken)
+}
+
 function hasWaterPotential(citizen: Citizen, state: GameState): boolean {
   return accessibleHas(citizen, 'water_ration')
     || (citizen.location.type === 'town'
-      && ((state.town.bank.water_ration ?? 0) > 0 || state.town.well.water > 0))
+      && ((state.town.bank.water_ration ?? 0) > 0
+        || (state.town.well.water > 0 && wellAllowanceRemaining(state,citizen)>0)))
 }
 
 function waterCanRefreshAp(citizen: Citizen): boolean {
   return !citizen.daily.drank && citizen.status.hydration !== 'dehydrated'
+}
+
+function projectedHydrationNeed(citizen:Citizen,desertStepsPlanned:number):boolean {
+  if(citizen.status.hydration!=='normal')return true
+  return citizen.status.desertStepsToday+Math.max(0,desertStepsPlanned)>=DESERT_STEPS_PER_HYDRATION_STAGE
 }
 
 function availableWeapon(citizen: Citizen, state: GameState, targetZombies: number): ItemType | null {
@@ -94,18 +108,20 @@ export function planLoadout(
   let water = false
   let food = false
   const hydrationNeed = citizen.status.hydration !== 'normal'
+  const routeHydrationNeed=projectedHydrationNeed(citizen,options.desertStepsPlanned??0)
   const policy = waterPolicyForState(state)
   const overnight = Boolean(options.overnight)
   const wellWaterAllowed = citizen.location.type === 'town'
-    && (hydrationNeed || canUseWellForPurpose(state, citizen.id, purpose) || (overnight && policy !== 'critical'))
+    && wellAllowanceRemaining(state,citizen)>0
+    && (hydrationNeed || routeHydrationNeed || canUseWellForPurpose(state, citizen.id, purpose) || (overnight && policy !== 'critical'))
   const waterAccessible = hasWaterPotential(citizen, state)
     && (accessibleHas(citizen, 'water_ration')
       || (citizen.location.type === 'town' && ((state.town.bank.water_ration ?? 0) > 0 || wellWaterAllowed)))
 
-  // A thirsty citizen may carry water and deliberately consume it later, after current AP
-  // has been spent. That future refill still counts as expedition capacity; it is not a
-  // reason to drink at 6/6 before leaving town.
-  if ((overnight || hydrationNeed || requiredAp > potentialAp) && waterAccessible) {
+  // Water is packed not only for AP range but whenever the planned desert movement is
+  // likely to create Thirst. Hydration safety overrides ordinary Well rationing policy;
+  // a citizen should not accept a route that predictably creates an untreated condition.
+  if ((overnight || hydrationNeed || routeHydrationNeed || requiredAp > potentialAp) && waterAccessible) {
     water = true
     if (waterCanRefreshAp(citizen)) potentialAp += citizen.maxAp
   }
@@ -131,7 +147,8 @@ export function planLoadout(
   }
 
   const reservedLootSlots = Math.max(1, citizen.inventoryCapacity - supplies)
-  return { water, food, weapon, weaponType, reservedLootSlots, potentialAp, wellWaterAllowed }
+  const hydrationReady=!routeHydrationNeed||water
+  return { water, food, weapon, weaponType, reservedLootSlots, potentialAp, wellWaterAllowed, hydrationReady }
 }
 
 export function shouldUseRefill(citizen: Citizen, remainingRequiredAp: number, kind: 'food' | 'water'): boolean {

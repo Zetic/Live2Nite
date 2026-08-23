@@ -223,6 +223,7 @@ export type GameCommand =
   | { type: 'EXCAVATE_SPECIAL_SITE'; citizenId: string }
   | { type: 'SEARCH_SPECIAL_SITE'; citizenId: string }
   | { type: 'PICK_UP_ITEM'; citizenId: string; itemId: string }
+  | { type: 'DROP_ITEM'; citizenId: string; itemId: string }
   | { type: 'ATTACK_BAREHANDED'; citizenId: string }
   | { type: 'USE_WEAPON'; citizenId: string; itemId: string }
   | { type: 'IMPROVE_CAMP'; citizenId: string }
@@ -264,6 +265,7 @@ export type GameEvent = (
   | { type: 'SPECIAL_SITE_EXCAVATED'; day: number; zoneKey: string; citizenId: string; amount: number }
   | { type: 'SPECIAL_SITE_SEARCHED'; day: number; zoneKey: string; citizenId: string; item: ItemInstance | null }
   | { type: 'ITEM_PICKED_UP'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
+  | { type: 'ITEM_DROPPED'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
   | { type: 'COMBAT_RESOLVED'; day: number; citizenId: string; zoneKey: string; method: CombatMethod; kills: number; item: ItemInstance | null; consumed: boolean; brokenInto?: ItemType; rngStateAfter: number }
   | { type: 'ITEM_DEPOSITED'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_WITHDRAWN'; day: number; citizenId: string; item: ItemInstance }

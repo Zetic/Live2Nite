@@ -3,6 +3,7 @@ import type { BotMissionAssignment, BotMissionPhase, Citizen, GameEvent, GameSta
 import { distanceToTown, isTownGateZone, zoneControl, zoneKey } from '../../core/world'
 import { AI_TUNING } from '../AiTuning'
 import { planMission } from './ExpeditionPlanner'
+import { shouldReturnWithHaul } from './LootPolicy'
 import { routeBetween } from './RoutePlanner'
 
 export interface MissionSafety {
@@ -141,15 +142,14 @@ export function nextMissionLifecycleEvent(state: GameState, citizenId: string): 
     return null
   }
 
-  const plan = planMission(state, citizenId, mission)
-  const plannedCamp = Boolean(
-    mission.overnightPlanned === true
-    && plan?.campingPlanned
-    && canPrepareCamp(state, citizen, mission),
-  )
+  // Ordinary same-day missions never need a new expedition plan merely because a free
+  // search or pickup changed the event stream. Only an explicitly overnight-planned
+  // mission needs to re-evaluate camping feasibility here.
+  const plannedCamp = mission.overnightPlanned === true
+    && Boolean(planMission(state,citizenId,mission)?.campingPlanned)
+    && canPrepareCamp(state,citizen,mission)
 
   if (citizen.location.type === 'world' && mission.phase !== 'return') {
-    const safety = missionSafety(state, citizenId)
     if (state.clock.hour >= mission.returnByHour) {
       if (plannedCamp) return phaseEvent(state, citizenId, mission, 'camp')
       return phaseEvent(state, citizenId, mission, 'return')
@@ -157,6 +157,10 @@ export function nextMissionLifecycleEvent(state: GameState, citizenId: string): 
     if (citizen.inventory.length >= citizen.inventoryCapacity && !plannedCamp) {
       return phaseEvent(state, citizenId, mission, 'return')
     }
+    if (shouldReturnWithHaul(state,citizen,mission) && !plannedCamp) {
+      return phaseEvent(state,citizenId,mission,'return')
+    }
+    const safety=missionSafety(state,citizenId)
     if (!mission.emergency && safety.usableAp <= safety.requiredAp && !plannedCamp) {
       return phaseEvent(state, citizenId, mission, 'return')
     }
