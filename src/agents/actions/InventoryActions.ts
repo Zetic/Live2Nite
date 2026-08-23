@@ -127,14 +127,22 @@ export function prepareLoadout(citizen: Citizen, actions: GameCommand[], plan: E
 
 export function refillAction(citizen: Citizen, actions: GameCommand[], remaining: number): GameCommand | null {
   const water = carried(citizen, 'water_ration')
-  if (water && shouldUseRefill(citizen, remaining, 'water')) {
+  const food = carried(citizen, 'food')
+
+  // Water is both AP capacity and hydration treatment. When hydration is still normal,
+  // spend food first so a later water refill resets desert-travel debt closer to home.
+  // Once Thirsty/Dehydrated, treatment takes priority immediately.
+  if (citizen.status.hydration !== 'normal' && water && shouldUseRefill(citizen, remaining, 'water')) {
     const drink = itemAction(actions, 'DRINK_ITEM', water.id)
     if (drink) return drink
   }
-  const food = carried(citizen, 'food')
   if (food && shouldUseRefill(citizen, remaining, 'food')) {
     const eat = itemAction(actions, 'EAT_ITEM', food.id)
     if (eat) return eat
+  }
+  if (water && shouldUseRefill(citizen, remaining, 'water')) {
+    const drink = itemAction(actions, 'DRINK_ITEM', water.id)
+    if (drink) return drink
   }
   return null
 }
