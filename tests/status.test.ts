@@ -72,9 +72,14 @@ describe('citizen hydration status',()=>{
     expect(game.citizens[0].status.hydration).toBe('normal')
   })
 
-  it('makes a thirsty town bot seek and drink water before ordinary work',()=>{
+  it('does not burn a water ration at full AP merely because a bot is Thirsty',()=>{
     let game=createInitialGame(505,2)
     game=withCitizen(game,'c02',{status:{hydration:'thirsty',desertStepsToday:0}})
+    const fullApDecision=bots.decide(game,'c02')
+    expect(fullApDecision?.type).not.toBe('TAKE_WATER')
+    expect(fullApDecision?.type).not.toBe('DRINK_ITEM')
+
+    game=withCitizen(game,'c02',{ap:1,status:{hydration:'thirsty',desertStepsToday:0}})
     const first=bots.decide(game,'c02')
     expect(first?.type).toBe('TAKE_WATER')
     game=executeCommand(game,first!).state
@@ -82,5 +87,6 @@ describe('citizen hydration status',()=>{
     expect(second?.type).toBe('DRINK_ITEM')
     game=executeCommand(game,second!).state
     expect(game.citizens[1].status.hydration).toBe('normal')
+    expect(game.citizens[1].ap).toBe(6)
   })
 })
