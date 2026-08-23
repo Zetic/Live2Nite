@@ -30,9 +30,9 @@ function withWorkshopResources(game: GameState): GameState {return { ...game, to
 function withInventory(game: GameState, types: ItemType[]): GameState {return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) } : citizen) }}
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v14 citizens at 1 AM with starter home, packages, hydration, camping, control, and coordination state', () => {
+  it('starts schema v15 citizens at 1 AM with starter home, packages, hydration, camping, control, and coordination state', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(14)
+    expect(game.schemaVersion).toBe(15)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
