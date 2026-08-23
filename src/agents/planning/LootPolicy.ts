@@ -102,7 +102,7 @@ function lowestDroppableCarry(state: GameState, citizen: Citizen, mission: BotMi
 }
 
 function relayCacheCandidate(state: GameState, citizen: Citizen, mission: BotMissionAssignment | null): ItemInstance | null {
-  if (!mission || mission.phase !== 'outbound' || citizen.location.type !== 'world') return null
+  if (!mission || mission.emergency || mission.phase !== 'outbound' || citizen.location.type !== 'world') return null
   const distance = distanceToTown(citizen.location.x,citizen.location.y)
   const targetDistance = distanceToTown(mission.target.x,mission.target.y)
   if (distance < 1 || distance > 3 || targetDistance <= distance + 1) return null
@@ -135,8 +135,10 @@ export function opportunisticFieldAction(
   if (ground) {
     const groundValue = lootScore(state,citizen,ground.type,mission)
     if (citizen.inventory.length < citizen.inventoryCapacity) {
-      const preserveTargetSlot = mission?.phase === 'outbound' && citizen.inventory.length >= citizen.inventoryCapacity - 1
-      if (!preserveTargetSlot || groundValue >= 88 || mission?.phase === 'return') {
+      // Keep deeper-expedition capacity instead of immediately picking a relay item back
+      // up after deliberately caching it. High-value finds still override that reserve.
+      const preserveTargetSlots = mission?.phase === 'outbound' && citizen.inventory.length >= citizen.inventoryCapacity - 2
+      if (!preserveTargetSlots || groundValue >= 88 || mission?.phase === 'return') {
         const pickup = pickupAction(actions,ground.id)
         if (pickup) return pickup
       }
