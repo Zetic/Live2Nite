@@ -33,7 +33,7 @@ describe('Home defense', () => {
     expect(getLegalActions(game, 'c01').some((candidate) => candidate.type === 'UPGRADE_HOME')).toBe(false)
   })
 
-  it('makes an Old Door at home worth 1 personal defense and 1 shared town defense', () => {
+  it('keeps home objects at full personal defense while only 40% contributes to shared town defense', () => {
     let game = createInitialGame(101, 1)
     game = {
       ...game,
@@ -44,6 +44,19 @@ describe('Home defense', () => {
     const store = getLegalActions(game, 'c01').find((candidate) => candidate.type === 'MOVE_ITEM_TO_HOME' && candidate.itemId === 'door')
     game = executeCommand(game, store!).state
     expect(personalDefense(game.citizens[0])).toBe(1)
+    expect(totalTownDefense(game)).toBe(40)
+
+    game = {
+      ...game,
+      citizens: game.citizens.map((citizen) => citizen.id === 'c01'
+        ? { ...citizen, home: { ...citizen.home, storage: [
+          { id: 'door-1', type: 'old_door' },
+          { id: 'door-2', type: 'old_door' },
+          { id: 'door-3', type: 'old_door' },
+        ] } }
+        : citizen),
+    }
+    expect(personalDefense(game.citizens[0])).toBe(3)
     expect(totalTownDefense(game)).toBe(41)
   })
 })
