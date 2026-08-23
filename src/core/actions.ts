@@ -62,7 +62,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     if(nextHome&&citizen.home.upgradedDay!==state.day&&citizen.ap>=nextHome.apCost&&hasPersonalMaterials(citizen,nextHome.resources))actions.push({type:'UPGRADE_HOME',citizenId})
     if(citizen.home.level!=='camp_bed'){for(const improvementId of Object.keys(HOME_IMPROVEMENTS) as HomeImprovementId[]){const nextLevel=improvementNextLevel(citizen,improvementId);if(nextLevel===null)continue;const definition=HOME_IMPROVEMENTS[improvementId];if(citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})}}
     if(citizen.ap>=CONSTRUCTION_AP_COST){for(const projectId of constructionFrontier(state))if(hasProjectMaterials(state,projectId))actions.push({type:'CONTRIBUTE_CONSTRUCTION',citizenId,projectId})}
-    if(state.town.construction.workshop.completed){for(const recipeId of WORKSHOP_RECIPE_ORDER)if(citizen.ap>=workshopRecipeApCost(state,recipeId)&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})}
+    if(state.town.construction.workshop.completed){for(const recipeId of WORKSHOP_RECIPE_ORDER)if(citizen.ap>=workshopRecipeApCost(state,recipeId,citizen.id)&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})}
     if(state.town.gateOpen){if(citizen.ap>=GATE_AP_COST)actions.push({type:'CLOSE_GATE',citizenId});actions.push({type:'EXIT_TOWN',citizenId})}else if(citizen.ap>=GATE_AP_COST&&!gateLockedAtHour(state,state.clock.hour))actions.push({type:'OPEN_GATE',citizenId})
     return actions
   }
