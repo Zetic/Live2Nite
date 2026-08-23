@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { refillAction } from '../src/agents/actions/InventoryActions'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { applyEvents } from '../src/core/events'
@@ -40,5 +41,12 @@ describe('source food AP targets',()=>{
     game=applyEvents(game,[{type:'DAY_STARTED',day:2,hour:1}])
     expect(game.citizens[0].ap).toBe(6)
     expect(game.citizens[0].daily.ate).toBe(false)
+  })
+
+  it('lets bot refill logic use any ordinary source food instead of only the legacy food type',()=>{
+    const game=withFood('vegetable')
+    const citizen=game.citizens[0]
+    const actions=getLegalActions(game,citizen.id)
+    expect(refillAction(citizen,actions,3)).toEqual({type:'EAT_ITEM',citizenId:'c01',itemId:'meal'})
   })
 })
