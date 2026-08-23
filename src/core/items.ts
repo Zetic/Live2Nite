@@ -26,6 +26,7 @@ const resource=(type:ItemType,name:string,purpose:string,capabilities:ItemCapabi
 const container=(type:ItemType,name:string,purpose:string,state?:ItemStateSchema):ItemDefinition=>def({type,name,purpose,category:'container',displayCategory:'containers',capabilities:state?.contents?['container','stateful_container']:['container'],state,source:'MYHORDES_CURRENT'})
 const sourceWeapon=(type:ItemType,name:string,purpose:string):ItemDefinition=>def({type,name,purpose,category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'})
 const brokenSourceWeapon=(type:ItemType,name:string):ItemDefinition=>def({type,name:`Broken ${name}`,purpose:`A broken ${name}. Repair it anywhere with a Repair Kit or Kwik-Fix.`,category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'MYHORDES_CURRENT'})
+const sourceFood=(type:ItemType,name:string):ItemDefinition=>def({type,name,purpose:'Ordinary MyHordes food. Eating restores the normal daily food AP refresh and consumes the item.',category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'MYHORDES_CURRENT',consumableKind:'food'})
 
 export const ITEMS:Record<ItemType,ItemDefinition>={
   rotten_log:def({type:'rotten_log',name:'Rotting Log',purpose:'Low-quality resource found abundantly in depleted zones. The Workshop converts it into a Twisted Plank.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
@@ -73,7 +74,14 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   battery_launcher:def({type:'battery_launcher',name:'Battery Launcher 1-ITF',purpose:'Reloadable improvised weapon recovered empty from electronic salvage. Combine with a Battery to load one shot.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','charge_bearing'],state:{charges:{min:0,max:1,initial:0}},source:'MYHORDES_CURRENT'}),
   construction_kit:def({type:'construction_kit',name:'Construction Kit',purpose:'Legacy Live2Nite container retained for save compatibility while MyHordes Resource Packs replace its acquisition role.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE'}),
   water_ration:def({type:'water_ration',name:'Water Ration',purpose:'Drinking treats hydration and can refresh AP once per day when AP is missing. It also refills several portable items.',category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'DIE2NITE_ARCHIVE',consumableKind:'water'}),
-  food:def({type:'food',name:'Mouldy Ham Sandwich',purpose:'Ordinary food. Eating can refresh AP once per day when AP is missing.',category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'DIE2NITE_ARCHIVE',consumableKind:'food'}),
+  food:sourceFood('food','Mouldy Ham Sandwich'),
+  mouldy_twinkies:sourceFood('mouldy_twinkies','Mouldy Twinkies'),
+  half_eaten_chicken_wings:sourceFood('half_eaten_chicken_wings','Half-eaten Chicken Wings'),
+  rancid_shortbread_pack:sourceFood('rancid_shortbread_pack','Rancid Shortbread Pack'),
+  out_of_date_jaffa_cakes:sourceFood('out_of_date_jaffa_cakes','Out-of-Date Jaffa Cakes'),
+  dried_chewing_gum:sourceFood('dried_chewing_gum','Dried Chewing Gum'),
+  stale_tart:sourceFood('stale_tart','Stale Tart'),
+  soft_crisps:sourceFood('soft_crisps','Packet of Soft Crisps'),
   old_door:def({type:'old_door',name:'Old Door',purpose:'Defensive object: +2 town defense in the Bank, or +1 personal defense when stored at Home.',category:'defense',displayCategory:'defences',capabilities:['defense'],source:'DIE2NITE_ARCHIVE',bankDefense:2,homeDefense:1}),
   water_bomb:def({type:'water_bomb',name:'Water Bomb',purpose:'Single-use weapon. While outside and not exhausted, it kills 1–5 zombies without spending AP. It can be made from a Plastic Bag and Water Ration.',category:'weapon',displayCategory:'armoury',capabilities:['weapon'],source:'DIE2NITE_ARCHIVE'}),
   human_bone:def({type:'human_bone',name:'Human Bone',purpose:'Breakable improvised weapon and a source-valid opener for some containers.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
@@ -98,7 +106,7 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   broken_chain:brokenSourceWeapon('broken_chain','Chain'),
   can_opener:sourceWeapon('can_opener','Can Opener','Tool for opening cans and metal containers. It can be used as a weapon, but doing so always breaks it.'),
   broken_can_opener:brokenSourceWeapon('broken_can_opener','Can Opener'),
-  doggy_bag:def({type:'doggy_bag',name:'Doggy Bag',purpose:'Starter food package. It is being migrated onto the source-backed openable system.',category:'container',displayCategory:'food',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['food']}),
+  doggy_bag:container('doggy_bag','Doggy Bag','MyHordes food bag. Opening consumes the bag and yields one of eight ordinary 6 AP foods.'),
   citizen_welcome_pack:def({type:'citizen_welcome_pack',name:"Citizen's Welcome Pack",purpose:'Starter package retained while its source-backed output catalogue is expanded.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['battery','box_of_matches','pharmaceutical_products']}),
   box_of_matches:def({type:'box_of_matches',name:'Box of Matches',purpose:'A utility component found in the desert and Welcome Packs. Combine with a Rotting Log to make a Torch.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'DIE2NITE_ARCHIVE'}),
   pharmaceutical_products:def({type:'pharmaceutical_products',name:'Pharmaceutical Products',purpose:'Medical/chemical supply also consumed by several current constructions.',category:'misc',displayCategory:'pharmacy',capabilities:['component','medical'],source:'MYHORDES_CURRENT'}),
