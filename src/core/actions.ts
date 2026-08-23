@@ -1,11 +1,11 @@
 import { CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
-import { CONSTRUCTION_ORDER, hasRequiredMaterials } from './construction'
+import { CONSTRUCTION_ORDER, gateLockedAtHour, hasRequiredMaterials, wellDailyWithdrawals } from './construction'
 import { HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
 import { consumableKind, isContainer } from './items'
 import type { Citizen, GameCommand, GameState, ItemInstance, ItemStorage, ItemType } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, zoneControl } from './world'
-import { WORKSHOP_RECIPE_ORDER, WORKSHOP_RECIPES, canRunWorkshopRecipe } from './workshop'
+import { WORKSHOP_RECIPE_ORDER, canRunWorkshopRecipe, workshopRecipeApCost } from './workshop'
 
 export const GATE_AP_COST = 1
 export const MOVE_AP_COST = 1
@@ -41,9 +41,8 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
     if (citizen.inventory.length < citizen.inventoryCapacity) {
       for (const item of citizen.home.storage) actions.push({ type: 'MOVE_ITEM_TO_RUCKSACK', citizenId, itemId: item.id })
       for (const [itemType, count] of Object.entries(state.town.bank)) if ((count ?? 0) > 0) actions.push({ type: 'WITHDRAW_BANK_ITEM', citizenId, itemType: itemType as ItemType })
-      const maxDailyWellTakes=state.town.construction.pump?.completed?2:1
       const waterTaken=Number(citizen.daily.waterTaken)+Number(Boolean(citizen.daily.bonusWaterTaken))
-      if (waterTaken<maxDailyWellTakes && state.town.well.water > 0) actions.push({ type: 'TAKE_WATER', citizenId })
+      if (waterTaken<wellDailyWithdrawals(state) && state.town.well.water > 0) actions.push({ type: 'TAKE_WATER', citizenId })
     }
     if (nextHomeLevel(citizen.home.level) && citizen.ap >= HOME_UPGRADE_AP_COST) actions.push({ type: 'UPGRADE_HOME', citizenId })
     if (citizen.ap >= CONSTRUCTION_AP_COST) {
@@ -54,14 +53,13 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
     }
     if (state.town.construction.workshop.completed) {
       for (const recipeId of WORKSHOP_RECIPE_ORDER) {
-        const recipe = WORKSHOP_RECIPES[recipeId]
-        if (citizen.ap >= recipe.apCost && canRunWorkshopRecipe(state, recipeId)) actions.push({ type: 'WORKSHOP_CONVERT', citizenId, recipeId })
+        if (citizen.ap >= workshopRecipeApCost(state,recipeId) && canRunWorkshopRecipe(state, recipeId)) actions.push({ type: 'WORKSHOP_CONVERT', citizenId, recipeId })
       }
     }
     if (state.town.gateOpen) {
       if (citizen.ap >= GATE_AP_COST) actions.push({ type: 'CLOSE_GATE', citizenId })
       actions.push({ type: 'EXIT_TOWN', citizenId })
-    } else if (citizen.ap >= GATE_AP_COST && !(state.clock.hour===23&&state.town.construction.portal_lock?.completed)) actions.push({ type: 'OPEN_GATE', citizenId })
+    } else if (citizen.ap >= GATE_AP_COST && !gateLockedAtHour(state,state.clock.hour)) actions.push({ type: 'OPEN_GATE', citizenId })
     return actions
   }
 
