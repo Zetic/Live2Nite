@@ -5,7 +5,8 @@ import { distanceToTown, zoneKey } from '../../core/world'
 import { evaluateTownNeeds, type TownNeeds } from './TownNeeds'
 
 const BASE_LOOT_VALUE:Record<ItemType,number>={
-  construction_kit:105,twisted_plank:72,wrought_iron:72,patchwork_beam:82,metal_support:86,sheet_metal:80,unshaped_concrete_block:76,rotten_log:38,scrap_metal:38,
+  construction_kit:105,resource_pack:105,toolbox:104,metal_chest:96,xl_chest:120,food_box:88,decoration_box:64,safe:118,
+  twisted_plank:72,wrought_iron:72,patchwork_beam:82,metal_support:86,sheet_metal:80,unshaped_concrete_block:76,rotten_log:38,scrap_metal:38,
   nuts_and_bolts:92,copper_pipe:86,wire_reel:82,duct_tape:78,compact_detonator:96,semtex:100,electronic_component:90,laser_diode:96,telescope:94,convex_lens:72,battery:70,empty_oil_can:64,
   mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,guitar:66,table:70,chicken:62,wire_mesh:72,grain_sack:58,
   tool_bag:78,kwik_fix:82,plastic_bag:36,engine_incomplete:86,engine:90,claymore:94,torch:48,battery_launcher:74,
@@ -13,7 +14,7 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
   broken_machete:20,broken_serrated_knife:18,broken_staff:26,broken_pathetic_penknife:14,broken_human_bone:12,water_pistol:68,water_cooler_bottle:66,repair_kit:84,
 }
 
-function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if(!mission)return 0;if(mission.purpose==='gather_construction'&&['raw','construction','misc'].includes(ITEMS[type].category))return 24;if(mission.purpose==='gather_food'&&['food','grain_sack','chicken'].includes(type))return 35;if(mission.purpose==='gather_medical'&&['pharmaceutical_products','duct_tape','kwik_fix','repair_kit'].includes(type))return 35;if((mission.purpose==='gather_weapons'||mission.purpose==='rescue')&&isWeapon(type))return 28;return 0}
+function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if(!mission)return 0;if(mission.purpose==='gather_construction'&&['raw','construction','misc','container'].includes(ITEMS[type].category))return 24;if(mission.purpose==='gather_food'&&['food','grain_sack','chicken','food_box'].includes(type))return 35;if(mission.purpose==='gather_medical'&&['pharmaceutical_products','duct_tape','kwik_fix','repair_kit','toolbox'].includes(type))return 35;if((mission.purpose==='gather_weapons'||mission.purpose==='rescue')&&isWeapon(type))return 28;return 0}
 function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null):number{
   let score=BASE_LOOT_VALUE[type]+missionBonus(mission,type);const directlyMissing=needs.missingConstruction[type]??0
   if(directlyMissing>0)score+=70+Math.min(28,directlyMissing*4)
@@ -26,8 +27,9 @@ function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:Bo
   if(type==='mechanism'&&Object.keys(needs.missingConstruction).some((key)=>['wrought_iron','nuts_and_bolts','copper_pipe'].includes(key)))score+=30
   if((type==='copper_pipe'||type==='convex_lens')&&(needs.missingConstruction.telescope??0)>0)score+=34
   if(['wire_reel','empty_oil_can','broken_staff'].includes(type)&&(needs.missingConstruction.guitar??0)>0)score+=30
-  if(type==='construction_kit'&&Object.keys(needs.missingConstruction).length>0)score+=28
+  if((type==='construction_kit'||type==='resource_pack')&&Object.keys(needs.missingConstruction).length>0)score+=28
   if(type==='food'&&needs.foodLow)score+=45
+  if(type==='food_box'&&needs.foodLow)score+=55
   if(isWeapon(type)&&needs.weaponsLow)score+=35
   if(type==='water_ration'){if(citizen.status.hydration!=='normal')score+=90;else if(!citizen.daily.drank&&citizen.status.desertStepsToday>=6)score+=45;if(needs.waterPerCitizen<1)score+=55;else if(needs.waterPerCitizen<2)score+=24}
   if(type==='old_door'&&(needs.defense.pressure==='critical'||needs.defense.pressure==='shortfall'))score+=45
@@ -41,7 +43,7 @@ export function opportunisticFieldAction(state:GameState,citizen:Citizen,actions
   if(citizen.location.type!=='world')return null;let needs:TownNeeds|null=null;const score=(type:ItemType)=>scoreWithNeeds(needs??(needs=evaluateTownNeeds(state)),citizen,type,mission);const zone=state.world.zones[zoneKey(citizen.location.x,citizen.location.y)];const ground=zone?.groundItems.length?[...zone.groundItems].sort((a,b)=>score(b.type)-score(a.type))[0]??null:null
   if(ground){const groundValue=score(ground.type);if(citizen.inventory.length<citizen.inventoryCapacity){const preserveTargetSlots=mission?.phase==='outbound'&&citizen.inventory.length>=citizen.inventoryCapacity-2;if(!preserveTargetSlots||groundValue>=88||mission?.phase==='return'){const pickup=pickupAction(actions,ground.id);if(pickup)return pickup}}else{const candidates=citizen.inventory.filter((item)=>!isProtectedCarry(state,citizen,item,mission));const lowest=[...candidates].sort((a,b)=>score(a.type)-score(b.type))[0]??null;if(lowest&&groundValue>=score(lowest.type)+15){const drop=dropAction(actions,lowest.id);if(drop)return drop}}}
   const specialSearch=actions.find((action)=>action.type==='SEARCH_SPECIAL_SITE')??null;if(specialSearch)return specialSearch;const search=actions.find((action)=>action.type==='SEARCH_ZONE')??null;if(search)return search
-  if(mission&&!mission.emergency&&mission.phase==='outbound'){const distance=distanceToTown(citizen.location.x,citizen.location.y);const targetDistance=distanceToTown(mission.target.x,mission.target.y);if(distance>=1&&distance<=3&&targetDistance>distance+1&&citizen.inventory.length>=citizen.inventoryCapacity-1){const cacheable=citizen.inventory.filter((item)=>{if(isProtectedCarry(state,citizen,item,mission))return false;const category=ITEMS[item.type].category;const value=score(item.type);return['raw','construction','defense','misc','broken_weapon'].includes(category)&&value>=18&&value<90});const cache=[...cacheable].sort((a,b)=>score(a.type)-score(b.type))[0]??null;if(cache)return dropAction(actions,cache.id)}}
+  if(mission&&!mission.emergency&&mission.phase==='outbound'){const distance=distanceToTown(citizen.location.x,citizen.location.y);const targetDistance=distanceToTown(mission.target.x,mission.target.y);if(distance>=1&&distance<=3&&targetDistance>distance+1&&citizen.inventory.length>=citizen.inventoryCapacity-1){const cacheable=citizen.inventory.filter((item)=>{if(isProtectedCarry(state,citizen,item,mission))return false;const category=ITEMS[item.type].category;const value=score(item.type);return['raw','construction','defense','misc','broken_weapon','container'].includes(category)&&value>=18&&value<90});const cache=[...cacheable].sort((a,b)=>score(a.type)-score(b.type))[0]??null;if(cache)return dropAction(actions,cache.id)}}
   return null
 }
 export function shouldReturnWithHaul(state:GameState,citizen:Citizen,mission:BotMissionAssignment):boolean{if(citizen.location.type!=='world'||mission.emergency||mission.phase==='return'||mission.phase==='camp')return false;const carried=citizen.inventory.filter((item)=>!['consumable','weapon'].includes(ITEMS[item.type].category));if(!carried.length)return false;const needs=evaluateTownNeeds(state);const valuable=carried.map((item)=>scoreWithNeeds(needs,citizen,item.type,mission)).sort((a,b)=>b-a);if(valuable[0]>=130&&distanceToTown(citizen.location.x,citizen.location.y)>=2)return true;return valuable.length>=2&&valuable[0]+valuable[1]>=210}
