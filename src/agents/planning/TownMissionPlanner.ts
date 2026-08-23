@@ -36,7 +36,9 @@ function scoutDesired(state: GameState): number {
   const base=discovered < AI_TUNING.earlyMapKnownZoneThreshold
     ? AI_TUNING.earlyScoutTarget
     : AI_TUNING.matureScoutTarget
-  return resourceStarved(state)?base+AI_TUNING.resourceStarvationScoutBoost:base
+  // Day 1 deliberately keeps the staged four-scout opening. The starvation boost is a
+  // recovery behavior for later towns whose external economy has begun to stall.
+  return state.day>1&&resourceStarved(state)?base+AI_TUNING.resourceStarvationScoutBoost:base
 }
 
 function currentFieldClaims(state:GameState,pending:GameEvent[]):number{
@@ -148,11 +150,10 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
     assignOpportunity(opportunity)
   }
 
-  // Distributed fallback: a citizen with usable AP can see that few people are outside,
-  // the Bank/construction is starving, and no public field claim covers the need. Those
-  // citizens volunteer for individual exploration instead of treating "no perfect mission"
-  // as a reason to sit in town. Resource starvation prefers new frontier information.
-  if(state.clock.hour<AI_TUNING.fallbackExplorationCutoffHour){
+  // Distributed fallback is intentionally a later-day anti-stagnation behavior. Day 1
+  // already has a healthy staged scouting opening; on later days citizens can see that
+  // resources are missing, field coverage is thin, and their AP would otherwise expire.
+  if(state.day>1&&state.clock.hour<AI_TUNING.fallbackExplorationCutoffHour){
     const starved=resourceStarved(state)
     const desiredPresence=Math.ceil(livingBots*(starved?Math.max(0.30,AI_TUNING.minimumFieldPresenceFraction):AI_TUNING.minimumFieldPresenceFraction))
     while(newBudget>0&&currentFieldClaims(state,events)<desiredPresence){
