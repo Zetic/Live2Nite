@@ -11,6 +11,8 @@ export interface OpenableDefinition {
   outputTable: WeightedLootTable
   apCost?: number
   successPercent?: number
+  /** Deterministic source morph: preserve the exact item ID and do not advance RNG. */
+  morphTo?: ItemType
   /**
    * Source-faithful item types that can open this container. The tool is not consumed unless
    * the source action explicitly says so. Empty means the container can be opened directly.
@@ -63,9 +65,20 @@ const toolboxTable:WeightedLootTable={
   ],
 }
 
+const canMorphTable:WeightedLootTable={
+  id:'myhordes.can_open',
+  source:'MYHORDES_CURRENT',
+  // The source action is morph_open_can, not a random spawn. This table documents the target;
+  // resolveOpenable handles morphTo before any weighted roll.
+  entries:[lootEntry('open_can',1)],
+}
+
 export const OPENABLES:Partial<Record<ItemType,OpenableDefinition>>={
   resource_pack:{type:'resource_pack',source:'MYHORDES_CURRENT',mode:'remaining_contents',outputTable:resourcePackTable},
   doggy_bag:{type:'doggy_bag',source:'MYHORDES_CURRENT',mode:'consume',outputTable:doggyBagTable},
+  // MyHordes can_#00 uses the "main" opener family. Saw Tool is not implemented yet;
+  // the three already-live ordinary equivalents are wired now and the opener is not consumed.
+  can:{type:'can',source:'MYHORDES_CURRENT',mode:'consume',morphTo:'open_can',openableBy:['can_opener','screwdriver','swiss_army_knife'],outputTable:canMorphTable},
   // MyHordes CHEST_TOOLS.openableBy includes CHAIR_BASIC, PC, WRENCH, CUTTER, BONE,
   // CUTCUT, SMALL_KNIFE, CHAIN, KNIFE, STAFF, CAN_OPENER, SCREW, SWISS_KNIFE and
   // HURLING_STICK. All ordinary source tools currently implemented in Live2Nite are wired
@@ -89,6 +102,9 @@ function generatedItem(state:GameState,type:ItemType,offset:number,itemState?:It
 export function resolveOpenable(state:GameState,container:ItemInstance):OpenableResolution{
   const definition=openableDefinition(container.type)
   if(!definition)throw new Error(`${container.type} has no source-backed openable definition`)
+  if(definition.morphTo){
+    return{success:true,outputs:[],containerAfter:createItemInstance(container.id,definition.morphTo),rngStateAfter:state.rngState}
+  }
   let rngState=state.rngState
   if(definition.mode==='attempt'){
     const chance=Math.max(0,Math.min(100,definition.successPercent??100))
