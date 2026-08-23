@@ -93,8 +93,8 @@ export const NORMAL_SCAVENGE_LOOT_POOL: ItemType[] = [
   'wrought_iron','wrought_iron','wrought_iron','wrought_iron','wrought_iron',
   'construction_kit','construction_kit','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
   'human_bone','human_bone','pathetic_penknife','staff','serrated_knife','water_bomb','battery','box_of_matches','pharmaceutical_products',
-  // Construction supplies are intentionally rarer than the basic resource stream.
-  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass',
+  // Construction supplies are intentionally rarer than the basic resource stream. Human Flesh is source-backed by the current MyHordes normal-zone drop table.
+  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','human_flesh',
 ]
 export const DEPLETED_SCAVENGE_LOOT_POOL: ItemType[] = ['rotten_log','rotten_log','rotten_log','scrap_metal','scrap_metal','scrap_metal']
 
