@@ -23,7 +23,7 @@ For an ordinary deposit/withdraw cycle:
 - `nextItemId` is unchanged;
 - only the owning storage collection changes.
 
-New/generated objects are created through `createItemInstance`. Schema migration also normalizes legacy objects through that boundary.
+New/generated objects are created through `createItemInstance`.
 
 ## Canonical item catalog
 
@@ -129,22 +129,13 @@ Current planning uses Bank helpers for construction stock, food, weapons, water,
 
 As richer item mechanics become active, AI valuation can inspect capabilities/state without changing the storage model. For example, a loaded Water Pistol and an empty Water Pistol can eventually receive different field value while remaining the same item type.
 
-## Schema v15 -> v16 migration
+## Development save compatibility
 
-Legacy saves stored the Bank as a count map such as:
+Current-schema persistence is a hard requirement: a v16 town must save/reload with item IDs and persistent state intact.
 
-```ts
-{
-  twisted_plank: 4,
-  water_ration: 2,
-}
-```
+Live2Nite is still in rapid development, so backward compatibility with older development schemas is not a PR blocker. A schema-breaking change may require starting a new town. Existing v15 -> v16 migration code remains because it is already implemented and tested, but future work should not be delayed solely to preserve every historical development save. See `instructions.md` for the project-wide policy.
 
-The v16 migration materializes each count as a unique `ItemInstance` with canonical default state. Existing inventory, Home, and ground objects are also normalized.
-
-Migration protects ID uniqueness even if an old save's `nextItemId` is stale: numeric generated IDs already present anywhere in the save are scanned before legacy Bank objects are allocated.
-
-Representable gameplay progress is otherwise preserved. Existing v16 saves are normalized on load as well so definitions can supply safe state defaults to older v16-shaped test/dev data.
+The existing v15 -> v16 migration materializes count-based Bank entries as unique instances, normalizes representable legacy objects, and protects generated-ID uniqueness. That behavior is useful compatibility, not a promise that all future schema versions will receive equivalent backward migrations during this phase.
 
 ## Historical-source discipline
 
@@ -178,8 +169,7 @@ The v16 item economy should keep focused tests for:
 - type+state Bank stacking;
 - exact Bank deposit/withdraw identity preservation;
 - state-constrained requirement matching;
-- schema v15 count-Bank materialization;
-- migration ID collision avoidance;
+- current-schema item identity/state persistence;
 - existing construction, Workshop, defense, AI and multi-day simulations.
 
-Economy/survival benchmark values remain telemetry while progression is still under construction; object identity, command legality, persistence, deterministic behavior, and migration correctness are hard invariants.
+Legacy migration tests may remain when useful, but backward migration completeness is not a hard development-stage invariant. Economy/survival benchmark values remain telemetry while progression is still under construction; object identity, command legality, current-schema persistence, and deterministic behavior are the hard item-economy invariants.
