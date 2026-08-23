@@ -18,7 +18,7 @@ Gameplay follows:
 
 `GameCommand -> legal-action validation -> GameEvent[] -> reducer -> GameState`
 
-The controlled citizen and bots use the same commands and reducers. React does not directly alter AP, inventory, status, camping, Well water, construction, homes, zombies, gate state, or time.
+The controlled citizen and bots use the same commands and reducers. React does not directly alter AP, inventory, item state, status, camping, Well water, construction, homes, zombies, gate state, or time.
 
 Simulation-owned mission and coordination changes are also explicit events so save/replay history stays inspectable.
 
@@ -36,7 +36,11 @@ Simulation-owned mission and coordination changes are also explicit events so sa
 - `defense.ts`: derived town/home defense aggregation.
 - `world.ts`: map generation, movement, zone control, scavenging, campsite state, and special-site placement.
 - `worldEvolution.ts`: deterministic nightly zombie evolution.
-- `items.ts`, `home.ts`, `well.ts`, `workshop.ts`, `combat.ts`: their respective gameplay domains.
+- `itemCatalog.ts`: stable item identifiers plus common state/display vocabulary.
+- `items.ts`: item capabilities, state normalization, display metadata, and canonical item construction.
+- `bank.ts`: item-instance Bank queries, exact removal, aggregate counts, and derived state-aware stacks.
+- `itemRecipes.ts`: generalized type/state requirement matching for future transformations.
+- `home.ts`, `well.ts`, `workshop.ts`, `combat.ts`: their respective gameplay domains.
 
 ## Clock and hourly simulation
 
@@ -149,6 +153,20 @@ An open gate is normal during daytime expeditions and therefore is not itself tr
 
 Strategic construction ranking computes the public defense assessment once per decision/pass and scores each candidate once. This prevents the broader construction catalog from turning hourly bot simulation into repeated nested full-tree rescoring.
 
+## Stateful item economy
+
+Schema v16 changes shared storage from anonymous per-type Bank counts to authoritative `ItemInstance[]` objects and introduces the persistent item-state vocabulary needed for the larger object catalog.
+
+The same object identity model now applies to the Bank, rucksack, Home chest, and World Beyond ground. A deposit/withdraw transfer moves the exact object and does not consume a generated item ID. The UI may derive visual stacks, but objects stack only when both item type and normalized state match.
+
+Initial state families cover charges, condition, contamination, and future assembly state. The catalog can therefore describe a Water Pistol with three charges, another with one charge, and an empty one without inventing three unrelated item types.
+
+`ItemType` is derived from the canonical catalog. Adding an item to that catalog does not automatically place it into loot tables or make it historically confirmed; spawn availability, recipes, AI use, and historical confidence remain separate concerns.
+
+Construction and other simple type/count consumers use aggregate Bank helpers. Exact withdrawals and stateful recipes select concrete instances. `itemRecipes.ts` supports state-constrained requirements such as an empty charge-bearing item or damaged equipment.
+
+See `docs/item-economy.md`.
+
 ## Coordinated field missions
 
 Active field roles are:
@@ -215,13 +233,17 @@ Town Records is the first permanent navigation destination and the default scree
 
 The Home screen is citizen-specific and separates **Inventory & Actions**, **Building Upgrades**, and **Home Improvements**. It presents personal-defense composition and the full structural progression without exposing hidden simulation information.
 
+The Bank screen derives visual stacks from authoritative objects. State-bearing objects with different normalized state remain separate stacks and withdrawals resolve to one exact legal item ID.
+
 The Citizens screen remains the deeper diagnostic surface for status, mission phase, AP/loadout budget, return margin, and reserve state.
 
 ## Determinism and persistence
 
 Core rules do not use scattered `Math.random()`. A seed plus the same ordered commands/time advances should reproduce the same result.
 
-Save schema is **v15**. Schema 2–14 saves migrate forward. Migration normalizes construction state against the current catalog, retains legitimate World Beyond observations, normalizes legacy missions to stable same-day behavior when needed, initializes missing coordination state as an empty public-commitment list, and fills missing v15 Home progression/improvement fields with safe defaults. Existing game progress is otherwise preserved where representable.
+Save schema is **v16**. Schema 2–15 saves migrate forward. Migration normalizes construction state against the current catalog, retains legitimate World Beyond observations, normalizes legacy missions to stable same-day behavior when needed, initializes missing coordination state as an empty public-commitment list, fills missing Home progression/improvement fields with safe defaults, and converts legacy Bank count maps into unique normalized item instances.
+
+Legacy Bank materialization scans existing generated item IDs before allocating replacements so an old/stale `nextItemId` cannot create collisions. Existing inventory, Home, ground, event, and v16 Bank objects are normalized through the canonical item-state boundary. Existing game progress is otherwise preserved where representable.
 
 Camping survival and World Beyond evolution use isolated deterministic seeds so unrelated random calls do not silently alter their outcomes.
 
@@ -229,17 +251,17 @@ Camping survival and World Beyond evolution use isolated deterministic seeds so 
 
 Tests are separated conceptually by what they protect:
 
-1. **Hard rule/architecture invariants** — command legality, AP/accounting, persistence, determinism, information boundaries, home material accounting, control/extraction, gate coverage, and concrete bug regressions. These gate CI.
-2. **Focused pathological scenarios** — known failures such as mass departure or rescue trap transfer, plus focused v15 home/defense-information regressions. These gate CI.
+1. **Hard rule/architecture invariants** — command legality, AP/accounting, persistence, determinism, information boundaries, item identity/state, Bank transfer semantics, migration, home material accounting, control/extraction, gate coverage, and concrete bug regressions. These gate CI.
+2. **Focused pathological scenarios** — known failures such as mass departure or rescue trap transfer, plus focused home/defense-information and stateful-item regressions. These gate CI.
 3. **Economy/survival simulation benchmarks** — Workshop frequency, survivor count, dehydration, Well level, defense, searches and outside-at-midnight population. During early development these are diagnostic telemetry, not exact balance gates.
 
 Benchmarks still run deterministically on every test run so large shifts remain visible. Selected metrics can become hard thresholds later when the surrounding progression, defense, camping, profession and social systems stabilize.
 
 ## Future forum and social integration
 
-The v14 commitment model remains the public-coordination substrate under schema v15 and is intentionally compatible with a later real forum/chat system. Human or bot posts can eventually produce the same public intentions: "I'll close the gate", "I'll be backup", "I'm working on the wall", "we need planks", or "I'm scouting east".
+The v14 commitment model remains the public-coordination substrate under schema v16 and is intentionally compatible with a later real forum/chat system. Human or bot posts can eventually produce the same public intentions: "I'll close the gate", "I'll be backup", "I'm working on the wall", "we need planks", or "I'm scouting east".
 
-Future personality/social systems may affect whether citizens communicate, volunteer, keep commitments, hoard, or accept risk. They must not bypass legal commands, private-resource ownership, or the World Knowledge/public-defense boundaries.
+Future personality/social systems may affect whether citizens communicate, volunteer, keep commitments, hoard, or accept risk. They must not bypass legal commands, private-resource ownership, exact item ownership, or the World Knowledge/public-defense boundaries.
 
 ## Multiplayer migration
 
