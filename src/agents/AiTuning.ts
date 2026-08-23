@@ -8,6 +8,7 @@ export const AI_TUNING = {
   scoutCutoffHour: 19,
   fallbackExplorationCutoffHour: 20,
   townApDumpHour: 17,
+  aggressiveTownApDumpHour: 20,
   minimumFieldPresenceFraction: 0.30,
   idleApFieldPresenceFraction: 0.40,
   resourceStarvedFieldPresenceFraction: 0.50,
