@@ -32,6 +32,22 @@ const resourcePackTable:WeightedLootTable={
   entries:[lootEntry('twisted_plank',1),lootEntry('wrought_iron',1)],
 }
 
+const doggyBagTable:WeightedLootTable={
+  id:'myhordes.doggy_bag',
+  source:'MYHORDES_CURRENT',
+  // MyHordes spawn_doggy. food_sandw_#00 maps to the existing Live2Nite `food` item.
+  entries:[
+    lootEntry('mouldy_twinkies',222),
+    lootEntry('half_eaten_chicken_wings',194),
+    lootEntry('rancid_shortbread_pack',188),
+    lootEntry('out_of_date_jaffa_cakes',186),
+    lootEntry('dried_chewing_gum',181),
+    lootEntry('stale_tart',174),
+    lootEntry('soft_crisps',168),
+    lootEntry('food',162),
+  ],
+}
+
 const toolboxTable:WeightedLootTable={
   id:'myhordes.toolbox',
   source:'MYHORDES_CURRENT',
@@ -49,6 +65,7 @@ const toolboxTable:WeightedLootTable={
 
 export const OPENABLES:Partial<Record<ItemType,OpenableDefinition>>={
   resource_pack:{type:'resource_pack',source:'MYHORDES_CURRENT',mode:'remaining_contents',outputTable:resourcePackTable},
+  doggy_bag:{type:'doggy_bag',source:'MYHORDES_CURRENT',mode:'consume',outputTable:doggyBagTable},
   // MyHordes CHEST_TOOLS.openableBy includes CHAIR_BASIC, PC, WRENCH, CUTTER, BONE,
   // CUTCUT, SMALL_KNIFE, CHAIN, KNIFE, STAFF, CAN_OPENER, SCREW, SWISS_KNIFE and
   // HURLING_STICK. All ordinary source tools currently implemented in Live2Nite are wired
