@@ -1,10 +1,20 @@
 import { completionWaterBonus, revealsAllTerrain } from './construction'
 import { zoneKey } from './world'
-import type { Citizen, GameEvent, GameState, ItemStorage, ItemType } from './types'
+import type { Citizen, GameEvent, GameState, ItemInstance, ItemStorage, ItemType } from './types'
 
 function changeBankCount(state:GameState,type:ItemType,amount:number):GameState['town']['bank']{const current=state.town.bank[type]??0;return{...state.town.bank,[type]:Math.max(0,current+amount)}}
 function replaceCitizen(state:GameState,citizenId:string,update:(citizen:Citizen)=>Citizen):Citizen[]{return state.citizens.map((citizen)=>citizen.id===citizenId?update(citizen):citizen)}
 function removeStoredItem(citizen:Citizen,itemId:string,source:ItemStorage):Citizen{if(source==='inventory')return{...citizen,inventory:citizen.inventory.filter((item)=>item.id!==itemId)};return{...citizen,home:{...citizen.home,storage:citizen.home.storage.filter((item)=>item.id!==itemId)}}}
+function consumeFromItems(items:ItemInstance[],type:ItemType,count:number):{items:ItemInstance[];remaining:number}{let remaining=count;const kept:ItemInstance[]=[];for(const item of items){if(item.type===type&&remaining>0){remaining-=1;continue}kept.push(item)}return{items:kept,remaining}}
+function consumePersonalResources(citizen:Citizen,resources:Partial<Record<ItemType,number>>):Citizen{
+  let inventory=[...citizen.inventory];let storage=[...citizen.home.storage]
+  for(const[type,amount]of Object.entries(resources)){
+    const itemType=type as ItemType;let remaining=amount??0
+    const fromInventory=consumeFromItems(inventory,itemType,remaining);inventory=fromInventory.items;remaining=fromInventory.remaining
+    const fromStorage=consumeFromItems(storage,itemType,remaining);storage=fromStorage.items
+  }
+  return{...citizen,inventory,home:{...citizen.home,storage}}
+}
 function withoutMission(state:GameState,citizenId:string):GameState['botMissions']{const next={...state.botMissions};delete next[citizenId];return next}
 function missionsForNewDay(state:GameState):GameState['botMissions']{const next:GameState['botMissions']={};for(const[citizenId,mission]of Object.entries(state.botMissions)){const citizen=state.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen?.alive||citizen.location.type!=='world')continue;const phase=mission.phase==='camp'?(citizen.location.x===mission.target.x&&citizen.location.y===mission.target.y?'operate':'outbound'):mission.phase;next[citizenId]={...mission,phase}}return next}
 
@@ -39,7 +49,8 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CONSTRUCTION_KIT_OPENED':return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,citizens:replaceCitizen(state,event.citizenId,(citizen)=>event.source==='inventory'?{...citizen,inventory:[...citizen.inventory.filter((item)=>item.id!==event.containerId),...event.outputs]}:{...citizen,home:{...citizen.home,storage:[...citizen.home.storage.filter((item)=>item.id!==event.containerId),...event.outputs]}})}
     case 'WATER_TAKEN':return{...state,nextItemId:state.nextItemId+1,town:{...state.town,well:{water:Math.max(0,state.town.well.water-1)}},citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item],daily:citizen.daily.waterTaken?{...citizen.daily,bonusWaterTaken:true}:{...citizen.daily,waterTaken:true}}))}
     case 'ITEM_CONSUMED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const withoutItem=removeStoredItem(citizen,event.item.id,event.source);return{...withoutItem,ap:event.restoresAp?withoutItem.maxAp:withoutItem.ap,daily:event.kind==='food'?{...withoutItem.daily,ate:true}:{...withoutItem.daily,drank:true}}})}
-    case 'HOME_UPGRADED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,home:{...citizen.home,level:event.to,defense:event.defenseAfter}}))}
+    case 'HOME_UPGRADED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,level:event.to,defense:event.defenseAfter,upgradedDay:event.day}}})}
+    case 'HOME_IMPROVEMENT_BUILT':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,storageCapacity:event.storageCapacityAfter,improvements:{...paid.home.improvements,[event.improvementId]:event.level}}}})}
     case 'CONSTRUCTION_AP_CONTRIBUTED':{const project=state.town.construction[event.projectId];if(!project)return state;return{...state,town:{...state.town,construction:{...state.town.construction,[event.projectId]:{...project,apContributed:project.apContributed+event.amount}}}}}
     case 'CONSTRUCTION_COMPLETED':{
       let bank={...state.town.bank}
