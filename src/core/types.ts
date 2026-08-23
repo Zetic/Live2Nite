@@ -56,6 +56,7 @@ export type CitizenStatusChangeReason = 'desert_travel' | 'drank_water' | 'night
 export type CampingOutlook = 'suicidal' | 'very_poor' | 'poor' | 'limited' | 'satisfactory' | 'decent'
 export type ZoneIntelFreshness = 'fresh' | 'stale' | 'unknown'
 export type ZoneControlState = 'secure' | 'fragile' | 'temporary' | 'trapped'
+export type CoordinationCommitmentKind = 'gate_primary' | 'gate_backup' | 'construction'
 
 export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType }
@@ -98,6 +99,24 @@ export interface BotMissionAssignment {
   allowsCamping?: boolean
   overnightPlanned?: boolean
   scoutKind?: ScoutMissionKind
+  searchMode?: SearchMode
+}
+
+export interface CoordinationCommitment {
+  id: string
+  citizenId: string
+  kind: CoordinationCommitmentKind
+  taskKey: string
+  label: string
+  reservedAp: number
+  day: number
+  hour: number
+  expiresHour: number
+  projectId?: ConstructionId
+}
+
+export interface TownCoordinationState {
+  commitments: CoordinationCommitment[]
 }
 
 export interface SpecialSiteState {
@@ -167,7 +186,7 @@ export interface NightReport {
 export interface WorldZombieChange { zoneKey:string; before:number; after:number }
 
 export interface GameState {
-  schemaVersion: 13
+  schemaVersion: 14
   gameId: string
   seed: number
   rngState: number
@@ -176,6 +195,7 @@ export interface GameState {
   clock: GameClock
   citizens: Citizen[]
   botMissions: Record<string, BotMissionAssignment>
+  coordination: TownCoordinationState
   town: TownState
   world: WorldState
   lastNight: NightReport | null
@@ -249,6 +269,8 @@ export type GameEvent = (
   | { type: 'CONSTRUCTION_EXPIRED'; day:number; projectId:ConstructionId }
   | { type: 'CONSTRUCTION_GENERATED_ITEM'; day:number; projectId:ConstructionId; itemType:ItemType; amount:number }
   | { type: 'WORKSHOP_CONVERTED'; day: number; citizenId: string; recipeId: WorkshopRecipeId; input: ItemType; inputCount: number; output: ItemType; outputCount: number }
+  | { type: 'COORDINATION_COMMITMENT_POSTED'; day:number; commitment:CoordinationCommitment }
+  | { type: 'COORDINATION_COMMITMENT_CLEARED'; day:number; commitmentId:string; reason:'expired'|'fulfilled'|'invalid'|'day_reset' }
   | { type: 'BOT_MISSION_ASSIGNED'; day: number; citizenId: string; mission: BotMissionAssignment }
   | { type: 'BOT_MISSION_PHASE_SET'; day: number; citizenId: string; missionId: string; phase: BotMissionPhase }
   | { type: 'BOT_MISSION_CLEARED'; day: number; citizenId: string; missionId: string; outcome: 'completed' | 'aborted' }
