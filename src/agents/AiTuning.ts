@@ -9,7 +9,7 @@ export const AI_TUNING = {
   newAssignmentFractionPerHour: 0.20,
   assignmentCutoffHour: 22,
   scoutCutoffHour: 19,
-  fallbackExplorationCutoffHour: 20,
+  fallbackExplorationCutoffHour: 21,
   townApDumpHour: 17,
   aggressiveTownApDumpHour: 20,
   minimumFieldPresenceFraction: 0.30,
