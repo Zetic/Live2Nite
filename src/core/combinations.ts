@@ -49,18 +49,31 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
   repair_staff:repairRecipe('repair_staff','Repair Staff','broken_staff','staff','repair_kit'),
   repair_serrated_knife:repairRecipe('repair_serrated_knife','Repair Serrated Knife','broken_serrated_knife','serrated_knife','repair_kit'),
   repair_machete:repairRecipe('repair_machete','Repair Machete','broken_machete','machete','repair_kit'),
+  repair_adjustable_spanner:repairRecipe('repair_adjustable_spanner','Repair Adjustable Spanner','broken_adjustable_spanner','adjustable_spanner','repair_kit'),
+  repair_screwdriver:repairRecipe('repair_screwdriver','Repair Screwdriver','broken_screwdriver','screwdriver','repair_kit'),
+  repair_swiss_army_knife:repairRecipe('repair_swiss_army_knife','Repair Swiss Army Knife','broken_swiss_army_knife','swiss_army_knife','repair_kit'),
+  repair_box_cutter:repairRecipe('repair_box_cutter','Repair Box Cutter','broken_box_cutter','box_cutter','repair_kit'),
+  repair_chain:repairRecipe('repair_chain','Repair Chain','broken_chain','chain','repair_kit'),
+  repair_can_opener:repairRecipe('repair_can_opener','Repair Can Opener','broken_can_opener','can_opener','repair_kit'),
+
   kwik_fix_human_bone:repairRecipe('kwik_fix_human_bone','Kwik-Fix Human Bone','broken_human_bone','human_bone','kwik_fix'),
   kwik_fix_penknife:repairRecipe('kwik_fix_penknife','Kwik-Fix Pathetic Penknife','broken_pathetic_penknife','pathetic_penknife','kwik_fix'),
   kwik_fix_staff:repairRecipe('kwik_fix_staff','Kwik-Fix Staff','broken_staff','staff','kwik_fix'),
   kwik_fix_serrated_knife:repairRecipe('kwik_fix_serrated_knife','Kwik-Fix Serrated Knife','broken_serrated_knife','serrated_knife','kwik_fix'),
   kwik_fix_machete:repairRecipe('kwik_fix_machete','Kwik-Fix Machete','broken_machete','machete','kwik_fix'),
+  kwik_fix_adjustable_spanner:repairRecipe('kwik_fix_adjustable_spanner','Kwik-Fix Adjustable Spanner','broken_adjustable_spanner','adjustable_spanner','kwik_fix'),
+  kwik_fix_screwdriver:repairRecipe('kwik_fix_screwdriver','Kwik-Fix Screwdriver','broken_screwdriver','screwdriver','kwik_fix'),
+  kwik_fix_swiss_army_knife:repairRecipe('kwik_fix_swiss_army_knife','Kwik-Fix Swiss Army Knife','broken_swiss_army_knife','swiss_army_knife','kwik_fix'),
+  kwik_fix_box_cutter:repairRecipe('kwik_fix_box_cutter','Kwik-Fix Box Cutter','broken_box_cutter','box_cutter','kwik_fix'),
+  kwik_fix_chain:repairRecipe('kwik_fix_chain','Kwik-Fix Chain','broken_chain','chain','kwik_fix'),
+  kwik_fix_can_opener:repairRecipe('kwik_fix_can_opener','Kwik-Fix Can Opener','broken_can_opener','can_opener','kwik_fix'),
 }
 
 export const COMBINATION_RECIPE_ORDER:CombinationRecipeId[]=[
   'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','mix_concrete','fill_water_bomb',
   'reload_water_pistol','refill_water_cooler','reload_battery_launcher',
-  'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete',
-  'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete',
+  'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete','repair_adjustable_spanner','repair_screwdriver','repair_swiss_army_knife','repair_box_cutter','repair_chain','repair_can_opener',
+  'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete','kwik_fix_adjustable_spanner','kwik_fix_screwdriver','kwik_fix_swiss_army_knife','kwik_fix_box_cutter','kwik_fix_chain','kwik_fix_can_opener',
 ]
 
 function personalRefs(citizen:Citizen):PersonalRef[]{
