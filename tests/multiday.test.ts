@@ -17,6 +17,7 @@ describe('multi-day town regression',()=>{
     let botDehydrationDeaths=0
     let maximumOutsideAtMidnight=0
     let totalFinalWell=0
+    const townSummaries=[]
 
     for(const seed of seeds){
       let game=createInitialGame(seed,40)
@@ -31,8 +32,21 @@ describe('multi-day town regression',()=>{
         totalOutsideDeaths+=game.lastNight?.outsideDeaths??0
         minimumLiving=Math.min(minimumLiving,game.citizens.filter((citizen)=>citizen.alive).length)
       }
-      botDehydrationDeaths+=game.events.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='dehydration'&&event.citizenId!=='c01').length
+      const deaths=game.events.filter((event)=>event.type==='CITIZEN_DIED'&&event.citizenId!=='c01')
+      const dehydration=deaths.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='dehydration').length
+      botDehydrationDeaths+=dehydration
       totalFinalWell+=game.town.well.water
+      townSummaries.push({
+        seed,
+        living:game.citizens.filter((citizen)=>citizen.alive).length,
+        outside:deaths.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='outside_at_night').length,
+        camping:deaths.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='camping_failure').length,
+        dehydration,
+        home:deaths.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='home_breach').length,
+        defense:game.town.defense,
+        completed:Object.values(game.town.construction).filter((project)=>project.completed).map((project)=>project.id),
+        finalWell:game.town.well.water,
+      })
     }
 
     console.log('MULTIDAY BENCHMARK',{
@@ -47,6 +61,7 @@ describe('multi-day town regression',()=>{
       totalOutsideDeaths,
       botDehydrationDeaths,
       averageFinalWell:totalFinalWell/seeds.length,
+      townSummaries,
     })
 
     expect(gateFailures).toBe(0)
