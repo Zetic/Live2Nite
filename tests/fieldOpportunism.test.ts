@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { BasicBotController } from '../src/agents/BasicBotController'
 import { createAgentDecisionContext } from '../src/agents/AgentDecisionContext'
+import { unloadAction } from '../src/agents/actions/InventoryActions'
 import { opportunisticFieldAction } from '../src/agents/planning/LootPolicy'
 import { planLoadout, wellAllowanceRemaining } from '../src/agents/planning/SupplyPolicy'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
+import { resolveNightAttack } from '../src/core/night'
 import type { BotMissionAssignment, GameState, ItemInstance } from '../src/core/types'
 import { runBotHour } from '../src/simulation/runBotHour'
 
@@ -84,5 +86,31 @@ describe('field opportunism and hydration assurance',()=>{
     expect(citizen.status.hydration).toBe('normal')
     expect(citizen.daily.drank).toBe(true)
     expect(after.town.well.water).toBe(19)
+  })
+
+  it('does not roll a thirsty autonomous citizen into Dehydrated when town water was legally available before the attack',()=>{
+    let game=createInitialGame(8107,2)
+    game={...game,day:3,clock:{hour:23,phase:'day'},town:{...game.town,defense:10_000,well:{water:20}}}
+    game=patchCitizen(game,'c02',{ap:4,status:{hydration:'thirsty',desertStepsToday:0},daily:{ate:false,drank:false,waterTaken:false},inventory:[],home:{...game.citizens[1].home,storage:[]}})
+    const beforeAttack=runBotHour(game,new BasicBotController(),'c01')
+    const prepared=beforeAttack.citizens.find((candidate)=>candidate.id==='c02')!
+    expect(prepared.daily.drank).toBe(true)
+    expect(prepared.status.hydration).toBe('normal')
+    const afterAttack=resolveNightAttack(beforeAttack)
+    const citizen=afterAttack.citizens.find((candidate)=>candidate.id==='c02')!
+    expect(citizen.alive).toBe(true)
+    expect(citizen.status.hydration).toBe('normal')
+  })
+
+  it('keeps a deliberately withdrawn next-home material instead of redepositing it into a Bank ping-pong loop',()=>{
+    let game=createInitialGame(8108,2)
+    const base=game.citizens.find((citizen)=>citizen.id==='c02')!
+    game=patchCitizen(game,'c02',{
+      inventory:[item('home-log','rotten_log')],
+      home:{...base.home,level:'tent',defense:1,storage:[]},
+    })
+    const citizen=game.citizens.find((candidate)=>candidate.id==='c02')!
+    const action=unloadAction(citizen,getLegalActions(game,'c02'),null,false)
+    expect(action).toEqual({type:'MOVE_ITEM_TO_HOME',citizenId:'c02',itemId:'home-log'})
   })
 })
