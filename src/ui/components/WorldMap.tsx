@@ -51,8 +51,9 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
           className={`map-cell ${zone.discovered?'known':''} ${known?.freshness==='stale'?'intel-stale':''} ${site?'special-site-cell':''} ${isTown?'town':''} ${isPlayer?'player':''} ${controlState?`control-${controlState}`:''} ${rescueInbound?'rescue-active':''}`}
           title={titleParts.join(' · ')}
         >
-          <span className="map-cell-top">{siteLabel??humanLabel??(isTown?'T':'')}</span>
-          <span className="map-cell-bottom">{humanCount>0&&siteLabel?humanLabel:zombieLabel}</span>
+          <span className="map-cell-top">{humanLabel||(siteLabel??(isTown?'T':''))}</span>
+          <span className="map-cell-bottom">{zombieLabel}</span>
+          {siteLabel&&humanCount>0&&<span className="map-site-marker">{siteLabel}</span>}
           {rescueInbound&&<span className="map-rescue-marker">R</span>}
         </span>,
       )
