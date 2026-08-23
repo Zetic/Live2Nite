@@ -5,8 +5,8 @@ export const ITEM_TYPE_IDS = [
   // Source utility opener/tool family. Hacksaw is assembled from the damaged source item.
   'saw_tool_part','saw_tool',
   // Ordinary source food outcomes. food itself maps to food_sandw_#00 (Mouldy Ham Sandwich).
-  'mouldy_twinkies','half_eaten_chicken_wings','rancid_shortbread_pack','out_of_date_jaffa_cakes','dried_chewing_gum','stale_tart','soft_crisps','can','open_can','vegetable','tasty_looking_steak',
-  'doggy_bag','citizen_welcome_pack','battery','box_of_matches','pharmaceutical_products',
+  'mouldy_twinkies','half_eaten_chicken_wings','rancid_shortbread_pack','out_of_date_jaffa_cakes','dried_chewing_gum','stale_tart','soft_crisps','can','open_can','vegetable','tasty_looking_steak','chinese_noodles','spicy_chinese_noodles',
+  'doggy_bag','citizen_welcome_pack','battery','box_of_matches','pharmaceutical_products','strong_spices',
   // Construction economy: advanced materials, supplies, and unprocessed salvage.
   'metal_support','patchwork_beam','sheet_metal','bag_of_damp_grass','bag_of_cement','belt','compact_detonator','convex_lens','copper_pipe','duct_tape','earplugs','electronic_component','empty_oil_can','nuts_and_bolts','laser_diode','semtex','telescope','wire_reel','broken_electronic_device','mechanism',
   // Additional current-MyHordes construction inputs used by direct equivalents in the town tree.

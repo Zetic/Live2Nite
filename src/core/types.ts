@@ -24,6 +24,7 @@ export type CombinationRecipeId =
   | 'assemble_claymore'
   | 'assemble_torch'
   | 'assemble_hacksaw'
+  | 'prepare_spicy_noodles'
   | 'mix_concrete'
   | 'fill_water_bomb'
   | 'reload_water_pistol'
