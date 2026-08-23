@@ -57,13 +57,15 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - depleted-zone Rotting Log / Scrap Metal feedstock
 - Construction Kits and construction-ready Workshop materials available from early scavenging
 - 4-slot ordinary rucksack
-- shared Bank deposits and withdrawals, including defensive objects, weapons, food, and expedition supplies
+- schema-v16 stateful item instances across rucksack, Home, ground, and shared Bank storage
+- shared Bank deposits and withdrawals preserve the exact object's ID and persistent state; visually identical objects stack only when type and state match
+- representative catalog support for charges, condition, contamination, and future assembly-aware recipes without automatically adding every catalogued object to loot
 - original-style 2 human CP vs. 1 zombie CP zone control
 - zombie combat can reduce control and free a trapped citizen immediately
 - bare-handed combat plus Human Bone, Pathetic Penknife, Staff, Serrated Knife, Machete, and Water Bomb weapon tiers
 - breakable field weapons produce broken items for the current Workshop repair prototype
 - shared Construction Sites with persistent AP progress
-- current construction catalog: Workshop, Watchtower, Pump, Wall Upgrade V1, Portal Lock, and Search Tower
+- broad seven-branch data-driven construction tree with Workshop, Watchtower, Pump, wall, Foundations, Portal, and Sanctuary progression
 - Workshop material processing and current repair recipes
 - Watchtower horde-estimate screen
 - Search Tower nightly depleted-zone replenishment prototype
@@ -83,7 +85,7 @@ Hydration/status evidence is recorded in [`docs/die2nite-reference/status-hydrat
 
 The clock/fast-forward and autonomous mission-planning systems are **Live2Nite single-player simulation interfaces**, not claims that the original browser game used player-controlled hourly ticks or these AI heuristics. They exist so autonomous citizens can evolve over a day while preserving the original-style AP economy: actions do not themselves consume clock hours.
 
-The citizen-control switcher and AI mission readout are development aids rather than permanent game mechanics. Control selection is kept out of authoritative save state. Active bot mission assignments, citizen hydration state, camping history, and campsite improvements are persisted because they affect multi-hour and multi-day gameplay.
+The citizen-control switcher and AI mission readout are development aids rather than permanent game mechanics. Control selection is kept out of authoritative save state. Active bot mission assignments, citizen hydration state, camping history, campsite improvements, and item-instance state are persisted because they affect multi-hour and multi-day gameplay.
 
 ## Development
 
@@ -101,4 +103,4 @@ npm run build
 
 ## Architecture
 
-See [`docs/architecture.md`](docs/architecture.md).
+See [`docs/architecture.md`](docs/architecture.md). Stateful item/storage invariants and the catalog expansion path are documented in [`docs/item-economy.md`](docs/item-economy.md).
