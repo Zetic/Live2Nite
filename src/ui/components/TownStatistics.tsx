@@ -84,14 +84,14 @@ export function TownStatistics({ game, terminal = false }: { game: GameState; te
     </section>
 
     <section className="records-section citizen-records-section">
-      <div className="records-section-heading"><div><p className="section-kicker">Citizen ledger</p><h3>Individual activity</h3></div><span className="panel-count">{stats.citizens.length} citizens</span></div>
+      <div className="records-section-heading"><div><p className="section-kicker">Citizen ledger</p><h3>Individual activity</h3><p className="section-note">AP and transaction columns make genuine work distinguishable from zero-AP inventory churn.</p></div><span className="panel-count">{stats.citizens.length} citizens</span></div>
       <div className="citizen-stat-table-wrap">
         <table className="citizen-stat-table">
-          <thead><tr><th>Citizen</th><th>Status</th><th>Searches</th><th>Loot</th><th>Kills</th><th>Bank</th><th>Build AP</th><th>Travel</th><th>Camps</th></tr></thead>
+          <thead><tr><th>Citizen</th><th>Status</th><th>AP spent</th><th>Missions</th><th>Searches</th><th>Loot</th><th>Ground +/-</th><th>Bank D/W</th><th>Build AP</th><th>Workshop</th><th>Home</th><th>Travel</th><th>Camps</th></tr></thead>
           <tbody>{stats.citizens.map((record) => <tr key={record.citizenId} className={record.alive ? '' : 'dead-row'}>
             <td><strong>{record.name}</strong></td>
             <td>{record.alive ? <span className="citizen-state alive-state">Alive</span> : <span className="citizen-state dead-state">D{record.deathDay ?? '?'} · {deathLabel(record.deathReason)}</span>}</td>
-            <td>{record.searches}</td><td>{record.lootFound}</td><td>{record.zombieKills}</td><td>{record.bankDeposits}</td><td>{record.constructionAp}</td><td>{record.travelSteps}</td><td>{record.campingSurvivals}/{record.campingAttempts}</td>
+            <td>{record.apSpent}</td><td>{record.missions}</td><td>{record.searches}</td><td>{record.lootFound}</td><td>{record.itemsPickedUp}/{record.itemsDropped}</td><td>{record.bankDeposits}/{record.bankWithdrawals}</td><td>{record.constructionAp}</td><td>{record.workshopActions}</td><td>{record.homeActions}</td><td>{record.travelSteps}</td><td>{record.campingSurvivals}/{record.campingAttempts}</td>
           </tr>)}</tbody>
         </table>
       </div>
