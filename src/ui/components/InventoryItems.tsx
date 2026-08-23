@@ -18,16 +18,6 @@ export const BANK_SECTIONS: BankSectionDefinition[] = [
   { id:'misc', label:'Miscellaneous', matches:(type)=>type!=='pharmaceutical_products'&&ITEMS[type].category==='misc' },
 ]
 
-export function bankSectionFor(type:ItemType):BankSectionDefinition {
-  return BANK_SECTIONS.find((section)=>section.matches(type)) ?? BANK_SECTIONS[BANK_SECTIONS.length-1]
-}
-
-export function stackedItems(items:readonly ItemInstance[]):Array<{type:ItemType;count:number}> {
-  const counts=new Map<ItemType,number>()
-  for(const item of items)counts.set(item.type,(counts.get(item.type)??0)+1)
-  return [...counts.entries()].map(([type,count])=>({type,count}))
-}
-
 export function itemTooltip(type:ItemType,extra?:string):string {
   const definition=ITEMS[type]
   const details=[itemPurpose(type)]
@@ -51,10 +41,10 @@ export function ItemButton({type,count,disabled,onClick,extraTooltip,className='
   </button>
 }
 
-export function ItemStrip({items,capacity,onItemClick,emptyLabel='Empty',extraTooltip}:{items:readonly ItemInstance[];capacity?:number;onItemClick?:(item:ItemInstance)=>void;emptyLabel?:string;extraTooltip?:(item:ItemInstance)=>string|undefined}) {
+export function ItemStrip({items,capacity,onItemClick,disabledForItem,emptyLabel='Empty',extraTooltip}:{items:readonly ItemInstance[];capacity?:number;onItemClick?:(item:ItemInstance)=>void;disabledForItem?:(item:ItemInstance)=>boolean;emptyLabel?:string;extraTooltip?:(item:ItemInstance)=>string|undefined}) {
   const slots=capacity===undefined?0:Math.max(0,capacity-items.length)
   return <div className="item-strip">
-    {items.map((item)=><ItemButton key={item.id} type={item.type} onClick={onItemClick?()=>onItemClick(item):undefined} extraTooltip={extraTooltip?.(item)}/>) }
+    {items.map((item)=><ItemButton key={item.id} type={item.type} disabled={disabledForItem?.(item)} onClick={onItemClick?()=>onItemClick(item):undefined} extraTooltip={extraTooltip?.(item)}/>) }
     {items.length===0&&capacity===undefined&&<span className="compact-empty">{emptyLabel}</span>}
     {Array.from({length:slots},(_,index)=><span className="empty-item-slot" aria-hidden="true" key={`slot-${index}`}/>) }
   </div>
