@@ -1,3 +1,4 @@
+import { homeDefenseBonus } from '../../core/construction'
 import { HOME_LEVELS, HOME_UPGRADE_AP_COST, homeName, personalDefense } from '../../core/home'
 import { ITEMS, itemName, itemPurpose } from '../../core/items'
 import type { GameCommand, GameState, ItemInstance } from '../../core/types'
@@ -43,8 +44,10 @@ export function HomeView({ game, citizenId, legalActions, act }: {
 }) {
   const player = game.citizens.find((citizen) => citizen.id === citizenId) ?? game.citizens[0]
   const upgrade = legalActions.find((action) => action.type === 'UPGRADE_HOME')
-  const currentDefense = personalDefense(player)
+  const currentDefense = personalDefense(player,game)
   const structuralDefense = HOME_LEVELS[player.home.level].defense
+  const townReinforcement=homeDefenseBonus(game)
+  const objectDefense=currentDefense-structuralDefense-townReinforcement
 
   return <section className="panel screen-panel home-screen">
     <div className="panel-heading">
@@ -65,11 +68,12 @@ export function HomeView({ game, citizenId, legalActions, act }: {
         <h3>{player.home.level === 'camp_bed' ? 'Upgrade to a Tent' : 'Tent established'}</h3>
         <p>{player.home.level === 'camp_bed'
           ? 'The first documented home upgrade costs 2 AP and raises structural personal defense from 0 to 1.'
-          : 'This Tent provides 1 structural defense. Later Hovel and higher upgrades are deliberately deferred.'}</p>
+          : 'This Tent provides 1 structural defense. Town constructions can reinforce every home further.'}</p>
       </div>
       <div className="home-defense-breakdown">
         <span>Structure <strong>{structuralDefense}</strong></span>
-        <span>Defense objects <strong>{currentDefense - structuralDefense}</strong></span>
+        <span>Town reinforcement <strong>{townReinforcement}</strong></span>
+        <span>Defense objects <strong>{objectDefense}</strong></span>
         <span>Total <strong>{currentDefense}</strong></span>
       </div>
       {player.home.level === 'camp_bed' && <button className="primary" disabled={!upgrade} onClick={() => act(upgrade)}>
@@ -85,13 +89,13 @@ export function HomeView({ game, citizenId, legalActions, act }: {
         <span>Water refresh</span><strong>{player.daily.drank ? 'USED' : 'AVAILABLE'}</strong><small>Water can independently refill AP to {player.maxAp} once each day.</small>
       </article>
       <article className={player.daily.waterTaken ? 'done' : ''}>
-        <span>Well ration</span><strong>{player.daily.waterTaken ? 'CLAIMED' : 'UNCLAIMED'}</strong><small>This citizen may take one Water Ration from the town well per day.</small>
+        <span>Well ration</span><strong>{player.daily.waterTaken ? 'CLAIMED' : 'UNCLAIMED'}</strong><small>Completed water infrastructure can increase this citizen's daily Well withdrawals.</small>
       </article>
     </div>
 
     <div className="storage-columns">
       <section className="storage-zone">
-        <div className="section-heading-row"><div><h3>Home Chest</h3><p>Defensive objects stored here can protect this home if the town is breached.</p></div><span className="micro-stat">{player.home.storage.length}/{player.home.storageCapacity}</span></div>
+        <div className="section-heading-row"><div><h3>Home Chest</h3><p>Defensive objects stored here protect this home and partly contribute to shared town defense.</p></div><span className="micro-stat">{player.home.storage.length}/{player.home.storageCapacity}</span></div>
         <div className="storage-list">{player.home.storage.length === 0 ? <p className="empty-state">This chest is empty.</p> : player.home.storage.map((item) => <ItemCard key={item.id} item={item} location="home" actions={legalActions} act={act}/>)}</div>
       </section>
 

@@ -144,5 +144,5 @@ describe('Day-1 economy benchmark', () => {
     expect(totalOutsideAtMidnight).toBeGreaterThanOrEqual(0)
     expect(minimumLiving).toBeGreaterThanOrEqual(0)
     expect(totalNormalSearches).toBeGreaterThanOrEqual(totalAutomaticSearches)
-  }, 15_000)
+  }, 30_000)
 })

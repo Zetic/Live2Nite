@@ -5,37 +5,41 @@ import { createInitialGame } from '../src/core/game'
 import { DEPLETED_SCAVENGE_LOOT_POOL, NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
 import type { GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
-import { availableScreens } from '../src/ui/navigation'
+import { availableScreens, FACILITY_SLOT_COUNT, facilitySlots, PRIMARY_SCREENS } from '../src/ui/navigation'
 
 function command(game: GameState, citizenId: string, type: ReturnType<typeof getLegalActions>[number]['type']) {
   const action = getLegalActions(game, citizenId).find((candidate) => candidate.type === type)
   if (!action) throw new Error(`Missing ${type}`)
   return action
 }
-
-function outsideAt(game: GameState, x: number, y: number): GameState {
-  return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, location: { type: 'world' as const, x, y } } : citizen) }
-}
+function outsideAt(game: GameState, x: number, y: number): GameState {return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, location: { type: 'world' as const, x, y } } : citizen) }}
 
 describe('facility navigation', () => {
-  it('removes the generic Town destination and exposes Well, Bank, Construction, and World Beyond', () => {
-    const screens = availableScreens(createInitialGame(123, 2)).map((entry) => entry.id)
-    expect(screens).toEqual(['home', 'well', 'bank', 'construction', 'world', 'citizens', 'chronicle'])
-    expect(screens).not.toContain('town')
+  it('keeps the primary navigation row fixed', () => {
+    const game=createInitialGame(123,2)
+    const primary=PRIMARY_SCREENS.map((entry)=>entry.id)
+    expect(primary).toEqual(['home','well','bank','construction','world','citizens','chronicle'])
+    expect(availableScreens(game).map((entry)=>entry.id)).toEqual(primary)
+    expect(primary).not.toContain('town')
   })
 
-  it('adds the Workshop destination only after the Workshop is built', () => {
-    const before = createInitialGame(123, 2)
-    expect(availableScreens(before).some((entry) => entry.id === 'workshop')).toBe(false)
-    const after: GameState = { ...before, town: { ...before.town, construction: { ...before.town.construction, workshop: { ...before.town.construction.workshop, completed: true, apContributed: 25 } } } }
-    expect(availableScreens(after).some((entry) => entry.id === 'workshop')).toBe(true)
+  it('keeps six stable facility slots and fills them without shifting primary screens', () => {
+    const before=createInitialGame(123,2)
+    expect(facilitySlots(before)).toHaveLength(FACILITY_SLOT_COUNT)
+    expect(facilitySlots(before).every((entry)=>entry===null)).toBe(true)
+    const after:GameState={...before,town:{...before.town,construction:{...before.town.construction,workshop:{...before.town.construction.workshop,completed:true,apContributed:25}}}}
+    const slots=facilitySlots(after)
+    expect(slots).toHaveLength(FACILITY_SLOT_COUNT)
+    expect(slots[0]?.id).toBe('workshop')
+    expect(slots[1]).toBeNull()
+    expect(availableScreens(after).slice(0,PRIMARY_SCREENS.length).map((entry)=>entry.id)).toEqual(PRIMARY_SCREENS.map((entry)=>entry.id))
   })
 })
 
 describe('undepleted and depleted scavenging', () => {
-  it('starts schema v12 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
+  it('starts schema v13 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
     const game = createInitialGame(123, 2)
-    expect(game.schemaVersion).toBe(12)
+    expect(game.schemaVersion).toBe(13)
     expect(game.botMissions).toEqual({})
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('twisted_plank')

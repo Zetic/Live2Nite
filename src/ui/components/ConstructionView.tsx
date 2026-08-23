@@ -1,65 +1,73 @@
-import { CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionUnlocked, missingMaterials } from '../../core/construction'
+import { useState } from 'react'
+import { CONSTRUCTION_CATEGORIES, CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionDepth, constructionFlatDefenseForProject, constructionUnlocked, missingMaterials, type ConstructionCategory } from '../../core/construction'
 import { itemName } from '../../core/items'
 import type { ConstructionId, GameCommand, GameState, ItemType } from '../../core/types'
+import '../construction.css'
 
 function constructionCommand(actions: GameCommand[], projectId: ConstructionId) {
   return actions.find((action): action is Extract<GameCommand,{type:'CONTRIBUTE_CONSTRUCTION'}> => action.type === 'CONTRIBUTE_CONSTRUCTION' && action.projectId === projectId)
 }
 function resourceEntries(resources: Partial<Record<ItemType,number>>) { return Object.entries(resources) as [ItemType,number][] }
+function categoryLabel(category:ConstructionCategory):string{return CONSTRUCTION_CATEGORIES.find((entry)=>entry.id===category)?.label??category}
 
 export function ConstructionView({ game, legalActions, act }: {
   game: GameState
   legalActions: GameCommand[]
   act: (command: GameCommand | undefined) => void
 }) {
-  const active = CONSTRUCTION_ORDER.filter((id) => !game.town.construction[id].completed)
-  const completed = CONSTRUCTION_ORDER.filter((id) => game.town.construction[id].completed)
+  const [category,setCategory]=useState<ConstructionCategory|'all'>('all')
+  const [expanded,setExpanded]=useState<ConstructionId|null>(null)
+  const completed=CONSTRUCTION_ORDER.filter((id)=>game.town.construction[id]?.completed).length
+  const visible=CONSTRUCTION_ORDER.filter((id)=>category==='all'||CONSTRUCTIONS[id].category===category)
 
-  return <section className="panel screen-panel">
+  return <section className="panel screen-panel construction-screen">
     <div className="panel-heading">
       <div>
         <p className="section-kicker">Shared town projects</p>
         <h2>Construction Sites</h2>
-        <p className="section-note">Projects now compete for shared materials. Build what the town needs; prerequisite projects unlock later branches.</p>
+        <p className="section-note">Choose a branch, then invest shared materials and AP. Indentation shows prerequisite progression; one-night emergency projects can be rebuilt after they expire.</p>
       </div>
-      <span className="panel-count">{completed.length}/{CONSTRUCTION_ORDER.length} built</span>
+      <span className="panel-count">{completed}/{CONSTRUCTION_ORDER.length} built</span>
     </div>
 
-    {active.length === 0 ? <p className="empty-state">Every currently available construction project is complete.</p> : <div className="project-grid">{active.map((projectId) => {
-      const definition = CONSTRUCTIONS[projectId]
-      const project = game.town.construction[projectId]
-      const unlocked = constructionUnlocked(game, projectId)
-      const missing = missingMaterials(game, projectId)
-      const command = constructionCommand(legalActions, projectId)
-      const progress = Math.round((project.apContributed / definition.apCost) * 100)
-      const prerequisites = definition.prerequisites.map((id) => CONSTRUCTIONS[id].name)
-      const blockedReason = !unlocked
-        ? `Requires ${prerequisites.join(' + ')}`
-        : Object.keys(missing).length
-          ? 'Waiting on Bank materials'
-          : 'No AP available'
-      return <article className="project-card" key={projectId}>
-        <div className="project-title-row">
-          <div><span className="project-state">{unlocked ? 'CONSTRUCTION' : 'LOCKED'}</span><h4>{definition.name}</h4></div>
-          {definition.defenseBonus > 0 && <span className="defense-badge">+{definition.defenseBonus} DEF</span>}
-        </div>
-        <p>{definition.description}</p>
-        {definition.effectLabel && <p className="section-note"><strong>Effect:</strong> {definition.effectLabel}</p>}
-        {definition.historicalCostConfidence === 'adapted' && <p className="section-note">Current material mix is a Live2Nite reconstruction pending exact final-English component verification.</p>}
-        {!unlocked && <div className="requirements"><span className="missing">Prerequisite <strong>{prerequisites.join(' + ')}</strong></span></div>}
-        <div className="progress-label"><span>Town labor</span><strong>{project.apContributed}/{definition.apCost} AP</strong></div>
-        <div className="progress-track"><span style={{width:`${progress}%`}}/></div>
-        <div className="requirements">{resourceEntries(definition.resources).map(([type,required]) => {
-          const current = game.town.bank[type] ?? 0
-          return <span className={current >= required ? 'ready' : 'missing'} key={type}>{itemName(type)} <strong>{current}/{required}</strong></span>
-        })}</div>
-        <button className="project-action" disabled={!command} onClick={() => act(command)}>{command ? 'Contribute to project' : blockedReason}<small>1 AP</small></button>
-      </article>
-    })}</div>}
+    <div className="construction-tabs" role="tablist" aria-label="Construction categories">
+      {CONSTRUCTION_CATEGORIES.map((entry)=><button key={entry.id} type="button" role="tab" aria-selected={category===entry.id} className={category===entry.id?'active':''} onClick={()=>setCategory(entry.id)}>{entry.label}</button>)}
+    </div>
 
-    {completed.length > 0 && <section className="town-section completed-facilities">
-      <div><h3>Completed Sites</h3><p>Completed projects remain active as town-wide effects or operational facilities.</p></div>
-      <div className="requirements">{completed.map((id) => <span className="ready" key={id}>{CONSTRUCTIONS[id].name} <strong>BUILT</strong></span>)}</div>
-    </section>}
+    <div className="construction-table" role="table" aria-label="Town construction projects">
+      <div className="construction-row construction-header" role="row">
+        <span>Project</span><span>Effect</span><span>Labor</span><span>Materials</span><span>Status</span>
+      </div>
+      {visible.map((projectId)=>{
+        const definition=CONSTRUCTIONS[projectId]
+        const project=game.town.construction[projectId]
+        const unlocked=constructionUnlocked(game,projectId)
+        const missing=missingMaterials(game,projectId)
+        const command=constructionCommand(legalActions,projectId)
+        const prerequisites=definition.prerequisites.map((id)=>CONSTRUCTIONS[id].name)
+        const flatDefense=constructionFlatDefenseForProject(projectId)
+        const isExpanded=expanded===projectId
+        const status=project.completed?'BUILT':!unlocked?'LOCKED':command?'BUILD':'WAITING'
+        const resourceSummary=resourceEntries(definition.resources)
+        return <div className={`construction-entry ${project.completed?'built':''} ${!unlocked?'locked':''}`} key={projectId}>
+          <div className="construction-row" role="row">
+            <button className="construction-name" type="button" onClick={()=>setExpanded(isExpanded?null:projectId)} style={{paddingLeft:`${10+constructionDepth(projectId)*18}px`}}>
+              <span className="tree-mark">{constructionDepth(projectId)>0?'└':'◆'}</span>
+              <span><strong>{definition.name}</strong><small>{categoryLabel(definition.category)}{definition.expiresAfterAttack?' · one night':''}</small></span>
+            </button>
+            <span className="construction-effect">{flatDefense>0?<strong>+{flatDefense} DEF</strong>:<strong>UTILITY</strong>}<small>{definition.effectLabel??'Unlocks branch progression'}</small></span>
+            <span className="construction-labor"><strong>{project.apContributed}/{definition.apCost}</strong><small>AP</small><span className="mini-progress"><i style={{width:`${Math.min(100,(project.apContributed/definition.apCost)*100)}%`}}/></span></span>
+            <span className="construction-resources">{resourceSummary.length?resourceSummary.map(([type,required])=>{const current=game.town.bank[type]??0;return <small className={current>=required?'ready':'missing'} key={type}>{itemName(type)} <strong>{current}/{required}</strong></small>}):<small>Labor only</small>}</span>
+            <span className="construction-status">
+              {project.completed?<strong className="built-label">BUILT</strong>:<button type="button" disabled={!command} onClick={()=>act(command)}>{command?'Contribute':status}<small>{command?'1 AP':!unlocked&&prerequisites.length?`Needs ${prerequisites.join(' + ')}`:Object.keys(missing).length?'Materials required':'No AP'}</small></button>}
+            </span>
+          </div>
+          {isExpanded&&<div className="construction-details">
+            <p>{definition.description}</p>
+            <div><span><strong>Effect</strong>{definition.effectLabel??'Branch prerequisite'}</span><span><strong>Source</strong>{definition.source.replaceAll('_',' ')}</span><span><strong>Costs</strong>{definition.historicalCostConfidence==='confirmed'?'Recovered/confirmed':'Live2Nite-adapted material mix'}</span>{prerequisites.length>0&&<span><strong>Requires</strong>{prerequisites.join(' + ')}</span>}</div>
+          </div>}
+        </div>
+      })}
+    </div>
   </section>
 }

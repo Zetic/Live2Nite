@@ -32,9 +32,9 @@ function scoutMission(): BotMissionAssignment {
 }
 
 describe('game clock', () => {
-  it('starts a new town at 1:00 AM in schema v12', () => {
+  it('starts a new town at 1:00 AM in schema v13', () => {
     const game = createInitialGame(123,2)
-    expect(game.schemaVersion).toBe(12)
+    expect(game.schemaVersion).toBe(13)
     expect(game.day).toBe(1)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.events[0]).toMatchObject({ type: 'DAY_STARTED', day: 1, hour: 1 })

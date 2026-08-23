@@ -1,5 +1,6 @@
+import { homeDefenseBonus } from './construction'
 import { homeDefenseFor } from './items'
-import type { Citizen, CitizenDailyState, CitizenHome, HomeLevel } from './types'
+import type { Citizen, CitizenDailyState, CitizenHome, GameState, HomeLevel } from './types'
 
 export const BASE_HOME_STORAGE = 4
 export const HOME_UPGRADE_AP_COST = 2
@@ -37,6 +38,8 @@ export function nextHomeLevel(level: HomeLevel): HomeLevel | null {
   return level === 'camp_bed' ? 'tent' : null
 }
 
-export function personalDefense(citizen: Citizen): number {
-  return citizen.home.defense + citizen.home.storage.reduce((sum, item) => sum + homeDefenseFor(item.type), 0)
+export function personalDefense(citizen: Citizen, state?: GameState): number {
+  return citizen.home.defense
+    + (state ? homeDefenseBonus(state) : 0)
+    + citizen.home.storage.reduce((sum, item) => sum + homeDefenseFor(item.type), 0)
 }

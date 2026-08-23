@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { BasicBotController } from '../src/agents/BasicBotController'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand, InvalidCommandError } from '../src/core/commands'
+import { totalTownDefense } from '../src/core/defense'
 import { createInitialGame } from '../src/core/game'
-import type { GameCommand, GameState, ItemType } from '../src/core/types'
+import type { ConstructionId, GameCommand, GameState, ItemType } from '../src/core/types'
 import { STARTING_WELL_MAX, STARTING_WELL_MIN } from '../src/core/well'
 import { zoneControl, zoneKey } from '../src/core/world'
 import { advanceOneHour, advanceToHour } from '../src/simulation/advanceTime'
@@ -15,25 +16,23 @@ function command(game: GameState, citizenId: string, type: GameCommand['type']) 
   if (!action) throw new Error(`Missing ${type}`)
   return action
 }
-
+function projectCommand(game:GameState,citizenId:string,projectId:ConstructionId){
+  const action=getLegalActions(game,citizenId).find((candidate)=>candidate.type==='CONTRIBUTE_CONSTRUCTION'&&candidate.projectId===projectId)
+  if(!action)throw new Error(`Missing construction ${projectId}`)
+  return action
+}
 function itemCommand(game: GameState, citizenId: string, type: 'OPEN_CONTAINER'|'EAT_ITEM'|'DRINK_ITEM'|'MOVE_ITEM_TO_HOME'|'MOVE_ITEM_TO_RUCKSACK', itemId: string) {
   const action = getLegalActions(game, citizenId).find((candidate) => candidate.type === type && 'itemId' in candidate && candidate.itemId === itemId)
   if (!action) throw new Error(`Missing ${type} for ${itemId}`)
   return action
 }
-
-function withWorkshopResources(game: GameState): GameState {
-  return { ...game, town: { ...game.town, bank: { ...game.town.bank, twisted_plank: 10, wrought_iron: 8, unshaped_concrete_block: 1 } } }
-}
-
-function withInventory(game: GameState, types: ItemType[]): GameState {
-  return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) } : citizen) }
-}
+function withWorkshopResources(game: GameState): GameState {return { ...game, town: { ...game.town, bank: { ...game.town.bank, twisted_plank: 10, wrought_iron: 8, unshaped_concrete_block: 1 } } }}
+function withInventory(game: GameState, types: ItemType[]): GameState {return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) } : citizen) }}
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v12 citizens at 1 AM with starter home, packages, hydration, camping, and control state', () => {
+  it('starts schema v13 citizens at 1 AM with starter home, packages, hydration, camping, and control state', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(12)
+    expect(game.schemaVersion).toBe(13)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
@@ -190,13 +189,14 @@ describe('World Beyond gameplay', () => {
     expect(game.town.bank.scrap_metal).toBe(1)
   })
 
-  it('can withdraw a shared bank item and removes its bank-defense value', () => {
+  it('can withdraw a shared bank item and removes its derived bank-defense value', () => {
     let game = withInventory(createInitialGame(123, 1), ['old_door'])
     game = executeCommand(game, command(game,'c01','DEPOSIT_ITEM')).state
-    expect(game.town.defense).toBe(42)
+    expect(game.town.defense).toBe(40)
+    expect(totalTownDefense(game)).toBe(42)
     game = executeCommand(game, command(game,'c01','WITHDRAW_BANK_ITEM')).state
     expect(game.town.bank.old_door).toBe(0)
-    expect(game.town.defense).toBe(40)
+    expect(totalTownDefense(game)).toBe(40)
     expect(game.citizens[0].inventory.some((item) => item.type === 'old_door')).toBe(true)
   })
 })
@@ -207,10 +207,10 @@ describe('Town construction and Workshop', () => {
     expect(getLegalActions(game, 'c01').some((a) => a.type === 'CONTRIBUTE_CONSTRUCTION')).toBe(false)
   })
 
-  it('retains materials while construction is incomplete', () => {
+  it('retains materials while Workshop construction is incomplete', () => {
     let game = withWorkshopResources(createInitialGame(321, 2))
     const before = { ...game.town.bank }
-    game = executeCommand(game, command(game, 'c01', 'CONTRIBUTE_CONSTRUCTION')).state
+    game = executeCommand(game, projectCommand(game,'c01','workshop')).state
     expect(game.town.construction.workshop.apContributed).toBe(1)
     expect(game.town.bank).toEqual(before)
   })
@@ -218,7 +218,7 @@ describe('Town construction and Workshop', () => {
   it('consumes only the Workshop materials on completion', () => {
     let game = withWorkshopResources(createInitialGame(321, 2))
     game = { ...game, town: { ...game.town, construction: { ...game.town.construction, workshop: { ...game.town.construction.workshop, apContributed: 24 } } } }
-    game = executeCommand(game, command(game, 'c01', 'CONTRIBUTE_CONSTRUCTION')).state
+    game = executeCommand(game, projectCommand(game,'c01','workshop')).state
     expect(game.town.construction.workshop.completed).toBe(true)
     expect(game.town.bank.twisted_plank).toBe(0)
     expect(game.town.bank.wrought_iron).toBe(0)
@@ -235,13 +235,13 @@ describe('Town construction and Workshop', () => {
     expect(game.town.bank.twisted_plank).toBe(1)
   })
 
-  it('completing the Watchtower adds +3 town defense', () => {
+  it('completing the Watchtower adds derived town defense without mutating the bootstrap base', () => {
     let game = createInitialGame(321, 2)
     game = { ...game, town: { ...game.town, bank: { twisted_plank: 3, wrought_iron: 2 }, construction: { ...game.town.construction, watchtower: { id: 'watchtower', apContributed: 11, completed: false } } } }
-    const action = getLegalActions(game, 'c01').find((a) => a.type === 'CONTRIBUTE_CONSTRUCTION' && a.projectId === 'watchtower')!
-    game = executeCommand(game, action).state
+    game = executeCommand(game, projectCommand(game,'c01','watchtower')).state
     expect(game.town.construction.watchtower.completed).toBe(true)
-    expect(game.town.defense).toBe(43)
+    expect(game.town.defense).toBe(40)
+    expect(totalTownDefense(game)).toBe(50)
   })
 
   it('spreads bot construction work across hourly planning ticks while preserving rescue AP', () => {
