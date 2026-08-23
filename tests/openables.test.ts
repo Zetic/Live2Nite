@@ -62,7 +62,11 @@ describe('source-backed openables',()=>{
     const toolbox=createItemInstance('toolbox','toolbox')
     expect(openAction(withInventory([toolbox]),'toolbox')).toBeUndefined()
 
-    const implementedSourceOpeners:ItemType[]=['human_bone','machete','pathetic_penknife','serrated_knife','staff']
+    const implementedSourceOpeners:ItemType[]=[
+      'adjustable_spanner','box_cutter','human_bone','machete','pathetic_penknife','chain',
+      'serrated_knife','staff','can_opener','screwdriver','swiss_army_knife',
+    ]
+    expect(OPENABLES.toolbox?.openableBy).toEqual(implementedSourceOpeners)
     for(const openerType of implementedSourceOpeners){
       let game=withInventory([toolbox,createItemInstance('opener',openerType)],9102)
       const action=openAction(game,'toolbox')
