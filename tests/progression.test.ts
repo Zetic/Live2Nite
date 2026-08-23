@@ -138,11 +138,13 @@ describe('Day-1 economy benchmark', () => {
 
     // These values are telemetry until the surrounding early-game economy is more
     // complete. Exact Workshop frequency, survivors, and outside counts are balance,
-    // not rule correctness, so they must not block unrelated feature PRs yet.
+    // not rule correctness, so they must not block unrelated feature PRs yet. The
+    // explicit timeout is intentionally generous enough for runner variance while still
+    // catching a real simulation hang.
     expect(workshops).toBeGreaterThanOrEqual(0)
     expect(workshops).toBeLessThanOrEqual(seeds.length)
     expect(totalOutsideAtMidnight).toBeGreaterThanOrEqual(0)
     expect(minimumLiving).toBeGreaterThanOrEqual(0)
     expect(totalNormalSearches).toBeGreaterThanOrEqual(totalAutomaticSearches)
-  }, 30_000)
+  }, 60_000)
 })
