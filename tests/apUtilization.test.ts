@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { BasicBotController } from '../src/agents/BasicBotController'
 import { normalCandidates } from '../src/agents/planning/AssignmentPolicy'
 import { shouldUseRefill } from '../src/agents/planning/SupplyPolicy'
 import { planTownMissionAssignments } from '../src/agents/planning/TownMissionPlanner'
 import { createInitialGame } from '../src/core/game'
 import type { GameState } from '../src/core/types'
+import { runBotHour } from '../src/simulation/runBotHour'
+
+const bots=new BasicBotController()
 
 function patchCitizen(game:GameState,id:string,patch:Partial<GameState['citizens'][number]>):GameState{
   return {...game,citizens:game.citizens.map((citizen)=>citizen.id===id?{...citizen,...patch}:citizen)}
@@ -51,5 +55,31 @@ describe('bot AP utilization discipline',()=>{
     const assignments=planTownMissionAssignments(game,'c01')
       .filter((event)=>event.type==='BOT_MISSION_ASSIGNED')
     expect(assignments.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('spends repeated safe town AP in the late window instead of one AP per hour',()=>{
+    const initial=createInitialGame(7105,2)
+    const game:GameState={
+      ...initial,
+      day:2,
+      clock:{hour:20,phase:'day'},
+      town:{...initial.town,bank:{...initial.town.bank,twisted_plank:10,wrought_iron:8}},
+      coordination:{commitments:[{
+        id:'late-work',
+        citizenId:'c02',
+        kind:'construction',
+        taskKey:'construction:workshop',
+        label:'I will work on the Workshop.',
+        reservedAp:0,
+        day:2,
+        hour:20,
+        expiresHour:21,
+        projectId:'workshop',
+      }]},
+    }
+    const after=runBotHour(game,bots,'c01')
+    const citizen=after.citizens.find((candidate)=>candidate.id==='c02')!
+    expect(citizen.ap).toBe(0)
+    expect(after.town.construction.workshop.apContributed).toBe(6)
   })
 })
