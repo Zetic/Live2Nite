@@ -6,6 +6,7 @@ import { CONSTRUCTIONS } from './construction'
 import { applyEvents } from './events'
 import { HOME_IMPROVEMENTS, homeImprovementDefense, improvementNextLevel, nextHomeDefinition } from './home'
 import { containerPool, createItemInstance, DEPLETED_SCAVENGE_LOOT_POOL, normalizeItemState } from './items'
+import { openableDefinition, resolveOpenable } from './openables'
 import { randomInt } from './rng'
 import { travelHydrationTransition, waterConsumptionOutcome } from './status'
 import type { Citizen, GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, SearchMode } from './types'
@@ -66,7 +67,18 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     case 'WITHDRAW_BANK_ITEM':{const item=state.town.bank.find((candidate)=>candidate.id===command.itemId);if(!item)throw new InvalidCommandError(`Missing Bank item ${command.itemId}`);events.push({type:'ITEM_WITHDRAWN',day:state.day,citizenId:command.citizenId,item});break}
     case 'MOVE_ITEM_TO_HOME':{const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_MOVED_TO_HOME',day:state.day,citizenId:command.citizenId,item});break}
     case 'MOVE_ITEM_TO_RUCKSACK':{const item=citizen.home.storage.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_MOVED_TO_RUCKSACK',day:state.day,citizenId:command.citizenId,item});break}
-    case 'OPEN_CONTAINER':{const located=locateItem(state,command.citizenId,command.itemId);if(located.item.type==='construction_kit'){const pool:ItemType[]=['twisted_plank','wrought_iron'];const first=randomInt(state.rngState,0,pool.length-1);const second=randomInt(first.state,0,pool.length-1);events.push({type:'CONSTRUCTION_KIT_OPENED',day:state.day,citizenId:command.citizenId,containerId:located.item.id,source:located.source,zoneKey:located.zoneKey,outputs:[itemAt(state,pool[first.value],0),itemAt(state,pool[second.value],1)],rngStateAfter:second.state});break}const pool=containerPool(located.item.type);if(!pool?.length)throw new InvalidCommandError(`${located.item.type} is not an openable container`);const roll=randomInt(state.rngState,0,pool.length-1);events.push({type:'CONTAINER_OPENED',day:state.day,citizenId:command.citizenId,containerId:located.item.id,containerType:located.item.type,source:located.source,zoneKey:located.zoneKey,output:itemAt(state,pool[roll.value]),rngStateAfter:roll.state});break}
+    case 'OPEN_CONTAINER':{
+      const located=locateItem(state,command.citizenId,command.itemId)
+      const openable=openableDefinition(located.item.type)
+      if(openable){
+        const resolution=resolveOpenable(state,located.item)
+        if((openable.apCost??0)>0)events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:openable.apCost??0})
+        events.push({type:'OPENABLE_RESOLVED',day:state.day,citizenId:command.citizenId,container:located.item,source:located.source,zoneKey:located.zoneKey,success:resolution.success,outputs:resolution.outputs,containerAfter:resolution.containerAfter,rngStateAfter:resolution.rngStateAfter})
+        break
+      }
+      if(located.item.type==='construction_kit'){const pool:ItemType[]=['twisted_plank','wrought_iron'];const first=randomInt(state.rngState,0,pool.length-1);const second=randomInt(first.state,0,pool.length-1);events.push({type:'CONSTRUCTION_KIT_OPENED',day:state.day,citizenId:command.citizenId,containerId:located.item.id,source:located.source,zoneKey:located.zoneKey,outputs:[itemAt(state,pool[first.value],0),itemAt(state,pool[second.value],1)],rngStateAfter:second.state});break}
+      const pool=containerPool(located.item.type);if(!pool?.length)throw new InvalidCommandError(`${located.item.type} is not an openable container`);const roll=randomInt(state.rngState,0,pool.length-1);events.push({type:'CONTAINER_OPENED',day:state.day,citizenId:command.citizenId,containerId:located.item.id,containerType:located.item.type,source:located.source,zoneKey:located.zoneKey,output:itemAt(state,pool[roll.value]),rngStateAfter:roll.state});break
+    }
     case 'TAKE_WATER':events.push({type:'WATER_TAKEN',day:state.day,citizenId:command.citizenId,item:itemAt(state,'water_ration')});break
     case 'EAT_ITEM':{const located=locateItem(state,command.citizenId,command.itemId);events.push({type:'ITEM_CONSUMED',day:state.day,citizenId:command.citizenId,item:located.item,source:located.source,zoneKey:located.zoneKey,kind:'food',restoresAp:true});break}
     case 'DRINK_ITEM':{const located=locateItem(state,command.citizenId,command.itemId);const outcome=waterConsumptionOutcome(citizen);const charges=located.item.type==='water_cooler_bottle'?(normalizeItemState(located.item.type,located.item.state).charges??0):undefined;events.push({type:'ITEM_CONSUMED',day:state.day,citizenId:command.citizenId,item:located.item,source:located.source,zoneKey:located.zoneKey,kind:'water',restoresAp:outcome.restoresAp,chargesAfter:charges===undefined?undefined:Math.max(0,charges-1)},{type:'CITIZEN_STATUS_CHANGED',day:state.day,citizenId:command.citizenId,status:outcome.statusAfter,reason:'drank_water'});break}
