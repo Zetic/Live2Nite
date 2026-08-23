@@ -13,6 +13,7 @@ export type WorkshopRecipeId =
   | 'supports_to_iron'
   | 'dismantle_electronic_device'
   | 'dismantle_mechanism'
+  | 'assemble_telescope'
   | 'repair_human_bone'
   | 'repair_penknife'
   | 'repair_staff'
@@ -239,7 +240,7 @@ export type GameEvent = (
   | {type:'CONSTRUCTION_COMPLETED';day:number;citizenId:string;projectId:ConstructionId;consumed:Partial<Record<ItemType,number>>;defenseBonus:number}
   | {type:'CONSTRUCTION_EXPIRED';day:number;projectId:ConstructionId}
   | {type:'CONSTRUCTION_GENERATED_ITEM';day:number;projectId:ConstructionId;itemType:ItemType;amount:number}
-  | {type:'WORKSHOP_CONVERTED';day:number;citizenId:string;recipeId:WorkshopRecipeId;input:ItemType;inputCount:number;output:ItemType;outputCount:number;rngStateAfter?:number}
+  | {type:'WORKSHOP_CONVERTED';day:number;citizenId:string;recipeId:WorkshopRecipeId;input:ItemType;inputCount:number;inputs?:Partial<Record<ItemType,number>>;output:ItemType;outputCount:number;rngStateAfter?:number}
   | {type:'COORDINATION_COMMITMENT_POSTED';day:number;commitment:CoordinationCommitment}
   | {type:'COORDINATION_COMMITMENT_CLEARED';day:number;commitmentId:string;reason:'expired'|'fulfilled'|'invalid'|'day_reset'}
   | {type:'BOT_MISSION_ASSIGNED';day:number;citizenId:string;mission:BotMissionAssignment}
