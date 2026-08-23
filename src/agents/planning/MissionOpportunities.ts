@@ -1,5 +1,5 @@
 import { specialSiteName } from '../../core/specialSites'
-import type { BotMissionPurpose, BotMissionRole, GameState, WorldZone } from '../../core/types'
+import type { BotMissionPurpose, BotMissionRole, GameState, SearchMode, WorldZone } from '../../core/types'
 import { distanceToTown, zoneControl, zoneControlState } from '../../core/world'
 import { AI_TUNING } from '../AiTuning'
 import { hasFreshZoneIntel, knownZombieCount } from '../WorldKnowledge'
@@ -16,6 +16,7 @@ export interface MissionOpportunity {
   priority: number
   safetyReserve: number
   emergency: boolean
+  searchMode?: SearchMode
 }
 
 const CONSTRUCTION_SITE_TYPES = new Set(['construction_site', 'wrecked_cars', 'dark_woods'])
@@ -146,6 +147,40 @@ export function knownOpportunities(state: GameState): MissionOpportunity[] {
         priority: 140,
         safetyReserve: AI_TUNING.ordinarySafetyReserve,
         emergency: false,
+        searchMode: 'normal',
+      })
+    }
+
+    // Depleted zones remain economically useful because their low-value salvage feeds
+    // Workshop plank/iron conversion. Nearby low-risk stale reports are acceptable for
+    // these fallback trips: waiting in town with unused AP is not automatically safer
+    // for a resource-starved settlement.
+    const depleted = knownNonTownZones(state)
+      .filter((zone) => {
+        if(zone.searchesRemaining !== 0 || distanceToTown(zone.x,zone.y) > 4) return false
+        const zombies=knownZombieCount(state,zone.x,zone.y)
+        if(zombies===null || zombies>2) return false
+        return hasFreshZoneIntel(state,zone.x,zone.y) || (distanceToTown(zone.x,zone.y)<=3 && zombies<=1)
+      })
+      .sort((a,b)=>
+        (knownZombieCount(state,a.x,a.y)??0)-(knownZombieCount(state,b.x,b.y)??0)
+        || distanceToTown(a.x,a.y)-distanceToTown(b.x,b.y))
+      .slice(0,4)
+
+    for(const zone of depleted){
+      const id=`${missionKey('gatherer','gather_construction',zone.x,zone.y)}:depleted`
+      opportunities.push({
+        missionId:id,
+        role:'gatherer',
+        purpose:'gather_construction',
+        target:{x:zone.x,y:zone.y},
+        targetLabel:`Salvage [${zone.x},${zone.y}]`,
+        reason:'The town lacks construction inputs; this nearby depleted zone can still yield logs or scrap for Workshop conversion.',
+        desiredCitizens:1,
+        priority:95,
+        safetyReserve:AI_TUNING.ordinarySafetyReserve,
+        emergency:false,
+        searchMode:'depleted',
       })
     }
   }
