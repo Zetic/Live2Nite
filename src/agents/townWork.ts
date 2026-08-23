@@ -1,7 +1,7 @@
 import { CONSTRUCTIONS, missingMaterials } from '../core/construction'
 import { nextHomeDefinition, personalMaterialCount } from '../core/home'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemType } from '../core/types'
-import { publicDefenseAssessment, strategicConstructionNeed, strategicConstructionScore } from './planning/TownDefenseStrategy'
+import { publicDefenseAssessment, rankStrategicConstruction, strategicConstructionNeed } from './planning/TownDefenseStrategy'
 
 function constructionActions(actions:GameCommand[]):Array<Extract<GameCommand,{type:'CONTRIBUTE_CONSTRUCTION'}>>{
   return actions.filter((action):action is Extract<GameCommand,{type:'CONTRIBUTE_CONSTRUCTION'}>=>action.type==='CONTRIBUTE_CONSTRUCTION')
@@ -11,13 +11,17 @@ function homeUpgradeAction(actions: GameCommand[]): GameCommand | null {return a
 function improvementAction(actions:GameCommand[],id:HomeImprovementId):GameCommand|null{return actions.find((action)=>action.type==='BUILD_HOME_IMPROVEMENT'&&action.improvementId===id)??null}
 function withdrawAction(actions:GameCommand[],type:ItemType):GameCommand|null{return actions.find((action)=>action.type==='WITHDRAW_BANK_ITEM'&&action.itemType===type)??null}
 
-function communalReserve(state:GameState,type:ItemType):number{
-  const {projectId}=strategicConstructionNeed(state)
+function communalReserve(state:GameState,type:ItemType,projectId:ConstructionId|null):number{
   if(!projectId||state.town.construction[projectId]?.completed)return 0
   return CONSTRUCTIONS[projectId].resources[type]??0
 }
 
-function homeMaterialWithdrawal(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
+function homeMaterialWithdrawal(
+  state:GameState,
+  citizen:Citizen,
+  actions:GameCommand[],
+  communalProjectId:ConstructionId|null,
+):GameCommand|null{
   const target=nextHomeDefinition(citizen.home.level)
   if(!target||citizen.home.upgradedDay===state.day||target.apCost>citizen.maxAp)return null
   for(const[type,required]of Object.entries(target.resources)){
@@ -25,7 +29,7 @@ function homeMaterialWithdrawal(state:GameState,citizen:Citizen,actions:GameComm
     const missing=Math.max(0,(required??0)-personalMaterialCount(citizen,itemType))
     if(missing<=0)continue
     const bank=state.town.bank[itemType]??0
-    if(bank<=communalReserve(state,itemType))continue
+    if(bank<=communalReserve(state,itemType,communalProjectId))continue
     const action=withdrawAction(actions,itemType)
     if(action)return action
   }
@@ -36,16 +40,19 @@ export function chooseTownWork(state: GameState, citizen: Citizen, actions: Game
   if (citizen.location.type !== 'town') return null
   const assessment=publicDefenseAssessment(state)
 
-  // Construction remains communal work, but the choice now responds to public defense risk.
+  // Construction remains communal work, but score each currently legal project once.
   const builds=constructionActions(actions)
-    .sort((left,right)=>strategicConstructionScore(state,right.projectId)-strategicConstructionScore(state,left.projectId))
-  if(builds[0])return builds[0]
+  const rankedBuildIds=rankStrategicConstruction(state,builds.map((action)=>action.projectId),assessment)
+  if(rankedBuildIds[0]){
+    const build=builds.find((action)=>action.projectId===rankedBuildIds[0])
+    if(build)return build
+  }
 
   // Refine feedstock for projects citizens have already begun rather than abandoning invested AP.
   const inProgress=(Object.entries(state.town.construction) as Array<[ConstructionId,GameState['town']['construction'][ConstructionId]]>)
     .filter(([,project])=>!project.completed&&project.apContributed>0)
-    .sort(([leftId,left],[rightId,right])=>strategicConstructionScore(state,rightId)-strategicConstructionScore(state,leftId)||right.apContributed-left.apContributed)
-  for(const[projectId]of inProgress){
+  const rankedInProgress=rankStrategicConstruction(state,inProgress.map(([projectId])=>projectId),assessment)
+  for(const projectId of rankedInProgress){
     const missing=missingMaterials(state,projectId)
     if((missing.twisted_plank??0)>0){const action=recipeAction(actions,'logs_to_planks');if(action)return action}
     if((missing.wrought_iron??0)>0){const action=recipeAction(actions,'scrap_to_iron');if(action)return action}
@@ -56,9 +63,13 @@ export function chooseTownWork(state: GameState, citizen: Citizen, actions: Game
   if(personalUpgrade&&(defenseUrgent||state.clock.hour>=20))return personalUpgrade
 
   // If personal defense is urgently needed, a citizen may take a material from the shared
-  // Bank only when it is surplus to the current communal strategic project. This is an
-  // individual decision using public inventory information, not a hidden town allocation.
-  if(defenseUrgent){const withdraw=homeMaterialWithdrawal(state,citizen,actions);if(withdraw)return withdraw}
+  // Bank only when it is surplus to the current communal strategic project. Determine that
+  // communal reserve once for this decision instead of rescoring it for every material type.
+  if(defenseUrgent){
+    const communalProjectId=strategicConstructionNeed(state).projectId
+    const withdraw=homeMaterialWithdrawal(state,citizen,actions,communalProjectId)
+    if(withdraw)return withdraw
+  }
 
   if(defenseUrgent||state.clock.hour>=20){
     const fence=improvementAction(actions,'fence');if(fence)return fence
