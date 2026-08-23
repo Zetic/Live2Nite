@@ -20,10 +20,11 @@ Live2Nite starts as a single-player browser game but keeps simulation rules inde
 - `game.ts`: initial state creation.
 - `status.ts`: citizen-condition definitions and hydration progression/treatment rules.
 - `camping.ts`: camping outlook, reconstructed survival probability, deterministic overnight roll, and campsite constants.
-- `night.ts`: camping/outside resolution, horde strength, Watchtower estimates, breaches, home survival, hydration resolution, and day rollover.
+- `night.ts`: camping/outside resolution, horde strength, Watchtower estimates, breaches, home survival, hydration resolution, World Beyond evolution, and day rollover.
 - `defense.ts`: town/home defense aggregation.
 - `combat.ts`: deterministic zombie combat and weapon definitions.
 - `world.ts`: map generation, movement, zone control, scavenging, campsite state, and deterministic special-site placement.
+- `worldEvolution.ts`: deterministic nightly World Beyond zombie evolution.
 - `specialSites.ts`: special-site identities and location-specific loot.
 - `items.ts`: item metadata, starter packages, consumables, defense objects, weapons, and scavenging pools.
 - `home.ts`: home levels, personal defense, storage, and daily-use state.
@@ -123,6 +124,33 @@ Rules enforced by the core:
 
 The factors used by `camping.ts` follow surviving English evidence, but the exact coefficients are a `LIVE2NITE_ADAPTATION`. See `docs/die2nite-reference/camping.md` for the historical boundary.
 
+## World intelligence and control
+
+Schema v12 separates authoritative zombie truth from shared town observations.
+
+`WorldZone.zombies` remains authoritative core truth. AI routing/planning and the strategic map consume `WorldState.intel` through the World Knowledge boundary instead of reading hidden zombie changes directly.
+
+Zombie observations store:
+
+```text
+observedZombies
+lastObservedDay
+lastObservedHour
+```
+
+Freshness is derived as fresh, stale, or unknown. Nightly evolution changes authoritative zombie populations without rewriting yesterday's observations, so repeat reconnaissance becomes useful while geographical/site/depletion knowledge remains persistent.
+
+Zone control now exposes decision states around the existing historical control equation:
+
+- `secure` — controlled with departure margin;
+- `fragile` — controlled, but one departure would lose control;
+- `temporary` — actual control lost while a citizen-specific extraction window remains;
+- `trapped` — no actual or temporary control.
+
+Temporary control is an extraction permission, not full zone ownership: movement/emergency actions remain possible, while ordinary scavenging and special-site work do not.
+
+See `docs/world-intelligence-control.md` for the detailed schema-v12 boundary and rescue/extraction rules.
+
 ## Status-aware AI
 
 Hydration is part of planning rather than a UI-only flag.
@@ -151,10 +179,10 @@ The mission layer prevents every citizen independently deciding to solve the sam
 
 Current field roles:
 
-- `scout` — reveal routes, zombie counts, resources, and special sites;
+- `scout` — reveal routes, zombie counts, resources, and special sites, including repeat reconnaissance of stale known territory;
 - `gatherer` — exploit known productive destinations;
 - `excavator` — clear known buried sites;
-- `rescue` — restore control around trapped citizens;
+- `rescue` — restore control and extract trapped citizens/responders;
 - `combat` — reserved for increasingly explicit hostile-site missions.
 
 Current isolated AI tuning values:
@@ -162,6 +190,7 @@ Current isolated AI tuning values:
 - minimum general town reserve: roughly 15% of living basic bots, never fewer than three;
 - new ordinary field assignments: up to roughly 20% of living bots per hour;
 - early poorly known maps target four active scouts, generally paired;
+- mature maps retain a smaller repeat-recon scout presence;
 - three citizens form the dedicated emergency reserve;
 - one of those three is a **night gate reserve** and is excluded from all field missions;
 - dedicated reserves can help town work while preserving the 4 AP floor established by PR #13 unless they accept an emergency assignment.
@@ -209,11 +238,13 @@ When the return reserve is reached, the mission transitions to `return` immediat
 
 Intentional overnight missions are evaluated differently at dispatch: they must be unable to make the safe same-day round trip while still being able to cover their one-way/task budget and overnight hydration requirement. Their accepted camping intent is persisted rather than rediscovered after AP has been spent.
 
-Scouts keep a larger safety reserve than known-resource gatherers. Emergency rescue missions may accept more risk but never intentionally camp.
+Scouts keep a larger safety reserve than known-resource gatherers. Emergency rescue assignments now budget both the route to the casualty and the extraction/return leg rather than accepting on outbound reach alone.
 
 ## Rescue semantics
 
-A rescue is not complete merely because a rescuer briefly enters the trapped zone. A rescue mission remains in `operate` while the protected citizen is still there so the player receives a real action window with restored human control.
+A rescue is not complete merely because a rescuer briefly enters the trapped zone. The protected citizen is given an extraction opportunity, responders reason about whether departures will break control, and responder missions remain active until they return to town.
+
+If a departure causes actual control loss, remaining citizens can receive the schema-v12 temporary-control extraction window. Rescue combat is control-aware: bots can reduce the threat only as far as needed to make extraction viable rather than automatically trying to clear every zombie.
 
 If a rescue needs more citizens than the two field-capable dedicated responders, the planner can use other available town citizens rather than dispatching the night gate reserve.
 
@@ -225,7 +256,7 @@ A zone can expose three independent resource channels:
 2. depleted search — Rotting Log / Scrap Metal feedstock;
 3. special-site search — location-specific ruin loot.
 
-Ordinary citizens can also receive automatic searches after remaining on a productive zone for the reconstructed two-hour cadence. Hidden citizens are excluded from automatic search because hiding locks ordinary field activity.
+Ordinary citizens can also receive automatic searches after remaining on a productive zone for the reconstructed two-hour cadence. Hidden citizens are excluded from automatic search because hiding locks ordinary field activity. Trapped or temporary-control citizens cannot continue ordinary productive searching merely because they still have an extraction window.
 
 Special sites begin buried. Excavation progress is shared. The current map has 12 deterministic sites from six initial identities; exact count, placement, excavation requirements, and loot weights are explicit adaptations.
 
@@ -235,7 +266,7 @@ Special sites begin buried. Excavation progress is shared. The current map has 1
 - `TownMissionPlanner.ts`: creates and staffs a limited mission set and persists same-day vs overnight intent.
 - `ExpeditionPlanner.ts`: route, task, return, overnight, loadout, and feasibility for an accepted mission.
 - `MissionLifecycle.ts`: phase changes, camp transition, and return-solvency enforcement.
-- `RoutePlanner.ts`: deterministic routing that avoids known risk without revealing unknown-zone contents.
+- `RoutePlanner.ts`: deterministic routing over shared town knowledge, with stale-intel penalties and repeat-recon targets.
 - `SupplyPolicy.ts`: food/water/weapon slot decisions and Well conservation.
 - `BasicBotController.ts`: chooses executable legal commands.
 
@@ -261,20 +292,18 @@ The attack conclusion remains isolated in `night.ts`:
 8. the Night Report records horde/home/outside/camping/dehydration outcomes;
 9. Search Tower replenishment is resolved;
 10. campsite improvements decay;
-11. `DAY_STARTED` refreshes AP/daily-use state and preserves only missions belonging to living citizens who remain outside.
+11. authoritative World Beyond zombie populations evolve without rewriting old town observations;
+12. `DAY_STARTED` refreshes AP/daily-use state and preserves only missions belonging to living citizens who remain outside.
 
 A successful mission in `camp` becomes `operate` on the next day when the camper is already at the mission target, otherwise it becomes `outbound`. Same-day missions carried by citizens who died outside are removed with the citizen death event.
 
 ## UI boundary
 
-The compact controlled-citizen status HUD is React presentation over authoritative state. It does not own a second condition or camping model.
+The compact controlled-citizen status HUD is React presentation over authoritative state. It does not own a second condition, camping, intelligence, or control model.
 
-The top HUD exposes immediate AP/condition information. The World Beyond screen exposes:
+The World Beyond map displays shared town knowledge rather than hidden authoritative zombie truth. It exposes live citizen counts and freshness-aware zombie reports (`H#`, `Z#`, `Z~#`, `Z?`), plus control state and active rescue markers. The controlled citizen is represented by a tile highlight instead of replacing the zone information.
 
-- qualitative camping outlook as the primary player-facing risk message;
-- the exact Live2Nite percentage as a secondary reconstructed estimate;
-- campsite improvement level;
-- Improve / Hide / Leave Hideout actions.
+The detailed current-zone panel can display authoritative local zombie information because the controlled citizen is physically present and therefore observing that zone.
 
 The Citizens screen remains the deeper testing surface for:
 
@@ -292,21 +321,25 @@ The Citizens screen remains the deeper testing surface for:
 
 Core rules should not use scattered `Math.random()`. A seed plus the same ordered commands/time advances should reproduce the same result.
 
-Save schema is **v11**. Schema 2–10 saves migrate forward. Legacy citizens receive default hydration/camping state, legacy zones receive zero campsite improvements, and pre-v11 active missions are normalized as same-day missions with no implicit camping intent. Existing world/town/clock/construction progress is otherwise preserved.
+Save schema is **v12**. Schema 2–11 saves migrate forward. Legacy citizens receive default hydration/camping state, legacy zones receive zero campsite improvements, and v12 migration initializes shared zombie observations from the state a legacy save legitimately knew at migration time. Existing world/town/clock/construction progress is otherwise preserved.
 
-Camping survival uses an isolated deterministic seed derived from town seed, day, and citizen so adding unrelated random calls elsewhere does not silently change overnight camping outcomes.
+Camping survival uses an isolated deterministic seed derived from town seed, day, and citizen so adding unrelated random calls elsewhere does not silently change overnight camping outcomes. World zombie evolution is likewise deterministic from persisted town/world inputs.
 
 New `ITEM_CONSUMED` events record whether the use actually restored AP. Historical events missing that field migrate as AP-restoring consumption, matching the pre-v10 behavior.
 
 ## Regression strategy
 
-The test suite now contains three levels of simulation protection:
+Tests are separated conceptually by what they protect:
 
-- focused unit/behavior tests for individual commands and camping rules;
-- the existing 12-seed Day-1 economy/survival benchmark;
-- a multi-day benchmark that runs several 40-citizen towns through three complete nights and checks gate discipline, dehydration safety, population survival, outside-at-midnight pressure, and camping accounting.
+1. **Hard rule/architecture invariants** — command legality, AP/accounting, persistence migration, deterministic output, hidden-information boundaries, zone-control semantics, temporary-control restrictions, gate-reserve behavior, rescue extraction, and other concrete bug regressions. These are CI merge gates.
+2. **Focused pathological scenarios** — known failures such as the mass-departure seed or a rescuer becoming the replacement trapped citizen. These remain CI merge gates even while overall balance is unfinished.
+3. **Economy/survival simulation benchmarks** — Day-1 economy and multi-day town metrics such as Workshop frequency, survivor count, dehydration deaths, Well level, defense, and outside-at-midnight population. During early development these are diagnostic telemetry, not exact balance gates.
 
-The multi-day benchmark does not require bots to camp during the first three days. Conservative AI should prefer safe same-day work while nearby missions remain viable; dedicated camping tests exercise intentional overnight dispatch separately.
+Balance benchmarks still execute on every test run and print deterministic summaries so large changes can be noticed and investigated. They intentionally do not fail solely because an incomplete progression/defense/camping/profession/social system changes a provisional survival or economy target.
+
+Structural accounting inside benchmarks remains strict where appropriate: for example, gate-reserve discipline and camping outcome accounting are still asserted because those are invariants rather than balance targets.
+
+As the major game systems stabilize, selected benchmark metrics can be promoted into explicit acceptance thresholds with documented baselines.
 
 ## Future status and camping families
 
@@ -314,7 +347,7 @@ The status boundary is intentionally prepared for later historically researched 
 
 ## Future LLM integration
 
-An LLM may eventually influence strategy, social intent, risk tolerance, mission preference, or willingness to accept an overnight assignment. It will not mutate state or bypass legal commands. API keys must never be shipped in the GitHub Pages client.
+An LLM may eventually influence strategy, social intent, risk tolerance, mission preference, or willingness to accept an overnight assignment. It will not mutate state or bypass legal commands or the World Knowledge boundary. API keys must never be shipped in the GitHub Pages client.
 
 ## Multiplayer migration
 
