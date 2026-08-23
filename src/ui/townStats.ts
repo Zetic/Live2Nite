@@ -9,10 +9,16 @@ export interface CitizenRecord {
   deathDay: number | null
   searches: number
   lootFound: number
+  itemsPickedUp: number
+  itemsDropped: number
   bankDeposits: number
+  bankWithdrawals: number
   zombieKills: number
   combatEncounters: number
   constructionAp: number
+  workshopActions: number
+  homeActions: number
+  apSpent: number
   travelSteps: number
   furthestDistance: number
   missions: number
@@ -87,10 +93,16 @@ export function computeTownStats(game: GameState): TownStats {
     deathDay: null,
     searches: 0,
     lootFound: 0,
+    itemsPickedUp: 0,
+    itemsDropped: 0,
     bankDeposits: 0,
+    bankWithdrawals: 0,
     zombieKills: 0,
     combatEncounters: 0,
     constructionAp: 0,
+    workshopActions: 0,
+    homeActions: 0,
+    apSpent: 0,
     travelSteps: 0,
     furthestDistance: 0,
     missions: 0,
@@ -126,6 +138,9 @@ export function computeTownStats(game: GameState): TownStats {
   for (const event of game.events) {
     const record = recordFor(records, event)
     switch (event.type) {
+      case 'AP_SPENT':
+        if(record)record.apSpent+=event.amount
+        break
       case 'ZONE_SEARCHED':
         if (event.mode === 'normal') normalSearches += 1
         else depletedSearches += 1
@@ -144,6 +159,12 @@ export function computeTownStats(game: GameState): TownStats {
         }
         if (record) record.searches += 1
         break
+      case 'ITEM_PICKED_UP':
+        if(record)record.itemsPickedUp+=1
+        break
+      case 'ITEM_DROPPED':
+        if(record)record.itemsDropped+=1
+        break
       case 'CITIZEN_LOCATION_CHANGED':
         if (event.location.type === 'world') {
           const distance = Math.abs(event.location.x) + Math.abs(event.location.y)
@@ -158,6 +179,7 @@ export function computeTownStats(game: GameState): TownStats {
         break
       case 'ITEM_WITHDRAWN':
         bankWithdrawals += 1
+        if(record)record.bankWithdrawals+=1
         break
       case 'COMBAT_RESOLVED':
         combatEncounters += 1
@@ -174,6 +196,11 @@ export function computeTownStats(game: GameState): TownStats {
         break
       case 'WORKSHOP_CONVERTED':
         workshopConversions += 1
+        if(record)record.workshopActions+=1
+        break
+      case 'HOME_UPGRADED':
+      case 'HOME_IMPROVEMENT_BUILT':
+        if(record)record.homeActions+=1
         break
       case 'BOT_MISSION_ASSIGNED':
         if (record) record.missions += 1
