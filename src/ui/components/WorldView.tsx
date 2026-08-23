@@ -30,8 +30,8 @@ export function WorldView({game,citizenId,legalActions,currentZone,control,act,m
   const pickups=legalActions.filter((action):action is Extract<GameCommand,{type:'PICK_UP_ITEM'}>=>action.type==='PICK_UP_ITEM')
   const drops=legalActions.filter((action):action is Extract<GameCommand,{type:'DROP_ITEM'}>=>action.type==='DROP_ITEM')
   const depleted=currentZone.searchesRemaining===0;const alreadyDepletedSearched=(currentZone.depletedSearchedBy??[]).includes(player.id);const site=currentZone.specialSite
-  const pickGround=(itemId:string)=>act(pickups.find((candidate)=>candidate.itemId===itemId))
-  const dropCarried=(itemId:string)=>act(drops.find((candidate)=>candidate.itemId===itemId))
+  const pickupFor=(itemId:string)=>pickups.find((candidate)=>candidate.itemId===itemId)
+  const dropFor=(itemId:string)=>drops.find((candidate)=>candidate.itemId===itemId)
 
   return <section className="panel screen-panel">
     <div className="panel-heading"><div><p className="section-kicker">World Beyond · {player.name}</p><h2>Zone [{player.location.x},{player.location.y}]</h2><p className="section-note">Click ground items to pick them up. Click rucksack items to drop them in this zone.</p></div><div className="world-heading-chips"><span className={`zone-chip ${state==='trapped'?'danger':''}`}>{stateLabel}</span><span className={`zone-chip ${depleted?'depleted-chip':''}`}>{depleted?'DEPLETED':'UNDEPLETED'}</span></div></div>
@@ -39,8 +39,8 @@ export function WorldView({game,citizenId,legalActions,currentZone,control,act,m
     <div className={`control ${state==='trapped'?'danger':''}`}><div><span>Citizens here</span><strong>{control.humans}</strong><small>{control.humanPoints} control points</small></div><div><span>Zombies</span><strong>{control.zombies}</strong><small>{control.zombiePoints} control points</small></div><p><strong>{stateLabel}</strong><br/>{controlMessage}</p></div>
 
     <div className="world-inventory-grid">
-      <section className="inventory-surface"><div className="inventory-heading"><h3>On the Ground</h3><span className="micro-stat">{currentZone.groundItems.length}</span></div><ItemStrip items={currentZone.groundItems} onItemClick={(item)=>pickGround(item.id)} emptyLabel="Nothing visible." extraTooltip={(item)=>pickups.some((command)=>command.itemId===item.id)?'Click to pick up.':'Your rucksack is full or pickup is unavailable.'}/></section>
-      <section className="inventory-surface"><div className="inventory-heading"><h3>Rucksack</h3><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div><ItemStrip items={player.inventory} capacity={player.inventoryCapacity} onItemClick={(item)=>dropCarried(item.id)} extraTooltip={()=> 'Click to drop on the ground.'}/></section>
+      <section className="inventory-surface"><div className="inventory-heading"><h3>On the Ground</h3><span className="micro-stat">{currentZone.groundItems.length}</span></div><ItemStrip items={currentZone.groundItems} disabledForItem={(item)=>!pickupFor(item.id)} onItemClick={(item)=>act(pickupFor(item.id))} emptyLabel="Nothing visible." extraTooltip={(item)=>pickupFor(item.id)?'Click to pick up.':'Your rucksack is full or pickup is unavailable.'}/></section>
+      <section className="inventory-surface"><div className="inventory-heading"><h3>Rucksack</h3><span className="micro-stat">{player.inventory.length}/{player.inventoryCapacity}</span></div><ItemStrip items={player.inventory} capacity={player.inventoryCapacity} disabledForItem={(item)=>!dropFor(item.id)} onItemClick={(item)=>act(dropFor(item.id))} extraTooltip={(item)=>dropFor(item.id)?'Click to drop on the ground.':'This item cannot be dropped right now.'}/></section>
     </div>
     <section className="inventory-actions-block"><div className="inventory-heading"><h3>Item Actions</h3><span className="micro-stat">rucksack + ground</span></div><ItemActionMenu items={player.inventory} actions={legalActions} act={act} includePickup groundItems={currentZone.groundItems}/></section>
 
