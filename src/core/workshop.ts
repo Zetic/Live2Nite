@@ -1,3 +1,4 @@
+import { workshopApDiscount } from './construction'
 import type { GameState, ItemType, WorkshopRecipeId } from './types'
 
 export interface WorkshopRecipe {
@@ -21,6 +22,10 @@ export const WORKSHOP_RECIPES: Record<WorkshopRecipeId, WorkshopRecipe> = {
 }
 
 export const WORKSHOP_RECIPE_ORDER: WorkshopRecipeId[] = ['logs_to_planks', 'scrap_to_iron', 'repair_human_bone', 'repair_penknife', 'repair_staff', 'repair_serrated_knife', 'repair_machete']
+
+export function workshopRecipeApCost(state:GameState,recipeId:WorkshopRecipeId):number{
+  return Math.max(1,WORKSHOP_RECIPES[recipeId].apCost-workshopApDiscount(state))
+}
 
 export function canRunWorkshopRecipe(state: GameState, recipeId: WorkshopRecipeId): boolean {
   if (!state.town.construction.workshop.completed) return false
