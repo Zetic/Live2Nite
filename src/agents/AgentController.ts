@@ -1,6 +1,7 @@
-import type { GameCommand, GameState } from '../core/types'
+import type { GameCommand } from '../core/types'
+import type { AgentDecisionInput } from './AgentDecisionContext'
 
 export interface AgentController {
   readonly kind: string
-  decide(state: Readonly<GameState>, citizenId: string): GameCommand | null
+  decide(input: AgentDecisionInput, citizenId: string): GameCommand | null
 }
