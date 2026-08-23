@@ -32,6 +32,7 @@ export function describeEvent(event: GameEvent, game: GameState): string {
     case 'SPECIAL_SITE_EXCAVATED': return `${citizenName(game,event.citizenId)} cleared ${event.amount} AP of debris at the ruin in [${event.zoneKey}].`
     case 'SPECIAL_SITE_SEARCHED': return event.item ? `${citizenName(game,event.citizenId)} searched the ruin at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.` : `${citizenName(game,event.citizenId)} searched the ruin at [${event.zoneKey}] but found nothing.`
     case 'ITEM_PICKED_UP': return `${citizenName(game,event.citizenId)} picked up ${itemName(event.item.type)}.`
+    case 'ITEM_DROPPED': return `${citizenName(game,event.citizenId)} left ${itemName(event.item.type)} on the ground at [${event.zoneKey}].`
     case 'COMBAT_RESOLVED': {const method = event.method==='fists' ? 'bare hands' : itemName(event.method);const broken = event.brokenInto ? ` The weapon broke into ${itemName(event.brokenInto)}.` : '';return `${citizenName(game,event.citizenId)} attacked with ${method} at [${event.zoneKey}] and killed ${event.kills} zombie${event.kills===1?'':'s'}.${broken}`}
     case 'ITEM_DEPOSITED': return `${citizenName(game,event.citizenId)} deposited ${itemName(event.item.type)} in the town bank.`
     case 'ITEM_WITHDRAWN': return `${citizenName(game,event.citizenId)} took ${itemName(event.item.type)} from the town bank.`
@@ -61,7 +62,7 @@ export function describeEvent(event: GameEvent, game: GameState): string {
 }
 
 export function isHighlightEvent(event: GameEvent): boolean {
-  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED','COORDINATION_COMMITMENT_POSTED','COORDINATION_COMMITMENT_CLEARED'].includes(event.type)
+  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','ITEM_DROPPED','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED','COORDINATION_COMMITMENT_POSTED','COORDINATION_COMMITMENT_CLEARED'].includes(event.type)
 }
 
 export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'system'|'home' {
@@ -71,7 +72,7 @@ export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'sy
     case 'CAMPING_RESOLVED': return event.survived?'world':'danger'
     case 'NIGHT_RESOLVED': return event.report.breached?'danger':'night'
     case 'DAY_STARTED': case 'WORLD_ZOMBIES_EVOLVED': return 'night'
-    case 'ZONE_DISCOVERED': case 'ZONE_OBSERVED': case 'ZONE_CONTROL_RESTORED': case 'TEMPORARY_CONTROL_GRANTED': case 'TEMPORARY_CONTROL_EXPIRED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': case 'CAMP_IMPROVED': case 'CAMP_IMPROVEMENTS_DECAYED': case 'CITIZEN_HIDING_SET': return 'world'
+    case 'ZONE_DISCOVERED': case 'ZONE_OBSERVED': case 'ZONE_CONTROL_RESTORED': case 'TEMPORARY_CONTROL_GRANTED': case 'TEMPORARY_CONTROL_EXPIRED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'ITEM_DROPPED': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': case 'CAMP_IMPROVED': case 'CAMP_IMPROVEMENTS_DECAYED': case 'CITIZEN_HIDING_SET': return 'world'
     case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'CONSTRUCTION_KIT_OPENED': case 'ITEM_CONSUMED': case 'HOME_UPGRADED': case 'HOME_IMPROVEMENT_BUILT': return 'home'
     case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'CONSTRUCTION_EXPIRED': case 'CONSTRUCTION_GENERATED_ITEM': case 'WORKSHOP_CONVERTED': case 'GATE_SET': case 'COORDINATION_COMMITMENT_POSTED': return 'town'
     default: return 'system'
