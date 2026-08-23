@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CONSTRUCTION_CATEGORIES, CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionDepth, constructionFlatDefenseForProject, constructionUnlocked, missingMaterials, type ConstructionCategory } from '../../core/construction'
 import { itemName } from '../../core/items'
 import type { ConstructionId, GameCommand, GameState, ItemType } from '../../core/types'
+import '../construction.css'
 
 function constructionCommand(actions: GameCommand[], projectId: ConstructionId) {
   return actions.find((action): action is Extract<GameCommand,{type:'CONTRIBUTE_CONSTRUCTION'}> => action.type === 'CONTRIBUTE_CONSTRUCTION' && action.projectId === projectId)
