@@ -1,9 +1,11 @@
 export const ITEM_TYPE_IDS = [
   'rotten_log','scrap_metal','water_ration','food','old_door','twisted_plank','wrought_iron','unshaped_concrete_block','construction_kit','water_bomb','human_bone','broken_human_bone','pathetic_penknife','broken_pathetic_penknife','staff','broken_staff','serrated_knife','broken_serrated_knife','machete','broken_machete','doggy_bag','citizen_welcome_pack','battery','box_of_matches','pharmaceutical_products',
-  // Representative catalog entries used to prove the stateful-item foundation. They are
-  // intentionally not all placed into loot tables yet; later content PRs can activate them
-  // without changing storage or persistence architecture.
-  'metal_support','patchwork_beam','sheet_metal','water_pistol','water_cooler_bottle','repair_kit',
+  // Construction economy: advanced materials, supplies, and unprocessed salvage.
+  'metal_support','patchwork_beam','sheet_metal','bag_of_damp_grass','belt','compact_detonator','convex_lens','copper_pipe','duct_tape','earplugs','electronic_component','empty_oil_can','nuts_and_bolts','laser_diode','semtex','telescope','wire_reel','broken_electronic_device','mechanism',
+  // Additional current-MyHordes construction inputs used by direct equivalents in the town tree.
+  'meaty_bone','human_flesh','poison_gland','working_radio','guitar','table','chicken','wire_mesh','grain_sack',
+  // Stateful foundation representatives retained from v16.
+  'water_pistol','water_cooler_bottle','repair_kit',
 ] as const
 
 export type ItemType = typeof ITEM_TYPE_IDS[number]

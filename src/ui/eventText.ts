@@ -3,8 +3,7 @@ import { HOME_IMPROVEMENTS, homeName } from '../core/home'
 import { itemName } from '../core/items'
 import { CITIZEN_STATUS_DEFINITIONS } from '../core/status'
 import { specialSiteName } from '../core/specialSites'
-import type { GameEvent, GameState } from '../core/types'
-import { WORKSHOP_RECIPES } from '../core/workshop'
+import type { GameEvent, GameState, ItemType } from '../core/types'
 
 export function citizenName(game: GameState, citizenId: string): string {
   return game.citizens.find((citizen) => citizen.id === citizenId)?.name ?? citizenId
@@ -48,7 +47,7 @@ export function describeEvent(event: GameEvent, game: GameState): string {
     case 'CONSTRUCTION_COMPLETED': return `${CONSTRUCTIONS[event.projectId].name} was completed by ${citizenName(game,event.citizenId)}.`
     case 'CONSTRUCTION_EXPIRED': return `${CONSTRUCTIONS[event.projectId].name} was consumed during the attack and can be rebuilt.`
     case 'CONSTRUCTION_GENERATED_ITEM': return `${CONSTRUCTIONS[event.projectId].name} produced ${event.amount} ${itemName(event.itemType)}${event.amount===1?'':'s'} for the Bank.`
-    case 'WORKSHOP_CONVERTED': {const recipe=WORKSHOP_RECIPES[event.recipeId];return `${citizenName(game,event.citizenId)} used the Workshop: ${event.inputCount} ${itemName(recipe.input)} → ${event.outputCount} ${itemName(recipe.output)}.`}
+    case 'WORKSHOP_CONVERTED': {const inputs=Object.entries(event.inputs??{[event.input]:event.inputCount}).map(([type,count])=>`${count??0} ${itemName(type as ItemType)}`).join(' + ');return `${citizenName(game,event.citizenId)} used the Workshop: ${inputs} → ${event.outputCount} ${itemName(event.output)}.`}
     case 'COORDINATION_COMMITMENT_POSTED': return `${citizenName(game,event.commitment.citizenId)} posted to town coordination: ${event.commitment.label}`
     case 'COORDINATION_COMMITMENT_CLEARED': return `A town coordination commitment ended (${event.reason.replace('_',' ')}).`
     case 'BOT_MISSION_ASSIGNED': return `${citizenName(game,event.citizenId)} volunteered for ${event.mission.role} duty toward ${event.mission.targetLabel}${event.mission.allowsCamping?' with an overnight option':''}.`

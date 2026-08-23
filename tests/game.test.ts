@@ -239,7 +239,7 @@ describe('Town construction and Workshop', () => {
 
   it('completing the Watchtower adds derived town defense without mutating the bootstrap base', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: bankFromCounts({twisted_plank:3,wrought_iron:2},'watchtower'), construction: { ...game.town.construction, watchtower: { id: 'watchtower', apContributed: 11, completed: false } } } }
+    game = { ...game, town: { ...game.town, bank: bankFromCounts({twisted_plank:3,patchwork_beam:1,wrought_iron:1},'watchtower'), construction: { ...game.town.construction, watchtower: { id: 'watchtower', apContributed: 14, completed: false } } } }
     game = executeCommand(game, projectCommand(game,'c01','watchtower')).state
     expect(game.town.construction.watchtower.completed).toBe(true)
     expect(game.town.defense).toBe(40)

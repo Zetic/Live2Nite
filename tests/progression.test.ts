@@ -73,7 +73,7 @@ describe('early-game progression', () => {
   it('Pump construction adds ten water and permits a second daily well withdrawal', () => {
     let game = createInitialGame(5678,1)
     const before = game.town.well.water
-    game = { ...game, town: { ...game.town, bank:bankFromCounts({twisted_plank:8,wrought_iron:1},'pump'), construction:{...game.town.construction,pump:{...game.town.construction.pump,apContributed:24}} } }
+    game = { ...game, town: { ...game.town, bank:bankFromCounts({wrought_iron:8,copper_pipe:1},'pump'), construction:{...game.town.construction,pump:{...game.town.construction.pump,apContributed:24}} } }
     game = executeCommand(game,projectCommand(game,'c01','pump')).state
     expect(game.town.construction.pump.completed).toBe(true)
     expect(game.town.well.water).toBe(before+10)

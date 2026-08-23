@@ -1,6 +1,7 @@
 import { createCitizenCampingState } from './camping'
 import { createGameClock, DAY_START_HOUR } from './clock'
 import { createConstructionState } from './construction'
+import './constructionCurrent'
 import { createDailyState, createStarterHome } from './home'
 import { resolveNightAttack } from './night'
 import { createCitizenStatusState } from './status'

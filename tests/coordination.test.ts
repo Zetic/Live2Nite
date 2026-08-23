@@ -87,7 +87,7 @@ describe('distributed citizen coordination',()=>{
     expect(scouts.some((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.mission.reason.includes('better than waiting in town'))).toBe(true)
   })
 
-  it('uses the volunteers to seal the gate at night without putting them on field missions',()=>{
+  it('keeps gate volunteers home and guarantees the gate is sealed without field missions',()=>{
     let game=createInitialGame(2233,40)
     game=advanceOneHour(game,bots,'c01')
     const primary=gatePrimaryCitizenId(game)!
@@ -100,7 +100,7 @@ describe('distributed citizen coordination',()=>{
       expect(keeper.location).toEqual({type:'town'})
       expect(game.events.some((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.citizenId===id)).toBe(false)
     }
-    expect(game.events.some((event)=>event.type==='GATE_SET'&&event.open===false&&(event.citizenId===primary||event.citizenId===backup))).toBe(true)
+    expect(game.events.some((event)=>event.type==='GATE_SET'&&event.open===false&&(event.citizenId===primary||event.citizenId===backup||(event.citizenId==='system'&&game.town.construction.automatic_piston_lock.completed)))).toBe(true)
   })
 
   it('forces a solvent return before a citizen spends the AP reserved for home',()=>{let game=clearPath(createInitialGame(123,2),4);game={...game,clock:{hour:10,phase:'day'},town:{...game.town,gateOpen:true},citizens:game.citizens.map((citizen)=>citizen.id==='c02'?{...citizen,ap:4,location:{type:'world' as const,x:4,y:0},inventory:[]}:citizen),botMissions:{c02:mission(5)}};const before=missionSafety(game,'c02');expect(before.usableAp).toBe(4);expect(before.requiredAp).toBe(5);game=advanceOneHour(game,bots,'c01');expect(game.citizens.find((citizen)=>citizen.id==='c02')?.location).toEqual({type:'town'});expect(game.events.some((event)=>event.type==='BOT_MISSION_PHASE_SET'&&event.citizenId==='c02'&&event.phase==='return')).toBe(true)})
