@@ -8,6 +8,7 @@ import { bestWeaponAction, controlAwareMove, controlAwareStepTowardTown } from '
 import { packageSharingAction, prepareLoadout, refillAction, unloadAction } from './actions/InventoryActions'
 import { campingAction, hydrationAction } from './actions/SurvivalActions'
 import { carried, pick } from './actions/actionSelectors'
+import { commitmentForCitizen, committedConstructionProject, reservedApForCitizen } from './coordination/TownCoordination'
 import { planExpedition } from './planning/ExpeditionPlanner'
 import { missionSafety } from './planning/MissionLifecycle'
 import { nextDirectionToward } from './planning/RoutePlanner'
@@ -36,8 +37,24 @@ export class BasicBotController implements AgentController {
       if (unload) return unload
       if (mission?.phase === 'unload') return null
 
-      const townWork = chooseTownWork(game, citizen, actions)
-      if (townWork && !mission) return townWork
+      const commitment=commitmentForCitizen(game,citizenId)
+      const reservedAp=reservedApForCitizen(game,citizenId)
+      if(!mission&&reservedAp>=citizen.ap){
+        const packages = packageSharingAction(citizen, actions, null, game.clock.hour)
+        if (packages) return packages
+        return null
+      }
+
+      if(!mission){
+        const committedProject=committedConstructionProject(game,citizenId)
+        if(committedProject){
+          const contribution=actions.find((action)=>action.type==='CONTRIBUTE_CONSTRUCTION'&&action.projectId===committedProject)
+          if(contribution)return contribution
+        }
+        const townWork = chooseTownWork(game, citizen, actions)
+        const gateVolunteer=commitment?.kind==='gate_primary'||commitment?.kind==='gate_backup'
+        if (townWork && (commitment?.kind==='construction'||(gateVolunteer&&citizen.ap>reservedAp)||game.clock.hour>=AI_TUNING.townApDumpHour)) return townWork
+      }
 
       if (!mission) {
         const packages = packageSharingAction(citizen, actions, null, game.clock.hour)

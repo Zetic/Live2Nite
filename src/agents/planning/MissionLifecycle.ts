@@ -74,6 +74,7 @@ function operationComplete(state: GameState, citizen: Citizen, mission: BotMissi
   if (mission.role === 'excavator') return !zone.specialSite || zone.specialSite.status !== 'buried'
   if (mission.role === 'combat') return zone.zombies <= zoneControl(state, mission.target.x, mission.target.y).humanPoints
   if (mission.role === 'scout') return zone.discovered && state.world.intel[key]?.lastObservedDay===state.day
+  if (mission.searchMode === 'depleted') return (zone.depletedSearchedBy ?? []).includes(citizen.id)
   if (zone.specialSite && zone.specialSite.status !== 'buried') {
     return zone.specialSite.searchedBy.includes(citizen.id) || zone.specialSite.status === 'depleted'
   }

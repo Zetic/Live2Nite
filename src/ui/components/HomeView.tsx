@@ -2,6 +2,7 @@ import { homeDefenseBonus } from '../../core/construction'
 import { HOME_LEVELS, HOME_UPGRADE_AP_COST, homeName, personalDefense } from '../../core/home'
 import { ITEMS, itemName, itemPurpose } from '../../core/items'
 import type { GameCommand, GameState, ItemInstance } from '../../core/types'
+import { TownCoordinationPanel } from './TownCoordinationPanel'
 
 function commandFor(actions: GameCommand[], type: GameCommand['type'], itemId: string): GameCommand | undefined {
   return actions.find((action) => {
@@ -92,6 +93,8 @@ export function HomeView({ game, citizenId, legalActions, act }: {
         <span>Well ration</span><strong>{player.daily.waterTaken ? 'CLAIMED' : 'UNCLAIMED'}</strong><small>Completed water infrastructure can increase this citizen's daily Well withdrawals.</small>
       </article>
     </div>
+
+    <TownCoordinationPanel game={game}/>
 
     <div className="storage-columns">
       <section className="storage-zone">

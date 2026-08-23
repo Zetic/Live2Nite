@@ -32,9 +32,9 @@ function scoutMission(): BotMissionAssignment {
 }
 
 describe('game clock', () => {
-  it('starts a new town at 1:00 AM in schema v13', () => {
+  it('starts a new town at 1:00 AM in schema v14', () => {
     const game = createInitialGame(123,2)
-    expect(game.schemaVersion).toBe(13)
+    expect(game.schemaVersion).toBe(14)
     expect(game.day).toBe(1)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.events[0]).toMatchObject({ type: 'DAY_STARTED', day: 1, hour: 1 })
@@ -99,6 +99,7 @@ describe('game clock', () => {
     expect(game.citizens[0].ap).toBe(6)
     expect(game.citizens[0].daily).toEqual({ ate: false, drank: false, waterTaken: false })
     expect(game.botMissions).toEqual({})
+    expect(game.coordination.commitments).toEqual([])
   })
 
   it('fast-forward simulates every intermediate hour instead of teleporting', () => {
