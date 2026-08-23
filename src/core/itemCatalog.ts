@@ -8,6 +8,8 @@ export const ITEM_TYPE_IDS = [
   'tool_bag','kwik_fix','plastic_bag','engine_incomplete','engine','claymore','torch','battery_launcher',
   // Stateful foundation representatives retained from v16.
   'water_pistol','water_cooler_bottle','repair_kit',
+  // Part 2 openables. Source variants such as 2- and 3-use resource packs are represented by state, not duplicate item types.
+  'resource_pack','toolbox','metal_chest','xl_chest','food_box','decoration_box','safe',
 ] as const
 
 export type ItemType = typeof ITEM_TYPE_IDS[number]
@@ -29,6 +31,8 @@ export type ItemAssemblyState = 'complete' | 'incomplete'
 export interface ItemState {
   /** Remaining uses/shots/rations for charge-bearing items. */
   charges?: number
+  /** Remaining discrete contents for stateful openables such as Resource Packs. */
+  contents?: number
   condition?: ItemCondition
   contamination?: ItemContamination
   powered?: boolean
@@ -45,11 +49,13 @@ export type ItemCapability =
   | 'defense'
   | 'decoration'
   | 'charge_bearing'
+  | 'stateful_container'
   | 'repairable'
   | 'medical'
 
 export interface ItemStateSchema {
   charges?: { min: number; max: number; initial: number }
+  contents?: { min: number; max: number; initial: number }
   condition?: { initial: ItemCondition }
   contamination?: { initial: ItemContamination }
   powered?: { initial: boolean }
