@@ -1,5 +1,6 @@
 import type { GameState } from '../../core/types'
 import { PRIMARY_SCREENS, facilitySlots, type GameScreen, type ScreenDefinition } from '../navigation'
+import '../navigation.css'
 
 function NavButton({entry,screen,outside,onChange}:{entry:ScreenDefinition;screen:GameScreen;outside:boolean;onChange:(screen:GameScreen)=>void}){
   const disabled=outside&&entry.townOnly
