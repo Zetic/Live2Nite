@@ -38,7 +38,8 @@ export type WorkshopRecipeId =
   | 'repair_staff'
   | 'repair_serrated_knife'
   | 'repair_machete'
-export type HomeLevel = 'camp_bed' | 'tent'
+export type HomeLevel = 'camp_bed' | 'tent' | 'hovel' | 'shack' | 'house' | 'fenced_house' | 'fortified_shelter' | 'bunker' | 'castle'
+export type HomeImprovementId = 'reinforcements' | 'fence' | 'storage'
 export type ItemStorage = 'inventory' | 'home'
 export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
@@ -61,7 +62,15 @@ export type CoordinationCommitmentKind = 'gate_primary' | 'gate_backup' | 'const
 export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType }
 export type CitizenLocation = { type: 'town' } | { type: 'world'; x: number; y: number }
-export interface CitizenHome { level: HomeLevel; defense: number; storage: ItemInstance[]; storageCapacity: number }
+export interface CitizenHome {
+  level: HomeLevel
+  /** Structural defense supplied by the current home level. */
+  defense: number
+  storage: ItemInstance[]
+  storageCapacity: number
+  upgradedDay: number | null
+  improvements: Record<HomeImprovementId, number>
+}
 export interface CitizenDailyState { ate: boolean; drank: boolean; waterTaken: boolean; bonusWaterTaken?: boolean }
 export interface CitizenStatusState { hydration: HydrationStatus; desertStepsToday: number }
 export interface CitizenCampingState { hidden:boolean; survivalChance:number|null; hiddenDay:number|null; nightsSurvived:number; lastSurvivedDay:number|null }
@@ -186,7 +195,7 @@ export interface NightReport {
 export interface WorldZombieChange { zoneKey:string; before:number; after:number }
 
 export interface GameState {
-  schemaVersion: 14
+  schemaVersion: 15
   gameId: string
   seed: number
   rngState: number
@@ -228,6 +237,7 @@ export type GameCommand =
   | { type: 'EAT_ITEM'; citizenId: string; itemId: string }
   | { type: 'DRINK_ITEM'; citizenId: string; itemId: string }
   | { type: 'UPGRADE_HOME'; citizenId: string }
+  | { type: 'BUILD_HOME_IMPROVEMENT'; citizenId: string; improvementId: HomeImprovementId }
   | { type: 'CONTRIBUTE_CONSTRUCTION'; citizenId: string; projectId: ConstructionId }
   | { type: 'WORKSHOP_CONVERT'; citizenId: string; recipeId: WorkshopRecipeId }
 
@@ -263,7 +273,8 @@ export type GameEvent = (
   | { type: 'CONSTRUCTION_KIT_OPENED'; day: number; citizenId: string; containerId: string; source: ItemStorage; outputs: ItemInstance[]; rngStateAfter: number }
   | { type: 'WATER_TAKEN'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_CONSUMED'; day: number; citizenId: string; item: ItemInstance; source: ItemStorage; kind: ConsumableKind; restoresAp: boolean }
-  | { type: 'HOME_UPGRADED'; day: number; citizenId: string; from: HomeLevel; to: HomeLevel; defenseAfter: number }
+  | { type: 'HOME_UPGRADED'; day: number; citizenId: string; from: HomeLevel; to: HomeLevel; defenseAfter: number; consumed: Partial<Record<ItemType, number>> }
+  | { type: 'HOME_IMPROVEMENT_BUILT'; day:number; citizenId:string; improvementId:HomeImprovementId; level:number; consumed:Partial<Record<ItemType,number>>; defenseAfter:number; storageCapacityAfter:number }
   | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }
   | { type: 'CONSTRUCTION_COMPLETED'; day: number; citizenId: string; projectId: ConstructionId; consumed: Partial<Record<ItemType, number>>; defenseBonus: number }
   | { type: 'CONSTRUCTION_EXPIRED'; day:number; projectId:ConstructionId }
