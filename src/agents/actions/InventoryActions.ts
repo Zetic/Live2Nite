@@ -1,5 +1,6 @@
 import { nextHomeDefinition, personalMaterialCount } from '../../core/home'
 import { ITEMS } from '../../core/items'
+import { openableDefinition } from '../../core/openables'
 import type { Citizen, GameCommand, GameState, ItemType } from '../../core/types'
 import type { ExpeditionPlan } from '../planning/ExpeditionPlanner'
 import { shouldUseRefill, supplyDispositionForCitizen } from '../planning/SupplyPolicy'
@@ -7,11 +8,15 @@ import { atHome, bankAction, carried, itemAction, pick } from './actionSelectors
 
 function desiredByPlan(type:ItemType,plan:ExpeditionPlan|null):boolean{if(!plan)return false;return(type==='water_ration'&&plan.loadout.water)||(type==='food'&&plan.loadout.food)||type===plan.loadout.weaponType}
 function neededForNextHome(citizen:Citizen,type:ItemType):boolean{const target=nextHomeDefinition(citizen.home.level);const required=target?.resources[type]??0;if(required<=0)return false;return personalMaterialCount(citizen,type)<=required}
+function legalOpenableBeforeUnload(citizen:Citizen,actions:GameCommand[]):GameCommand|null{
+  for(const item of citizen.inventory){if(item.type!=='construction_kit'&&!openableDefinition(item.type))continue;const open=itemAction(actions,'OPEN_CONTAINER',item.id);if(open)return open}
+  return null
+}
 export function unloadAction(citizen:Citizen,actions:GameCommand[],plan:ExpeditionPlan|null,forceUnload=false):GameCommand|null{
-  const kit=citizen.inventory.find((item)=>item.type==='construction_kit');if(kit){const open=itemAction(actions,'OPEN_CONTAINER',kit.id);if(open)return open}
+  const openable=legalOpenableBeforeUnload(citizen,actions);if(openable)return openable
   const disposition=supplyDispositionForCitizen(citizen.id)
-  for(const item of citizen.inventory){if(item.type==='construction_kit')continue;if(!forceUnload&&desiredByPlan(item.type,plan))continue;if(!forceUnload&&!plan&&neededForNextHome(citizen,item.type)){const store=itemAction(actions,'MOVE_ITEM_TO_HOME',item.id);if(store)return store;continue}const definition=ITEMS[item.type];if(['construction','raw','misc','defense','broken_weapon','container'].includes(definition.category)){const deposit=itemAction(actions,'DEPOSIT_ITEM',item.id);if(deposit)return deposit}if(definition.category==='weapon'||definition.category==='consumable'){if(disposition!=='community'&&citizen.home.storage.length<citizen.home.storageCapacity){const store=itemAction(actions,'MOVE_ITEM_TO_HOME',item.id);if(store)return store}if(disposition!=='hoarder'){const deposit=itemAction(actions,'DEPOSIT_ITEM',item.id);if(deposit)return deposit}}}
-  if(kit){const deposit=itemAction(actions,'DEPOSIT_ITEM',kit.id);if(deposit)return deposit}return null
+  for(const item of citizen.inventory){if(!forceUnload&&desiredByPlan(item.type,plan))continue;if(!forceUnload&&!plan&&neededForNextHome(citizen,item.type)){const store=itemAction(actions,'MOVE_ITEM_TO_HOME',item.id);if(store)return store;continue}const definition=ITEMS[item.type];if(['construction','raw','misc','defense','broken_weapon','container'].includes(definition.category)){const deposit=itemAction(actions,'DEPOSIT_ITEM',item.id);if(deposit)return deposit}if(definition.category==='weapon'||definition.category==='consumable'){if(disposition!=='community'&&citizen.home.storage.length<citizen.home.storageCapacity){const store=itemAction(actions,'MOVE_ITEM_TO_HOME',item.id);if(store)return store}if(disposition!=='hoarder'){const deposit=itemAction(actions,'DEPOSIT_ITEM',item.id);if(deposit)return deposit}}}
+  return null
 }
 export function packageSharingAction(citizen:Citizen,actions:GameCommand[],plan:ExpeditionPlan|null,hour:number):GameCommand|null{
   const disposition=supplyDispositionForCitizen(citizen.id);const doggy=atHome(citizen,'doggy_bag');if(doggy&&(plan?.loadout.food||(!plan&&disposition==='community'&&hour<=4))){const open=itemAction(actions,'OPEN_CONTAINER',doggy.id);if(open)return open}
