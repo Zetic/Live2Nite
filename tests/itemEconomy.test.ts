@@ -5,6 +5,7 @@ import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
 import { createItemInstance, normalizeItemState } from '../src/core/items'
 import { itemMatchesRequirement, itemRequirementsMet } from '../src/core/itemRecipes'
+import { migrateStoredGame } from '../src/persistence/IndexedDbGameRepository'
 
 describe('schema v16 stateful item economy',()=>{
   it('creates canonical default state and clamps charge-bearing item state',()=>{
@@ -64,5 +65,29 @@ describe('schema v16 stateful item economy',()=>{
     const game=createInitialGame(2602,2)
     expect(game.schemaVersion).toBe(16)
     expect(game.citizens.flatMap((citizen)=>citizen.home.storage).every((item)=>item.state!==undefined)).toBe(true)
+  })
+
+  it('materializes legacy Bank counts as unique normalized objects without colliding with existing IDs',()=>{
+    const current=createInitialGame(2603,1)
+    const existing=createItemInstance('i000007','water_pistol',{charges:1})
+    const legacy={
+      ...current,
+      schemaVersion:15,
+      nextItemId:2,
+      citizens:current.citizens.map((citizen)=>({...citizen,inventory:[existing],home:{...citizen.home,storage:citizen.home.storage.map(({id,type})=>({id,type}))}})),
+      town:{...current.town,bank:{water_ration:2,food:1}},
+      events:[],
+    } as unknown as Record<string,unknown>
+    const migrated=migrateStoredGame(legacy)
+    expect(migrated?.schemaVersion).toBe(16)
+    expect(migrated?.town.bank).toHaveLength(3)
+    expect(migrated?.town.bank.filter((item)=>item.type==='water_ration')).toHaveLength(2)
+    expect(migrated?.town.bank.every((item)=>item.state?.contamination==='clean')).toBe(true)
+    const bankIds=migrated?.town.bank.map((item)=>item.id)??[]
+    expect(new Set(bankIds).size).toBe(bankIds.length)
+    expect(bankIds.every((id)=>Number(id.slice(1))>7)).toBe(true)
+    expect(migrated?.citizens[0].inventory[0]).toEqual(existing)
+    expect(migrated?.citizens[0].home.storage.every((item)=>item.state!==undefined)).toBe(true)
+    expect(migrated?.nextItemId).toBeGreaterThan(10)
   })
 })
