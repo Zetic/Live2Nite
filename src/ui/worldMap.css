@@ -15,6 +15,7 @@
 }
 .map-cell.known { background: #182126; color: #b8c2c0; }
 .map-cell.intel-stale { background: #151c20; color: #889596; }
+.map-cell.known.depleted { background-color:#141b1f; background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0,rgba(255,255,255,.025) 3px,transparent 3px,transparent 7px); }
 .map-cell.town { background: #6d3c29; color: #fff0df; }
 .map-cell.player { outline: 2px solid #e8b277; outline-offset: -3px; color: #fff; }
 .map-cell.control-secure { border-color: #355440; }
@@ -26,11 +27,12 @@
 .map-cell-top { color: #d6c3b3; }
 .map-cell-bottom { color: #9da9a8; }
 .map-cell.intel-stale .map-cell-bottom { color: #788385; }
-.map-site-marker,.map-rescue-marker {
+.map-site-marker,.map-rescue-marker,.map-depleted-marker {
   position: absolute;
-  top: 1px;
   font-size: .43rem;
   line-height: 1;
+  font-weight:900;
 }
-.map-site-marker { left: 2px; color: #a9b8c0; }
-.map-rescue-marker { right: 2px; color: #efb070; }
+.map-site-marker { top:1px; left:2px; color:#a9b8c0; }
+.map-rescue-marker { top:1px; right:2px; color:#efb070; }
+.map-depleted-marker { bottom:2px; right:2px; color:#b18c68; }
