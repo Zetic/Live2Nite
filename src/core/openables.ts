@@ -51,9 +51,10 @@ export const OPENABLES:Partial<Record<ItemType,OpenableDefinition>>={
   resource_pack:{type:'resource_pack',source:'MYHORDES_CURRENT',mode:'remaining_contents',outputTable:resourcePackTable},
   // MyHordes CHEST_TOOLS.openableBy includes CHAIR_BASIC, PC, WRENCH, CUTTER, BONE,
   // CUTCUT, SMALL_KNIFE, CHAIN, KNIFE, STAFF, CAN_OPENER, SCREW, SWISS_KNIFE and
-  // HURLING_STICK. Human Bone and Staff are already live; the remaining ordinary source
-  // tools are added as their dependency chains land in this Part 2 PR.
-  toolbox:{type:'toolbox',source:'MYHORDES_CURRENT',mode:'consume',openableBy:['human_bone','staff'],outputTable:toolboxTable},
+  // HURLING_STICK. Existing Live2Nite equivalents are BONE -> Human Bone,
+  // CUTCUT -> Machete, SMALL_KNIFE -> Pathetic Penknife, KNIFE -> Serrated Knife,
+  // and STAFF -> Staff. Remaining ordinary source tools land with the normal-loot graph.
+  toolbox:{type:'toolbox',source:'MYHORDES_CURRENT',mode:'consume',openableBy:['human_bone','machete','pathetic_penknife','serrated_knife','staff'],outputTable:toolboxTable},
 }
 
 export function openableDefinition(type:ItemType):OpenableDefinition|null{return OPENABLES[type]??null}
