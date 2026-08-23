@@ -7,7 +7,7 @@ Live2Nite starts as a single-player browser game but keeps simulation rules inde
 - `src/core`: authoritative rules and persisted gameplay state. No React, DOM, network, IndexedDB, or local-storage dependencies.
 - `src/agents`: citizen controllers and deterministic decision helpers. Controllers select legal commands; they never directly mutate gameplay state.
 - `src/agents/coordination`: public, forum-like citizen commitments and volunteering rules.
-- `src/agents/planning`: town needs, mission opportunities, routes, expedition budgets, supply policy, camping intent, and return safety.
+- `src/agents/planning`: town needs, mission opportunities, routes, expedition budgets, supply policy, camping intent, defense strategy, and return safety.
 - `src/simulation`: orchestration between the persistent clock and autonomous controllers.
 - `src/persistence`: save/load adapters. IndexedDB is the current implementation.
 - `src/ui`: React presentation, human input, and removable diagnostics.
@@ -18,7 +18,7 @@ Gameplay follows:
 
 `GameCommand -> legal-action validation -> GameEvent[] -> reducer -> GameState`
 
-The controlled citizen and bots use the same commands and reducers. React does not directly alter AP, inventory, status, camping, Well water, construction, zombies, gate state, or time.
+The controlled citizen and bots use the same commands and reducers. React does not directly alter AP, inventory, status, camping, Well water, construction, homes, zombies, gate state, or time.
 
 Simulation-owned mission and coordination changes are also explicit events so save/replay history stays inspectable.
 
@@ -32,7 +32,7 @@ Simulation-owned mission and coordination changes are also explicit events so sa
 - `status.ts`: hydration progression and treatment.
 - `camping.ts`: camping outlook and deterministic survival.
 - `night.ts`: camping/outside resolution, horde attack, home survival, hydration, construction effects, World Beyond evolution, and day rollover.
-- `construction.ts`: data-driven construction catalog, prerequisites, effects, and priority scoring.
+- `construction.ts`: data-driven construction catalog, prerequisites, effects, and baseline priority scoring.
 - `defense.ts`: derived town/home defense aggregation.
 - `world.ts`: map generation, movement, zone control, scavenging, campsite state, and special-site placement.
 - `worldEvolution.ts`: deterministic nightly zombie evolution.
@@ -49,7 +49,7 @@ Hourly ordering is:
 3. `runBotHour` performs the uncontrolled citizens' current-hour coordination and decisions.
 4. `TIME_ADVANCED` moves the clock.
 
-The clock is a planning cadence, not a one-action-per-hour rule. If a citizen can safely perform several actions with remaining AP, the bot may do so within one simulation hour.
+The clock is a planning cadence, not a one-action-per-hour rule. If a citizen can safely perform several actions with remaining AP, the bot may do so within one simulation hour. Town work that represents one bounded commitment, including a construction contribution, personal-home improvement, or strategic material withdrawal, ends that citizen's town-work step for the hour so the bot cannot consume an entire shared stockpile in one decision loop.
 
 ## Status and camping lineage
 
@@ -88,7 +88,7 @@ Construction definitions own category, prerequisites, AP/material requirements, 
 
 Supported effect families include derived town defense, Bank/home-defense contribution, Well water/access, Workshop AP discounts, Watchtower forecasting, Search Tower replenishment, camping support, gate locking/auto-close, daily production, and terrain revelation.
 
-The 40-point `town.defense` field is bootstrap/static defense. Effective defense is derived from that base plus Bank objects, homes, completed projects, multipliers, and temporary defenses.
+The 40-point `town.defense` field is bootstrap/static defense. Effective defense is derived from that base plus Bank objects, eligible home defense, completed projects, multipliers, and temporary defenses.
 
 See `docs/die2nite-reference/construction-expansion.md`.
 
@@ -119,6 +119,35 @@ If a later-day town is resource-starved and field coverage is thin, citizens wit
 Nearby low-risk depleted zones are valid construction-salvage missions because Rotting Logs and Scrap Metal remain useful Workshop feedstock.
 
 See `docs/distributed-coordination.md`.
+
+## Home progression and threat-aware defense
+
+Schema v15 expands the citizen home from the initial Camp Bed/Tent slice into persistent structural progression and supported Home Improvements.
+
+The structural path is:
+
+`Camp Bed -> Tent -> Hovel -> Shack -> House -> Fenced House -> Fortified Shelter -> Bunker -> Castle`
+
+A citizen may perform at most one structural home upgrade per day. Home upgrades and Home Improvements consume that citizen's personally held materials through normal legal commands/events rather than silently consuming the shared Bank. Where Live2Nite does not yet contain the mature historical material type, the definition records an explicit adapted substitution rather than pretending the replacement is historically exact.
+
+Personal home defense and shared town defense are deliberately different quantities:
+
+- structural home defense and supported defensive Home Improvements protect the resident during a breach;
+- defensive objects stored in the private home chest protect that resident but do **not** become shared town defense merely by being private property;
+- eligible home defense contributes 40% to the town by default and 80% after Circular Quarters, using the construction effect layer.
+
+`src/agents/planning/TownDefenseStrategy.ts` provides the public threat model used by autonomous citizens. It may use only information an ordinary citizen could reasonably know:
+
+- a built Watchtower's visible estimate range; or
+- the previous public Night Report as a conservative historical planning anchor when no Watchtower estimate exists.
+
+It never calls the deterministic upcoming attack-strength function. The exact attack remains authoritative night-resolution truth.
+
+Defense pressure is classified as `comfortable`, `uncertain`, `shortfall`, or `critical`. That pressure can alter construction volunteering and individual town work, including prioritizing defensive projects, emergency temporary defense, or personal home reinforcement. Citizens may withdraw a Home-upgrade material from the Bank only when it is surplus to the current communal strategic priority.
+
+An open gate is normal during daytime expeditions and therefore is not itself treated as a defense emergency. A still-open gate becomes critical only in the late pre-attack window; gate volunteers remain responsible for sealing it.
+
+Strategic construction ranking computes the public defense assessment once per decision/pass and scores each candidate once. This prevents the broader construction catalog from turning hourly bot simulation into repeated nested full-tree rescoring.
 
 ## Coordinated field missions
 
@@ -182,7 +211,9 @@ The attack conclusion remains isolated in `night.ts`:
 
 The World Beyond map displays shared town knowledge, not hidden zombie truth. The detailed current-zone view can display authoritative local information because the controlled citizen is physically observing that zone.
 
-The Home screen exposes the Town Coordination Board so bot cooperation is visible rather than a hidden NPC-only mechanism. It shows gate volunteers, current construction intentions, and active field claims.
+Town Records is the first permanent navigation destination and the default screen. Its default **Town Bulletin** tab exposes public coordination and defense planning in one place: defense outlook/source, strategic construction need, gate volunteers, construction intentions, and active field claims. Chronicle and Statistics remain sibling Town Records tabs. There is no separate Communications screen in this slice.
+
+The Home screen is citizen-specific and separates **Inventory & Actions**, **Building Upgrades**, and **Home Improvements**. It presents personal-defense composition and the full structural progression without exposing hidden simulation information.
 
 The Citizens screen remains the deeper diagnostic surface for status, mission phase, AP/loadout budget, return margin, and reserve state.
 
@@ -190,7 +221,7 @@ The Citizens screen remains the deeper diagnostic surface for status, mission ph
 
 Core rules do not use scattered `Math.random()`. A seed plus the same ordered commands/time advances should reproduce the same result.
 
-Save schema is **v14**. Schema 2–13 saves migrate forward. Migration normalizes construction state against the current catalog, retains legitimate World Beyond observations, normalizes legacy missions to stable same-day behavior when needed, and initializes missing coordination state as an empty public-commitment list. Existing game progress is otherwise preserved where representable.
+Save schema is **v15**. Schema 2–14 saves migrate forward. Migration normalizes construction state against the current catalog, retains legitimate World Beyond observations, normalizes legacy missions to stable same-day behavior when needed, initializes missing coordination state as an empty public-commitment list, and fills missing v15 Home progression/improvement fields with safe defaults. Existing game progress is otherwise preserved where representable.
 
 Camping survival and World Beyond evolution use isolated deterministic seeds so unrelated random calls do not silently alter their outcomes.
 
@@ -198,17 +229,17 @@ Camping survival and World Beyond evolution use isolated deterministic seeds so 
 
 Tests are separated conceptually by what they protect:
 
-1. **Hard rule/architecture invariants** — command legality, AP/accounting, persistence, determinism, information boundaries, control/extraction, gate coverage, and concrete bug regressions. These gate CI.
-2. **Focused pathological scenarios** — known failures such as mass departure or rescue trap transfer. These gate CI.
+1. **Hard rule/architecture invariants** — command legality, AP/accounting, persistence, determinism, information boundaries, home material accounting, control/extraction, gate coverage, and concrete bug regressions. These gate CI.
+2. **Focused pathological scenarios** — known failures such as mass departure or rescue trap transfer, plus focused v15 home/defense-information regressions. These gate CI.
 3. **Economy/survival simulation benchmarks** — Workshop frequency, survivor count, dehydration, Well level, defense, searches and outside-at-midnight population. During early development these are diagnostic telemetry, not exact balance gates.
 
 Benchmarks still run deterministically on every test run so large shifts remain visible. Selected metrics can become hard thresholds later when the surrounding progression, defense, camping, profession and social systems stabilize.
 
 ## Future forum and social integration
 
-The v14 commitment model is intentionally compatible with a later real forum/chat system. Human or bot posts can eventually produce the same public intentions: "I'll close the gate", "I'll be backup", "I'm working on the wall", "we need planks", or "I'm scouting east".
+The v14 commitment model remains the public-coordination substrate under schema v15 and is intentionally compatible with a later real forum/chat system. Human or bot posts can eventually produce the same public intentions: "I'll close the gate", "I'll be backup", "I'm working on the wall", "we need planks", or "I'm scouting east".
 
-Future personality/social systems may affect whether citizens communicate, volunteer, keep commitments, hoard, or accept risk. They must not bypass legal commands or the World Knowledge boundary.
+Future personality/social systems may affect whether citizens communicate, volunteer, keep commitments, hoard, or accept risk. They must not bypass legal commands, private-resource ownership, or the World Knowledge/public-defense boundaries.
 
 ## Multiplayer migration
 
