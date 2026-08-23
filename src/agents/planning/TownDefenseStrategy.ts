@@ -68,6 +68,12 @@ export function strategicConstructionScore(state:GameState,projectId:Constructio
   const flat=constructionFlatDefenseForProject(projectId)
   const defensive=defensiveUtility(projectId)
 
+  // The core catalog keeps Workshop at a strong bootstrap priority. The agent layer may
+  // temporarily yield that preference when public evidence says tonight's defense is unsafe.
+  if(projectId==='workshop'){
+    if(assessment.pressure==='critical')score-=750
+    else if(assessment.pressure==='shortfall')score-=500
+  }
   if(projectId==='watchtower'&&assessment.source!=='watchtower')score+=assessment.source==='none'?240:150
   if(defensive){
     if(assessment.pressure==='critical')score+=flat*2.3+150
