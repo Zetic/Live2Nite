@@ -1,37 +1,34 @@
-import { getLegalActions } from '../../core/actions'
 import type { BotMissionAssignment, Citizen, GameEvent, GameState } from '../../core/types'
 import { distanceToTown } from '../../core/world'
 import { citizenNumber } from '../AgentIdentity'
 import { AI_TUNING } from '../AiTuning'
-import { chooseTownWork } from '../townWork'
+import { commitmentForCitizen, gatePrimaryCitizenId } from '../coordination/TownCoordination'
 import { planMission } from './ExpeditionPlanner'
 import type { MissionOpportunity } from './MissionOpportunities'
 
-export const DEDICATED_RESCUE_RESERVE = AI_TUNING.dedicatedRescueReserve
+// Retained as a compatibility export for diagnostics/tests. Fixed rescue citizens are no
+// longer selected; emergency responders volunteer from currently available town citizens.
+export const DEDICATED_RESCUE_RESERVE = 0
+
+export function dedicatedRescueCitizenIds(_state: GameState): string[] {
+  return []
+}
+
+export function nightGateReserveCitizenId(state: GameState): string | null {
+  return gatePrimaryCitizenId(state)
+}
+
+export function isDedicatedRescueReserve(_state: GameState, _citizenId: string): boolean {
+  return false
+}
 
 function returnByHour(citizenId: string): number {
   return AI_TUNING.returnHourBase + (citizenNumber(citizenId) % AI_TUNING.returnHourSpread)
 }
 
-export function dedicatedRescueCitizenIds(state: GameState): string[] {
-  return state.citizens
-    .filter((citizen) => citizen.alive && citizen.controller === 'basic-bot')
-    .sort((a, b) => citizenNumber(b.id) - citizenNumber(a.id))
-    .slice(0, DEDICATED_RESCUE_RESERVE)
-    .map((citizen) => citizen.id)
-}
-
-export function nightGateReserveCitizenId(state: GameState): string | null {
-  return dedicatedRescueCitizenIds(state)[0] ?? null
-}
-
-export function isDedicatedRescueReserve(state: GameState, citizenId: string): boolean {
-  return dedicatedRescueCitizenIds(state).includes(citizenId)
-}
-
 export function minimumTownReserve(state: GameState): number {
   const livingBots = state.citizens.filter((citizen) => citizen.alive && citizen.controller === 'basic-bot').length
-  return Math.max(DEDICATED_RESCUE_RESERVE, Math.ceil(livingBots * AI_TUNING.minimumTownReserveFraction))
+  return Math.max(2, Math.ceil(livingBots * AI_TUNING.minimumTownReserveFraction))
 }
 
 export function activeMissionCount(state: GameState): number {
@@ -60,6 +57,7 @@ export function makeAssignment(
     returnByHour: returnByHour(citizen.id),
     safetyReserve: opportunity.safetyReserve,
     emergency: opportunity.emergency,
+    searchMode: opportunity.searchMode,
     allowsCamping: !opportunity.emergency
       && distanceToTown(opportunity.target.x, opportunity.target.y) >= AI_TUNING.campingEligibilityDistance,
   }
@@ -95,14 +93,9 @@ export function allTownCandidates(state: GameState, controlledCitizenId?: string
     .sort((a, b) => ((citizenNumber(a.id) + offset) % 100) - ((citizenNumber(b.id) + offset) % 100))
 }
 
-function hasImmediateTownWork(state: GameState, citizen: Citizen): boolean {
-  return Boolean(chooseTownWork(state, citizen, getLegalActions(state, citizen.id)))
-}
-
 export function normalCandidates(state: GameState, controlledCitizenId?: string): Citizen[] {
-  const dedicated = new Set(dedicatedRescueCitizenIds(state))
   return allTownCandidates(state, controlledCitizenId)
-    .filter((citizen) => !dedicated.has(citizen.id) && !hasImmediateTownWork(state, citizen))
+    .filter((citizen) => !commitmentForCitizen(state, citizen.id) && citizen.status.hydration === 'normal')
 }
 
 export function assignmentEvent(state: GameState, citizen: Citizen, mission: BotMissionAssignment): GameEvent {
