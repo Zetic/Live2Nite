@@ -35,12 +35,17 @@ describe('pinned MyHordes loot manifest',()=>{
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('preserves source state when one Live2Nite type represents multiple MyHordes variants',()=>{
+  it('preserves source identity/state when Live2Nite already owns the exact gameplay item',()=>{
     expect(MYHORDES_NORMAL_LOOT_MAPPING['rsc_pack_2_#00']).toEqual({type:'resource_pack',state:{contents:2}})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['rsc_pack_3_#00']).toEqual({type:'resource_pack',state:{contents:3}})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['watergun_empty_#00']).toEqual({type:'water_pistol',state:{charges:0}})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['pilegun_empty_#00']).toEqual({type:'battery_launcher',state:{charges:0}})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['saw_tool_part_#00']).toEqual({type:'saw_tool_part'})
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['fence_#00']).toEqual({type:'wire_mesh'})
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['pet_chick_#00']).toEqual({type:'chicken'})
+    const pending=new Set(unmappedOrdinarySourceLootIds())
+    expect(pending.has('fence_#00')).toBe(false)
+    expect(pending.has('pet_chick_#00')).toBe(false)
   })
 
   it('keeps still-unmapped ordinary ids visible instead of dropping them',()=>{
