@@ -87,7 +87,7 @@ export function executeCommand(state: GameState, command: GameCommand): CommandR
     case 'ENTER_TOWN': events.push({ type: 'CITIZEN_LOCATION_CHANGED', day: state.day, citizenId: command.citizenId, location: { type: 'town' } }); break
     case 'MOVE': {
       if (citizen.location.type !== 'world') throw new InvalidCommandError('Citizen is not outside')
-      const target = moveCoordinates(citizen.location.x, citizen.location.y); const key = zoneKey(target.x, target.y); const targetZone = getZone(state.world, target.x, target.y)
+      const target = moveCoordinates(citizen.location.x, citizen.location.y, command.direction); const key = zoneKey(target.x, target.y); const targetZone = getZone(state.world, target.x, target.y)
       if (!targetZone) throw new InvalidCommandError('Target zone does not exist')
       events.push({ type: 'AP_SPENT', day: state.day, citizenId: command.citizenId, amount: MOVE_AP_COST },{ type: 'CITIZEN_LOCATION_CHANGED', day: state.day, citizenId: command.citizenId, location: { type: 'world', x: target.x, y: target.y }, desertStep: true },{ type: 'ZONE_DISCOVERED', day: state.day, zoneKey: key },{ type: 'ZONE_OBSERVED', day: state.day, zoneKey: key, zombies: targetZone.zombies, citizenId: command.citizenId },...movementControlEvents(state, citizen, target))
       const transition = travelHydrationTransition(citizen); if (transition) events.push({ type: 'CITIZEN_STATUS_CHANGED', day: state.day, citizenId: command.citizenId, status: transition, reason: 'desert_travel' }); break
