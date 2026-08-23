@@ -29,9 +29,13 @@ export function chooseHourlyObjective(state: GameState, citizenId: string): Hour
   if (citizen.location.type === 'world') return 'return_home'
 
   const commitment=commitmentForCitizen(state,citizenId)
-  if(commitment&&(commitment.kind==='gate_primary'||commitment.kind==='gate_backup')&&citizen.ap<=reservedApForCitizen(state,citizenId))return'reserve'
-  if(commitment?.kind==='construction'&&chooseTownWork(state,citizen,getLegalActions(state,citizenId)))return'town_work'
-  if(state.clock.hour>=AI_TUNING.townApDumpHour&&chooseTownWork(state,citizen,getLegalActions(state,citizenId)))return'town_work'
+  const reserved=reservedApForCitizen(state,citizenId)
+  const townWork=chooseTownWork(state,citizen,getLegalActions(state,citizenId))
+  const gateVolunteer=commitment?.kind==='gate_primary'||commitment?.kind==='gate_backup'
+  if(gateVolunteer&&citizen.ap<=reserved)return'reserve'
+  if(commitment?.kind==='construction'&&townWork)return'town_work'
+  if(gateVolunteer&&citizen.ap>reserved&&townWork)return'town_work'
+  if(state.clock.hour>=AI_TUNING.townApDumpHour&&townWork)return'town_work'
   return 'reserve'
 }
 
