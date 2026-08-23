@@ -47,7 +47,7 @@ describe('portable combinations',()=>{
 
   it('lets town AI prepare construction combinations by withdrawing Bank ingredients',()=>{
     let game=createInitialGame(2808,1)
-    game={...game,town:{...game.town,bank:bankFromCounts({bag_of_cement:1,water_ration:1},'concrete-prep'),construction:{...game.town.construction,spiked_wall:{...game.town.construction.spiked_wall,apContributed:1}}}}
+    game={...game,town:{...game.town,bank:bankFromCounts({twisted_plank:5,wrought_iron:2,bag_of_cement:1,water_ration:1},'concrete-prep'),construction:{...game.town.construction,advanced_ramparts:{...game.town.construction.advanced_ramparts,completed:true,apContributed:CONSTRUCTIONS.advanced_ramparts.apCost},spiked_wall:{...game.town.construction.spiked_wall,apContributed:1}}}}
     let citizen=game.citizens[0];let actions=getLegalActions(game,citizen.id);let work=chooseTownWork(game,citizen,actions)
     expect(work?.type).toBe('WITHDRAW_BANK_ITEM')
     if(!work)throw new Error('Expected concrete ingredient withdrawal')
