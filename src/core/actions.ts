@@ -34,6 +34,7 @@ function constructionFrontier(state:GameState):ConstructionId[]{
 function hasProjectMaterials(state:GameState,projectId:ConstructionId):boolean{return Object.entries(CONSTRUCTIONS[projectId].resources).every(([type,required])=>(state.town.bank[type as ItemType]??0)>=(required??0))}
 function canOpenContainer(citizen:Citizen,item:ItemInstance,source:ItemStorage):boolean{
   if(item.type!=='construction_kit')return true
+  if(source==='ground')return true
   return source==='inventory'?citizen.inventory.length<citizen.inventoryCapacity:citizen.home.storage.length<citizen.home.storageCapacity
 }
 function addConsumableActions(actions: GameCommand[], citizen: Citizen, items: ItemInstance[],source:ItemStorage): void {
@@ -94,6 +95,7 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
   const { x, y } = citizen.location
   const zone = getZone(state.world, x, y)
   if (!zone) return actions
+  addConsumableActions(actions,citizen,zone.groundItems,'ground')
   if (isTownGateZone(x, y) && state.town.gateOpen) actions.push({ type: 'ENTER_TOWN', citizenId })
 
   const control = zoneControl(state, x, y)
@@ -115,7 +117,7 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
   if (citizen.inventory.length < citizen.inventoryCapacity) for (const item of zone.groundItems) actions.push({ type: 'PICK_UP_ITEM', citizenId, itemId: item.id })
   for (const item of citizen.inventory) actions.push({ type: 'DROP_ITEM', citizenId, itemId: item.id })
   if (zone.zombies > 0 && citizen.ap > 0) {
-    for (const item of citizen.inventory) {
+    for (const item of [...citizen.inventory,...zone.groundItems]) {
       const weapon = weaponDefinition(item.type)
       if (weapon && isWeapon(item.type) && (!weapon.requiresPositiveAp || citizen.ap > 0)) actions.push({ type: 'USE_WEAPON', citizenId, itemId: item.id })
     }
