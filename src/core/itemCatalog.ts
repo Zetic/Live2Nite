@@ -3,7 +3,7 @@ export const ITEM_TYPE_IDS = [
   // Ordinary MyHordes Armoury tools used as weapons and container openers.
   'adjustable_spanner','broken_adjustable_spanner','screwdriver','broken_screwdriver','swiss_army_knife','broken_swiss_army_knife','box_cutter','broken_box_cutter','chain','broken_chain','can_opener','broken_can_opener',
   // Ordinary source food outcomes. food itself maps to food_sandw_#00 (Mouldy Ham Sandwich).
-  'mouldy_twinkies','half_eaten_chicken_wings','rancid_shortbread_pack','out_of_date_jaffa_cakes','dried_chewing_gum','stale_tart','soft_crisps',
+  'mouldy_twinkies','half_eaten_chicken_wings','rancid_shortbread_pack','out_of_date_jaffa_cakes','dried_chewing_gum','stale_tart','soft_crisps','can','open_can',
   'doggy_bag','citizen_welcome_pack','battery','box_of_matches','pharmaceutical_products',
   // Construction economy: advanced materials, supplies, and unprocessed salvage.
   'metal_support','patchwork_beam','sheet_metal','bag_of_damp_grass','bag_of_cement','belt','compact_detonator','convex_lens','copper_pipe','duct_tape','earplugs','electronic_component','empty_oil_can','nuts_and_bolts','laser_diode','semtex','telescope','wire_reel','broken_electronic_device','mechanism',
