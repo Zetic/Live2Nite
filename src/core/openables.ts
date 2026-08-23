@@ -27,6 +27,11 @@ export interface OpenableResolution {
   rngStateAfter: number
 }
 
+const MELEE_BOX_OPENERS:readonly ItemType[]=[
+  'adjustable_spanner','box_cutter','human_bone','machete','pathetic_penknife','chain',
+  'serrated_knife','staff','can_opener','screwdriver','swiss_army_knife',
+]
+
 const resourcePackTable:WeightedLootTable={
   id:'myhordes.resource_pack',
   source:'MYHORDES_CURRENT',
@@ -65,6 +70,21 @@ const toolboxTable:WeightedLootTable={
   ],
 }
 
+const foodBoxTable:WeightedLootTable={
+  id:'myhordes.food_box',
+  source:'MYHORDES_CURRENT',
+  // MyHordes ws016 / chest_food_#00: food_bag 8, can 11, meat 7, hmeat 13, vegetable 8.
+  // The table is source-complete now. Normal acquisition remains gated until Human Flesh's
+  // ghoul conversion/hunger path is represented rather than flattened into ordinary food.
+  entries:[
+    lootEntry('doggy_bag',8),
+    lootEntry('can',11),
+    lootEntry('tasty_looking_steak',7),
+    lootEntry('human_flesh',13),
+    lootEntry('vegetable',8),
+  ],
+}
+
 const canMorphTable:WeightedLootTable={
   id:'myhordes.can_open',
   source:'MYHORDES_CURRENT',
@@ -76,19 +96,14 @@ const canMorphTable:WeightedLootTable={
 export const OPENABLES:Partial<Record<ItemType,OpenableDefinition>>={
   resource_pack:{type:'resource_pack',source:'MYHORDES_CURRENT',mode:'remaining_contents',outputTable:resourcePackTable},
   doggy_bag:{type:'doggy_bag',source:'MYHORDES_CURRENT',mode:'consume',outputTable:doggyBagTable},
-  // MyHordes can_#00 uses the "main" opener family. Saw Tool is not implemented yet;
-  // the three already-live ordinary equivalents are wired now and the opener is not consumed.
+  // MyHordes can_#00 uses the "main" opener family. Saw Tool is the remaining ordinary source
+  // opener dependency; these three already-live equivalents are reusable and not consumed.
   can:{type:'can',source:'MYHORDES_CURRENT',mode:'consume',morphTo:'open_can',openableBy:['can_opener','screwdriver','swiss_army_knife'],outputTable:canMorphTable},
-  // MyHordes CHEST_TOOLS.openableBy includes CHAIR_BASIC, PC, WRENCH, CUTTER, BONE,
-  // CUTCUT, SMALL_KNIFE, CHAIN, KNIFE, STAFF, CAN_OPENER, SCREW, SWISS_KNIFE and
-  // HURLING_STICK. All ordinary source tools currently implemented in Live2Nite are wired
-  // below. CHAIR_BASIC and PC land with their own ordinary-item mechanics; HURLING_STICK
-  // remains event-gated and is intentionally not made normally available.
-  toolbox:{
-    type:'toolbox',source:'MYHORDES_CURRENT',mode:'consume',
-    openableBy:['adjustable_spanner','box_cutter','human_bone','machete','pathetic_penknife','chain','serrated_knife','staff','can_opener','screwdriver','swiss_army_knife'],
-    outputTable:toolboxTable,
-  },
+  // chest_food_#00 and chest_tools_#00 both use the source "melee" opener family.
+  food_box:{type:'food_box',source:'MYHORDES_CURRENT',mode:'consume',openableBy:MELEE_BOX_OPENERS,outputTable:foodBoxTable},
+  // MyHordes CHEST_TOOLS.openableBy also includes CHAIR_BASIC, PC and HURLING_STICK. The first
+  // two land with their own ordinary-item mechanics; HURLING_STICK remains event-gated.
+  toolbox:{type:'toolbox',source:'MYHORDES_CURRENT',mode:'consume',openableBy:MELEE_BOX_OPENERS,outputTable:toolboxTable},
 }
 
 export function openableDefinition(type:ItemType):OpenableDefinition|null{return OPENABLES[type]??null}
