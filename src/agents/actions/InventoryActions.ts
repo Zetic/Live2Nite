@@ -1,3 +1,4 @@
+import { nextHomeDefinition, personalMaterialCount } from '../../core/home'
 import { ITEMS } from '../../core/items'
 import type { Citizen, GameCommand, ItemType } from '../../core/types'
 import type { ExpeditionPlan } from '../planning/ExpeditionPlanner'
@@ -9,6 +10,13 @@ function desiredByPlan(type: ItemType, plan: ExpeditionPlan | null): boolean {
   return (type === 'water_ration' && plan.loadout.water)
     || (type === 'food' && plan.loadout.food)
     || type === plan.loadout.weaponType
+}
+
+function neededForNextHome(citizen:Citizen,type:ItemType):boolean {
+  const target=nextHomeDefinition(citizen.home.level)
+  const required=target?.resources[type]??0
+  if(required<=0)return false
+  return personalMaterialCount(citizen,type)<=required
 }
 
 export function unloadAction(
@@ -27,6 +35,16 @@ export function unloadAction(
   for (const item of citizen.inventory) {
     if (item.type === 'construction_kit') continue
     if (!forceUnload && desiredByPlan(item.type, plan)) continue
+
+    // A citizen who deliberately withdrew a material for their next personal home level
+    // must not immediately put it back in the Bank on the next controller step. Park it
+    // in Home storage when possible, or keep it in the rucksack until the upgrade can run.
+    if(!forceUnload&&!plan&&neededForNextHome(citizen,item.type)){
+      const store=itemAction(actions,'MOVE_ITEM_TO_HOME',item.id)
+      if(store)return store
+      continue
+    }
+
     const definition = ITEMS[item.type]
     if (['construction', 'raw', 'misc', 'defense', 'broken_weapon', 'container'].includes(definition.category)) {
       const deposit = itemAction(actions, 'DEPOSIT_ITEM', item.id)
