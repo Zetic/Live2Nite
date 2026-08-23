@@ -2,7 +2,7 @@ import { getLegalActions } from '../../core/actions'
 import { CONSTRUCTIONS, gateAutoCloseAtHour } from '../../core/construction'
 import type { Citizen, ConstructionId, CoordinationCommitment, GameEvent, GameState } from '../../core/types'
 import { citizenNumber } from '../AgentIdentity'
-import { publicDefenseAssessment, strategicConstructionScore } from '../planning/TownDefenseStrategy'
+import { publicDefenseAssessment, rankStrategicConstruction, type DefensePressure } from '../planning/TownDefenseStrategy'
 
 export const GATE_PRIMARY_TASK = 'gate:primary'
 export const GATE_BACKUP_TASK = 'gate:backup'
@@ -75,25 +75,31 @@ function post(
     day: state.day,
     hour: state.clock.hour,
     commitment: {
-      id: commitmentId(state, citizen.id, taskKey), citizenId: citizen.id, kind, taskKey, label,
-      reservedAp, day: state.day, hour: state.clock.hour, expiresHour, projectId,
+      id: commitmentId(state, citizen.id, taskKey),
+      citizenId: citizen.id,
+      kind,
+      taskKey,
+      label,
+      reservedAp,
+      day: state.day,
+      hour: state.clock.hour,
+      expiresHour,
+      projectId,
     },
   }
 }
 
-function buildableProjectsForCitizen(state: GameState, citizenId: string): ConstructionId[] {
+function constructionProjectsAvailableTo(state: GameState, citizenId: string): ConstructionId[] {
   return getLegalActions(state, citizenId)
     .filter((action): action is Extract<ReturnType<typeof getLegalActions>[number], { type: 'CONTRIBUTE_CONSTRUCTION' }> => action.type === 'CONTRIBUTE_CONSTRUCTION')
     .map((action) => action.projectId)
-    .sort((left, right) => strategicConstructionScore(state, right) - strategicConstructionScore(state, left))
 }
 
-function desiredConstructionVolunteers(state: GameState, projectId: ConstructionId): number {
+function desiredConstructionVolunteers(state: GameState, projectId: ConstructionId, pressure: DefensePressure): number {
   const definition = CONSTRUCTIONS[projectId]
   const project = state.town.construction[projectId]
   const remainingLabor = Math.max(0, definition.apCost - (project?.apContributed ?? 0))
-  const pressure=publicDefenseAssessment(state).pressure
-  const base = pressure==='critical' ? 10 : pressure==='shortfall' ? 8 : state.clock.hour >= 18 ? 6 : 4
+  const base = pressure === 'critical' ? 10 : pressure === 'shortfall' ? 8 : state.clock.hour >= 18 ? 6 : 4
   return Math.max(1, Math.min(base, remainingLabor))
 }
 
@@ -120,31 +126,59 @@ export function planTownCoordination(state: GameState, controlledCitizenId?: str
   const retained = new Set(active.map((commitment) => commitment.id))
 
   for (const commitment of state.coordination.commitments) {
-    if (!retained.has(commitment.id)) events.push({type:'COORDINATION_COMMITMENT_CLEARED',day:state.day,hour:state.clock.hour,commitmentId:commitment.id,reason:'expired'})
+    if (!retained.has(commitment.id)) {
+      events.push({ type: 'COORDINATION_COMMITMENT_CLEARED', day: state.day, hour: state.clock.hour, commitmentId: commitment.id, reason: 'expired' })
+    }
   }
 
   const working = [...active]
   const candidates = volunteerOrder(state, controlledCitizenId)
   const hasCommitment = (citizenId: string) => working.some((commitment) => commitment.citizenId === citizenId)
+  const assessment = publicDefenseAssessment(state)
+
+  // Construction legality is public town state and is identical for ordinary town citizens
+  // with AP remaining. Rank the current frontier once instead of rescoring it for every bot.
+  const constructionCandidate = candidates.find((citizen) => citizen.ap > 0)
+  const rankedProjects = constructionCandidate
+    ? rankStrategicConstruction(state, constructionProjectsAvailableTo(state, constructionCandidate.id), assessment)
+    : []
+  const projectId = rankedProjects[0] ?? null
 
   if (!automaticGateCoverage(state)) {
     if (!working.some((commitment) => commitment.kind === 'gate_primary')) {
       const citizen = candidates.find((candidate) => !hasCommitment(candidate.id) && candidate.ap >= 1)
-      if (citizen) {const event=post(state,citizen,'gate_primary',GATE_PRIMARY_TASK,'I will keep 1 AP to close the gate tonight.',1,23);events.push(event);if(event.type==='COORDINATION_COMMITMENT_POSTED')working.push(event.commitment)}
+      if (citizen) {
+        const event = post(state, citizen, 'gate_primary', GATE_PRIMARY_TASK, 'I will keep 1 AP to close the gate tonight.', 1, 23)
+        events.push(event)
+        if (event.type === 'COORDINATION_COMMITMENT_POSTED') working.push(event.commitment)
+      }
     }
     if (!working.some((commitment) => commitment.kind === 'gate_backup')) {
       const citizen = candidates.find((candidate) => !hasCommitment(candidate.id) && candidate.ap >= 1)
-      if (citizen) {const event=post(state,citizen,'gate_backup',GATE_BACKUP_TASK,'I will keep 1 AP as backup for the gate.',1,23);events.push(event);if(event.type==='COORDINATION_COMMITMENT_POSTED')working.push(event.commitment)}
+      if (citizen) {
+        const event = post(state, citizen, 'gate_backup', GATE_BACKUP_TASK, 'I will keep 1 AP as backup for the gate.', 1, 23)
+        events.push(event)
+        if (event.type === 'COORDINATION_COMMITMENT_POSTED') working.push(event.commitment)
+      }
     }
   }
 
+  if (!projectId) return events
+  const desired = desiredConstructionVolunteers(state, projectId, assessment.pressure)
   for (const citizen of candidates) {
     if (hasCommitment(citizen.id) || citizen.ap <= 0 || citizen.status.hydration !== 'normal') continue
-    const projectId = buildableProjectsForCitizen(state, citizen.id)[0]
-    if (!projectId) continue
     const current = working.filter((commitment) => commitment.kind === 'construction' && commitment.projectId === projectId).length
-    if (current >= desiredConstructionVolunteers(state, projectId)) continue
-    const event = post(state,citizen,'construction',`construction:${projectId}`,`I will put an AP into ${CONSTRUCTIONS[projectId].name} this hour.`,0,Math.min(23,state.clock.hour+1),projectId)
+    if (current >= desired) break
+    const event = post(
+      state,
+      citizen,
+      'construction',
+      `construction:${projectId}`,
+      `I will put an AP into ${CONSTRUCTIONS[projectId].name} this hour.`,
+      0,
+      Math.min(23, state.clock.hour + 1),
+      projectId,
+    )
     events.push(event)
     if (event.type === 'COORDINATION_COMMITMENT_POSTED') working.push(event.commitment)
   }
