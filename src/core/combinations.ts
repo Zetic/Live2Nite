@@ -37,6 +37,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
   assemble_engine:recipe({id:'assemble_engine',name:'Assemble Engine',category:'assemble',apCost:0,inputs:[{type:'engine_incomplete'},{type:'duct_tape'},{type:'nuts_and_bolts'},{type:'wrought_iron'},{type:'compact_detonator'},{type:'human_bone'}],outputType:'engine',summary:'Incomplete Engine + Duct Tape + Nuts & Bolts + Wrought Iron + Compact Detonator + Human Bone → Engine',source:'MYHORDES_CURRENT'}),
   assemble_claymore:recipe({id:'assemble_claymore',name:'Assemble Claymore Mine',category:'assemble',apCost:0,inputs:[{type:'wire_reel'},{type:'semtex'},{type:'nuts_and_bolts'},{type:'duct_tape'}],outputType:'claymore',summary:'Wire Reel + Semtex + Nuts & Bolts + Duct Tape → Claymore Mine',source:'MYHORDES_CURRENT'}),
   assemble_torch:recipe({id:'assemble_torch',name:'Make Torch',category:'assemble',apCost:0,inputs:[{type:'box_of_matches'},{type:'rotten_log'}],outputType:'torch',summary:'Box of Matches + Rotting Log → Torch',source:'MYHORDES_CURRENT'}),
+  assemble_hacksaw:recipe({id:'assemble_hacksaw',name:'Repair Hacksaw',category:'assemble',apCost:0,inputs:[{type:'saw_tool_part'},{type:'kwik_fix'},{type:'nuts_and_bolts'}],outputType:'saw_tool',summary:'Damaged Hacksaw + Kwik-Fix + Nuts & Bolts → Hacksaw',source:'MYHORDES_CURRENT'}),
   mix_concrete:recipe({id:'mix_concrete',name:'Mix Concrete Block',category:'assemble',apCost:0,inputs:[{type:'bag_of_cement'},{type:'water_ration'}],outputType:'unshaped_concrete_block',summary:'Bag of Cement + Water Ration → Unshaped Concrete Block',source:'MYHORDES_CURRENT'}),
   fill_water_bomb:recipe({id:'fill_water_bomb',name:'Fill Water Bomb',category:'assemble',apCost:0,inputs:[{type:'plastic_bag'},{type:'water_ration'}],outputType:'water_bomb',summary:'Plastic Bag + Water Ration → Water Bomb',source:'MYHORDES_CURRENT'}),
 
@@ -70,7 +71,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
 }
 
 export const COMBINATION_RECIPE_ORDER:CombinationRecipeId[]=[
-  'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','mix_concrete','fill_water_bomb',
+  'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','assemble_hacksaw','mix_concrete','fill_water_bomb',
   'reload_water_pistol','refill_water_cooler','reload_battery_launcher',
   'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete','repair_adjustable_spanner','repair_screwdriver','repair_swiss_army_knife','repair_box_cutter','repair_chain','repair_can_opener',
   'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete','kwik_fix_adjustable_spanner','kwik_fix_screwdriver','kwik_fix_swiss_army_knife','kwik_fix_box_cutter','kwik_fix_chain','kwik_fix_can_opener',
