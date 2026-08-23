@@ -241,9 +241,11 @@ The Citizens screen remains the deeper diagnostic surface for status, mission ph
 
 Core rules do not use scattered `Math.random()`. A seed plus the same ordered commands/time advances should reproduce the same result.
 
-Save schema is **v16**. Schema 2–15 saves migrate forward. Migration normalizes construction state against the current catalog, retains legitimate World Beyond observations, normalizes legacy missions to stable same-day behavior when needed, initializes missing coordination state as an empty public-commitment list, fills missing Home progression/improvement fields with safe defaults, and converts legacy Bank count maps into unique normalized item instances.
+Save schema is **v16**. Current-schema save/load correctness is a hard requirement: v16 item identity/state, citizen state, missions, coordination, and deterministic simulation state must survive persistence.
 
-Legacy Bank materialization scans existing generated item IDs before allocating replacements so an old/stale `nextItemId` cannot create collisions. Existing inventory, Home, ground, event, and v16 Bank objects are normalized through the canonical item-state boundary. Existing game progress is otherwise preserved where representable.
+Older development saves are **not** guaranteed to migrate forward during this rapid-development phase. Schema-breaking changes may require starting a new town, and backward migration completeness must not delay otherwise-correct gameplay or architecture work. See `instructions.md` for the project policy.
+
+This branch retains already-implemented v15 -> v16 compatibility: legacy Bank count maps are materialized as unique normalized item instances, and generated IDs are protected from collisions. That compatibility is useful but is not a promise that every future development schema will receive a complete migration path.
 
 Camping survival and World Beyond evolution use isolated deterministic seeds so unrelated random calls do not silently alter their outcomes.
 
@@ -251,9 +253,10 @@ Camping survival and World Beyond evolution use isolated deterministic seeds so 
 
 Tests are separated conceptually by what they protect:
 
-1. **Hard rule/architecture invariants** — command legality, AP/accounting, persistence, determinism, information boundaries, item identity/state, Bank transfer semantics, migration, home material accounting, control/extraction, gate coverage, and concrete bug regressions. These gate CI.
+1. **Hard rule/architecture invariants** — command legality, AP/accounting, current-schema persistence, determinism, information boundaries, item identity/state, Bank transfer semantics, home material accounting, control/extraction, gate coverage, and concrete bug regressions. These gate CI.
 2. **Focused pathological scenarios** — known failures such as mass departure or rescue trap transfer, plus focused home/defense-information and stateful-item regressions. These gate CI.
 3. **Economy/survival simulation benchmarks** — Workshop frequency, survivor count, dehydration, Well level, defense, searches and outside-at-midnight population. During early development these are diagnostic telemetry, not exact balance gates.
+4. **Historical-schema migrations** — useful compatibility when cheap or already implemented, but not a merge blocker unless a task explicitly requires it.
 
 Benchmarks still run deterministically on every test run so large shifts remain visible. Selected metrics can become hard thresholds later when the surrounding progression, defense, camping, profession and social systems stabilize.
 
