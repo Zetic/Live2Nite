@@ -1,9 +1,9 @@
 import { CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
-import { CONSTRUCTION_ORDER, gateLockedAtHour, hasRequiredMaterials, wellDailyWithdrawals } from './construction'
+import { CONSTRUCTION_ORDER, CONSTRUCTIONS, gateLockedAtHour, wellDailyWithdrawals } from './construction'
 import { HOME_UPGRADE_AP_COST, nextHomeLevel } from './home'
 import { consumableKind, isContainer } from './items'
-import type { Citizen, GameCommand, GameState, ItemInstance, ItemStorage, ItemType } from './types'
+import type { Citizen, ConstructionId, GameCommand, GameState, ItemInstance, ItemStorage, ItemType } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, zoneControl } from './world'
 import { WORKSHOP_RECIPE_ORDER, canRunWorkshopRecipe, workshopRecipeApCost } from './workshop'
 
@@ -12,6 +12,26 @@ export const MOVE_AP_COST = 1
 export const CONSTRUCTION_AP_COST = 1
 export const SPECIAL_EXCAVATION_AP_COST = 1
 
+const ROOT_CONSTRUCTIONS=CONSTRUCTION_ORDER.filter((id)=>CONSTRUCTIONS[id].prerequisites.length===0)
+const CONSTRUCTION_CHILDREN=new Map<ConstructionId,ConstructionId[]>()
+for(const id of CONSTRUCTION_ORDER){for(const prerequisite of CONSTRUCTIONS[id].prerequisites){const children=CONSTRUCTION_CHILDREN.get(prerequisite)??[];children.push(id);CONSTRUCTION_CHILDREN.set(prerequisite,children)}}
+
+function constructionFrontier(state:GameState):ConstructionId[]{
+  const frontier:ConstructionId[]=[]
+  const queue=[...ROOT_CONSTRUCTIONS]
+  const seen=new Set<ConstructionId>()
+  while(queue.length){
+    const id=queue.shift()!
+    if(seen.has(id))continue
+    seen.add(id)
+    const project=state.town.construction[id]
+    if(!project)continue
+    if(!project.completed){frontier.push(id);continue}
+    for(const child of CONSTRUCTION_CHILDREN.get(id)??[]){if(CONSTRUCTIONS[child].prerequisites.every((required)=>state.town.construction[required]?.completed))queue.push(child)}
+  }
+  return frontier
+}
+function hasProjectMaterials(state:GameState,projectId:ConstructionId):boolean{return Object.entries(CONSTRUCTIONS[projectId].resources).every(([type,required])=>(state.town.bank[type as ItemType]??0)>=(required??0))}
 function canOpenContainer(citizen:Citizen,item:ItemInstance,source:ItemStorage):boolean{
   if(item.type!=='construction_kit')return true
   return source==='inventory'?citizen.inventory.length<citizen.inventoryCapacity:citizen.home.storage.length<citizen.home.storageCapacity
@@ -46,10 +66,7 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
     }
     if (nextHomeLevel(citizen.home.level) && citizen.ap >= HOME_UPGRADE_AP_COST) actions.push({ type: 'UPGRADE_HOME', citizenId })
     if (citizen.ap >= CONSTRUCTION_AP_COST) {
-      for (const projectId of CONSTRUCTION_ORDER) {
-        const project = state.town.construction[projectId]
-        if (project && !project.completed && hasRequiredMaterials(state, projectId)) actions.push({ type: 'CONTRIBUTE_CONSTRUCTION', citizenId, projectId })
-      }
+      for (const projectId of constructionFrontier(state)) if(hasProjectMaterials(state,projectId))actions.push({ type: 'CONTRIBUTE_CONSTRUCTION', citizenId, projectId })
     }
     if (state.town.construction.workshop.completed) {
       for (const recipeId of WORKSHOP_RECIPE_ORDER) {
@@ -70,8 +87,6 @@ export function getLegalActions(state: GameState, citizenId: string): GameComman
 
   const control = zoneControl(state, x, y)
   if (!isTownGateZone(x, y)) {
-    // Temporary control is an escape window, not continued ownership of the zone.
-    // Productive scavenging therefore requires real human control.
     if (!control.trapped) {
       if (zone.searchesRemaining > 0 && !zone.searchedBy.includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
       else if (zone.searchesRemaining === 0 && !(zone.depletedSearchedBy ?? []).includes(citizenId)) actions.push({ type: 'SEARCH_ZONE', citizenId })
