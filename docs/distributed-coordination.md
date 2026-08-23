@@ -35,9 +35,9 @@ The coordination pass is deterministic for replay, but its semantics are sequent
 
 ## Gate duty
 
-Before automation exists, citizens attempt to maintain one primary closer and one backup. Both remain eligible for useful town work but protect 1 AP. They are excluded from ordinary field volunteering while their commitment is active.
+Before true automatic closing exists, citizens attempt to maintain one primary closer and one backup. Both remain eligible for useful town work but protect 1 AP. They are excluded from ordinary field volunteering while their commitment is active.
 
-At 23:00 the simulation prefers the primary, then backup, then any other legal town citizen. This allows failure/recovery behavior without a permanently hard-coded gatekeeper. When a construction provides automatic closing/locking at the relevant hour, manual gate commitments are no longer generated.
+At 23:00 the simulation prefers the primary, then backup, then any other legal town citizen. This allows failure/recovery behavior without a permanently hard-coded gatekeeper. The basic Portal Lock still needs manual closers because it prevents reopening but does not close an already-open gate. Manual commitments disappear only when a completed effect such as the Automatic Piston Lock actually auto-closes the gate.
 
 ## Construction saturation
 
