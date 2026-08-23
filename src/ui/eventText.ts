@@ -1,79 +1,77 @@
+import { COMBINATION_RECIPES } from '../core/combinations'
 import { CONSTRUCTIONS } from '../core/construction'
 import { HOME_IMPROVEMENTS, homeName } from '../core/home'
 import { itemName } from '../core/items'
 import { CITIZEN_STATUS_DEFINITIONS } from '../core/status'
 import { specialSiteName } from '../core/specialSites'
-import type { GameEvent, GameState, ItemType } from '../core/types'
+import type { GameEvent, GameState } from '../core/types'
 
-export function citizenName(game: GameState, citizenId: string): string {
-  return game.citizens.find((citizen) => citizen.id === citizenId)?.name ?? citizenId
-}
+export function citizenName(game:GameState,citizenId:string):string{return game.citizens.find((citizen)=>citizen.id===citizenId)?.name??citizenId}
 
-export function describeEvent(event: GameEvent, game: GameState): string {
-  switch (event.type) {
-    case 'AP_SPENT': return `${citizenName(game,event.citizenId)} spent ${event.amount} AP.`
-    case 'GATE_SET': return event.citizenId==='system'?`The Automatic Piston Lock ${event.open?'opened':'closed'} the gate.`:`${citizenName(game,event.citizenId)} ${event.open?'opened':'closed'} the gate.`
-    case 'CITIZEN_LOCATION_CHANGED': return event.location.type==='town' ? `${citizenName(game,event.citizenId)} returned to town.` : `${citizenName(game,event.citizenId)} moved to [${event.location.x},${event.location.y}].`
-    case 'CITIZEN_STATUS_CHANGED': {const name=citizenName(game,event.citizenId);if(event.reason==='drank_water')return event.status.hydration==='normal'?`${name} drank water and is no longer thirsty.`:`${name} drank water; dehydration eased to Thirsty, but the water did not restore AP.`;if(event.status.hydration==='dehydrated')return `${name} became ${CITIZEN_STATUS_DEFINITIONS.dehydrated.label}.`;if(event.status.hydration==='thirsty')return `${name} became ${CITIZEN_STATUS_DEFINITIONS.thirsty.label}.`;return `${name}'s condition improved.`}
-    case 'CAMP_IMPROVED': return `${citizenName(game,event.citizenId)} spent ${event.amount} AP improving a campsite at [${event.zoneKey}].`
-    case 'CAMP_IMPROVEMENTS_DECAYED': return `The campsite at [${event.zoneKey}] deteriorated overnight.`
-    case 'CITIZEN_HIDING_SET': return event.hidden ? `${citizenName(game,event.citizenId)} hid for the night and locked in their camping outlook.` : `${citizenName(game,event.citizenId)} left their hiding place.`
-    case 'CAMPING_RESOLVED': return event.survived ? `${citizenName(game,event.citizenId)} survived the night while camping outside.` : `${citizenName(game,event.citizenId)} failed to survive the night while camping.`
-    case 'ZONE_DISCOVERED': {const zone=game.world.zones[event.zoneKey];return zone?.specialSite ? `Zone [${event.zoneKey}] revealed ${specialSiteName(zone.specialSite.type)}.` : `Zone [${event.zoneKey}] was discovered.`}
-    case 'ZONE_OBSERVED': return event.citizenId ? `${citizenName(game,event.citizenId)} surveyed [${event.zoneKey}]: ${event.zombies} zombie${event.zombies===1?'':'s'} observed.` : `Zone [${event.zoneKey}] was surveyed: ${event.zombies} zombie${event.zombies===1?'':'s'} observed.`
-    case 'WORLD_ZOMBIES_EVOLVED': return `The World Beyond shifted overnight across ${event.changes.length} zone${event.changes.length===1?'':'s'}; yesterday's zombie reports may now be stale.`
-    case 'ZONE_CONTROL_LOST': return `${citizenName(game,event.causedByCitizenId)} left [${event.zoneKey}], causing human control to fail. ${event.remainingCitizenIds.length} citizen${event.remainingCitizenIds.length===1?' received':'s received'} a temporary extraction window.`
-    case 'TEMPORARY_CONTROL_GRANTED': return `${citizenName(game,event.citizenId)} has temporary control at [${event.zoneKey}] and can still escape this hour.`
-    case 'TEMPORARY_CONTROL_EXPIRED': return `${citizenName(game,event.citizenId)}'s temporary control at [${event.zoneKey}] expired.`
-    case 'ZONE_CONTROL_RESTORED': return `Human control at [${event.zoneKey}] was restored by ${event.reason==='combat'?'reducing the zombie threat':'additional citizen control'}.`
-    case 'ZONE_SEARCHED': {const label = event.automatic ? 'automatically searched' : event.mode==='depleted' ? 'combed depleted ground' : 'searched';return event.item ? `${citizenName(game,event.citizenId)} ${label} at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.` : `${citizenName(game,event.citizenId)} ${label} at [${event.zoneKey}] and found nothing.`}
-    case 'ZONE_REPLENISHED': return `The Search Tower identified renewed scavenging potential at [${event.zoneKey}].`
-    case 'SPECIAL_SITE_EXCAVATED': return `${citizenName(game,event.citizenId)} cleared ${event.amount} AP of debris at the ruin in [${event.zoneKey}].`
-    case 'SPECIAL_SITE_SEARCHED': return event.item ? `${citizenName(game,event.citizenId)} searched the ruin at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.` : `${citizenName(game,event.citizenId)} searched the ruin at [${event.zoneKey}] but found nothing.`
-    case 'ITEM_PICKED_UP': return `${citizenName(game,event.citizenId)} picked up ${itemName(event.item.type)}.`
-    case 'ITEM_DROPPED': return `${citizenName(game,event.citizenId)} left ${itemName(event.item.type)} on the ground at [${event.zoneKey}].`
-    case 'COMBAT_RESOLVED': {const method = event.method==='fists' ? 'bare hands' : itemName(event.method);const broken = event.brokenInto ? ` The weapon broke into ${itemName(event.brokenInto)}.` : '';return `${citizenName(game,event.citizenId)} attacked with ${method} at [${event.zoneKey}] and killed ${event.kills} zombie${event.kills===1?'':'s'}.${broken}`}
-    case 'ITEM_DEPOSITED': return `${citizenName(game,event.citizenId)} deposited ${itemName(event.item.type)} in the town bank.`
-    case 'ITEM_WITHDRAWN': return `${citizenName(game,event.citizenId)} took ${itemName(event.item.type)} from the town bank.`
-    case 'ITEM_MOVED_TO_HOME': return `${citizenName(game,event.citizenId)} stored ${itemName(event.item.type)} at home.`
-    case 'ITEM_MOVED_TO_RUCKSACK': return `${citizenName(game,event.citizenId)} packed ${itemName(event.item.type)} into their rucksack.`
-    case 'CONTAINER_OPENED': return `${citizenName(game,event.citizenId)} opened ${itemName(event.containerType)} and found ${itemName(event.output.type)}.`
-    case 'CONSTRUCTION_KIT_OPENED': return `${citizenName(game,event.citizenId)} opened a Construction Kit and recovered ${event.outputs.map((item)=>itemName(item.type)).join(' + ')}.`
-    case 'WATER_TAKEN': return `${citizenName(game,event.citizenId)} took a Water Ration from the well.`
-    case 'ITEM_CONSUMED': return `${citizenName(game,event.citizenId)} ${event.kind==='food'?'ate':'drank'} ${itemName(event.item.type)}${event.restoresAp?' and refreshed their AP':''}.`
-    case 'HOME_UPGRADED': return `${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
-    case 'HOME_IMPROVEMENT_BUILT': return `${citizenName(game,event.citizenId)} improved their home: ${HOME_IMPROVEMENTS[event.improvementId].name} level ${event.level}.`
-    case 'CONSTRUCTION_AP_CONTRIBUTED': return `${citizenName(game,event.citizenId)} contributed ${event.amount} AP to ${CONSTRUCTIONS[event.projectId].name}.`
-    case 'CONSTRUCTION_COMPLETED': return `${CONSTRUCTIONS[event.projectId].name} was completed by ${citizenName(game,event.citizenId)}.`
-    case 'CONSTRUCTION_EXPIRED': return `${CONSTRUCTIONS[event.projectId].name} was consumed during the attack and can be rebuilt.`
-    case 'CONSTRUCTION_GENERATED_ITEM': return `${CONSTRUCTIONS[event.projectId].name} produced ${event.amount} ${itemName(event.itemType)}${event.amount===1?'':'s'} for the Bank.`
-    case 'WORKSHOP_CONVERTED': {const inputs=Object.entries(event.inputs??{[event.input]:event.inputCount}).map(([type,count])=>`${count??0} ${itemName(type as ItemType)}`).join(' + ');return `${citizenName(game,event.citizenId)} used the Workshop: ${inputs} → ${event.outputCount} ${itemName(event.output)}.`}
-    case 'COORDINATION_COMMITMENT_POSTED': return `${citizenName(game,event.commitment.citizenId)} posted to town coordination: ${event.commitment.label}`
-    case 'COORDINATION_COMMITMENT_CLEARED': return `A town coordination commitment ended (${event.reason.replace('_',' ')}).`
-    case 'BOT_MISSION_ASSIGNED': return `${citizenName(game,event.citizenId)} volunteered for ${event.mission.role} duty toward ${event.mission.targetLabel}${event.mission.allowsCamping?' with an overnight option':''}.`
-    case 'BOT_MISSION_PHASE_SET': return `${citizenName(game,event.citizenId)} mission phase changed to ${event.phase}.`
-    case 'BOT_MISSION_CLEARED': return `${citizenName(game,event.citizenId)} ${event.outcome==='completed'?'completed':'aborted'} their field mission.`
-    case 'CITIZEN_DIED': return event.reason==='outside_at_night' ? `${citizenName(game,event.citizenId)} died outside without a prepared hiding place.` : event.reason==='camping_failure' ? `${citizenName(game,event.citizenId)} died while camping outside.` : event.reason==='dehydration' ? `${citizenName(game,event.citizenId)} died of dehydration.` : `${citizenName(game,event.citizenId)} was killed when zombies broke into their home.`
-    case 'NIGHT_RESOLVED': {const inside=event.report.zombiesInside??Math.max(0,event.report.attackStrength-event.report.effectiveDefense);const dehydration=event.report.dehydrationDeaths??0;const campSurvivors=event.report.campingSurvivors??0;const campDeaths=event.report.campingDeaths??0;return `Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${inside>0?` — ${inside} zombie(s) breached, ${event.report.homeDeaths??0} home death(s)`:' — the town held'}${event.report.outsideDeaths?`; ${event.report.outsideDeaths} stranded outside death(s)`:''}${campSurvivors?`; ${campSurvivors} camper(s) survived`:''}${campDeaths?`; ${campDeaths} camping death(s)`:''}${dehydration?`; ${dehydration} dehydration death(s)`:''}.`}
-    case 'DAY_STARTED': return `Day ${event.day} began.`
-    case 'TIME_ADVANCED': return `Time advanced from ${String(event.fromHour).padStart(2,'0')}:00 to ${String(event.toHour).padStart(2,'0')}:00.`
+export function describeEvent(event:GameEvent,game:GameState):string{
+  switch(event.type){
+    case 'AP_SPENT':return`${citizenName(game,event.citizenId)} spent ${event.amount} AP.`
+    case 'GATE_SET':return event.citizenId==='system'?`The Automatic Piston Lock ${event.open?'opened':'closed'} the gate.`:`${citizenName(game,event.citizenId)} ${event.open?'opened':'closed'} the gate.`
+    case 'CITIZEN_LOCATION_CHANGED':return event.location.type==='town'?`${citizenName(game,event.citizenId)} returned to town.`:`${citizenName(game,event.citizenId)} moved to [${event.location.x},${event.location.y}].`
+    case 'CITIZEN_STATUS_CHANGED':{const name=citizenName(game,event.citizenId);if(event.reason==='drank_water')return event.status.hydration==='normal'?`${name} drank water and is no longer thirsty.`:`${name} drank water; dehydration eased to Thirsty, but the water did not restore AP.`;if(event.status.hydration==='dehydrated')return`${name} became ${CITIZEN_STATUS_DEFINITIONS.dehydrated.label}.`;if(event.status.hydration==='thirsty')return`${name} became ${CITIZEN_STATUS_DEFINITIONS.thirsty.label}.`;return`${name}'s condition improved.`}
+    case 'CAMP_IMPROVED':return`${citizenName(game,event.citizenId)} spent ${event.amount} AP improving a campsite at [${event.zoneKey}].`
+    case 'CAMP_IMPROVEMENTS_DECAYED':return`The campsite at [${event.zoneKey}] deteriorated overnight.`
+    case 'CITIZEN_HIDING_SET':return event.hidden?`${citizenName(game,event.citizenId)} hid for the night and locked in their camping outlook.`:`${citizenName(game,event.citizenId)} left their hiding place.`
+    case 'CAMPING_RESOLVED':return event.survived?`${citizenName(game,event.citizenId)} survived the night while camping outside.`:`${citizenName(game,event.citizenId)} failed to survive the night while camping.`
+    case 'ZONE_DISCOVERED':{const zone=game.world.zones[event.zoneKey];return zone?.specialSite?`Zone [${event.zoneKey}] revealed ${specialSiteName(zone.specialSite.type)}.`:`Zone [${event.zoneKey}] was discovered.`}
+    case 'ZONE_OBSERVED':return event.citizenId?`${citizenName(game,event.citizenId)} surveyed [${event.zoneKey}]: ${event.zombies} zombie${event.zombies===1?'':'s'} observed.`:`Zone [${event.zoneKey}] was surveyed: ${event.zombies} zombie${event.zombies===1?'':'s'} observed.`
+    case 'WORLD_ZOMBIES_EVOLVED':return`The World Beyond shifted overnight across ${event.changes.length} zone${event.changes.length===1?'':'s'}; yesterday's zombie reports may now be stale.`
+    case 'ZONE_CONTROL_LOST':return`${citizenName(game,event.causedByCitizenId)} left [${event.zoneKey}], causing human control to fail. ${event.remainingCitizenIds.length} citizen${event.remainingCitizenIds.length===1?' received':'s received'} a temporary extraction window.`
+    case 'TEMPORARY_CONTROL_GRANTED':return`${citizenName(game,event.citizenId)} has temporary control at [${event.zoneKey}] and can still escape this hour.`
+    case 'TEMPORARY_CONTROL_EXPIRED':return`${citizenName(game,event.citizenId)}'s temporary control at [${event.zoneKey}] expired.`
+    case 'ZONE_CONTROL_RESTORED':return`Human control at [${event.zoneKey}] was restored by ${event.reason==='combat'?'reducing the zombie threat':'additional citizen control'}.`
+    case 'ZONE_SEARCHED':{const label=event.automatic?'automatically searched':event.mode==='depleted'?'combed depleted ground':'searched';return event.item?`${citizenName(game,event.citizenId)} ${label} at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.`:`${citizenName(game,event.citizenId)} ${label} at [${event.zoneKey}] and found nothing.`}
+    case 'ZONE_REPLENISHED':return`The Search Tower identified renewed scavenging potential at [${event.zoneKey}].`
+    case 'SPECIAL_SITE_EXCAVATED':return`${citizenName(game,event.citizenId)} cleared ${event.amount} AP of debris at the ruin in [${event.zoneKey}].`
+    case 'SPECIAL_SITE_SEARCHED':return event.item?`${citizenName(game,event.citizenId)} searched the ruin at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.`:`${citizenName(game,event.citizenId)} searched the ruin at [${event.zoneKey}] but found nothing.`
+    case 'ITEM_PICKED_UP':return`${citizenName(game,event.citizenId)} picked up ${itemName(event.item.type)}.`
+    case 'ITEM_DROPPED':return`${citizenName(game,event.citizenId)} left ${itemName(event.item.type)} on the ground at [${event.zoneKey}].`
+    case 'COMBAT_RESOLVED':{const method=event.method==='fists'?'bare hands':itemName(event.method);const broken=event.brokenInto?` The weapon broke into ${itemName(event.brokenInto)}.`:'';const charges=event.chargesAfter!==undefined?` ${event.chargesAfter} charge${event.chargesAfter===1?'':'s'} remain.`:'';return`${citizenName(game,event.citizenId)} attacked with ${method} at [${event.zoneKey}] and killed ${event.kills} zombie${event.kills===1?'':'s'}.${broken}${charges}`}
+    case 'ITEM_DEPOSITED':return`${citizenName(game,event.citizenId)} deposited ${itemName(event.item.type)} in the town bank.`
+    case 'ITEM_WITHDRAWN':return`${citizenName(game,event.citizenId)} took ${itemName(event.item.type)} from the town bank.`
+    case 'ITEM_MOVED_TO_HOME':return`${citizenName(game,event.citizenId)} stored ${itemName(event.item.type)} at home.`
+    case 'ITEM_MOVED_TO_RUCKSACK':return`${citizenName(game,event.citizenId)} packed ${itemName(event.item.type)} into their rucksack.`
+    case 'CONTAINER_OPENED':return`${citizenName(game,event.citizenId)} opened ${itemName(event.containerType)} and found ${itemName(event.output.type)}.`
+    case 'CONSTRUCTION_KIT_OPENED':return`${citizenName(game,event.citizenId)} opened a Construction Kit and recovered ${event.outputs.map((item)=>itemName(item.type)).join(' + ')}.`
+    case 'WATER_TAKEN':return`${citizenName(game,event.citizenId)} took a Water Ration from the well.`
+    case 'ITEM_CONSUMED':{const remaining=event.chargesAfter!==undefined?` ${event.chargesAfter} ration${event.chargesAfter===1?'':'s'} remain in the container.`:'';return`${citizenName(game,event.citizenId)} ${event.kind==='food'?'ate':'drank'} ${itemName(event.item.type)}${event.restoresAp?' and refreshed their AP':''}.${remaining}`}
+    case 'HOME_UPGRADED':return`${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
+    case 'HOME_IMPROVEMENT_BUILT':return`${citizenName(game,event.citizenId)} improved their home: ${HOME_IMPROVEMENTS[event.improvementId].name} level ${event.level}.`
+    case 'CONSTRUCTION_AP_CONTRIBUTED':return`${citizenName(game,event.citizenId)} contributed ${event.amount} AP to ${CONSTRUCTIONS[event.projectId].name}.`
+    case 'CONSTRUCTION_COMPLETED':return`${CONSTRUCTIONS[event.projectId].name} was completed by ${citizenName(game,event.citizenId)}.`
+    case 'CONSTRUCTION_EXPIRED':return`${CONSTRUCTIONS[event.projectId].name} was consumed during the attack and can be rebuilt.`
+    case 'CONSTRUCTION_GENERATED_ITEM':return`${CONSTRUCTIONS[event.projectId].name} produced ${event.amount} ${itemName(event.itemType)}${event.amount===1?'':'s'} for the Bank.`
+    case 'WORKSHOP_CONVERTED':return`${citizenName(game,event.citizenId)} used the Workshop: ${event.inputCount} ${itemName(event.input)} → ${event.outputCount} ${itemName(event.output)}.`
+    case 'ITEMS_COMBINED':return`${citizenName(game,event.citizenId)} used a portable item action: ${COMBINATION_RECIPES[event.recipeId].name}.`
+    case 'COORDINATION_COMMITMENT_POSTED':return`${citizenName(game,event.commitment.citizenId)} posted to town coordination: ${event.commitment.label}`
+    case 'COORDINATION_COMMITMENT_CLEARED':return`A town coordination commitment ended (${event.reason.replace('_',' ')}).`
+    case 'BOT_MISSION_ASSIGNED':return`${citizenName(game,event.citizenId)} volunteered for ${event.mission.role} duty toward ${event.mission.targetLabel}${event.mission.allowsCamping?' with an overnight option':''}.`
+    case 'BOT_MISSION_PHASE_SET':return`${citizenName(game,event.citizenId)} mission phase changed to ${event.phase}.`
+    case 'BOT_MISSION_CLEARED':return`${citizenName(game,event.citizenId)} ${event.outcome==='completed'?'completed':'aborted'} their field mission.`
+    case 'CITIZEN_DIED':return event.reason==='outside_at_night'?`${citizenName(game,event.citizenId)} died outside without a prepared hiding place.`:event.reason==='camping_failure'?`${citizenName(game,event.citizenId)} died while camping outside.`:event.reason==='dehydration'?`${citizenName(game,event.citizenId)} died of dehydration.`:`${citizenName(game,event.citizenId)} was killed when zombies broke into their home.`
+    case 'NIGHT_RESOLVED':{const inside=event.report.zombiesInside??Math.max(0,event.report.attackStrength-event.report.effectiveDefense);const dehydration=event.report.dehydrationDeaths??0;const campSurvivors=event.report.campingSurvivors??0;const campDeaths=event.report.campingDeaths??0;return`Night ${event.day}: attack ${event.report.attackStrength} vs defense ${event.report.effectiveDefense}${inside>0?` — ${inside} zombie(s) breached, ${event.report.homeDeaths??0} home death(s)`:' — the town held'}${event.report.outsideDeaths?`; ${event.report.outsideDeaths} stranded outside death(s)`:''}${campSurvivors?`; ${campSurvivors} camper(s) survived`:''}${campDeaths?`; ${campDeaths} camping death(s)`:''}${dehydration?`; ${dehydration} dehydration death(s)`:''}.`}
+    case 'DAY_STARTED':return`Day ${event.day} began.`
+    case 'TIME_ADVANCED':return`Time advanced from ${String(event.fromHour).padStart(2,'0')}:00 to ${String(event.toHour).padStart(2,'0')}:00.`
   }
 }
 
-export function isHighlightEvent(event: GameEvent): boolean {
-  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','ITEM_DROPPED','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED','COORDINATION_COMMITMENT_POSTED','COORDINATION_COMMITMENT_CLEARED'].includes(event.type)
-}
+export function isHighlightEvent(event:GameEvent):boolean{return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','ITEM_DROPPED','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED','COORDINATION_COMMITMENT_POSTED','COORDINATION_COMMITMENT_CLEARED'].includes(event.type)}
 
-export function eventTone(event: GameEvent): 'town'|'world'|'night'|'danger'|'system'|'home' {
+export function eventTone(event:GameEvent):'town'|'world'|'night'|'danger'|'system'|'home'{
   switch(event.type){
-    case 'CITIZEN_DIED': case 'ZONE_CONTROL_LOST': return 'danger'
-    case 'CITIZEN_STATUS_CHANGED': return event.status.hydration==='dehydrated'?'danger':event.status.hydration==='thirsty'?'home':'system'
-    case 'CAMPING_RESOLVED': return event.survived?'world':'danger'
-    case 'NIGHT_RESOLVED': return event.report.breached?'danger':'night'
-    case 'DAY_STARTED': case 'WORLD_ZOMBIES_EVOLVED': return 'night'
-    case 'ZONE_DISCOVERED': case 'ZONE_OBSERVED': case 'ZONE_CONTROL_RESTORED': case 'TEMPORARY_CONTROL_GRANTED': case 'TEMPORARY_CONTROL_EXPIRED': case 'ZONE_SEARCHED': case 'ZONE_REPLENISHED': case 'SPECIAL_SITE_EXCAVATED': case 'SPECIAL_SITE_SEARCHED': case 'ITEM_PICKED_UP': case 'ITEM_DROPPED': case 'COMBAT_RESOLVED': case 'CITIZEN_LOCATION_CHANGED': case 'BOT_MISSION_ASSIGNED': case 'BOT_MISSION_PHASE_SET': case 'BOT_MISSION_CLEARED': case 'CAMP_IMPROVED': case 'CAMP_IMPROVEMENTS_DECAYED': case 'CITIZEN_HIDING_SET': return 'world'
-    case 'ITEM_MOVED_TO_HOME': case 'ITEM_MOVED_TO_RUCKSACK': case 'CONTAINER_OPENED': case 'CONSTRUCTION_KIT_OPENED': case 'ITEM_CONSUMED': case 'HOME_UPGRADED': case 'HOME_IMPROVEMENT_BUILT': return 'home'
-    case 'WATER_TAKEN': case 'ITEM_DEPOSITED': case 'ITEM_WITHDRAWN': case 'CONSTRUCTION_AP_CONTRIBUTED': case 'CONSTRUCTION_COMPLETED': case 'CONSTRUCTION_EXPIRED': case 'CONSTRUCTION_GENERATED_ITEM': case 'WORKSHOP_CONVERTED': case 'GATE_SET': case 'COORDINATION_COMMITMENT_POSTED': return 'town'
-    default: return 'system'
+    case 'CITIZEN_DIED':case 'ZONE_CONTROL_LOST':return'danger'
+    case 'CITIZEN_STATUS_CHANGED':return event.status.hydration==='dehydrated'?'danger':event.status.hydration==='thirsty'?'home':'system'
+    case 'CAMPING_RESOLVED':return event.survived?'world':'danger'
+    case 'NIGHT_RESOLVED':return event.report.breached?'danger':'night'
+    case 'DAY_STARTED':case 'WORLD_ZOMBIES_EVOLVED':return'night'
+    case 'ZONE_DISCOVERED':case 'ZONE_OBSERVED':case 'ZONE_CONTROL_RESTORED':case 'TEMPORARY_CONTROL_GRANTED':case 'TEMPORARY_CONTROL_EXPIRED':case 'ZONE_SEARCHED':case 'ZONE_REPLENISHED':case 'SPECIAL_SITE_EXCAVATED':case 'SPECIAL_SITE_SEARCHED':case 'ITEM_PICKED_UP':case 'ITEM_DROPPED':case 'COMBAT_RESOLVED':case 'CITIZEN_LOCATION_CHANGED':case 'BOT_MISSION_ASSIGNED':case 'BOT_MISSION_PHASE_SET':case 'BOT_MISSION_CLEARED':case 'CAMP_IMPROVED':case 'CAMP_IMPROVEMENTS_DECAYED':case 'CITIZEN_HIDING_SET':return'world'
+    case 'ITEM_MOVED_TO_HOME':case 'ITEM_MOVED_TO_RUCKSACK':case 'CONTAINER_OPENED':case 'CONSTRUCTION_KIT_OPENED':case 'ITEM_CONSUMED':case 'ITEMS_COMBINED':case 'HOME_UPGRADED':case 'HOME_IMPROVEMENT_BUILT':return'home'
+    case 'WATER_TAKEN':case 'ITEM_DEPOSITED':case 'ITEM_WITHDRAWN':case 'CONSTRUCTION_AP_CONTRIBUTED':case 'CONSTRUCTION_COMPLETED':case 'CONSTRUCTION_EXPIRED':case 'CONSTRUCTION_GENERATED_ITEM':case 'WORKSHOP_CONVERTED':case 'GATE_SET':case 'COORDINATION_COMMITMENT_POSTED':return'town'
+    default:return'system'
   }
 }
