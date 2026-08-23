@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { chooseTownWork } from '../src/agents/townWork'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { CONSTRUCTIONS } from '../src/core/construction'
 import { createInitialGame } from '../src/core/game'
-import { createItemInstance } from '../src/core/items'
+import { createItemInstance, NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
 import type { CombinationRecipeId, GameState, WorkshopRecipeId } from '../src/core/types'
+import { bankFromCounts } from './bankFixtures'
 
 function combination(game:GameState,recipeId:CombinationRecipeId){const action=getLegalActions(game,'c01').find((candidate)=>candidate.type==='COMBINE_ITEMS'&&candidate.recipeId===recipeId);if(!action||action.type!=='COMBINE_ITEMS')throw new Error(`Missing combination ${recipeId}`);return action}
 function workshop(game:GameState,recipeId:WorkshopRecipeId){const action=getLegalActions(game,'c01').find((candidate)=>candidate.type==='WORKSHOP_CONVERT'&&candidate.recipeId===recipeId);if(!action||action.type!=='WORKSHOP_CONVERT')throw new Error(`Missing Workshop recipe ${recipeId}`);return action}
@@ -31,6 +33,32 @@ describe('portable combinations',()=>{
     expect(getLegalActions(game,'c01').some((action)=>action.type==='COMBINE_ITEMS'&&action.recipeId==='assemble_telescope')).toBe(false)
     game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:[copper,lens],home:{...citizen.home,storage:[]}}:citizen)}
     expect(getLegalActions(game,'c01').some((action)=>action.type==='COMBINE_ITEMS'&&action.recipeId==='assemble_telescope')).toBe(true)
+  })
+
+  it('mixes source-backed cement and water into a construction block anywhere',()=>{
+    expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('bag_of_cement')
+    const cement=createItemInstance('cement','bag_of_cement');const water=createItemInstance('water','water_ration')
+    let game=personal(createInitialGame(2807,1),[cement,water],[]);const beforeAp=game.citizens[0].ap
+    game=executeCommand(game,combination(game,'mix_concrete')).state
+    expect(game.citizens[0].ap).toBe(beforeAp)
+    expect(game.citizens[0].inventory.some((item)=>item.type==='unshaped_concrete_block')).toBe(true)
+    expect(game.citizens[0].inventory.some((item)=>item.id==='cement'||item.id==='water')).toBe(false)
+  })
+
+  it('lets town AI prepare construction combinations by withdrawing Bank ingredients',()=>{
+    let game=createInitialGame(2808,1)
+    game={...game,town:{...game.town,bank:bankFromCounts({bag_of_cement:1,water_ration:1},'concrete-prep'),construction:{...game.town.construction,spiked_wall:{...game.town.construction.spiked_wall,apContributed:1}}}}
+    let citizen=game.citizens[0];let actions=getLegalActions(game,citizen.id);let work=chooseTownWork(game,citizen,actions)
+    expect(work?.type).toBe('WITHDRAW_BANK_ITEM')
+    if(!work)throw new Error('Expected concrete ingredient withdrawal')
+    game=executeCommand(game,work).state
+    citizen=game.citizens[0];actions=getLegalActions(game,citizen.id);work=chooseTownWork(game,citizen,actions)
+    expect(work?.type).toBe('WITHDRAW_BANK_ITEM')
+    if(!work)throw new Error('Expected second concrete ingredient withdrawal')
+    game=executeCommand(game,work).state
+    citizen=game.citizens[0];actions=getLegalActions(game,citizen.id);work=chooseTownWork(game,citizen,actions)
+    expect(work?.type).toBe('COMBINE_ITEMS')
+    if(work?.type==='COMBINE_ITEMS')expect(work.recipeId).toBe('mix_concrete')
   })
 
   it('reloads a Water Pistol in place and consumes the Water Ration',()=>{
