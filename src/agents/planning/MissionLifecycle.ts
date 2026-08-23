@@ -1,6 +1,6 @@
 import { campingChancePercent } from '../../core/camping'
 import type { BotMissionAssignment, BotMissionPhase, Citizen, GameEvent, GameState } from '../../core/types'
-import { distanceToTown, isTownGateZone, zoneControl } from '../../core/world'
+import { distanceToTown, isTownGateZone, zoneControl, zoneKey } from '../../core/world'
 import { AI_TUNING } from '../AiTuning'
 import { planMission } from './ExpeditionPlanner'
 import { routeBetween } from './RoutePlanner'
@@ -67,12 +67,13 @@ function rescueComplete(state: GameState, rescuer: Citizen, mission: BotMissionA
 }
 
 function operationComplete(state: GameState, citizen: Citizen, mission: BotMissionAssignment): boolean {
-  const zone = state.world.zones[`${mission.target.x},${mission.target.y}`]
+  const key=zoneKey(mission.target.x,mission.target.y)
+  const zone = state.world.zones[key]
   if (!zone) return true
   if (mission.role === 'rescue') return rescueComplete(state, citizen, mission)
   if (mission.role === 'excavator') return !zone.specialSite || zone.specialSite.status !== 'buried'
   if (mission.role === 'combat') return zone.zombies <= zoneControl(state, mission.target.x, mission.target.y).humanPoints
-  if (mission.role === 'scout') return zone.discovered && (zone.searchedBy.includes(citizen.id) || zone.searchesRemaining === 0)
+  if (mission.role === 'scout') return zone.discovered && state.world.intel[key]?.lastObservedDay===state.day
   if (zone.specialSite && zone.specialSite.status !== 'buried') {
     return zone.specialSite.searchedBy.includes(citizen.id) || zone.specialSite.status === 'depleted'
   }
@@ -101,9 +102,6 @@ function canPrepareCamp(state: GameState, citizen: Citizen, mission: BotMissionA
     || citizen.location.type !== 'world'
     || isTownGateZone(citizen.location.x, citizen.location.y)) return false
 
-  // A ration that was already consumed this day still supplied the intended overnight
-  // hydration. Requiring the physical item to remain carried would invalidate plans as
-  // soon as a bot used that same ration to extend the outbound AP budget.
   if (!citizen.daily.drank && !citizen.inventory.some((item) => item.type === 'water_ration')) return false
   const current = campingChancePercent(state, citizen.id)
   const possibleWithPlannedImprovements = current
