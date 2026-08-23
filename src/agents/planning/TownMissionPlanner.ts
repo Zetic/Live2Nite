@@ -36,13 +36,22 @@ function scoutDesired(state: GameState): number {
   const base=discovered < AI_TUNING.earlyMapKnownZoneThreshold
     ? AI_TUNING.earlyScoutTarget
     : AI_TUNING.matureScoutTarget
-  // Day 1 deliberately keeps the staged four-scout opening. The starvation boost is a
-  // recovery behavior for later towns whose external economy has begun to stall.
+  // Day 1 deliberately keeps the staged opening. Later towns increase reconnaissance when
+  // public construction needs show that the external economy is starving.
   return state.day>1&&resourceStarved(state)?base+AI_TUNING.resourceStarvationScoutBoost:base
 }
 
 function currentFieldClaims(state:GameState,pending:GameEvent[]):number{
   return activeMissionCount(state)+pending.filter((event)=>event.type==='BOT_MISSION_ASSIGNED').length
+}
+
+function volunteerFieldFraction(state:GameState,starved:boolean):number{
+  if(starved)return AI_TUNING.resourceStarvedFieldPresenceFraction
+  // This is not a hidden workforce allocation. It is a saturation cue any citizen can
+  // infer from the public citizen list: when few people are outside, high personal AP is
+  // a stronger reason to volunteer rather than wait for someone else to do it.
+  if(state.clock.hour>=10)return AI_TUNING.idleApFieldPresenceFraction
+  return AI_TUNING.minimumFieldPresenceFraction
 }
 
 export function planTownMissionAssignments(state: GameState, controlledCitizenId?: string): GameEvent[] {
@@ -107,9 +116,6 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
     }
   }
 
-  // Scouting receives the first ordinary field budget. Public construction commitments
-  // already removed the citizens who volunteered to build this hour, so town work no
-  // longer acts as a blanket veto against everyone else leaving.
   const existingScouts = Object.values(state.botMissions)
     .filter((mission) => mission.role === 'scout' && mission.phase !== 'unload').length
     + events.filter((event) => event.type === 'BOT_MISSION_ASSIGNED' && event.mission.role === 'scout').length
@@ -150,16 +156,17 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
     assignOpportunity(opportunity)
   }
 
-  // Distributed fallback is intentionally a later-day anti-stagnation behavior. Day 1
-  // already has a healthy staged scouting opening; on later days citizens can see that
-  // resources are missing, field coverage is thin, and their AP would otherwise expire.
+  // Later-day citizens with substantial personal AP independently volunteer when public
+  // field coverage is thin. Frontier expansion is preferred while unknown territory
+  // remains; stale recon is the fallback. Same-day expedition feasibility still decides
+  // whether each proposed trip is actually accepted, so this does not waive return safety.
   if(state.day>1&&state.clock.hour<AI_TUNING.fallbackExplorationCutoffHour){
     const starved=resourceStarved(state)
-    const desiredPresence=Math.ceil(livingBots*(starved?Math.max(0.30,AI_TUNING.minimumFieldPresenceFraction):AI_TUNING.minimumFieldPresenceFraction))
+    const desiredPresence=Math.ceil(livingBots*volunteerFieldFraction(state,starved))
     while(newBudget>0&&currentFieldClaims(state,events)<desiredPresence){
-      const citizen=candidates.find((candidate)=>!used.has(candidate.id)&&candidate.ap>=4)
+      const citizen=candidates.find((candidate)=>!used.has(candidate.id)&&candidate.ap>=AI_TUNING.explorationVolunteerMinAp)
       if(!citizen)break
-      const frontier=starved?chooseFrontierTarget(state,citizen.id,assignedTargets):null
+      const frontier=chooseFrontierTarget(state,citizen.id,assignedTargets)
       const choice=frontier?{zone:frontier,kind:'frontier' as const}:chooseScoutTarget(state,citizen.id,assignedTargets)
       if(!choice)break
       const target=choice.zone
@@ -170,10 +177,10 @@ export function planTownMissionAssignments(state: GameState, controlledCitizenId
         target:{x:target.x,y:target.y},
         targetLabel:`Volunteer ${choice.kind==='frontier'?'exploration':'recon'} [${target.x},${target.y}]`,
         reason:starved
-          ? 'Construction is blocked by missing resources and field coverage is thin; I have usable AP, so exploring is better than waiting in town.'
-          : 'Few citizens are currently outside and I have safe usable AP, so I volunteered to improve the town map.',
+          ? 'Construction is blocked by missing resources, few citizens are outside, and I still have usable AP; I volunteered to push the search farther.'
+          : 'Field coverage is thin and I still have usable AP; spending it on safe exploration is better than losing it at midnight.',
         desiredCitizens:1,
-        priority:70,
+        priority:75,
         safetyReserve:AI_TUNING.scoutSafetyReserve,
         emergency:false,
       }
