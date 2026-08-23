@@ -1,3 +1,4 @@
+import { campingConstructionBonus } from './construction'
 import { randomInt } from './rng'
 import type { Citizen, CitizenCampingState, CampingOutlook, GameState, SpecialSiteType, WorldZone } from './types'
 import { distanceToTown, isTownGateZone, zoneKey } from './world'
@@ -17,14 +18,7 @@ const SITE_TOPOLOGY_BONUS: Record<SpecialSiteType, number> = {
   police_station: 10,
 }
 
-/**
- * LIVE2NITE_ADAPTATION.
- *
- * Surviving English references identify the factors that affect camping but do not
- * expose a trustworthy final-English probability formula. Keep the coefficients here
- * isolated so the simulation can preserve the historical inputs without presenting
- * these exact numbers as recovered Motion Twin values.
- */
+/** LIVE2NITE_ADAPTATION using historically documented camping factors. */
 export function campingChancePercent(state: GameState, citizenId: string): number {
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || !citizen.alive || citizen.location.type !== 'world' || isTownGateZone(citizen.location.x,citizen.location.y)) return 0
@@ -34,11 +28,12 @@ export function campingChancePercent(state: GameState, citizenId: string): numbe
   const distanceBonus = Math.min(30, distanceToTown(zone.x,zone.y) * 3)
   const topologyBonus = zone.specialSite ? (zone.specialSite.status === 'buried' ? 10 : SITE_TOPOLOGY_BONUS[zone.specialSite.type]) : 0
   const improvementBonus = Math.min(CAMP_IMPROVEMENT_CAP, zone.campImprovements ?? 0) * 5
+  const constructionBonus=campingConstructionBonus(state)
   const zombiePenalty = Math.min(45, zone.zombies * 7)
   const alreadyHiddenHere = state.citizens.filter((other) => other.id !== citizenId && other.alive && other.location.type === 'world' && other.location.x === zone.x && other.location.y === zone.y && other.camping.hidden).length
   const crowdPenalty = alreadyHiddenHere * 7
   const repeatPenalty = citizen.camping.nightsSurvived * 12
-  return Math.max(1, Math.min(ORDINARY_CAMPING_CAP_PERCENT, 15 + distanceBonus + topologyBonus + improvementBonus - zombiePenalty - crowdPenalty - repeatPenalty))
+  return Math.max(1, Math.min(ORDINARY_CAMPING_CAP_PERCENT, 15 + distanceBonus + topologyBonus + improvementBonus + constructionBonus - zombiePenalty - crowdPenalty - repeatPenalty))
 }
 
 export function campingOutlookFromChance(chance: number): CampingOutlook {
