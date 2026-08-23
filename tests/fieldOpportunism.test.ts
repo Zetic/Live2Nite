@@ -7,6 +7,7 @@ import { planLoadout, wellAllowanceRemaining } from '../src/agents/planning/Supp
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
+import { consumableKind } from '../src/core/items'
 import { resolveNightAttack } from '../src/core/night'
 import type { BotMissionAssignment, GameState, ItemInstance } from '../src/core/types'
 import { runBotHour } from '../src/simulation/runBotHour'
@@ -54,7 +55,7 @@ describe('field opportunism and hydration assurance',()=>{
     expect(citizen.inventory).toHaveLength(0)
     expect(after.world.zones['1,0'].groundItems).toHaveLength(1)
     expect(after.world.zones['1,0'].groundItems[0].id).not.toBe('ground-bag')
-    expect(after.world.zones['1,0'].groundItems[0].type).toBe('food')
+    expect(consumableKind(after.world.zones['1,0'].groundItems[0].type)).toBe('food')
   })
 
   it('searches a depleted route tile before spending another movement AP',()=>{
