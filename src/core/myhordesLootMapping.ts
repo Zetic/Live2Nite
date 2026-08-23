@@ -18,6 +18,8 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'metal_#00':mapped('wrought_iron'),
   'wood_beam_#00':mapped('patchwork_beam'),
   'metal_beam_#00':mapped('metal_support'),
+  'wood_log_#00':mapped('quality_log'),
+  'plate_raw_#00':mapped('sheet_metal_bits'),
   'pile_#00':mapped('battery'),
   'pharma_#00':mapped('pharmaceutical_products'),
   'meca_parts_#00':mapped('nuts_and_bolts'),

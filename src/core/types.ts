@@ -6,7 +6,9 @@ export type { ItemAssemblyState, ItemCondition, ItemContamination, ItemDisplayCa
 export type CitizenControllerKind = 'human' | 'basic-bot'
 export type WorkshopRecipeId =
   | 'logs_to_planks'
+  | 'quality_log_to_planks'
   | 'scrap_to_iron'
+  | 'sheet_metal_bits_to_sheet_metal'
   | 'planks_to_beams'
   | 'beams_to_planks'
   | 'iron_to_supports'

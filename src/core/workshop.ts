@@ -22,7 +22,9 @@ export interface WorkshopRecipe {
 
 export const WORKSHOP_RECIPES:Record<WorkshopRecipeId,WorkshopRecipe>={
   logs_to_planks:{id:'logs_to_planks',name:'Cut Rotting Log into a Twisted Plank',category:'transform',input:'rotten_log',inputCount:1,output:'twisted_plank',outputCount:1,apCost:3},
+  quality_log_to_planks:{id:'quality_log_to_planks',name:'Cut Quality Log into a Twisted Plank',category:'transform',input:'quality_log',inputCount:1,output:'twisted_plank',outputCount:1,apCost:3},
   scrap_to_iron:{id:'scrap_to_iron',name:'Work Scrap Metal into Wrought Iron',category:'transform',input:'scrap_metal',inputCount:1,output:'wrought_iron',outputCount:1,apCost:3},
+  sheet_metal_bits_to_sheet_metal:{id:'sheet_metal_bits_to_sheet_metal',name:'Process Sheet Metal (bits) into Sheet Metal',category:'transform',input:'sheet_metal_bits',inputCount:1,output:'sheet_metal',outputCount:1,apCost:3},
   planks_to_beams:{id:'planks_to_beams',name:'Reinforce Twisted Plank into a Patchwork Beam',category:'transform',input:'twisted_plank',inputCount:1,output:'patchwork_beam',outputCount:1,apCost:3},
   beams_to_planks:{id:'beams_to_planks',name:'Break Patchwork Beam down into a Twisted Plank',category:'transform',input:'patchwork_beam',inputCount:1,output:'twisted_plank',outputCount:1,apCost:3},
   iron_to_supports:{id:'iron_to_supports',name:'Reinforce Wrought Iron into a Metal Support',category:'transform',input:'wrought_iron',inputCount:1,output:'metal_support',outputCount:1,apCost:3},
@@ -51,7 +53,7 @@ export const WORKSHOP_RECIPES:Record<WorkshopRecipeId,WorkshopRecipe>={
 }
 
 export const WORKSHOP_RECIPE_ORDER:WorkshopRecipeId[]=[
-  'logs_to_planks','scrap_to_iron','planks_to_beams','beams_to_planks','iron_to_supports','supports_to_iron',
+  'logs_to_planks','quality_log_to_planks','scrap_to_iron','sheet_metal_bits_to_sheet_metal','planks_to_beams','beams_to_planks','iron_to_supports','supports_to_iron',
   'dismantle_electronic_device','dismantle_mechanism','repair_repair_kit',
 ]
 

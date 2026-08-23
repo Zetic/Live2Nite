@@ -6,7 +6,7 @@ import { evaluateTownNeeds, type TownNeeds } from './TownNeeds'
 
 const BASE_LOOT_VALUE:Record<ItemType,number>={
   construction_kit:105,resource_pack:105,toolbox:104,metal_chest:96,xl_chest:120,food_box:88,decoration_box:64,safe:118,
-  twisted_plank:72,wrought_iron:72,patchwork_beam:82,metal_support:86,sheet_metal:80,unshaped_concrete_block:76,rotten_log:38,scrap_metal:38,
+  twisted_plank:72,wrought_iron:72,patchwork_beam:82,metal_support:86,sheet_metal:80,unshaped_concrete_block:76,rotten_log:38,scrap_metal:38,quality_log:66,sheet_metal_bits:74,
   nuts_and_bolts:92,copper_pipe:86,wire_reel:82,duct_tape:78,compact_detonator:96,semtex:100,electronic_component:90,laser_diode:96,telescope:94,convex_lens:72,battery:70,empty_oil_can:64,
   mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,guitar:66,table:70,chicken:62,wire_mesh:72,grain_sack:58,
   tool_bag:78,kwik_fix:82,plastic_bag:36,engine_incomplete:86,engine:90,claymore:94,torch:48,battery_launcher:74,
@@ -23,8 +23,9 @@ function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if
 function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null):number{
   let score=BASE_LOOT_VALUE[type]+missionBonus(mission,type);const directlyMissing=needs.missingConstruction[type]??0
   if(directlyMissing>0)score+=70+Math.min(28,directlyMissing*4)
-  if(type==='rotten_log'&&((needs.missingConstruction.twisted_plank??0)>0||(needs.missingConstruction.patchwork_beam??0)>0))score+=36
+  if((type==='rotten_log'||type==='quality_log')&&((needs.missingConstruction.twisted_plank??0)>0||(needs.missingConstruction.patchwork_beam??0)>0))score+=36
   if(type==='scrap_metal'&&((needs.missingConstruction.wrought_iron??0)>0||(needs.missingConstruction.metal_support??0)>0))score+=36
+  if(type==='sheet_metal_bits'&&(needs.missingConstruction.sheet_metal??0)>0)score+=40
   if(type==='twisted_plank'&&(needs.missingConstruction.patchwork_beam??0)>0)score+=24
   if(type==='wrought_iron'&&(needs.missingConstruction.metal_support??0)>0)score+=24
   if(type==='bag_of_cement'&&(needs.missingConstruction.unshaped_concrete_block??0)>0)score+=40
