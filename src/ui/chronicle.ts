@@ -86,7 +86,7 @@ export function chronicleCategory(event: GameEvent): ChronicleCategory {
 }
 
 export function eventCitizenId(event: GameEvent): string | null {
-  return 'citizenId' in event ? event.citizenId : null
+  return 'citizenId' in event && typeof event.citizenId === 'string' ? event.citizenId : null
 }
 
 export function filterChronicleEvents(events: readonly GameEvent[], filters: ChronicleFilters): GameEvent[] {
