@@ -22,8 +22,15 @@ export function isDedicatedRescueReserve(_state: GameState, _citizenId: string):
   return false
 }
 
-function returnByHour(citizenId: string): number {
+function preferredReturnByHour(citizenId: string): number {
   return AI_TUNING.returnHourBase + (citizenNumber(citizenId) % AI_TUNING.returnHourSpread)
+}
+
+function assignmentReturnByHour(state:GameState,citizenId:string):number{
+  // A citizen who independently volunteers late cannot obey a personal 18:00 preference
+  // that has already passed. Give the proposed mission at least one hour, but never plan an
+  // ordinary return later than 22:00 so the gate/attack window still has a full buffer.
+  return Math.min(22,Math.max(preferredReturnByHour(citizenId),state.clock.hour+1))
 }
 
 export function minimumTownReserve(state: GameState): number {
@@ -54,7 +61,7 @@ export function makeAssignment(
     phase: 'prepare',
     assignedDay: state.day,
     assignedHour: state.clock.hour,
-    returnByHour: returnByHour(citizen.id),
+    returnByHour: assignmentReturnByHour(state,citizen.id),
     safetyReserve: opportunity.safetyReserve,
     emergency: opportunity.emergency,
     searchMode: opportunity.searchMode,
@@ -95,7 +102,10 @@ export function allTownCandidates(state: GameState, controlledCitizenId?: string
 
 export function normalCandidates(state: GameState, controlledCitizenId?: string): Citizen[] {
   return allTownCandidates(state, controlledCitizenId)
-    .filter((citizen) => !commitmentForCitizen(state, citizen.id) && citizen.status.hydration === 'normal')
+    // Thirsty is a treatable expedition condition, not a reason to lose the whole day.
+    // The expedition planner can reserve/carry water and the citizen consumes it after
+    // spending current AP. Dehydrated remains excluded until immediate treatment occurs.
+    .filter((citizen) => !commitmentForCitizen(state, citizen.id) && citizen.status.hydration !== 'dehydrated')
 }
 
 export function assignmentEvent(state: GameState, citizen: Citizen, mission: BotMissionAssignment): GameEvent {

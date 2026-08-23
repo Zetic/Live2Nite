@@ -30,6 +30,8 @@ export class BasicBotController implements AgentController {
 
     if (citizen.camping.hidden) return null
 
+    // Dehydration and low-AP Thirst are urgent. Ordinary Thirst at high AP is deliberately
+    // deferred so the citizen spends perishable current AP before consuming stored AP.
     const hydration = hydrationAction(game, citizen, actions)
     if (hydration) return hydration
 
@@ -62,6 +64,13 @@ export class BasicBotController implements AgentController {
       if (!mission) {
         const packages = packageSharingAction(citizen, actions, null, game.clock.hour)
         if (packages) return packages
+        // Only after field volunteering and town AP sinks have had the day to act do we
+        // force ordinary Thirst treatment. This avoids the 6/6-AP water-ration waste case
+        // while still treating before the attack when a citizen truly has nothing else.
+        const lateHydration=hydrationAction(game,citizen,actions,{
+          forceThirstTreatment:game.clock.hour>=AI_TUNING.lateHydrationTreatmentHour,
+        })
+        if(lateHydration)return lateHydration
         return null
       }
 
