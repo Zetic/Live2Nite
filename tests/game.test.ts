@@ -30,11 +30,12 @@ function withWorkshopResources(game: GameState): GameState {return { ...game, to
 function withInventory(game: GameState, types: ItemType[]): GameState {return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) } : citizen) }}
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v13 citizens at 1 AM with starter home, packages, hydration, camping, and control state', () => {
+  it('starts schema v14 citizens at 1 AM with starter home, packages, hydration, camping, control, and coordination state', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(13)
+    expect(game.schemaVersion).toBe(14)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
+    expect(game.coordination.commitments).toEqual([])
     expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.storage.map((item) => item.type).sort().join(',') === 'citizen_welcome_pack,doggy_bag')).toBe(true)
@@ -244,7 +245,7 @@ describe('Town construction and Workshop', () => {
     expect(totalTownDefense(game)).toBe(50)
   })
 
-  it('spreads bot construction work across hourly planning ticks while preserving rescue AP', () => {
+  it('spreads bot construction work across hourly planning ticks while preserving gate AP', () => {
     const initial = withWorkshopResources(createInitialGame(321, 8))
     const waterBefore = initial.town.well.water
     const game = advanceToHour(initial,8,bots,'c01')
