@@ -1,10 +1,10 @@
 import { getLegalActions } from '../core/actions'
 import type { GameCommand } from '../core/types'
-import { zoneControl } from '../core/world'
+import { temporaryControlActive, zoneControl, zoneControlState } from '../core/world'
 import { asAgentDecisionContext, type AgentDecisionInput } from './AgentDecisionContext'
 import type { AgentController } from './AgentController'
 import { AI_TUNING } from './AiTuning'
-import { bestWeaponAction, stepTowardTown } from './actions/FieldActions'
+import { bestWeaponAction, controlAwareMove, controlAwareStepTowardTown } from './actions/FieldActions'
 import { packageSharingAction, prepareLoadout, refillAction, unloadAction } from './actions/InventoryActions'
 import { campingAction, hydrationAction } from './actions/SurvivalActions'
 import { carried, pick } from './actions/actionSelectors'
@@ -49,7 +49,7 @@ export class BasicBotController implements AgentController {
       if (plan) {
         const prep = prepareLoadout(citizen, actions, plan)
         if (prep) return prep
-        if (!plan.feasible) return null
+        if (!plan.feasible && !mission.emergency) return null
       }
 
       const open = pick(actions, 'OPEN_GATE')
@@ -59,6 +59,14 @@ export class BasicBotController implements AgentController {
 
     const control = zoneControl(game, citizen.location.x, citizen.location.y)
     if (control.trapped) {
+      // Temporary control is an extraction window. Do not waste it fighting unless
+      // movement is impossible; consume an available refill and get out immediately.
+      if(temporaryControlActive(game,citizen.id)){
+        const safety=missionSafety(game,citizenId)
+        const refill=refillAction(citizen,actions,safety.returnAp)
+        if(refill)return refill
+        return controlAwareStepTowardTown(game,citizen,actions)
+      }
       const weapon = bestWeaponAction(citizen, actions)
       if (weapon) return weapon
       if (game.clock.hour >= AI_TUNING.lateBarehandedFightHour) {
@@ -70,19 +78,19 @@ export class BasicBotController implements AgentController {
     }
 
     if (citizen.status.hydration !== 'normal' && !carried(citizen, 'water_ration')) {
-      return stepTowardTown(game, citizen, actions)
+      return controlAwareStepTowardTown(game, citizen, actions)
     }
-    if (!mission) return stepTowardTown(game, citizen, actions)
+    if (!mission) return controlAwareStepTowardTown(game, citizen, actions)
     if (mission.phase === 'camp') return campingAction(game, citizen, actions)
 
     if (mission.phase === 'return') {
       const safety = missionSafety(game, citizenId)
       const refill = refillAction(citizen, actions, safety.returnAp)
       if (refill) return refill
-      return stepTowardTown(game, citizen, actions)
+      return controlAwareStepTowardTown(game, citizen, actions)
     }
 
-    if (!plan) return stepTowardTown(game, citizen, actions)
+    if (!plan) return controlAwareStepTowardTown(game, citizen, actions)
     const refill = refillAction(
       citizen,
       actions,
@@ -94,7 +102,15 @@ export class BasicBotController implements AgentController {
     if (refill) return refill
 
     if (mission.phase === 'operate') {
-      if (mission.role === 'rescue') return null
+      if (mission.role === 'rescue') {
+        // If the rescue team only barely controls the zone, reduce the threat until a
+        // protected citizen can leave without immediately trapping the responders.
+        if(zoneControlState(game,citizen.location.x,citizen.location.y)==='fragile'){
+          const weapon=bestWeaponAction(citizen,actions)
+          if(weapon)return weapon
+        }
+        return null
+      }
       const pickup = pick(actions, 'PICK_UP_ITEM')
       if (pickup) return pickup
       if (mission.role === 'excavator') {
@@ -115,10 +131,9 @@ export class BasicBotController implements AgentController {
       mission.target,
     )
     if (direction) {
-      const move = actions.find((action): action is Extract<GameCommand, { type: 'MOVE' }> =>
-        action.type === 'MOVE' && action.direction === direction)
-      if (move) return move
+      const action=controlAwareMove(game,citizen,actions,direction,false)
+      if(action)return action
     }
-    return stepTowardTown(game, citizen, actions)
+    return controlAwareStepTowardTown(game, citizen, actions)
   }
 }
