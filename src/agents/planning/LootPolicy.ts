@@ -10,7 +10,7 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
   nuts_and_bolts:92,copper_pipe:86,wire_reel:82,duct_tape:78,compact_detonator:96,semtex:100,electronic_component:90,laser_diode:96,telescope:94,convex_lens:72,battery:70,empty_oil_can:64,
   mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,guitar:66,table:70,chicken:62,wire_mesh:72,grain_sack:58,
   tool_bag:78,kwik_fix:82,plastic_bag:36,engine_incomplete:86,engine:90,claymore:94,torch:48,battery_launcher:74,
-  water_ration:62,food:52,mouldy_twinkies:52,half_eaten_chicken_wings:52,rancid_shortbread_pack:52,out_of_date_jaffa_cakes:52,dried_chewing_gum:52,stale_tart:52,soft_crisps:52,
+  water_ration:62,food:52,mouldy_twinkies:52,half_eaten_chicken_wings:52,rancid_shortbread_pack:52,out_of_date_jaffa_cakes:52,dried_chewing_gum:52,stale_tart:52,soft_crisps:52,can:58,open_can:52,
   old_door:58,water_bomb:70,machete:72,serrated_knife:66,staff:50,pathetic_penknife:40,human_bone:58,doggy_bag:58,citizen_welcome_pack:42,pharmaceutical_products:72,box_of_matches:22,
   adjustable_spanner:62,screwdriver:54,swiss_army_knife:52,box_cutter:60,chain:60,can_opener:58,
   broken_machete:20,broken_serrated_knife:18,broken_staff:26,broken_pathetic_penknife:14,broken_human_bone:12,
@@ -19,7 +19,7 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
 }
 
 function isFood(type:ItemType):boolean{return ITEMS[type].consumableKind==='food'}
-function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if(!mission)return 0;if(mission.purpose==='gather_construction'&&['raw','construction','misc','container'].includes(ITEMS[type].category))return 24;if(mission.purpose==='gather_food'&&(isFood(type)||['grain_sack','chicken','food_box','doggy_bag'].includes(type)))return 35;if(mission.purpose==='gather_medical'&&['pharmaceutical_products','duct_tape','kwik_fix','repair_kit','toolbox'].includes(type))return 35;if((mission.purpose==='gather_weapons'||mission.purpose==='rescue')&&isWeapon(type))return 28;return 0}
+function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if(!mission)return 0;if(mission.purpose==='gather_construction'&&['raw','construction','misc','container'].includes(ITEMS[type].category))return 24;if(mission.purpose==='gather_food'&&(isFood(type)||['grain_sack','chicken','food_box','doggy_bag','can'].includes(type)))return 35;if(mission.purpose==='gather_medical'&&['pharmaceutical_products','duct_tape','kwik_fix','repair_kit','toolbox'].includes(type))return 35;if((mission.purpose==='gather_weapons'||mission.purpose==='rescue')&&isWeapon(type))return 28;return 0}
 function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null):number{
   let score=BASE_LOOT_VALUE[type]+missionBonus(mission,type);const directlyMissing=needs.missingConstruction[type]??0
   if(directlyMissing>0)score+=70+Math.min(28,directlyMissing*4)
@@ -34,7 +34,7 @@ function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:Bo
   if(['wire_reel','empty_oil_can','broken_staff'].includes(type)&&(needs.missingConstruction.guitar??0)>0)score+=30
   if((type==='construction_kit'||type==='resource_pack')&&Object.keys(needs.missingConstruction).length>0)score+=28
   if(isFood(type)&&needs.foodLow)score+=45
-  if((type==='food_box'||type==='doggy_bag')&&needs.foodLow)score+=55
+  if((type==='food_box'||type==='doggy_bag'||type==='can')&&needs.foodLow)score+=55
   if(isWeapon(type)&&needs.weaponsLow)score+=35
   if(type==='water_ration'){if(citizen.status.hydration!=='normal')score+=90;else if(!citizen.daily.drank&&citizen.status.desertStepsToday>=6)score+=45;if(needs.waterPerCitizen<1)score+=55;else if(needs.waterPerCitizen<2)score+=24}
   if(type==='old_door'&&(needs.defense.pressure==='critical'||needs.defense.pressure==='shortfall'))score+=45
