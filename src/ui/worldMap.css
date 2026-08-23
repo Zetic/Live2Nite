@@ -26,11 +26,11 @@
 .map-cell-top { color: #d6c3b3; }
 .map-cell-bottom { color: #9da9a8; }
 .map-cell.intel-stale .map-cell-bottom { color: #788385; }
-.map-rescue-marker {
+.map-site-marker,.map-rescue-marker {
   position: absolute;
   top: 1px;
-  right: 2px;
-  color: #efb070;
-  font-size: .48rem;
+  font-size: .43rem;
   line-height: 1;
 }
+.map-site-marker { left: 2px; color: #a9b8c0; }
+.map-rescue-marker { right: 2px; color: #efb070; }
