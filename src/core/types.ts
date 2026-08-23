@@ -40,7 +40,7 @@ export type WorkshopRecipeId =
   | 'repair_machete'
 export type HomeLevel = 'camp_bed' | 'tent' | 'hovel' | 'shack' | 'house' | 'fenced_house' | 'fortified_shelter' | 'bunker' | 'castle'
 export type HomeImprovementId = 'reinforcements' | 'fence' | 'storage'
-export type ItemStorage = 'inventory' | 'home'
+export type ItemStorage = 'inventory' | 'home' | 'ground'
 export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
 export type CombatMethod = 'fists' | ItemType
@@ -266,15 +266,15 @@ export type GameEvent = (
   | { type: 'SPECIAL_SITE_SEARCHED'; day: number; zoneKey: string; citizenId: string; item: ItemInstance | null }
   | { type: 'ITEM_PICKED_UP'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
   | { type: 'ITEM_DROPPED'; day: number; citizenId: string; zoneKey: string; item: ItemInstance }
-  | { type: 'COMBAT_RESOLVED'; day: number; citizenId: string; zoneKey: string; method: CombatMethod; kills: number; item: ItemInstance | null; consumed: boolean; brokenInto?: ItemType; rngStateAfter: number }
+  | { type: 'COMBAT_RESOLVED'; day: number; citizenId: string; zoneKey: string; method: CombatMethod; kills: number; item: ItemInstance | null; source?: ItemStorage; consumed: boolean; brokenInto?: ItemType; rngStateAfter: number }
   | { type: 'ITEM_DEPOSITED'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_WITHDRAWN'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_MOVED_TO_HOME'; day: number; citizenId: string; item: ItemInstance }
   | { type: 'ITEM_MOVED_TO_RUCKSACK'; day: number; citizenId: string; item: ItemInstance }
-  | { type: 'CONTAINER_OPENED'; day: number; citizenId: string; containerId: string; containerType: ItemType; source: ItemStorage; output: ItemInstance; rngStateAfter: number }
-  | { type: 'CONSTRUCTION_KIT_OPENED'; day: number; citizenId: string; containerId: string; source: ItemStorage; outputs: ItemInstance[]; rngStateAfter: number }
+  | { type: 'CONTAINER_OPENED'; day: number; citizenId: string; containerId: string; containerType: ItemType; source: ItemStorage; zoneKey?: string; output: ItemInstance; rngStateAfter: number }
+  | { type: 'CONSTRUCTION_KIT_OPENED'; day: number; citizenId: string; containerId: string; source: ItemStorage; zoneKey?: string; outputs: ItemInstance[]; rngStateAfter: number }
   | { type: 'WATER_TAKEN'; day: number; citizenId: string; item: ItemInstance }
-  | { type: 'ITEM_CONSUMED'; day: number; citizenId: string; item: ItemInstance; source: ItemStorage; kind: ConsumableKind; restoresAp: boolean }
+  | { type: 'ITEM_CONSUMED'; day: number; citizenId: string; item: ItemInstance; source: ItemStorage; zoneKey?: string; kind: ConsumableKind; restoresAp: boolean }
   | { type: 'HOME_UPGRADED'; day: number; citizenId: string; from: HomeLevel; to: HomeLevel; defenseAfter: number; consumed: Partial<Record<ItemType, number>> }
   | { type: 'HOME_IMPROVEMENT_BUILT'; day:number; citizenId:string; improvementId:HomeImprovementId; level:number; consumed:Partial<Record<ItemType,number>>; defenseAfter:number; storageCapacityAfter:number }
   | { type: 'CONSTRUCTION_AP_CONTRIBUTED'; day: number; citizenId: string; projectId: ConstructionId; amount: number }

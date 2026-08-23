@@ -11,16 +11,8 @@ import { resolveNightAttack } from '../src/core/night'
 import type { BotMissionAssignment, GameState, ItemInstance } from '../src/core/types'
 import { runBotHour } from '../src/simulation/runBotHour'
 
-function patchCitizen(game:GameState,id:string,patch:Partial<GameState['citizens'][number]>):GameState{
-  return {...game,citizens:game.citizens.map((citizen)=>citizen.id===id?{...citizen,...patch}:citizen)}
-}
-
-function mission(overrides:Partial<BotMissionAssignment>={}):BotMissionAssignment{
-  return {
-    missionId:'test-route',role:'scout',purpose:'explore',target:{x:3,y:0},targetLabel:'test',reason:'test',phase:'outbound',assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false,overnightPlanned:false,...overrides,
-  }
-}
-
+function patchCitizen(game:GameState,id:string,patch:Partial<GameState['citizens'][number]>):GameState{return {...game,citizens:game.citizens.map((citizen)=>citizen.id===id?{...citizen,...patch}:citizen)}}
+function mission(overrides:Partial<BotMissionAssignment>={}):BotMissionAssignment{return {missionId:'test-route',role:'scout',purpose:'explore',target:{x:3,y:0},targetLabel:'test',reason:'test',phase:'outbound',assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false,overnightPlanned:false,...overrides}}
 function item(id:string,type:ItemInstance['type']):ItemInstance{return{id,type}}
 
 describe('field opportunism and hydration assurance',()=>{
@@ -34,6 +26,35 @@ describe('field opportunism and hydration assurance',()=>{
     expect(citizen.ap).toBe(4)
     expect(citizen.inventory).toHaveLength(0)
     expect(result.state.world.zones['1,0'].groundItems.some((ground)=>ground.id==='battery')).toBe(true)
+  })
+
+  it('drinks a Water Ration directly from the ground without picking it up first',()=>{
+    let game=createInitialGame(8110,2)
+    game=patchCitizen(game,'c02',{location:{type:'world',x:1,y:0},inventory:[],ap:1,status:{hydration:'thirsty',desertStepsToday:0},daily:{ate:false,drank:false,waterTaken:false}})
+    game={...game,world:{...game.world,zones:{...game.world.zones,'1,0':{...game.world.zones['1,0'],discovered:true,zombies:0,groundItems:[item('ground-water','water_ration')]}}}}
+    const drink=getLegalActions(game,'c02').find((candidate)=>candidate.type==='DRINK_ITEM'&&candidate.itemId==='ground-water')
+    expect(drink).toBeTruthy()
+    const after=executeCommand(game,drink!).state
+    const citizen=after.citizens.find((candidate)=>candidate.id==='c02')!
+    expect(citizen.inventory).toHaveLength(0)
+    expect(citizen.status.hydration).toBe('normal')
+    expect(citizen.daily.drank).toBe(true)
+    expect(citizen.ap).toBe(citizen.maxAp)
+    expect(after.world.zones['1,0'].groundItems).toHaveLength(0)
+  })
+
+  it('opens a container on the ground and leaves its output on that same tile',()=>{
+    let game=createInitialGame(8111,2)
+    game=patchCitizen(game,'c02',{location:{type:'world',x:1,y:0},inventory:[],ap:4})
+    game={...game,world:{...game.world,zones:{...game.world.zones,'1,0':{...game.world.zones['1,0'],discovered:true,zombies:0,groundItems:[item('ground-bag','doggy_bag')]}}}}
+    const open=getLegalActions(game,'c02').find((candidate)=>candidate.type==='OPEN_CONTAINER'&&candidate.itemId==='ground-bag')
+    expect(open).toBeTruthy()
+    const after=executeCommand(game,open!).state
+    const citizen=after.citizens.find((candidate)=>candidate.id==='c02')!
+    expect(citizen.inventory).toHaveLength(0)
+    expect(after.world.zones['1,0'].groundItems).toHaveLength(1)
+    expect(after.world.zones['1,0'].groundItems[0].id).not.toBe('ground-bag')
+    expect(after.world.zones['1,0'].groundItems[0].type).toBe('food')
   })
 
   it('searches a depleted route tile before spending another movement AP',()=>{
@@ -105,10 +126,7 @@ describe('field opportunism and hydration assurance',()=>{
   it('keeps a deliberately withdrawn next-home material instead of redepositing it into a Bank ping-pong loop',()=>{
     let game=createInitialGame(8108,2)
     const base=game.citizens.find((citizen)=>citizen.id==='c02')!
-    game=patchCitizen(game,'c02',{
-      inventory:[item('home-log','rotten_log')],
-      home:{...base.home,level:'tent',defense:1,storage:[]},
-    })
+    game=patchCitizen(game,'c02',{inventory:[item('home-log','rotten_log')],home:{...base.home,level:'tent',defense:1,storage:[]}})
     const citizen=game.citizens.find((candidate)=>candidate.id==='c02')!
     const action=unloadAction(citizen,getLegalActions(game,'c02'),null,false)
     expect(action).toEqual({type:'MOVE_ITEM_TO_HOME',citizenId:'c02',itemId:'home-log'})
