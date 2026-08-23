@@ -1,17 +1,21 @@
 import { removeBankItemById, removeBankItems } from './bank'
 import { completionWaterBonus, revealsAllTerrain } from './construction'
-import { createItemInstance } from './items'
+import { createItemInstance, normalizeItemState } from './items'
 import { zoneKey } from './world'
-import type { Citizen, GameEvent, GameState, ItemInstance, ItemStorage, ItemType } from './types'
+import type { Citizen, CombinationEventOutput, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, PersonalItemStorage } from './types'
 
 function replaceCitizen(state:GameState,citizenId:string,update:(citizen:Citizen)=>Citizen):Citizen[]{return state.citizens.map((citizen)=>citizen.id===citizenId?update(citizen):citizen)}
 function removeStoredItem(citizen:Citizen,itemId:string,source:ItemStorage):Citizen{if(source==='inventory')return{...citizen,inventory:citizen.inventory.filter((item)=>item.id!==itemId)};if(source==='home')return{...citizen,home:{...citizen.home,storage:citizen.home.storage.filter((item)=>item.id!==itemId)}};return citizen}
+function replaceStoredItem(citizen:Citizen,item:ItemInstance,source:PersonalItemStorage):Citizen{if(source==='inventory')return{...citizen,inventory:citizen.inventory.map((existing)=>existing.id===item.id?item:existing)};return{...citizen,home:{...citizen.home,storage:citizen.home.storage.map((existing)=>existing.id===item.id?item:existing)}}}
 function consumeFromItems(items:ItemInstance[],type:ItemType,count:number):{items:ItemInstance[];remaining:number}{let remaining=count;const kept:ItemInstance[]=[];for(const item of items){if(item.type===type&&remaining>0){remaining-=1;continue}kept.push(item)}return{items:kept,remaining}}
 function consumePersonalResources(citizen:Citizen,resources:Partial<Record<ItemType,number>>):Citizen{let inventory=[...citizen.inventory];let storage=[...citizen.home.storage];for(const[type,amount]of Object.entries(resources)){const itemType=type as ItemType;let remaining=amount??0;const fromInventory=consumeFromItems(inventory,itemType,remaining);inventory=fromInventory.items;remaining=fromInventory.remaining;const fromStorage=consumeFromItems(storage,itemType,remaining);storage=fromStorage.items}return{...citizen,inventory,home:{...citizen.home,storage}}}
 function withoutMission(state:GameState,citizenId:string):GameState['botMissions']{const next={...state.botMissions};delete next[citizenId];return next}
 function missionsForNewDay(state:GameState):GameState['botMissions']{const next:GameState['botMissions']={};for(const[citizenId,mission]of Object.entries(state.botMissions)){const citizen=state.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen?.alive||citizen.location.type!=='world')continue;const phase=mission.phase==='camp'?(citizen.location.x===mission.target.x&&citizen.location.y===mission.target.y?'operate':'outbound'):mission.phase;next[citizenId]={...mission,phase}}return next}
 function replaceGround(state:GameState,key:string,update:(items:ItemInstance[])=>ItemInstance[]):GameState['world']{const zone=state.world.zones[key];if(!zone)return state.world;return{...state.world,zones:{...state.world.zones,[key]:{...zone,groundItems:update(zone.groundItems)}}}}
 function generatedItems(state:GameState,type:ItemType,count:number):ItemInstance[]{return Array.from({length:count},(_,offset)=>createItemInstance(`i${String(state.nextItemId+offset).padStart(6,'0')}`,type))}
+function removePersonalIds(citizen:Citizen,ids:Set<string>):Citizen{return{...citizen,inventory:citizen.inventory.filter((item)=>!ids.has(item.id)),home:{...citizen.home,storage:citizen.home.storage.filter((item)=>!ids.has(item.id))}}}
+function addCombinationOutputs(citizen:Citizen,outputs:CombinationEventOutput[]):Citizen{let inventory=[...citizen.inventory];let storage=[...citizen.home.storage];for(const output of outputs){if(output.storage==='inventory')inventory.push(output.item);else storage.push(output.item)}return{...citizen,inventory,home:{...citizen.home,storage}}}
+function withCharges(item:ItemInstance,charges:number):ItemInstance{return createItemInstance(item.id,item.type,{...normalizeItemState(item.type,item.state),charges})}
 
 function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
   switch(event.type){
@@ -36,7 +40,16 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'SPECIAL_SITE_SEARCHED':{const zone=state.world.zones[event.zoneKey];const site=zone?.specialSite;if(!zone||!site)return state;const hiddenLoot=site.hiddenLoot.slice(1);const searchedBy=site.searchedBy.includes(event.citizenId)?site.searchedBy:[...site.searchedBy,event.citizenId];return{...state,nextItemId:event.item?state.nextItemId+1:state.nextItemId,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:{...zone,groundItems:event.item?[...zone.groundItems,event.item]:zone.groundItems,specialSite:{...site,hiddenLoot,searchedBy,status:hiddenLoot.length===0?'depleted':'accessible'}}}}}}
     case 'ITEM_PICKED_UP':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item]})),world:replaceGround(state,event.zoneKey,(items)=>items.filter((item)=>item.id!==event.item.id))}}
     case 'ITEM_DROPPED':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id)})),world:replaceGround(state,event.zoneKey,(items)=>[...items,event.item])}}
-    case 'COMBAT_RESOLVED':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;let citizens=state.citizens;let world=state.world;const broken=(item:ItemInstance)=>event.brokenInto?createItemInstance(item.id,event.brokenInto):item;if(event.item&&event.source==='ground'){world=replaceGround(state,event.zoneKey,(items)=>event.consumed?items.filter((item)=>item.id!==event.item?.id):event.brokenInto?items.map((item)=>item.id===event.item?.id?broken(item):item):items)}else if(event.item&&event.consumed)citizens=replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item?.id)}));else if(event.item&&event.brokenInto)citizens=replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.map((item)=>item.id===event.item?.id?broken(item):item)}));const updatedZone=world.zones[event.zoneKey]??zone;return{...state,rngState:event.rngStateAfter,citizens,world:{...world,zones:{...world.zones,[event.zoneKey]:{...updatedZone,zombies:Math.max(0,updatedZone.zombies-event.kills)}}}}}
+    case 'COMBAT_RESOLVED':{
+      const zone=state.world.zones[event.zoneKey];if(!zone)return state
+      let citizens=state.citizens;let world=state.world
+      const changed=(item:ItemInstance)=>event.brokenInto?createItemInstance(item.id,event.brokenInto):event.chargesAfter!==undefined?withCharges(item,event.chargesAfter):item
+      if(event.item&&event.source==='ground')world=replaceGround(state,event.zoneKey,(items)=>event.consumed?items.filter((item)=>item.id!==event.item?.id):(event.brokenInto||event.chargesAfter!==undefined)?items.map((item)=>item.id===event.item?.id?changed(item):item):items)
+      else if(event.item&&event.consumed)citizens=replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item?.id)}))
+      else if(event.item&&(event.brokenInto||event.chargesAfter!==undefined))citizens=replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.map((item)=>item.id===event.item?.id?changed(item):item)}))
+      const updatedZone=world.zones[event.zoneKey]??zone
+      return{...state,rngState:event.rngStateAfter,citizens,world:{...world,zones:{...world.zones,[event.zoneKey]:{...updatedZone,zombies:Math.max(0,updatedZone.zombies-event.kills)}}}}
+    }
     case 'ITEM_DEPOSITED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id)})),town:{...state.town,bank:[...state.town.bank,event.item]}}
     case 'ITEM_WITHDRAWN':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item]})),town:{...state.town,bank:removeBankItemById(state.town.bank,event.item.id)}}
     case 'ITEM_MOVED_TO_HOME':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id),home:{...citizen.home,storage:[...citizen.home.storage,event.item]}}))}
@@ -44,7 +57,19 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CONTAINER_OPENED':{if(event.source==='ground'&&event.zoneKey)return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+1,world:replaceGround(state,event.zoneKey,(items)=>[...items.filter((item)=>item.id!==event.containerId),event.output])};return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+1,citizens:replaceCitizen(state,event.citizenId,(citizen)=>event.source==='inventory'?{...citizen,inventory:[...citizen.inventory.filter((item)=>item.id!==event.containerId),event.output]}:{...citizen,home:{...citizen.home,storage:[...citizen.home.storage.filter((item)=>item.id!==event.containerId),event.output]}})}}
     case 'CONSTRUCTION_KIT_OPENED':{if(event.source==='ground'&&event.zoneKey)return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,world:replaceGround(state,event.zoneKey,(items)=>[...items.filter((item)=>item.id!==event.containerId),...event.outputs])};return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,citizens:replaceCitizen(state,event.citizenId,(citizen)=>event.source==='inventory'?{...citizen,inventory:[...citizen.inventory.filter((item)=>item.id!==event.containerId),...event.outputs]}:{...citizen,home:{...citizen.home,storage:[...citizen.home.storage.filter((item)=>item.id!==event.containerId),...event.outputs]}})}}
     case 'WATER_TAKEN':return{...state,nextItemId:state.nextItemId+1,town:{...state.town,well:{water:Math.max(0,state.town.well.water-1)}},citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item],daily:citizen.daily.waterTaken?{...citizen.daily,bonusWaterTaken:true}:{...citizen.daily,waterTaken:true}}))}
-    case 'ITEM_CONSUMED':{const citizens=replaceCitizen(state,event.citizenId,(citizen)=>{const withoutItem=removeStoredItem(citizen,event.item.id,event.source);return{...withoutItem,ap:event.restoresAp?withoutItem.maxAp:withoutItem.ap,daily:event.kind==='food'?{...withoutItem.daily,ate:true}:{...withoutItem.daily,drank:true}}});const world=event.source==='ground'&&event.zoneKey?replaceGround(state,event.zoneKey,(items)=>items.filter((item)=>item.id!==event.item.id)):state.world;return{...state,citizens,world}}
+    case 'ITEM_CONSUMED':{
+      let citizens=state.citizens;let world=state.world
+      if(event.chargesAfter!==undefined){
+        const charged=withCharges(event.item,event.chargesAfter)
+        if(event.source==='ground'&&event.zoneKey)world=replaceGround(state,event.zoneKey,(items)=>items.map((item)=>item.id===event.item.id?charged:item))
+        else citizens=replaceCitizen(state,event.citizenId,(citizen)=>replaceStoredItem(citizen,charged,event.source as PersonalItemStorage))
+        citizens=citizens.map((citizen)=>citizen.id===event.citizenId?{...citizen,ap:event.restoresAp?citizen.maxAp:citizen.ap,daily:event.kind==='food'?{...citizen.daily,ate:true}:{...citizen.daily,drank:true}}:citizen)
+      }else{
+        citizens=replaceCitizen(state,event.citizenId,(citizen)=>{const withoutItem=removeStoredItem(citizen,event.item.id,event.source);return{...withoutItem,ap:event.restoresAp?withoutItem.maxAp:withoutItem.ap,daily:event.kind==='food'?{...withoutItem.daily,ate:true}:{...withoutItem.daily,drank:true}}})
+        if(event.source==='ground'&&event.zoneKey)world=replaceGround(state,event.zoneKey,(items)=>items.filter((item)=>item.id!==event.item.id))
+      }
+      return{...state,citizens,world}
+    }
     case 'HOME_UPGRADED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,level:event.to,defense:event.defenseAfter,upgradedDay:event.day}}})}
     case 'HOME_IMPROVEMENT_BUILT':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,storageCapacity:event.storageCapacityAfter,improvements:{...paid.home.improvements,[event.improvementId]:event.level}}}})}
     case 'CONSTRUCTION_AP_CONTRIBUTED':{const project=state.town.construction[event.projectId];if(!project)return state;return{...state,town:{...state.town,construction:{...state.town.construction,[event.projectId]:{...project,apContributed:project.apContributed+event.amount}}}}}
@@ -52,11 +77,16 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CONSTRUCTION_EXPIRED':{const project=state.town.construction[event.projectId];if(!project)return state;return{...state,town:{...state.town,construction:{...state.town.construction,[event.projectId]:{...project,apContributed:0,completed:false}}}}}
     case 'CONSTRUCTION_GENERATED_ITEM':{const items=generatedItems(state,event.itemType,event.amount);return{...state,nextItemId:state.nextItemId+items.length,town:{...state.town,bank:[...state.town.bank,...items]}}}
     case 'WORKSHOP_CONVERTED':{
-      let bank=state.town.bank
-      const inputs=event.inputs??{[event.input]:event.inputCount}
-      for(const[type,count]of Object.entries(inputs))bank=removeBankItems(bank,type as ItemType,count??0)
-      const outputs=generatedItems(state,event.output,event.outputCount);bank=[...bank,...outputs]
-      return{...state,rngState:event.rngStateAfter??state.rngState,nextItemId:state.nextItemId+outputs.length,town:{...state.town,bank}}
+      let bank=state.town.bank.filter((item)=>!event.inputItemIds.includes(item.id))
+      let createdCount=event.outputCount
+      if(event.preserveInputId&&event.inputItemIds[0]){const output=createItemInstance(event.inputItemIds[0],event.output,event.outputState);bank=[...bank,output];createdCount=0}
+      else{const outputs=Array.from({length:event.outputCount},(_,offset)=>createItemInstance(`i${String(state.nextItemId+offset).padStart(6,'0')}`,event.output,event.outputState));bank=[...bank,...outputs]}
+      return{...state,rngState:event.rngStateAfter??state.rngState,nextItemId:state.nextItemId+createdCount,town:{...state.town,bank}}
+    }
+    case 'ITEMS_COMBINED':{
+      const consumed=new Set(event.consumedItemIds)
+      const citizens=replaceCitizen(state,event.citizenId,(citizen)=>addCombinationOutputs(removePersonalIds(citizen,consumed),event.outputs))
+      return{...state,nextItemId:state.nextItemId+event.createdCount,citizens}
     }
     case 'COORDINATION_COMMITMENT_POSTED':return{...state,coordination:{commitments:[...state.coordination.commitments.filter((commitment)=>commitment.id!==event.commitment.id&&commitment.citizenId!==event.commitment.citizenId),event.commitment]}}
     case 'COORDINATION_COMMITMENT_CLEARED':return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.id!==event.commitmentId)}}

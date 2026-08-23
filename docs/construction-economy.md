@@ -46,9 +46,9 @@ The construction economy now distinguishes:
 
 The normal desert remains weighted toward basic materials. Advanced/specialist supplies are rarer and are concentrated in appropriate special sites so construction progression depends on exploration rather than a single generic material stream.
 
-## Workshop transformations
+## Workshop processing
 
-The Workshop now supports recipes with more than one input and deterministic weighted outputs.
+The Workshop is intentionally limited to material transformation, salvage dismantling, and Workshop-specific repair.
 
 Implemented structural transformations:
 
@@ -62,22 +62,31 @@ Implemented salvage dismantling:
 - Broken Electronic Device -> weighted construction-relevant electronic/mechanical output
 - Mechanism -> weighted Wrought Iron / Nuts & Bolts / Copper Pipe / Scrap Metal output
 
-Implemented current-MyHordes combination dependency:
+Implemented Workshop repair:
+
+- Damaged Repair Kit -> intact Repair Kit
+
+Random Workshop outputs are resolved in the command layer from `GameState.rngState`. The emitted `WORKSHOP_CONVERTED` event carries the exact input item IDs, resolved output, and post-roll RNG state so reducers preserve deterministic replay and item identity where required.
+
+## Portable construction combinations
+
+Multi-item assembly is not owned by the Workshop. Traditional personal combinations are implemented through `COMBINE_ITEMS` and may use Rucksack + Home chest while at Home, or the Rucksack only while outside.
+
+Construction dependencies currently include:
 
 - Copper Pipe + Convex Lens -> Telescope
+- Wire Reel + Empty Oil Can + Broken Staff -> Guitar
 
-Telescope therefore does not spawn directly as generic loot.
-
-Random Workshop outputs are resolved in the command layer from `GameState.rngState`. The emitted `WORKSHOP_CONVERTED` event carries the resolved output and post-roll RNG state. The reducer only consumes the declared inputs and applies that explicit result, preserving deterministic replay.
+Telescope therefore does not spawn directly as generic loot and no longer appears in the Workshop table. See `docs/item-combinations.md` for the broader combination/reload/repair system.
 
 ## AI expectations
 
-Bots treat the newly active construction materials as real town resources. Directly missing materials receive high loot value. Town work can process low-quality salvage into basic materials, promote basics into advanced beams/supports, assemble a Telescope when both inputs exist, and dismantle technical salvage when an active construction is blocked on those outputs.
+Bots treat the active construction materials and combination components as real town resources. Directly missing materials receive high loot value. Town work can process low-quality salvage into basic materials, promote basics into advanced beams/supports, use legal portable construction combinations when the required personal items are available, and dismantle technical salvage when an active construction is blocked on those outputs.
 
 This does not introduce a hidden town-wide production planner. Citizens still select legal commands from public town state and existing construction priorities.
 
 ## Scope boundaries
 
-This pass intentionally does not implement every MyHordes item or every recipe. Items were activated when they are required by a direct-equivalent construction or by the acquisition/processing chain needed to make those constructions reachable.
+This pass intentionally does not implement every MyHordes item or every recipe. Items are activated when they support an owned gameplay loop and have legitimate acquisition/use paths.
 
 Profession-only, social, shaman, status-heavy, event-only and quest systems remain deferred until their owning gameplay systems exist.
