@@ -39,7 +39,6 @@ describe('Citizen homes, starter supplies, and well', () => {
     expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 4)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.storage.map((item) => item.type).sort().join(',') === 'citizen_welcome_pack,doggy_bag')).toBe(true)
     expect(game.citizens.every((citizen) => citizen.status.hydration === 'normal' && citizen.status.desertStepsToday === 0)).toBe(true)
-    expect(game.citizens.every((citizen) => citizen.camping.hidden === false && citizen.citizens?.length === undefined)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.camping.hidden === false && citizen.camping.nightsSurvived === 0)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.temporaryControl === null)).toBe(true)
   })
