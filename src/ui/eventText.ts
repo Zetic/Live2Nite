@@ -19,6 +19,7 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'CAMP_IMPROVEMENTS_DECAYED':return`The campsite at [${event.zoneKey}] deteriorated overnight.`
     case 'CITIZEN_HIDING_SET':return event.hidden?`${citizenName(game,event.citizenId)} hid for the night and locked in their camping outlook.`:`${citizenName(game,event.citizenId)} left their hiding place.`
     case 'CAMPING_RESOLVED':return event.survived?`${citizenName(game,event.citizenId)} survived the night while camping outside.`:`${citizenName(game,event.citizenId)} failed to survive the night while camping.`
+    case 'CAMPING_BLUEPRINT_DROPPED':return`${citizenName(game,event.citizenId)}'s successful camp uncovered ${itemName(event.item.type)} at [${event.zoneKey}] (${event.distanceKm} km from town).`
     case 'ZONE_DISCOVERED':{const zone=game.world.zones[event.zoneKey];return zone?.specialSite?`Zone [${event.zoneKey}] revealed ${specialSiteName(zone.specialSite.type)}.`:`Zone [${event.zoneKey}] was discovered.`}
     case 'ZONE_OBSERVED':return event.citizenId?`${citizenName(game,event.citizenId)} surveyed [${event.zoneKey}]: ${event.zombies} zombie${event.zombies===1?'':'s'} observed.`:`Zone [${event.zoneKey}] was surveyed: ${event.zombies} zombie${event.zombies===1?'':'s'} observed.`
     case 'WORLD_ZOMBIES_EVOLVED':return`The World Beyond shifted overnight across ${event.changes.length} zone${event.changes.length===1?'':'s'}; yesterday's zombie reports may now be stale.`
@@ -48,6 +49,7 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'HOME_IMPROVEMENT_BUILT':return`${citizenName(game,event.citizenId)} improved their home: ${HOME_IMPROVEMENTS[event.improvementId].name} level ${event.level}.`
     case 'CORPSE_DISPOSED':return event.method==='watered'?`${citizenName(game,event.citizenId)} destroyed ${citizenName(game,event.targetCitizenId)}'s corpse with a Water Ration.`:`${citizenName(game,event.citizenId)} dragged ${citizenName(game,event.targetCitizenId)}'s corpse outside town for 2 AP.`
     case 'CORPSE_REANIMATED':return event.outcome==='well'?`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated and spoiled ${event.waterLost} Well water.`:event.outcome==='citizen'&&event.victimCitizenId?`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated and killed ${citizenName(game,event.victimCitizenId)} inside town.`:`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated but found no target.`
+    case 'BLUEPRINT_READ':return event.projectId?`${citizenName(game,event.citizenId)} studied ${itemName(event.item.type)} and identified ${CONSTRUCTIONS[event.projectId].name}.`:`${citizenName(game,event.citizenId)} studied ${itemName(event.item.type)}, but no eligible new construction could be identified.`
     case 'CONSTRUCTION_DISCOVERED':return`A new construction plan is now known: ${CONSTRUCTIONS[event.projectId].name}.`
     case 'CONSTRUCTION_AP_CONTRIBUTED':return`${citizenName(game,event.citizenId)} contributed ${event.amount} AP to ${CONSTRUCTIONS[event.projectId].name}.`
     case 'CONSTRUCTION_COMPLETED':return`${CONSTRUCTIONS[event.projectId].name} was completed by ${citizenName(game,event.citizenId)}.`
@@ -74,11 +76,12 @@ export function eventTone(event:GameEvent):'town'|'world'|'night'|'danger'|'syst
     case 'CITIZEN_DIED':case 'CORPSE_REANIMATED':case 'ZONE_CONTROL_LOST':case 'FLEE_ZOMBIES_RESOLVED':return'danger'
     case 'CITIZEN_STATUS_CHANGED':return event.status.hydration==='dehydrated'||event.status.infected||event.status.terrorized||event.status.addicted?'danger':event.status.hydration==='thirsty'||Boolean(event.status.wound)||event.status.drunk||event.status.hangover?'home':'system'
     case 'CAMPING_RESOLVED':return event.survived?'world':'danger'
+    case 'CAMPING_BLUEPRINT_DROPPED':return'world'
     case 'NIGHT_RESOLVED':return event.report.breached||(event.report.corpseReanimations??0)>0?'danger':'night'
     case 'DAY_STARTED':case 'WORLD_ZOMBIES_EVOLVED':return'night'
     case 'WOUNDED_MOVEMENT_RESOLVED':case 'ZONE_DISCOVERED':case 'ZONE_OBSERVED':case 'ZONE_CONTROL_RESTORED':case 'TEMPORARY_CONTROL_GRANTED':case 'TEMPORARY_CONTROL_EXPIRED':case 'ZONE_SEARCHED':case 'ZONE_REPLENISHED':case 'SPECIAL_SITE_EXCAVATED':case 'SPECIAL_SITE_SEARCHED':case 'ITEM_PICKED_UP':case 'ITEM_DROPPED':case 'COMBAT_RESOLVED':case 'CITIZEN_LOCATION_CHANGED':case 'BOT_MISSION_ASSIGNED':case 'BOT_MISSION_PHASE_SET':case 'BOT_MISSION_CLEARED':case 'CAMP_IMPROVED':case 'CAMP_IMPROVEMENTS_DECAYED':case 'CITIZEN_HIDING_SET':return'world'
     case 'ITEM_MOVED_TO_HOME':case 'ITEM_MOVED_TO_RUCKSACK':case 'OPENABLE_RESOLVED':case 'CONTAINER_OPENED':case 'ITEM_CONSUMED':case 'ITEM_ACTION_RESOLVED':case 'ITEMS_COMBINED':case 'HOME_UPGRADED':case 'HOME_IMPROVEMENT_BUILT':case 'CORPSE_DISPOSED':return'home'
-    case 'WATER_TAKEN':case 'ITEM_DEPOSITED':case 'ITEM_WITHDRAWN':case 'CONSTRUCTION_DISCOVERED':case 'CONSTRUCTION_AP_CONTRIBUTED':case 'CONSTRUCTION_COMPLETED':case 'CONSTRUCTION_EXPIRED':case 'CONSTRUCTION_GENERATED_ITEM':case 'WORKSHOP_CONVERTED':case 'GATE_SET':case 'COORDINATION_COMMITMENT_POSTED':return'town'
+    case 'WATER_TAKEN':case 'ITEM_DEPOSITED':case 'ITEM_WITHDRAWN':case 'BLUEPRINT_READ':case 'CONSTRUCTION_DISCOVERED':case 'CONSTRUCTION_AP_CONTRIBUTED':case 'CONSTRUCTION_COMPLETED':case 'CONSTRUCTION_EXPIRED':case 'CONSTRUCTION_GENERATED_ITEM':case 'WORKSHOP_CONVERTED':case 'GATE_SET':case 'COORDINATION_COMMITMENT_POSTED':return'town'
     default:return'system'
   }
 }
