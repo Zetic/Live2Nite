@@ -83,7 +83,7 @@ describe('construction blueprints',()=>{
     game=readBlueprint(game).state
     expect(game.town.construction.bastion.discovered).toBe(true)
     expect(constructionUnlocked(game,'bastion')).toBe(false)
-    game={...game,town:{...game.town,construction:{...game.town.construction,wall_upgrade:{...game.town.construction.wall_upgrade,completed:true,hp:25}}}}
+    game={...game,town:{...game.town,construction:{...game.town.construction,wall_upgrade:{...game.town.construction.wall_upgrade,completed:true}}}}
     expect(constructionUnlocked(game,'bastion')).toBe(true)
   })
 

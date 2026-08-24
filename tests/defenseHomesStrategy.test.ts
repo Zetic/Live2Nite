@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { publicDefenseAssessment, strategicConstructionScore } from '../src/agents/planning/TownDefenseStrategy'
 import { getLegalActions } from '../src/core/actions'
-import { CONSTRUCTIONS, constructionMaxHp } from '../src/core/construction'
+import { CONSTRUCTIONS } from '../src/core/construction'
 import { executeCommand } from '../src/core/commands'
 import { homeTownDefense } from '../src/core/defense'
 import { HOME_LEVEL_ORDER, HOME_LEVELS, personalDefense } from '../src/core/home'
@@ -10,7 +10,7 @@ import { watchtowerEstimate } from '../src/core/night'
 import type { GameState } from '../src/core/types'
 
 function completed(game:GameState,projectId:keyof GameState['town']['construction']):GameState{
-  return{...game,town:{...game.town,construction:{...game.town.construction,[projectId]:{...game.town.construction[projectId],discovered:true,completed:true,apContributed:CONSTRUCTIONS[projectId].apCost,hp:constructionMaxHp(projectId)}}}}
+  return{...game,town:{...game.town,construction:{...game.town.construction,[projectId]:{...game.town.construction[projectId],discovered:true,completed:true,apContributed:CONSTRUCTIONS[projectId].apCost}}}}
 }
 
 describe('historical-style Home progression',()=>{

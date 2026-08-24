@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
-import { CONSTRUCTIONS, constructionMaxHp } from '../src/core/construction'
+import { CONSTRUCTIONS } from '../src/core/construction'
 import { MYHORDES_CURRENT_CONSTRUCTION_COSTS } from '../src/core/constructionEconomy'
 import { createInitialGame } from '../src/core/game'
 import { NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
@@ -9,7 +9,7 @@ import { SPECIAL_SITES } from '../src/core/specialSites'
 import type { GameState, WorkshopRecipeId } from '../src/core/types'
 import { bankFromCounts, bankCount as countBank } from './bankFixtures'
 
-function withWorkshop(game:GameState,bank:GameState['town']['bank']):GameState{return{...game,town:{...game.town,bank,construction:{...game.town.construction,workshop:{id:'workshop',discovered:true,completed:true,apContributed:CONSTRUCTIONS.workshop.apCost,hp:constructionMaxHp('workshop')}}}}}
+function withWorkshop(game:GameState,bank:GameState['town']['bank']):GameState{return{...game,town:{...game.town,bank,construction:{...game.town.construction,workshop:{id:'workshop',discovered:true,completed:true,apContributed:CONSTRUCTIONS.workshop.apCost}}}}}
 function recipeAction(game:GameState,recipeId:WorkshopRecipeId){const action=getLegalActions(game,'c01').find((candidate)=>candidate.type==='WORKSHOP_CONVERT'&&candidate.recipeId===recipeId);if(!action||action.type!=='WORKSHOP_CONVERT')throw new Error(`Missing Workshop recipe ${recipeId}`);return action}
 
 describe('current MyHordes construction cost layer',()=>{
