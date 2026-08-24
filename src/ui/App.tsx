@@ -97,6 +97,7 @@ export function App() {
   if (!loaded) return <main className="shell loading-shell"><p>Opening the town gates…</p></main>
 
   const zombiesInside = game.lastNight?.zombiesInside ?? (game.lastNight ? Math.max(0, game.lastNight.attackStrength - game.lastNight.effectiveDefense) : 0)
+  const nightHadCorpseAttack = (game.lastNight?.corpseReanimations ?? 0) > 0
   const attackPhase = game.clock.phase === 'attack'
   const townEnded = alive === 0
 
@@ -122,11 +123,11 @@ export function App() {
         <div className="night-report-copy"><span>00:00–01:00 · attack hour</span><strong>The horde is attacking.</strong><p>Normal actions are locked. Advance one hour to resolve the town attack, camping attempts, casualties, status progression, and the start of Day {game.day + 1} at 1:00 AM.</p></div>
       </section>}
 
-      {!attackPhase && game.lastNight && <section className={`night-report ${game.lastNight.breached ? 'danger' : 'safe'}`}>
+      {!attackPhase && game.lastNight && <section className={`night-report ${game.lastNight.breached || nightHadCorpseAttack ? 'danger' : 'safe'}`}>
         <div className="night-icon" aria-hidden="true">☾</div>
         <div className="night-report-copy">
           <span>Night {game.lastNight.day} report</span>
-          <strong>{game.lastNight.breached ? `${zombiesInside} zombie${zombiesInside === 1 ? '' : 's'} got inside.` : 'The town held.'}</strong>
+          <strong>{game.lastNight.breached ? `${zombiesInside} zombie${zombiesInside === 1 ? '' : 's'} got inside.` : nightHadCorpseAttack ? 'Undisposed corpses struck inside town.' : 'The town held.'}</strong>
           <p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}{(game.lastNight.campingSurvivors??0)>0&&` ${game.lastNight.campingSurvivors} citizen(s) survived camping outside.`}{(game.lastNight.corpseReanimations??0)>0&&` ${game.lastNight.corpseReanimations} undisposed corpse(s) reanimated; ${game.lastNight.corpseAttackDeaths??0} citizen(s) were killed and ${game.lastNight.corpseWaterLost??0} Well water was lost.`}</p>
           {(outsideDeathNames.length > 0 || campingDeathNames.length > 0 || homeDeathNames.length > 0 || corpseDeathNames.length > 0 || dehydrationDeathNames.length > 0) && <div className="night-casualties">
             {outsideDeathNames.length > 0 && <span>Outside without shelter: {outsideDeathNames.join(', ')}</span>}
