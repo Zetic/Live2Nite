@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, codexCategoryCount, filterCodexItems, type CodexItemCategory, type CodexItemEntry, type CodexRelationshipGroup } from '../../core/codex'
 import { STATUS_CODEX_ENTRIES, filterCodexStatuses, type CodexStatusEntry } from '../../core/statusCodex'
+import { CONSTRUCTION_CODEX_ENTRIES } from '../../core/constructionCodex'
 import type { CitizenStatusId, ItemType } from '../../core/types'
 import '../codex.css'
+import { ConstructionCodexView } from './ConstructionCodexView'
 
-type CodexSection='items'|'statuses'
+type CodexSection='items'|'statuses'|'constructions'
 
 function RelationshipGroups({title,groups,empty}:{title:string;groups:CodexRelationshipGroup[];empty:string}){
   return <section className="codex-detail-section">
@@ -75,26 +77,31 @@ export function CodexView(){
   const visibleStatuses=useMemo(()=>filterCodexStatuses(query),[query])
   const itemEntry=(selectedItem?visibleItems.find((entry)=>entry.type===selectedItem):undefined)??visibleItems[0]??null
   const statusEntry=(selectedStatus?visibleStatuses.find((entry)=>entry.id===selectedStatus):undefined)??visibleStatuses[0]??null
-  const shown=section==='items'?visibleItems.length:visibleStatuses.length
+  const shown=section==='items'?visibleItems.length:section==='statuses'?visibleStatuses.length:CONSTRUCTION_CODEX_ENTRIES.length
+  const countLabel=section==='items'?`${CODEX_ITEM_ENTRIES.length} items`:section==='statuses'?`${STATUS_CODEX_ENTRIES.length} statuses`:`${CONSTRUCTION_CODEX_ENTRIES.length} constructions`
 
   return <section className="panel screen-panel codex-screen">
-    <div className="panel-heading codex-heading"><div><p className="section-kicker">Reference</p><h2>Codex</h2><p className="section-note">A live reference generated from the same item, condition, action, recipe, construction and acquisition definitions used by gameplay.</p></div><span className="panel-count">{section==='items'?`${CODEX_ITEM_ENTRIES.length} items`:`${STATUS_CODEX_ENTRIES.length} statuses`}</span></div>
+    <div className="panel-heading codex-heading"><div><p className="section-kicker">Reference</p><h2>Codex</h2><p className="section-note">A live reference generated from the same item, condition, construction, blueprint and acquisition definitions used by gameplay.</p></div><span className="panel-count">{countLabel}</span></div>
     <div className="codex-section-tabs" role="tablist" aria-label="Codex sections">
       <button type="button" className={section==='items'?'active':''} aria-selected={section==='items'} onClick={()=>setSection('items')}><strong>Items</strong><small>Current Live2Nite catalogue</small></button>
       <button type="button" className={section==='statuses'?'active':''} aria-selected={section==='statuses'} onClick={()=>setSection('statuses')}><strong>Status Effects</strong><small>Runtime citizen conditions</small></button>
+      <button type="button" className={section==='constructions'?'active':''} aria-selected={section==='constructions'} onClick={()=>setSection('constructions')}><strong>Constructions</strong><small>Branches & blueprint unlocks</small></button>
     </div>
-    {section==='items'&&<div className="codex-category-tabs" role="tablist" aria-label="Item categories">
-      {CODEX_ITEM_CATEGORIES.map((entry)=><button type="button" key={entry.id} className={category===entry.id?'active':''} aria-selected={category===entry.id} onClick={()=>setCategory(entry.id)}><span>{entry.label}</span><small>{codexCategoryCount(entry.id)}</small></button>)}
-    </div>}
-    <div className="codex-toolbar"><label><span>{section==='items'?'Search items':'Search status effects'}</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder={section==='items'?'Name, purpose, source, recipe, location…':'Status, source, treatment, progression, effect…'}/></label><strong>{shown} shown</strong></div>
-    <div className="codex-layout">
-      <section className="codex-list-panel" aria-label={section==='items'?'Codex items':'Codex status effects'}>
-        <div className="codex-item-list">
-          {section==='items'?visibleItems.map((entry)=><button type="button" key={entry.type} className={`codex-item-row ${itemEntry?.type===entry.type?'active':''}`} onClick={()=>setSelectedItem(entry.type)}><span><strong>{entry.name}</strong><small>{entry.categoryLabel} · {entry.sourceLabel}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>):visibleStatuses.map((entry)=><button type="button" key={entry.id} className={`codex-item-row status-${entry.severity} ${statusEntry?.id===entry.id?'active':''}`} onClick={()=>setSelectedStatus(entry.id)}><span><strong>{entry.label}</strong><small>{entry.family} · {entry.severity}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>)}
-          {shown===0&&<p className="empty-state">No {section==='items'?'items':'status effects'} match this search.</p>}
-        </div>
-      </section>
-      {section==='items'?(itemEntry?<ItemDetail entry={itemEntry}/>:<article className="codex-detail"><p className="empty-state">No item is available for the current filter.</p></article>):(statusEntry?<StatusDetail entry={statusEntry}/>:<article className="codex-detail"><p className="empty-state">No status effect is available for this search.</p></article>)}
-    </div>
+
+    {section==='constructions'?<ConstructionCodexView/>:<>
+      {section==='items'&&<div className="codex-category-tabs" role="tablist" aria-label="Item categories">
+        {CODEX_ITEM_CATEGORIES.map((entry)=><button type="button" key={entry.id} className={category===entry.id?'active':''} aria-selected={category===entry.id} onClick={()=>setCategory(entry.id)}><span>{entry.label}</span><small>{codexCategoryCount(entry.id)}</small></button>)}
+      </div>}
+      <div className="codex-toolbar"><label><span>{section==='items'?'Search items':'Search status effects'}</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder={section==='items'?'Name, purpose, source, recipe, location…':'Status, source, treatment, progression, effect…'}/></label><strong>{shown} shown</strong></div>
+      <div className="codex-layout">
+        <section className="codex-list-panel" aria-label={section==='items'?'Codex items':'Codex status effects'}>
+          <div className="codex-item-list">
+            {section==='items'?visibleItems.map((entry)=><button type="button" key={entry.type} className={`codex-item-row ${itemEntry?.type===entry.type?'active':''}`} onClick={()=>setSelectedItem(entry.type)}><span><strong>{entry.name}</strong><small>{entry.categoryLabel} · {entry.sourceLabel}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>):visibleStatuses.map((entry)=><button type="button" key={entry.id} className={`codex-item-row status-${entry.severity} ${statusEntry?.id===entry.id?'active':''}`} onClick={()=>setSelectedStatus(entry.id)}><span><strong>{entry.label}</strong><small>{entry.family} · {entry.severity}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>)}
+            {shown===0&&<p className="empty-state">No {section==='items'?'items':'status effects'} match this search.</p>}
+          </div>
+        </section>
+        {section==='items'?(itemEntry?<ItemDetail entry={itemEntry}/>:<article className="codex-detail"><p className="empty-state">No item is available for the current filter.</p></article>):(statusEntry?<StatusDetail entry={statusEntry}/>:<article className="codex-detail"><p className="empty-state">No status effect is available for this search.</p></article>)}
+      </div>
+    </>}
   </section>
 }

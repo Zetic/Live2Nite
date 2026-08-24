@@ -68,7 +68,7 @@ describe('item codex',()=>{
     const staff=codexItemEntry('staff')
     expect(staff.obtainedFrom.find((group)=>group.id==='special-locations')?.entries.some((entry)=>entry.label==='Dark Woods'&&entry.badge==='Unique location')).toBe(true)
     const food=codexItemEntry('food')
-    expect(food.obtainedFrom.find((group)=>group.id==='constructions')?.entries.some((entry)=>entry.label==='Vegetable Plot')).toBe(true)
+    expect(food.obtainedFrom.find((group)=>group.id==='constructions')?.entries.some((entry)=>entry.label==='Vegetable Plot')??false).toBe(false)
   })
 })
 

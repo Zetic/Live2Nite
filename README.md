@@ -70,7 +70,7 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - bare-handed combat plus Human Bone, Pathetic Penknife, Staff, Serrated Knife, Machete, and Water Bomb weapon tiers
 - breakable field weapons produce broken items for the current Workshop repair prototype
 - shared Construction Sites with persistent AP progress
-- broad data-driven construction tree with Workshop, Watchtower, Pump, Wall, Portal, Foundations, and Sanctuary branches
+- complete 166-entry current MyHordes construction catalogue across Defensive Wall, Pump, Portal Lock, Workshop, Foundations, Watchtower, and Soul Purifying Source branches
 - Workshop material processing and current repair recipes
 - Watchtower horde-estimate screen
 - Search Tower nightly depleted-zone replenishment prototype
@@ -114,4 +114,4 @@ npm run build
 
 See [`docs/architecture.md`](docs/architecture.md). Stateful item architecture is documented in [`docs/item-economy.md`](docs/item-economy.md).
 
-- Construction Sites separate known sites from completed buildings; no-blueprint branches are registered recursively while tiered blueprints reveal one random eligible advanced site. Successful camping at an uncovered ruin can leave an Uncommon/Rare blueprint on the zone floor, and Worn Leather Bags use the source 50/35/10/5 blueprint distribution.
+- Construction Sites separate known sites, implementation readiness, and completed buildings: no-blueprint branches register recursively, tiered blueprints reveal one random eligible class 1-4 site, and WIP sites can be discovered without accepting AP/materials. The Codex includes all 166 current constructions in branch and blueprint views. Successful camping at an uncovered ruin can leave an Uncommon/Rare blueprint on the zone floor, and Worn Leather Bags use the source 50/35/10/5 blueprint distribution.

@@ -6,7 +6,7 @@ Live2Nite follows current MyHordes blueprint behavior while retaining Live2Nite-
 
 MyHordes distinguishes a construction site being registered in town from that site being complete.
 
-When a site is added, all of its rarity-0 children that require no blueprint are recursively registered as well. Live2Nite mirrors that behavior: the playable no-blueprint tree is visible from the beginning where it is connected through no-blueprint parents. Completion does **not** reveal those sites; completion only satisfies the prerequisite for actually contributing work to descendants.
+When a site is added, all of its rarity-0 children that require no blueprint are recursively registered as well. Live2Nite mirrors that behavior across the complete catalogue, including WIP entries. Completion does **not** reveal those sites; completion only satisfies the parent prerequisite for actually contributing work to descendants. A WIP site's implementation status can still prevent construction work.
 
 ## Blueprint grades
 
@@ -21,9 +21,9 @@ Tier 0 is the no-blueprint class and is not the target of a Common Blueprint.
 
 A blueprint can only be read in town. Reading consumes the item even if no eligible construction remains.
 
-The candidate pool contains playable projects of the matching tier that are not already known and either have no parent or have a direct parent site already known to town. One candidate is selected at random. The parent does **not** need to be complete for discovery. Construction work remains blocked until the required parent chain is complete.
+The candidate pool contains generic class 1-4 catalogue projects of the matching tier that are not already known and either have no parent or have a direct parent site already known to town. WIP projects remain candidates so implementation readiness does not distort source blueprint pools. One candidate is selected at random. The parent does **not** need to be complete for discovery. Construction work remains blocked until the required parent chain is complete and the selected project is implemented enough to be buildable.
 
-If the selected site has playable tier-0 descendants, those no-blueprint descendants become known recursively with it.
+If the selected site has tier-0 descendants, those no-blueprint descendants become known recursively with it, including catalogued WIP descendants.
 
 ## Worn Leather Bag
 
@@ -51,4 +51,14 @@ Distance follows the current source calculation: rounded Euclidean distance from
 
 Live2Nite's current 14x13 world has a maximum rounded Euclidean distance below 10 km, so ordinary naturally generated sites currently exercise the Uncommon branch. The 10+ Rare rule is implemented and covered for future map growth; other source-faithful rare acquisition routes can also supply Rare plans.
 
-Specialized hotel, bunker, and hospital blueprint pools belong to the explorable-ruin pass and are not flattened into the generic blueprint system.
+Generic blueprint items only target classes 1-4. Current class-5 special/manual and class-6 dump-specialization constructions are catalogued separately and are not flattened into generic blueprint rarities.
+
+## Specialized explorable-ruin blueprints
+
+The current source catalogue also contains **nine specialized ruin blueprint variants** outside the four generic construction-blueprint items:
+
+- Hotel Blueprint — Uncommon, Rare, Very Rare
+- Bunker Blueprint — Uncommon, Rare, Very Rare
+- Hospital Blueprint — Uncommon, Rare, Very Rare
+
+Live2Nite records these as its own semantic WIP blueprint-family metadata. They are visible in the Construction Codex blueprint view and searchable there, but they are **not runtime items yet**, do not participate in the generic tier 1-4 candidate pools, and cannot alter construction discovery. The future explorable-ruin pass must implement their acquisition routing and dedicated unlock pools before those behaviors become active.

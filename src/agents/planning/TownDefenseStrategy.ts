@@ -1,5 +1,5 @@
 import { bankCount } from '../../core/bank'
-import { CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionFlatDefenseForProject, constructionPriority } from '../../core/construction'
+import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionFlatDefenseForProject, constructionPriority } from '../../core/construction'
 import { totalTownDefense } from '../../core/defense'
 import { watchtowerEstimate } from '../../core/night'
 import type { ConstructionId, GameState, ItemType } from '../../core/types'
@@ -27,5 +27,5 @@ function scoreWithAssessment(state:GameState,projectId:ConstructionId,assessment
 }
 export function strategicConstructionScore(state:GameState,projectId:ConstructionId):number{return scoreWithAssessment(state,projectId,publicDefenseAssessment(state))}
 export function rankStrategicConstruction(state:GameState,projectIds:readonly ConstructionId[],assessment:PublicDefenseAssessment=publicDefenseAssessment(state)):ConstructionId[]{return projectIds.map((projectId,index)=>({projectId,index,score:scoreWithAssessment(state,projectId,assessment)})).filter((candidate)=>candidate.score>=0).sort((left,right)=>right.score-left.score||left.index-right.index).map((candidate)=>candidate.projectId)}
-export function strategicConstructionProjects(state:GameState):ConstructionId[]{return rankStrategicConstruction(state,CONSTRUCTION_ORDER)}
+export function strategicConstructionProjects(state:GameState):ConstructionId[]{return rankStrategicConstruction(state,BUILDABLE_CONSTRUCTION_IDS)}
 export function strategicConstructionNeed(state:GameState):{projectId:ConstructionId|null;missing:Partial<Record<ItemType,number>>}{const projectId=strategicConstructionProjects(state)[0]??null;if(!projectId)return{projectId:null,missing:{}};const missing:Partial<Record<ItemType,number>>={};for(const[type,required]of Object.entries(CONSTRUCTIONS[projectId].resources)){const itemType=type as ItemType;const amount=Math.max(0,(required??0)-bankCount(state,itemType));if(amount>0)missing[itemType]=amount}return{projectId,missing}}
