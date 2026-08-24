@@ -37,27 +37,22 @@ function migrateWorld(world:WorldState,seed:number,day:number):WorldState{
 }
 function normalizeEventItem(value:unknown):unknown{if(!value||typeof value!=='object')return value;const item=value as Partial<ItemInstance>;return typeof item.id==='string'&&typeof item.type==='string'&&ITEM_TYPE_IDS.includes(item.type as ItemType)?createItemInstance(item.id,item.type as ItemType,item.state):value}
 function migrateEvents(events:unknown):GameEvent[]{if(!Array.isArray(events))return[];return events.map((candidate)=>{let event={...(candidate as Record<string,unknown>)};if(event.type==='ZONE_SEARCHED'&&!event.mode)event={...event,mode:'normal'};if(event.type==='ITEM_CONSUMED'&&event.restoresAp===undefined)event={...event,restoresAp:true};if(event.type==='HOME_UPGRADED'&&event.consumed===undefined)event={...event,consumed:{}};if('item'in event)event={...event,item:normalizeEventItem(event.item)};if('output'in event)event={...event,output:normalizeEventItem(event.output)};if(Array.isArray(event.outputs))event={...event,outputs:event.outputs.map(normalizeEventItem)};return event as unknown as GameEvent})}
-function normalizeConstruction(existing:Partial<GameState['town']['construction']>|undefined,resetPrototypeCommonDiscovery=false):GameState['town']['construction']{
+function normalizeConstruction(existing:Partial<GameState['town']['construction']>|undefined,legacyDiscoveryModel=false):GameState['town']['construction']{
   const base=createConstructionState()
   if(existing)for(const[id,project]of Object.entries(existing)){
     if(!(id in base)||!project)continue
     const projectId=id as ConstructionId
     const legacy=project as Partial<GameState['town']['construction'][ConstructionId]>
     const completed=legacy.completed??false
+    const discovered=legacyDiscoveryModel
+      ? base[projectId].discovered||legacy.discovered===true||completed
+      : legacy.discovered??(completed||base[projectId].discovered)
     base[projectId]={
       ...base[projectId],
       ...legacy,
       id:projectId,
-      discovered:legacy.discovered??(completed||base[projectId].discovered),
+      discovered,
       hp:completed?(typeof legacy.hp==='number'?legacy.hp:constructionMaxHp(projectId)):0,
-    }
-  }
-  if(resetPrototypeCommonDiscovery){
-    for(const id of CONSTRUCTION_ORDER){
-      const definition=CONSTRUCTIONS[id]
-      const project=base[id]
-      if(!definition.parentId||constructionBlueprintTier(id)!==0||project.completed||project.apContributed>0)continue
-      project.discovered=false
     }
   }
   return base
