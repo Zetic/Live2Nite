@@ -23,7 +23,7 @@ function mission(targetX=4,phase:BotMissionAssignment['phase']='camp',allowsCamp
 describe('camping and overnight survival',()=>{
   it('starts schema v16 with camping state and campsite state initialized',()=>{
     const game=createInitialGame(123,2)
-    expect(game.schemaVersion).toBe(18)
+    expect(game.schemaVersion).toBe(19)
     expect(game.citizens.every((citizen)=>citizen.camping.hidden===false&&citizen.camping.nightsSurvived===0)).toBe(true)
     expect(Object.values(game.world.zones).every((zone)=>zone.campImprovements===0)).toBe(true)
   })
@@ -63,7 +63,7 @@ describe('camping and overnight survival',()=>{
   it('caps an ordinary citizen at ninety percent and penalizes repeated camping',()=>{
     let game=outsideAt(createInitialGame(125,1),'c01',6,6)
     const key=zoneKey(6,6)
-    game={...game,world:{...game.world,zones:{...game.world.zones,[key]:{...game.world.zones[key],campImprovements:10,zombies:0,specialSite:{type:'construction_site',status:'accessible',excavationRequired:3,excavationProgress:3,hiddenLoot:[],searchedBy:[]}}}}}
+    game={...game,world:{...game.world,zones:{...game.world.zones,[key]:{...game.world.zones[key],campImprovements:10,zombies:0,specialSite:{type:'construction_site',status:'accessible',excavationRequired:3,excavationProgress:3,hiddenLoot:[],searchedBy:[],blueprintFound:false}}}}}
     const first=campingChancePercent(game,'c01')
     expect(first).toBeLessThanOrEqual(ORDINARY_CAMPING_CAP_PERCENT)
     game={...game,citizens:game.citizens.map((citizen)=>({...citizen,camping:{...citizen.camping,nightsSurvived:2}}))}
