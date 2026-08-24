@@ -4,7 +4,7 @@ import { createConstructionState } from '../core/construction'
 import { HOME_LEVELS, createDailyState, createStarterHome } from '../core/home'
 import { ITEM_TYPE_IDS } from '../core/itemCatalog'
 import { createItemInstance } from '../core/items'
-import { createCitizenStatusState } from '../core/status'
+import { normalizeCitizenStatusState } from '../core/status'
 import type { Citizen, CitizenHome, ConstructionId, GameClock, GameEvent, GameState, HomeLevel, ItemInstance, ItemType, TownCoordinationState, WorldState, WorldZone, ZoneIntelState } from '../core/types'
 import { startingWellWater } from '../core/well'
 import { addSpecialSites, emptyZoneIntel, isTownGateZone } from '../core/world'
@@ -20,7 +20,7 @@ function normalizeHome(existing:Partial<CitizenHome>|undefined,citizenId:string)
   const level=validHomeLevel(existing.level)?existing.level:'camp_bed'
   return{level,defense:HOME_LEVELS[level].defense,storage:normalizeItems(existing.storage),storageCapacity:typeof existing.storageCapacity==='number'?existing.storageCapacity:4,upgradedDay:typeof existing.upgradedDay==='number'?existing.upgradedDay:null,improvements:{reinforcements:existing.improvements?.reinforcements??0,fence:existing.improvements?.fence??0,storage:existing.improvements?.storage??0}}
 }
-function migrateCitizen(candidate:Partial<Citizen>&Pick<Citizen,'id'>):Citizen{return{...(candidate as Citizen),inventory:normalizeItems(candidate.inventory),home:normalizeHome(candidate.home,candidate.id),daily:candidate.daily??createDailyState(),status:candidate.status??createCitizenStatusState(),camping:candidate.camping??createCitizenCampingState(),temporaryControl:candidate.temporaryControl??null}}
+function migrateCitizen(candidate:Partial<Citizen>&Pick<Citizen,'id'>):Citizen{return{...(candidate as Citizen),inventory:normalizeItems(candidate.inventory),home:normalizeHome(candidate.home,candidate.id),daily:{...createDailyState(),...(candidate.daily??{})},status:normalizeCitizenStatusState(candidate.status),camping:candidate.camping??createCitizenCampingState(),temporaryControl:candidate.temporaryControl??null}}
 function normalizeLegacyNormalLoot(type:ItemType):ItemType{if(type==='rotten_log')return'twisted_plank';if(type==='scrap_metal')return'wrought_iron';return type}
 function migrateWorld(world:WorldState,seed:number,day:number):WorldState{
   const zones:Record<string,WorldZone>={};const legacyWorld=world as WorldState&{intel?:Record<string,ZoneIntelState>};const intel:Record<string,ZoneIntelState>={}

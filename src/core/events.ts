@@ -1,6 +1,7 @@
 import { removeBankItemById, removeBankItems } from './bank'
 import { completionWaterBonus, revealsAllTerrain } from './construction'
 import { foodApTarget } from './food'
+import { effectiveMaxAp } from './status'
 import { createItemInstance, normalizeItemState } from './items'
 import { zoneKey } from './world'
 import type { Citizen, CombinationEventOutput, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, PersonalItemStorage } from './types'
@@ -34,6 +35,7 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'GATE_SET':return{...state,town:{...state.town,gateOpen:event.open}}
     case 'CITIZEN_LOCATION_CHANGED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,location:event.location,temporaryControl:null,camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null},status:event.desertStep?{...citizen.status,desertStepsToday:citizen.status.desertStepsToday+1}:citizen.status}))}
     case 'CITIZEN_STATUS_CHANGED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,status:event.status}))}
+    case 'WOUNDED_MOVEMENT_RESOLVED':return{...state,rngState:event.rngStateAfter}
     case 'CAMP_IMPROVED':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;return{...state,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:{...zone,campImprovements:Math.min(10,(zone.campImprovements??0)+event.amount)}}}}}
     case 'CAMP_IMPROVEMENTS_DECAYED':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;return{...state,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:{...zone,campImprovements:Math.max(0,(zone.campImprovements??0)-event.amount)}}}}}
     case 'CITIZEN_HIDING_SET':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,camping:{...citizen.camping,hidden:event.hidden,survivalChance:event.hidden?event.survivalChance:null,hiddenDay:event.hidden?event.day:null}}))}
@@ -77,12 +79,32 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
         const charged=withCharges(event.item,event.chargesAfter)
         if(event.source==='ground'&&event.zoneKey)world=replaceGround(state,event.zoneKey,(items)=>items.map((item)=>item.id===event.item.id?charged:item))
         else citizens=replaceCitizen(state,event.citizenId,(citizen)=>replaceStoredItem(citizen,charged,event.source as PersonalItemStorage))
-        citizens=citizens.map((citizen)=>citizen.id===event.citizenId?{...citizen,ap:restoredAp(citizen,event.item,event.kind,event.restoresAp),daily:event.kind==='food'?{...citizen.daily,ate:true}:{...citizen.daily,drank:true}}:citizen)
       }else{
-        citizens=replaceCitizen(state,event.citizenId,(citizen)=>{const withoutItem=removeStoredItem(citizen,event.item.id,event.source);return{...withoutItem,ap:restoredAp(withoutItem,event.item,event.kind,event.restoresAp),daily:event.kind==='food'?{...withoutItem.daily,ate:true}:{...withoutItem.daily,drank:true}}})
         if(event.source==='ground'&&event.zoneKey)world=replaceGround(state,event.zoneKey,(items)=>items.filter((item)=>item.id!==event.item.id))
+        else citizens=replaceCitizen(state,event.citizenId,(citizen)=>removeStoredItem(citizen,event.item.id,event.source))
       }
-      return{...state,citizens,world}
+      citizens=citizens.map((citizen)=>{
+        if(citizen.id!==event.citizenId)return citizen
+        const legacyDaily=event.kind==='food'?{...citizen.daily,ate:true}:event.restoresAp?{...citizen.daily,drank:true}:citizen.daily
+        return{...citizen,ap:event.apAfter??restoredAp(citizen,event.item,event.kind,event.restoresAp),status:event.statusAfter??citizen.status,daily:event.dailyAfter??legacyDaily}
+      })
+      return{...state,rngState:event.rngStateAfter??state.rngState,citizens,world}
+    }
+    case 'ITEM_ACTION_RESOLVED':{
+      let citizens=state.citizens;let world=state.world
+      const replacement=event.morphTo?createItemInstance(event.item.id,event.morphTo):null
+      if(event.source==='ground'&&event.zoneKey){
+        world=replaceGround(state,event.zoneKey,(items)=>items.flatMap((item)=>item.id!==event.item.id?[item]:replacement?[replacement]:event.consumed?[]:[item]))
+        citizens=replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,ap:event.apAfter,status:event.statusAfter,daily:event.dailyAfter}))
+      }else{
+        citizens=replaceCitizen(state,event.citizenId,(citizen)=>{
+          let next=citizen
+          if(replacement)next=replaceStoredItem(next,replacement,event.source as PersonalItemStorage)
+          else if(event.consumed)next=removeStoredItem(next,event.item.id,event.source)
+          return{...next,ap:event.apAfter,status:event.statusAfter,daily:event.dailyAfter}
+        })
+      }
+      return{...state,rngState:event.rngStateAfter,citizens,world}
     }
     case 'HOME_UPGRADED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,level:event.to,defense:event.defenseAfter,upgradedDay:event.day}}})}
     case 'HOME_IMPROVEMENT_BUILT':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,storageCapacity:event.storageCapacityAfter,improvements:{...paid.home.improvements,[event.improvementId]:event.level}}}})}
@@ -110,7 +132,7 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CITIZEN_DIED':return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.citizenId!==event.citizenId)},botMissions:withoutMission(state,event.citizenId),citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,alive:false,ap:0,temporaryControl:null,camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
     case 'NIGHT_RESOLVED':return{...state,lastNight:event.report}
     case 'TIME_ADVANCED':return{...state,clock:{hour:event.toHour,phase:event.phase}}
-    case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:missionsForNewDay(state),coordination:{commitments:[]},citizens:state.citizens.map((citizen)=>({...citizen,ap:citizen.alive?citizen.maxAp:0,temporaryControl:null,daily:{ate:false,drank:false,waterTaken:false},camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
+    case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:missionsForNewDay(state),coordination:{commitments:[]},citizens:state.citizens.map((citizen)=>({...citizen,ap:citizen.alive?effectiveMaxAp(citizen):0,temporaryControl:null,daily:{ate:false,drank:false,waterTaken:false},camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
   }
 }
 export function applyEvents(state:GameState,events:GameEvent[]):GameState{const nextState=events.reduce(reduceSingleEvent,state);return{...nextState,events:[...state.events,...events]}}

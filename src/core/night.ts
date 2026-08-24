@@ -6,7 +6,7 @@ import { applyEvents } from './events'
 import { personalDefense } from './home'
 import { NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
-import { nightlyHydrationEvents } from './status'
+import { nightlyStatusEvents } from './status'
 import type { GameEvent, GameState, HomeAttackOutcome, NightReport } from './types'
 import { isTownGateZone, zoneKey } from './world'
 import { worldZombieEvolutionEvent } from './worldEvolution'
@@ -83,17 +83,19 @@ export function resolveNightAttack(state:GameState):GameState{
   const homeAttacks=distributeBreachedZombies(afterOutside,zombiesInside)
   const homeDeathEvents:GameEvent[]=homeAttacks.filter((outcome)=>!outcome.survived).map((outcome)=>({type:'CITIZEN_DIED',day:state.day,hour:ATTACK_HOUR,citizenId:outcome.citizenId,reason:'home_breach'}))
   const afterHomeDeaths=applyEvents(afterOutside,homeDeathEvents)
-  const hydrationEvents=nightlyHydrationEvents(afterHomeDeaths)
-  const dehydrationDeaths=hydrationEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='dehydration').length
-  const afterHydration=applyEvents(afterHomeDeaths,hydrationEvents)
-  const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,homeAttacks}
-  const replenishment=searchTowerReplenishmentEvents(afterHydration)
-  const outputs=constructionOutputEvents(afterHydration)
-  const expiries=constructionExpiryEvents(afterHydration)
-  const decay=campDecayEvents(afterHydration)
-  const evolution=worldZombieEvolutionEvent(afterHydration)
+  const statusEvents=nightlyStatusEvents(afterHomeDeaths,(citizenId)=>randomInt(isolatedNightSeed(afterHomeDeaths.seed,afterHomeDeaths.day,stableStringSalt(`infection:${citizenId}`)),1,100).value)
+  const dehydrationDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='dehydration').length
+  const infectionDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='infection').length
+  const withdrawalDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='drug_withdrawal').length
+  const afterStatuses=applyEvents(afterHomeDeaths,statusEvents)
+  const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,infectionDeaths,withdrawalDeaths,homeAttacks}
+  const replenishment=searchTowerReplenishmentEvents(afterStatuses)
+  const outputs=constructionOutputEvents(afterStatuses)
+  const expiries=constructionExpiryEvents(afterStatuses)
+  const decay=campDecayEvents(afterStatuses)
+  const evolution=worldZombieEvolutionEvent(afterStatuses)
   const rollover:GameEvent[]=[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...replenishment,...outputs,...expiries,...decay]
   if(evolution)rollover.push(evolution)
   rollover.push({type:'DAY_STARTED',day:state.day+1,hour:DAY_START_HOUR})
-  return applyEvents(afterHydration,rollover)
+  return applyEvents(afterStatuses,rollover)
 }

@@ -81,7 +81,7 @@ export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefiniti
 }
 
 export function createDailyState(): CitizenDailyState {
-  return { ate: false, drank: false, waterTaken: false, woundTreated: false }
+  return { ate: false, drank: false, waterTaken: false }
 }
 
 export function createStarterHome(citizenId: string): CitizenHome {
