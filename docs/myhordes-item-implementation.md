@@ -1,0 +1,197 @@
+# MyHordes item implementation tracker
+
+This is the developer-side item tracker for Live2Nite. It is deliberately separate from the in-game Codex.
+
+The **Codex is built only from Live2Nite's real `ITEMS` definitions**. Adding an upstream item to this document does not create runtime data and does not make the item appear in-game.
+
+## Update rule
+
+When an item is implemented or materially changed:
+
+1. Add/update the real Live2Nite `ItemType` and `ITEMS` definition.
+2. Add the actual mechanic in the appropriate gameplay system.
+3. Add/update its explicit MyHordes source-ID mapping where known.
+4. Update this document.
+5. Do not add a second Codex-specific item list; the Codex updates from item code automatically.
+
+## Source baseline
+
+The broad upstream registry is tracked against `Zenoo/zen-hordes@f301c05f2527a341f663eea05e6ebd893f181ed6`, generated from MyHordes 5.1.1. Its `ItemId` enum contains **383 upstream item/state IDs** and is the baseline registry for source-sync work.
+
+Current behavioral audits use the public MyHordes v5.1.2 release line (`42f53fa5`, 2026-07-20). When the upstream item registry changes, update this tracker in a focused source-sync pass instead of inserting source-only entries into runtime code.
+
+Status in this document is intentionally more nuanced than "an `ItemType` exists": source variants can map to one stateful Live2Nite item, and a mapped item can still have mechanics deferred to another PR.
+
+## Source-linked identities already represented
+
+These source IDs currently have explicit high-confidence Live2Nite identities in the item/loot work. Stateful variants intentionally share a Live2Nite `ItemType`.
+
+| MyHordes source ID | Live2Nite identity |
+| --- | --- |
+| `water_#00` | `water_ration` |
+| `wood_bad_#00` | `rotten_log` |
+| `metal_bad_#00` | `scrap_metal` |
+| `wood2_#00` | `twisted_plank` |
+| `metal_#00` | `wrought_iron` |
+| `wood_beam_#00` | `patchwork_beam` |
+| `metal_beam_#00` | `metal_support` |
+| `wood_log_#00` | `quality_log` |
+| `plate_raw_#00` | `sheet_metal_bits` |
+| `plate_#00` | `sheet_metal` |
+| `pile_#00` | `battery` |
+| `pharma_#00` | `pharmaceutical_products` |
+| `meca_parts_#00` | `nuts_and_bolts` |
+| `rustine_#00` / `repair_one_#00` | `kwik_fix` |
+| `explo_#00` | `semtex` |
+| `tube_#00` | `copper_pipe` |
+| `electro_#00` | `electronic_component` |
+| `engine_part_#00` | `engine_incomplete` |
+| `engine_#00` | `engine` |
+| `courroie_#00` | `belt` |
+| `deto_#00` | `compact_detonator` |
+| `fence_#00` | `wire_mesh` |
+| `rsc_pack_2_#00` / `rsc_pack_3_#00` | `resource_pack` + contents state |
+| `staff_#00` | `staff` |
+| `wrench_#00` | `adjustable_spanner` |
+| `screw_#00` | `screwdriver` |
+| `swiss_knife_#00` | `swiss_army_knife` |
+| `cutter_#00` | `box_cutter` |
+| `can_opener_#00` | `can_opener` |
+| `knife_#00` | `serrated_knife` |
+| `cutcut_#00` | `machete` |
+| `small_knife_#00` | `pathetic_penknife` |
+| `chain_#00` | `chain` |
+| `bone_#00` | `human_bone` |
+| `chair_basic_#00` | `ektorp_gluten_chair` |
+| `pc_#00` | `pc_base_unit` |
+| `saw_tool_#00` | `saw_tool` |
+| `saw_tool_part_#00` | `saw_tool_part` |
+| `repair_kit_part_raw_#00` | `tool_bag` |
+| `repair_kit_#00` | `repair_kit` |
+| `grenade_empty_#00` | `plastic_bag` |
+| `grenade_#00` | `water_bomb` |
+| `watergun_empty_#00` / `watergun_1_#00` / `watergun_2_#00` | `water_pistol` + charges state |
+| `pilegun_empty_#00` | `battery_launcher` + charges state |
+| `water_can_empty_#00` / `water_can_1_#00` / `water_can_2_#00` / `water_can_3_#00` | `water_cooler_bottle` + charges state |
+| `food_bag_#00` | `doggy_bag` |
+| `food_sandw_#00` | `food` |
+| `food_noodles_#00` | `chinese_noodles` |
+| `food_noodles_hot_#00` | `spicy_chinese_noodles` |
+| `spices_#00` | `strong_spices` |
+| `can_#00` / `can_open_#00` | `can` / `open_can` |
+| `meat_#00` | `tasty_looking_steak` |
+| `vegetable_#00` | `vegetable` |
+| `hmeat_#00` | `human_flesh` |
+| `pet_chick_#00` | `chicken` |
+| `bone_meat_#00` | `meaty_bone` |
+| `poison_part_#00` | `poison_gland` |
+| `chama_#00` | `bag_of_damp_grass` |
+| `door_#00` | `old_door` |
+| `concrete_#00` | `bag_of_cement` |
+| `table_#00` | `table` |
+| `lights_#00` | `box_of_matches` |
+| `wire_#00` | `wire_reel` |
+| `oilcan_#00` | `empty_oil_can` |
+| `lens_#00` | `convex_lens` |
+| `diode_#00` | `laser_diode` |
+| `ryebag_#00` | `grain_sack` |
+| `bquies_#00` | `earplugs` |
+| `claymo_#00` | `claymore` |
+| `guitar_#00` | `guitar` |
+| `torch_#00` | `torch` |
+| `radio_off_#00` / `radio_on_#00` | `radio_cassette_player_off` / `working_radio` |
+| `chest_#00` | `metal_chest` |
+| `chest_tools_#00` | `toolbox` |
+| `chest_citizen_#00` | `citizen_welcome_pack` |
+| `chest_xl_#00` | `xl_chest` |
+| `chest_food_#00` | `food_box` |
+| `electro_box_#00` | `broken_electronic_device` |
+| `deco_box_#00` | `decoration_box` |
+| `mecanism_#00` | `mechanism` |
+| `safe_#00` | `safe` |
+
+## Ordinary normal-loot backlog
+
+These source IDs remain unresolved in the current ordinary normal-loot dependency pass. This is a development backlog, **not a merge blocker for the Codex PR**.
+
+- [ ] `jerrycan_#00`
+- [ ] `gun_#00`
+- [ ] `big_pgun_part_#00`
+- [ ] `iphone_#00`
+- [ ] `drug_hero_#00`
+- [ ] `drug_random_#00`
+- [ ] `disinfect_#00`
+- [ ] `drug_#00`
+- [ ] `vodka_#00`
+- [ ] `pet_rat_#00`
+- [ ] `rhum_#00`
+- [ ] `bandage_#00`
+- [ ] `xanax_#00`
+- [ ] `pet_pig_#00`
+- [ ] `pet_snake_#00`
+- [ ] `pet_cat_#00`
+- [ ] `water_cleaner_#00`
+- [ ] `beta_drug_bad_#00`
+- [ ] `cadaver_#00`
+- [ ] `food_armag_#00`
+- [ ] `wood_plate_part_#00`
+- [ ] `lock_#00`
+- [ ] `trestle_#00`
+- [ ] `home_def_#00`
+- [ ] `car_door_part_#00`
+- [ ] `bag_#00` — Manbag; needs carry-extension mechanics
+- [ ] `cart_part_#00`
+- [ ] `bed_#00`
+- [ ] `lamp_#00`
+- [ ] `music_part_#00`
+- [ ] `vibr_empty_#00`
+- [ ] `cyanure_#00`
+- [ ] `coffee_machine_part_#00`
+- [ ] `sport_elec_empty_#00`
+- [ ] `tagger_#00`
+- [ ] `digger_#00`
+- [ ] `game_box_#00`
+- [ ] `chair_#00`
+- [ ] `powder_#00`
+- [ ] `machine_1_#00`
+- [ ] `machine_2_#00`
+- [ ] `machine_3_#00`
+- [ ] `home_box_#00`
+- [ ] `home_box_xl_#00`
+- [ ] `cigs_#00`
+- [ ] `pilegun_upkit_#00`
+- [ ] `money_#00`
+- [ ] `sheet_#00`
+- [ ] `out_def_#00`
+- [ ] `smelly_meat_#00`
+- [ ] `maglite_off_#00`
+- [ ] `smoke_bomb_#00`
+- [ ] `bplan_drop_#00`
+- [ ] `rp_book_#00`
+- [ ] `book_gen_letter_#00`
+- [ ] `book_gen_box_#00`
+- [ ] `postal_box_#00`
+- [ ] `rp_twin_#00`
+- [ ] `badge_#00`
+- [ ] `angryc_#00`
+- [ ] `chudol_#00`
+- [ ] `lilboo_#00`
+- [ ] `cdelvi_#00`
+- [ ] `cdbrit_#00`
+- [ ] `cdphil_#00`
+- [ ] `catbox_#00`
+- [ ] `pet_snake2_#00`
+- [ ] `cinema_#00`
+- [ ] `fest_#00`
+- [ ] `bretz_#00`
+- [ ] `tekel_#00`
+
+Some entries above carry source event IDs or other conditions that still need classification before they are treated as ordinary gameplay dependencies. Do not implement conditional content merely to make this list smaller.
+
+## Broader upstream registry
+
+The pinned 383-ID `ItemId` registry also contains seasonal, hero/profession, blueprint, key, soul, event, state-variant, and other specialist items that are outside the ordinary-loot backlog above. Keep the pinned upstream enum as the complete discovery source and add a row/checklist entry here when one of those systems enters Live2Nite scope.
+
+Examples include Christmas/Halloween items, blueprints and prints, soul items, fireworks, keys, suits/vests, event weapons, photo states, alarm states, tame-pet states, and specialist quest/RP items.
+
+The important boundary is: **the tracker may know about source-only content; runtime `ITEMS` should not contain source-only placeholders solely for Codex display.**

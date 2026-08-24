@@ -13,6 +13,7 @@ import { BankView } from './components/BankView'
 import { CampingPanel } from './components/CampingPanel'
 import { CitizenRoster } from './components/CitizenRoster'
 import { CitizenStatusBar } from './components/CitizenStatusBar'
+import { CodexView } from './components/CodexView'
 import { ConstructionView } from './components/ConstructionView'
 import { GameNavigation } from './components/GameNavigation'
 import { HomeView } from './components/HomeView'
@@ -136,6 +137,7 @@ export function App() {
       <GameNavigation game={game} screen={screen} outside={player.location.type === 'world'} onChange={setScreen}/>
 
       <div className="screen-stage">
+        {screen === 'codex' && <CodexView/>}
         {screen === 'home' && <HomeView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
         {screen === 'well' && <WellView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
         {screen === 'bank' && <BankView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
