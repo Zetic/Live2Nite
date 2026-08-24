@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BLUEPRINT_ACQUISITION_NOTES, CONSTRUCTION_CODEX_BRANCHES, CONSTRUCTION_CODEX_ENTRIES, GENERIC_BLUEPRINT_CLASSES, constructionCodexStatusLabel, filterConstructionCodex, type ConstructionCodexEntry } from '../../core/constructionCodex'
+import { BLUEPRINT_ACQUISITION_NOTES, CONSTRUCTION_CODEX_BRANCHES, CONSTRUCTION_CODEX_ENTRIES, GENERIC_BLUEPRINT_CLASSES, SPECIALIZED_RUIN_BLUEPRINTS, constructionCodexStatusLabel, filterConstructionCodex, filterSpecializedRuinBlueprints, type ConstructionCodexEntry, type SpecializedRuinBlueprintMetadata } from '../../core/constructionCodex'
 import { blueprintClassLabel, type ConstructionBlueprintClass, type ConstructionBranchId } from '../../core/constructionCatalog'
 import type { ConstructionId } from '../../core/constructionIds'
 
@@ -16,6 +16,13 @@ function EntryButton({entry,selected,onSelect,showDepth=true}:{entry:Constructio
     <span className="construction-codex-row-copy"><strong>{entry.name}</strong><small>{entry.blueprintLabel} · {entry.apCost} AP · {entry.branchLabel}</small></span>
     <StatusChip entry={entry}/>
   </button>
+}
+
+function SpecializedBlueprintRow({entry}:{entry:SpecializedRuinBlueprintMetadata}){
+  return <div className="construction-codex-row wip">
+    <span className="construction-codex-row-copy"><strong>{entry.name}</strong><small>{entry.familyLabel} explorable-ruin family · {entry.rarityLabel}</small></span>
+    <span className="construction-codex-status wip">WIP</span>
+  </div>
 }
 
 function RelationshipButton({id,label,onJump}:{id:ConstructionId;label:string;onJump:(id:ConstructionId)=>void}){
@@ -66,7 +73,8 @@ export function ConstructionCodexView(){
   const[query,setQuery]=useState('')
   const[selected,setSelected]=useState<ConstructionId>(CONSTRUCTION_CODEX_ENTRIES[0].id)
 
-  const visible=useMemo(()=>filterConstructionCodex(query,branch,mode==='blueprints'),[query,branch,mode])
+  const visible=useMemo(()=>filterConstructionCodex(query,mode==='branches'?branch:'all',mode==='blueprints'),[query,branch,mode])
+  const specializedBlueprints=useMemo(()=>mode==='blueprints'?filterSpecializedRuinBlueprints(query):[],[query,mode])
   const selectedEntry=visible.find((entry)=>entry.id===selected)??visible[0]??null
 
   const branchGroups=useMemo(()=>CONSTRUCTION_CODEX_BRANCHES.filter((candidate)=>candidate.id!=='all'&&(branch==='all'||candidate.id===branch)).map((candidate)=>({
@@ -81,6 +89,12 @@ export function ConstructionCodexView(){
     return special.length?[...generic,{id:'special',label:'Special / non-generic unlocks',blueprintClass:5 as ConstructionBlueprintClass,entries:special}]:generic
   },[visible])
 
+  const specializedBlueprintGroups=useMemo(()=>([2,3,4] as const).map((rarity)=>({
+    id:`specialized-${rarity}`,
+    label:`${blueprintClassLabel(rarity)} · specialized ruins`,
+    entries:specializedBlueprints.filter((entry)=>entry.rarity===rarity),
+  })).filter((group)=>group.entries.length>0),[specializedBlueprints])
+
   const jump=(id:ConstructionId)=>{const entry=ENTRY_BY_ID.get(id);if(!entry)return;setMode('branches');setBranch(entry.branchId);setSelected(id)}
 
   return <>
@@ -89,13 +103,18 @@ export function ConstructionCodexView(){
       <button type="button" className={mode==='blueprints'?'active':''} aria-selected={mode==='blueprints'} onClick={()=>setMode('blueprints')}><strong>Blueprint unlocks</strong><small>Grouped by rarity</small></button>
     </div>
     {mode==='branches'&&<div className="construction-codex-branch-tabs" role="tablist" aria-label="Construction branches">{CONSTRUCTION_CODEX_BRANCHES.map((entry)=><button type="button" key={entry.id} className={branch===entry.id?'active':''} aria-selected={branch===entry.id} onClick={()=>setBranch(entry.id)}><span>{entry.label}</span><small>{entry.count}</small></button>)}</div>}
-    <div className="codex-toolbar"><label><span>Search constructions</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Name, branch, blueprint, material, mechanic…"/></label><strong>{visible.length} shown · 166 total</strong></div>
+    <div className="codex-toolbar"><label><span>Search constructions</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Name, branch, blueprint, material, mechanic…"/></label><strong>{mode==='blueprints'?`${visible.length} construction unlocks · ${specializedBlueprints.length} specialized shown / ${SPECIALIZED_RUIN_BLUEPRINTS.length} total`:`${visible.length} shown · 166 total`}</strong></div>
     <div className="codex-layout construction-codex-layout">
       <section className="codex-list-panel construction-codex-list" aria-label="Construction Codex entries">
-        {mode==='branches'?branchGroups.map((group)=><section className="construction-codex-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3>{group.entries.map((entry)=><EntryButton key={entry.id} entry={entry} selected={selectedEntry?.id===entry.id} onSelect={()=>setSelected(entry.id)}/>)}</section>):blueprintGroups.map((group)=><section className="construction-codex-group blueprint-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3><p>{group.id==='special'?'These constructions use special/manual unlock rules rather than generic blueprint items.':BLUEPRINT_ACQUISITION_NOTES[group.blueprintClass]}</p>{group.entries.map((entry)=><EntryButton key={entry.id} entry={entry} selected={selectedEntry?.id===entry.id} onSelect={()=>setSelected(entry.id)} showDepth={false}/>)}</section>)}
-        {!visible.length&&<p className="empty-state">No constructions match this view.</p>}
+        {mode==='branches'
+          ?branchGroups.map((group)=><section className="construction-codex-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3>{group.entries.map((entry)=><EntryButton key={entry.id} entry={entry} selected={selectedEntry?.id===entry.id} onSelect={()=>setSelected(entry.id)}/>)}</section>)
+          :<>
+            {blueprintGroups.map((group)=><section className="construction-codex-group blueprint-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3><p>{group.id==='special'?'These constructions use special/manual unlock rules rather than generic blueprint items.':BLUEPRINT_ACQUISITION_NOTES[group.blueprintClass]}</p>{group.entries.map((entry)=><EntryButton key={entry.id} entry={entry} selected={selectedEntry?.id===entry.id} onSelect={()=>setSelected(entry.id)} showDepth={false}/>)}</section>)}
+            {specializedBlueprintGroups.map((group)=><section className="construction-codex-group blueprint-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3><p>Specialized explorable-ruin blueprint metadata. Runtime acquisition and the dedicated unlock pool remain WIP.</p>{group.entries.map((entry)=><SpecializedBlueprintRow key={entry.id} entry={entry}/>)}</section>)}
+          </>}
+        {!visible.length&&!(mode==='blueprints'&&specializedBlueprints.length)&&<p className="empty-state">No constructions or blueprint metadata match this view.</p>}
       </section>
-      {selectedEntry?<Detail entry={selectedEntry} onJump={jump}/>:<article className="codex-detail"><p className="empty-state">No construction is available for the current filter.</p></article>}
+      {selectedEntry?<Detail entry={selectedEntry} onJump={jump}/>:specializedBlueprints.length?<article className="codex-detail"><p className="section-kicker">Explorable ruin blueprints</p><h2>Specialized blueprint families</h2><p className="codex-purpose">Hotel, Bunker, and Hospital each have Uncommon, Rare, and Very Rare blueprint variants in the source catalogue. These nine entries are reference metadata only until the explorable-ruin acquisition and dedicated unlock-pool mechanics are implemented.</p><div className="construction-wip-banner"><strong>Work in progress</strong><span>No specialized ruin blueprint currently becomes a runtime Live2Nite item or changes construction discovery.</span></div></article>:<article className="codex-detail"><p className="empty-state">No construction is available for the current filter.</p></article>}
     </div>
   </>
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER } from '../src/core/constructionCatalog'
-import { CONSTRUCTION_CODEX_ENTRIES, GENERIC_BLUEPRINT_CLASSES } from '../src/core/constructionCodex'
+import { CONSTRUCTION_CODEX_ENTRIES, GENERIC_BLUEPRINT_CLASSES, SPECIALIZED_RUIN_BLUEPRINTS, filterSpecializedRuinBlueprints } from '../src/core/constructionCodex'
 import { CONSTRUCTION_ORDER, CONSTRUCTIONS, blueprintEligibleProjects, constructionBlueprintTier, constructionImplementationStatus, constructionPlayable, constructionUnlocked } from '../src/core/construction'
 import { createInitialGame } from '../src/core/game'
 import { migrateStoredGame } from '../src/persistence/IndexedDbGameRepository'
@@ -81,6 +81,17 @@ describe('complete current construction catalog',()=>{
     expect(common.some((id)=>constructionImplementationStatus(id)==='wip')).toBe(true)
     for(const tier of GENERIC_BLUEPRINT_CLASSES)expect(blueprintEligibleProjects(game,tier).every((id)=>constructionBlueprintTier(id)===tier)).toBe(true)
     expect([...blueprintEligibleProjects(game,1),...blueprintEligibleProjects(game,2),...blueprintEligibleProjects(game,3),...blueprintEligibleProjects(game,4)].some((id)=>constructionBlueprintTier(id)>=5)).toBe(false)
+  })
+
+  it('represents all nine specialized explorable-ruin blueprint variants as WIP metadata',()=>{
+    expect(SPECIALIZED_RUIN_BLUEPRINTS).toHaveLength(9)
+    expect(new Set(SPECIALIZED_RUIN_BLUEPRINTS.map((entry)=>entry.id)).size).toBe(9)
+    expect(SPECIALIZED_RUIN_BLUEPRINTS.every((entry)=>entry.implementation==='wip')).toBe(true)
+    expect(Object.fromEntries(['hotel','bunker','hospital'].map((family)=>[family,SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>entry.family===family).length]))).toEqual({hotel:3,bunker:3,hospital:3})
+    expect(Object.fromEntries([2,3,4].map((rarity)=>[rarity,SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>entry.rarity===rarity).length]))).toEqual({2:3,3:3,4:3})
+    expect(filterSpecializedRuinBlueprints('hotel')).toHaveLength(3)
+    expect(filterSpecializedRuinBlueprints('very rare')).toHaveLength(3)
+    expect(CONSTRUCTION_CATALOG_ORDER).toHaveLength(166)
   })
 
   it('normalizes schema-19 saves onto the complete catalog and drops the obsolete prototype-only drill',()=>{

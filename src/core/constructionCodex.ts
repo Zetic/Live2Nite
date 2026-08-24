@@ -75,7 +75,51 @@ export const CONSTRUCTION_CODEX_BRANCHES:readonly {id:'all'|ConstructionBranchId
   ...CONSTRUCTION_BRANCHES.map((branch)=>({id:branch.id,label:branch.label,count:CONSTRUCTION_CODEX_ENTRIES.filter((entry)=>entry.branchId===branch.id).length})),
 ]
 
-export const GENERIC_BLUEPRINT_CLASSES:readonly ConstructionBlueprintClass[]=[1,2,3,4]
+export type SpecializedRuinBlueprintFamily='hotel'|'bunker'|'hospital'
+export type SpecializedRuinBlueprintRarity=2|3|4
+export interface SpecializedRuinBlueprintMetadata{
+  id:string
+  name:string
+  family:SpecializedRuinBlueprintFamily
+  familyLabel:string
+  rarity:SpecializedRuinBlueprintRarity
+  rarityLabel:'Uncommon'|'Rare'|'Very Rare'
+  acquisitionNote:string
+  implementation:'wip'
+}
+
+const specializedRuinBlueprint=(family:SpecializedRuinBlueprintFamily,familyLabel:string,rarity:SpecializedRuinBlueprintRarity,rarityLabel:SpecializedRuinBlueprintMetadata['rarityLabel']):SpecializedRuinBlueprintMetadata=>({
+  id:`ruin_${family}_${rarityLabel.toLocaleLowerCase().replaceAll(' ','_')}`,
+  name:`${familyLabel} Blueprint (${rarityLabel.toLocaleLowerCase()})`,
+  family,
+  familyLabel,
+  rarity,
+  rarityLabel,
+  acquisitionNote:`Specialized ${familyLabel} ruin blueprint. The source family and rarity are catalogued; explorable-ruin acquisition and its dedicated unlock pool are not implemented yet.`,
+  implementation:'wip',
+})
+
+export const SPECIALIZED_RUIN_BLUEPRINTS:readonly SpecializedRuinBlueprintMetadata[]=[
+  specializedRuinBlueprint('hotel','Hotel',2,'Uncommon'),
+  specializedRuinBlueprint('bunker','Bunker',2,'Uncommon'),
+  specializedRuinBlueprint('hospital','Hospital',2,'Uncommon'),
+  specializedRuinBlueprint('hotel','Hotel',3,'Rare'),
+  specializedRuinBlueprint('bunker','Bunker',3,'Rare'),
+  specializedRuinBlueprint('hospital','Hospital',3,'Rare'),
+  specializedRuinBlueprint('hotel','Hotel',4,'Very Rare'),
+  specializedRuinBlueprint('bunker','Bunker',4,'Very Rare'),
+  specializedRuinBlueprint('hospital','Hospital',4,'Very Rare'),
+]
+
+export function filterSpecializedRuinBlueprints(query:string):SpecializedRuinBlueprintMetadata[]{
+  const needle=query.trim().toLocaleLowerCase()
+  if(!needle)return[...SPECIALIZED_RUIN_BLUEPRINTS]
+  return SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>[
+    entry.name,entry.family,entry.familyLabel,entry.rarityLabel,entry.acquisitionNote,entry.implementation,'explorable ruin','specialized blueprint',
+  ].some((value)=>value.toLocaleLowerCase().includes(needle)))
+}
+
+export const GENERIC_BLUEPRINT_CLASSES=[1,2,3,4] as const
 
 export const BLUEPRINT_ACQUISITION_NOTES:Readonly<Record<ConstructionBlueprintClass,string>>={
   0:'No blueprint required; the site is registered with its no-blueprint branch.',

@@ -89,7 +89,9 @@ The full parent/child tree is grouped under the seven branch roots. Each detail 
 
 ### Blueprint unlocks
 
-Shows generic blueprint projects grouped by Common, Uncommon, Rare and Very Rare, plus a separate special/non-generic section.
+Shows generic blueprint projects grouped by Common, Uncommon, Rare and Very Rare, plus a separate special/non-generic construction section.
+
+The blueprint view also represents the **nine specialized explorable-ruin blueprint variants** as WIP metadata: Hotel, Bunker, and Hospital families at Uncommon, Rare, and Very Rare. These entries are reference-only until their ruin acquisition and dedicated unlock-pool mechanics exist; they are not injected into the generic construction blueprint pool.
 
 The Codex is intentionally complete even when the current town has not discovered a project. Construction Sites remains the town-state view; the Codex is the reference/implementation view.
 
