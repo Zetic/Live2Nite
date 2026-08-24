@@ -49,11 +49,12 @@ export function workshopConstructionDiscountPercent(state:GameState):number{retu
 export function workshopCreditedLabor(baseAp:number,level:number):number{return Math.max(0,baseAp-Math.ceil(baseAp*(100-Math.min(30,level*6))/100))}
 export function constructionUpgradeDefenseBonus(state:GameState,projectId:ConstructionId):number{
   const track=constructionUpgradeTrack(projectId)
-  if(track?.kind!=='defense_total')return 0
+  if(track?.kind!=='defense_total'||!state.town.construction[projectId]?.completed)return 0
   const level=Math.min(constructionUpgradeLevel(state,projectId),track.maxLevel)
   const base=track.values[0]??0
   return Math.max(0,(track.values[level]??base)-base)
 }
+export function totalConstructionUpgradeDefenseBonus(state:GameState):number{return ACTIVE_CONSTRUCTION_UPGRADE_IDS.reduce((sum,id)=>sum+constructionUpgradeDefenseBonus(state,id),0)}
 
 export function canCitizenVoteForUpgrade(state:GameState,citizenId:string,projectId:ConstructionId):boolean{const citizen=state.citizens.find((candidate)=>candidate.id===citizenId);return Boolean(citizen?.alive&&citizen.location.type==='town'&&state.clock.phase==='day'&&!citizenUpgradeVote(state,citizenId)&&constructionUpgradeAvailable(state,projectId))}
 export function castConstructionUpgradeVote(state:GameState,citizenId:string,projectId:ConstructionId):GameState{if(!canCitizenVoteForUpgrade(state,citizenId,projectId))return state;const current=upgradeState(state);return withUpgradeState(state,{...current,votes:{...current.votes,[citizenId]:projectId}})}
@@ -83,6 +84,18 @@ function applyWorkshopUpgradeLabor(state:GameState,fromLevel:number,toLevel:numb
   }
   return construction
 }
+function ensureWorkshopBaseline(state:GameState):GameState{
+  const level=constructionUpgradeLevel(state,'workshop')
+  if(level<=0)return state
+  const construction={...state.town.construction};let changed=false
+  for(const [id,project] of Object.entries(state.town.construction) as Array<[ConstructionId,GameState['town']['construction'][ConstructionId]]>){
+    if(project.completed||id==='workshop')continue
+    const baseAp=CONSTRUCTION_CATALOG[id].apCost
+    const baseline=workshopCreditedLabor(baseAp,level)
+    if(project.apContributed<baseline){construction[id]={...project,apContributed:baseline};changed=true}
+  }
+  return changed?{...state,town:{...state.town,construction}}:state
+}
 function applyWinningUpgrade(state:GameState,projectId:ConstructionId):GameState{
   const track=constructionUpgradeTrack(projectId);if(!track)return state
   const current=upgradeState(state);const fromLevel=constructionUpgradeLevel(state,projectId);if(fromLevel>=track.maxLevel)return state
@@ -99,4 +112,9 @@ export function resolveConstructionUpgradeVotesAtMidnight(state:GameState):GameS
   const upgraded=applyWinningUpgrade({...state,rngState:roll.state},projectId);const after=upgradeState(upgraded)
   return withUpgradeState(upgraded,{...after,resolvedDay:state.day,lastWinner:projectId,lastWinnerDay:state.day,lastWinningVotes:top})
 }
-export function resetConstructionUpgradeVotesForNewDay(state:GameState):GameState{const current=upgradeState(state);if(!Object.keys(current.votes).length)return state;return withUpgradeState(state,{...current,votes:{}})}
+export function resetConstructionUpgradeVotesForNewDay(state:GameState):GameState{
+  const withBaseline=ensureWorkshopBaseline(state)
+  const current=upgradeState(withBaseline)
+  if(!Object.keys(current.votes).length)return withBaseline
+  return withUpgradeState(withBaseline,{...current,votes:{}})
+}
