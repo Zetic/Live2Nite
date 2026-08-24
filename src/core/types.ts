@@ -113,7 +113,7 @@ export interface SpecialSiteState { type:SpecialSiteType; status:SpecialSiteStat
 export interface WorldZone { x:number; y:number; discovered:boolean; zombies:number; searchesRemaining:number; searchedBy:string[]; depletedSearchedBy:string[]; hiddenLoot:ItemType[]; groundItems:ItemInstance[]; campImprovements:number; specialSite?:SpecialSiteState }
 export interface ZoneIntelState { observedZombies:number|null; lastObservedDay:number|null; lastObservedHour:number|null }
 export interface WorldState { minX:number; maxX:number; minY:number; maxY:number; zones:Record<string,WorldZone>; intel:Record<string,ZoneIntelState> }
-export interface ConstructionProjectState { id:ConstructionId; discovered:boolean; apContributed:number; completed:boolean; hp:number }
+export interface ConstructionProjectState { id:ConstructionId; discovered:boolean; apContributed:number; completed:boolean }
 export interface TownWellState { water:number }
 export interface TownState { gateOpen:boolean; defense:number; bank:ItemInstance[]; construction:Record<ConstructionId,ConstructionProjectState>; well:TownWellState }
 export interface HomeAttackOutcome { citizenId:string; zombies:number; defense:number; survived:boolean }

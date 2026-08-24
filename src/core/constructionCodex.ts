@@ -14,9 +14,7 @@ export interface ConstructionCodexEntry{
   blueprintClass:ConstructionBlueprintClass
   blueprintLabel:string
   apCost:number
-  maxHp:number
   defense:number
-  breakable:boolean
   temporary:boolean
   hasUpgrade:boolean
   resources:readonly {name:string;amount:number}[]
@@ -49,9 +47,7 @@ export function constructionCodexEntry(id:ConstructionId):ConstructionCodexEntry
     blueprintClass:source.blueprintClass,
     blueprintLabel:blueprintClassLabel(source.blueprintClass),
     apCost:source.apCost,
-    maxHp:source.maxHp,
     defense:source.defense,
-    breakable:source.breakable,
     temporary:source.temporary,
     hasUpgrade:source.hasUpgrade,
     resources:source.resources,

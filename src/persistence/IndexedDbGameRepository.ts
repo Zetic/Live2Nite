@@ -1,6 +1,6 @@
 import { createCitizenCampingState } from '../core/camping'
 import { createGameClock } from '../core/clock'
-import { CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionBlueprintTier, constructionMaxHp, constructionPlayable, createConstructionState } from '../core/construction'
+import { CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionBlueprintTier, constructionPlayable, createConstructionState } from '../core/construction'
 import { HOME_LEVELS, createDailyState, createStarterHome } from '../core/home'
 import { ITEM_TYPE_IDS } from '../core/itemCatalog'
 import { createItemInstance } from '../core/items'
@@ -48,11 +48,10 @@ function normalizeConstruction(existing:Partial<GameState['town']['construction'
       ? base[projectId].discovered||legacy.discovered===true||completed
       : legacy.discovered??(completed||base[projectId].discovered)
     base[projectId]={
-      ...base[projectId],
-      ...legacy,
       id:projectId,
       discovered,
-      hp:completed?(typeof legacy.hp==='number'?legacy.hp:constructionMaxHp(projectId)):0,
+      apContributed:typeof legacy.apContributed==='number'?legacy.apContributed:0,
+      completed,
     }
   }
   return base
