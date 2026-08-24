@@ -17,10 +17,6 @@ export const CODEX_ITEM_CATEGORIES: readonly { id: CodexItemCategory; label: str
   { id: 'miscellaneous', label: 'Miscellaneous' },
 ]
 
-const categoryLabels: Record<ItemDisplayCategory, string> = Object.fromEntries(
-  CODEX_ITEM_CATEGORIES.filter((category): category is { id: ItemDisplayCategory; label: string } => category.id !== 'all').map((category) => [category.id, category.label]),
-) as Record<ItemDisplayCategory, string>
-
 const sourceLabels = {
   DIE2NITE_ARCHIVE: 'Die2Nite archive',
   HORDES_V4_4: 'Hordes v4.4',
@@ -42,6 +38,9 @@ export interface CodexItemEntry {
 
 function titleCase(value: string): string {
   return value.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+}
+function categoryLabel(category: ItemDisplayCategory): string {
+  return CODEX_ITEM_CATEGORIES.find((entry)=>entry.id===category)?.label ?? titleCase(category)
 }
 function killRange(min: number, max: number): string { return min === max ? `${min}` : `${min}–${max}` }
 function itemNames(types: readonly ItemType[]): string { return types.map((type) => ITEMS[type].name).join(', ') }
@@ -90,7 +89,7 @@ export function codexItemEntry(type: ItemType): CodexItemEntry {
     name: definition.name,
     purpose: definition.purpose,
     category: definition.displayCategory,
-    categoryLabel: categoryLabels[definition.displayCategory],
+    categoryLabel: categoryLabel(definition.displayCategory),
     sourceLabel: sourceLabels[definition.source],
     capabilities: definition.capabilities.map(titleCase),
     facts,
