@@ -11,7 +11,7 @@ function firstFood(items:ItemInstance[]):ItemInstance|undefined{return items.fin
 function desiredByPlan(type:ItemType,plan:ExpeditionPlan|null):boolean{if(!plan)return false;return(type==='water_ration'&&plan.loadout.water)||(isFood(type)&&plan.loadout.food)||type===plan.loadout.weaponType}
 function neededForNextHome(citizen:Citizen,type:ItemType):boolean{const target=nextHomeDefinition(citizen.home.level);const required=target?.resources[type]??0;if(required<=0)return false;return personalMaterialCount(citizen,type)<=required}
 function legalOpenableBeforeUnload(citizen:Citizen,actions:GameCommand[]):GameCommand|null{
-  for(const item of citizen.inventory){if(item.type!=='construction_kit'&&!openableDefinition(item.type))continue;const open=itemAction(actions,'OPEN_CONTAINER',item.id);if(open)return open}
+  for(const item of citizen.inventory){if(!openableDefinition(item.type))continue;const open=itemAction(actions,'OPEN_CONTAINER',item.id);if(open)return open}
   return null
 }
 function bankFoodAction(state:GameState,actions:GameCommand[]):GameCommand|null{
