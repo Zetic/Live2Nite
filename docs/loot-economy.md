@@ -15,6 +15,28 @@ At finalization, implemented/activated mechanics are checked against the current
 
 Source weights are fidelity data. Live2Nite does not rebalance copied MyHordes weights simply to fit the current partial item catalogue.
 
+## Current-source audit — 2026-08-23
+
+The merge audit was repeated against the current public MyHordes line rather than assuming the pinned 5.1.1 export was still current.
+
+- Current public release: **v5.1.2** (`42f53fa5`, 2026-07-20).
+- Current master inspected during the audit: **`c05060df`**.
+- `ItemGroupDataService.php` still contains the same depleted table (`wood_bad_#00` 20 / `metal_bad_#00` 12) and the same normal-source weights used by the manifest for the items represented by this PR.
+- Resource Pack actions still use the 3 → 2 → 1 morph chain, require room for intermediate outputs, and consume the final pack.
+- Can still uses the source can-opener requirement and deterministic open-can morph.
+- Toolbox and Food Box still consume the container and use their distinct source opener requirement families; the current Workshop recipe table still carries the Toolbox weights `12/17/13/13/25/19` and Food Box weights `8/11/7/13/8`.
+- `grenade_empty_#00` still maps to the fillable Plastic Bag path. Filling consumes one water item and morphs it to the Water Bomb state.
+- Water Bomb still consumes itself and uses `zone_kill_2_4`; Live2Nite therefore uses **2–4 kills**, not the older adapted 1–5 range.
+- Water Pistol still fills directly to the three-charge state; successive attacks morph 3 → 2 → 1 → empty and kill one zombie per shot.
+- Water Cooler Bottle states still refill one step at a time: empty → 1 → 2 → 3, consuming one water item per refill.
+- Radio Cassette Player still consumes one Battery and morphs to the powered radio state.
+- Ektorp-Gluten Chair still has 50% break / 50% one-zombie kill groups. PC Base Unit still has 50% break and a guaranteed one-zombie kill.
+- Current recipes still confirm Sheet Metal (bits) → Sheet Metal, Quality Log → Twisted Plank, Chinese Noodles + Strong Spices + Water → spicy noodles, Damaged Hacksaw + Kwik-Fix + Nuts & Bolts → Hacksaw, and the Repair Kit/Engine assembly chains represented in this pass.
+
+One intentional approximation remains documented: the current Staff fixture still contains the malformed/ambiguous `60/60` break group inherited from the source data. Live2Nite keeps that weapon marked `confidence: 'approximate'` rather than inventing a falsely exact source percentage.
+
+Technician/hero/event alternatives referenced by the current fixtures remain gated because those systems are outside this PR's activated scope.
+
 ## Merge boundary
 
 The dependency-closure rule applies to **activated acquisition paths**, not recursively to every source ID recorded in a manifest.
@@ -70,7 +92,7 @@ Each opening produces either a Twisted Plank or Wrought Iron. If contents remain
 
 ### Toolbox
 
-Pinned generated source weights:
+Current source weights:
 
 | Output | Weight |
 | --- | ---: |
