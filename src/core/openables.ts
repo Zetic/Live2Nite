@@ -28,7 +28,7 @@ export interface OpenableResolution {
 }
 
 const MELEE_BOX_OPENERS:readonly ItemType[]=[
-  'adjustable_spanner','box_cutter','human_bone','machete','pathetic_penknife','chain',
+  'ektorp_gluten_chair','pc_base_unit','adjustable_spanner','box_cutter','human_bone','machete','pathetic_penknife','chain',
   'serrated_knife','staff','can_opener','screwdriver','swiss_army_knife',
 ]
 const MAIN_OPENERS:readonly ItemType[]=['saw_tool','can_opener','screwdriver','swiss_army_knife']
@@ -101,8 +101,7 @@ export const OPENABLES:Partial<Record<ItemType,OpenableDefinition>>={
   can:{type:'can',source:'MYHORDES_CURRENT',mode:'consume',morphTo:'open_can',openableBy:MAIN_OPENERS,outputTable:canMorphTable},
   // chest_food_#00 and chest_tools_#00 use the distinct source "melee" opener family.
   food_box:{type:'food_box',source:'MYHORDES_CURRENT',mode:'consume',openableBy:MELEE_BOX_OPENERS,outputTable:foodBoxTable},
-  // MyHordes CHEST_TOOLS.openableBy also includes CHAIR_BASIC, PC and HURLING_STICK. The first
-  // two land with their own ordinary-item mechanics; HURLING_STICK remains event-gated.
+  // HURLING_STICK is also source-valid for CHEST_TOOLS but remains event-gated.
   toolbox:{type:'toolbox',source:'MYHORDES_CURRENT',mode:'consume',openableBy:MELEE_BOX_OPENERS,outputTable:toolboxTable},
 }
 
