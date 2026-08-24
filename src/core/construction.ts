@@ -208,10 +208,12 @@ export function constructionUnlocked(state: GameState, projectId: ConstructionId
   return constructionPlayable(projectId)&&constructionDiscovered(state,projectId)&&CONSTRUCTIONS[projectId].prerequisites.every((id) => state.town.construction[id]?.completed)
 }
 
-export function commonChildrenToDiscover(state:GameState,parentId:ConstructionId):ConstructionId[]{
+export function blueprintEligibleProjects(state:GameState,tier:ConstructionBlueprintTier):ConstructionId[]{
   return CONSTRUCTION_ORDER.filter((id)=>{
     const definition=CONSTRUCTIONS[id]
-    return constructionPlayable(id)&&constructionBlueprintTier(id)===0&&definition.parentId===parentId&&!state.town.construction[id]?.discovered
+    const project=state.town.construction[id]
+    if(!constructionPlayable(id)||project?.discovered||constructionBlueprintTier(id)!==tier)return false
+    return !definition.parentId||state.town.construction[definition.parentId]?.discovered===true
   })
 }
 
