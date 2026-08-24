@@ -79,6 +79,23 @@ describe('source-backed openables',()=>{
     }
   })
 
+  it('opens a Worn Leather Bag into exactly one weighted blueprint',()=>{
+    const table=OPENABLES.worn_leather_bag?.outputTable
+    expect(table?.source).toBe('MYHORDES_CURRENT')
+    expect(table?.entries.map((entry)=>[entry.items[0]?.type,entry.weight])).toEqual([
+      ['common_blueprint',50],
+      ['uncommon_blueprint',35],
+      ['rare_blueprint',10],
+      ['very_rare_blueprint',5],
+    ])
+    let game=withInventory([createItemInstance('bag','worn_leather_bag')],9109)
+    const action=openAction(game,'bag')
+    expect(action).toBeDefined()
+    game=executeCommand(game,action!).state
+    expect(game.citizens[0].inventory).toHaveLength(1)
+    expect(['common_blueprint','uncommon_blueprint','rare_blueprint','very_rare_blueprint']).toContain(game.citizens[0].inventory[0].type)
+  })
+
   it('keeps the exact MyHordes Toolbox weights in the source table',()=>{
     const table=OPENABLES.toolbox?.outputTable
     expect(table?.source).toBe('MYHORDES_CURRENT')

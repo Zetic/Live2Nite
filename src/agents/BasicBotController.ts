@@ -24,6 +24,7 @@ export class BasicBotController implements AgentController {
     const hydration=hydrationAction(game,citizen,actions);if(hydration)return hydration
     const treatment=conditionTreatmentAction(game,citizen,actions);if(treatment)return treatment
     if(citizen.location.type==='town'){
+      const blueprint=actions.find((action)=>action.type==='READ_BLUEPRINT')??null;if(blueprint)return blueprint
       const plan=planExpedition(game,citizenId);const unload=unloadAction(citizen,actions,plan,mission?.phase==='unload');if(unload)return unload;if(mission?.phase==='unload')return null
       const commitment=commitmentForCitizen(game,citizenId);const reservedAp=reservedApForCitizen(game,citizenId)
       if(!mission&&reservedAp>=citizen.ap){const packages=packageSharingAction(citizen,actions,null,game.clock.hour);if(packages)return packages;const reservedHydration=hydrationAction(game,citizen,actions,{forceThirstTreatment:game.clock.hour>=AI_TUNING.lateHydrationTreatmentHour});if(reservedHydration)return reservedHydration;return null}

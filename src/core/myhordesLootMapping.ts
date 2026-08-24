@@ -67,6 +67,7 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'deco_box_#00':mapped('decoration_box'),
   'mecanism_#00':mapped('mechanism'),
   'safe_#00':mapped('safe'),
+  'bplan_drop_#00':mapped('worn_leather_bag'),
   'plate_#00':mapped('sheet_metal'),
   'door_#00':mapped('old_door'),
   'concrete_#00':mapped('bag_of_cement'),

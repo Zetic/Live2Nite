@@ -9,7 +9,7 @@ import { ContextRegister } from './ContextRegister'
 function constructionCommand(actions:GameCommand[],projectId:ConstructionId){return actions.find((action):action is Extract<GameCommand,{type:'CONTRIBUTE_CONSTRUCTION'}>=>action.type==='CONTRIBUTE_CONSTRUCTION'&&action.projectId===projectId)}
 function resourceEntries(resources:Partial<Record<ItemType,number>>){return Object.entries(resources) as [ItemType,number][]}
 function categoryLabel(category:ConstructionCategory):string{return CONSTRUCTION_CATEGORIES.find((entry)=>entry.id===category)?.label??category}
-function constructionEvent(event:GameEvent):boolean{return['CONSTRUCTION_DISCOVERED','CONSTRUCTION_AP_CONTRIBUTED','CONSTRUCTION_COMPLETED','CONSTRUCTION_EXPIRED','CONSTRUCTION_GENERATED_ITEM'].includes(event.type)}
+function constructionEvent(event:GameEvent):boolean{return['BLUEPRINT_READ','CONSTRUCTION_DISCOVERED','CONSTRUCTION_AP_CONTRIBUTED','CONSTRUCTION_COMPLETED','CONSTRUCTION_EXPIRED','CONSTRUCTION_GENERATED_ITEM'].includes(event.type)}
 
 export function ConstructionView({game,legalActions,act}:{game:GameState;legalActions:GameCommand[];act:(command:GameCommand|undefined)=>void}){
   const[category,setCategory]=useState<ConstructionCategory|'all'>('all')

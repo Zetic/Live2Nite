@@ -86,6 +86,18 @@ const foodBoxTable:WeightedLootTable={
   ],
 }
 
+const wornLeatherBagTable:WeightedLootTable={
+  id:'myhordes.worn_leather_bag',
+  source:'MYHORDES_CURRENT',
+  // Current source spawn_cbox: common 50, uncommon 35, rare 10, very rare 5.
+  entries:[
+    lootEntry('common_blueprint',50),
+    lootEntry('uncommon_blueprint',35),
+    lootEntry('rare_blueprint',10),
+    lootEntry('very_rare_blueprint',5),
+  ],
+}
+
 const canMorphTable:WeightedLootTable={
   id:'myhordes.can_open',
   source:'MYHORDES_CURRENT',
@@ -96,6 +108,7 @@ const canMorphTable:WeightedLootTable={
 
 export const OPENABLES:Partial<Record<ItemType,OpenableDefinition>>={
   resource_pack:{type:'resource_pack',source:'MYHORDES_CURRENT',mode:'remaining_contents',outputTable:resourcePackTable},
+  worn_leather_bag:{type:'worn_leather_bag',source:'MYHORDES_CURRENT',mode:'consume',outputTable:wornLeatherBagTable},
   doggy_bag:{type:'doggy_bag',source:'MYHORDES_CURRENT',mode:'consume',outputTable:doggyBagTable},
   // MyHordes can_#00 uses the "main" opener family: Hacksaw, Can Opener, Screwdriver, Swiss Army Knife.
   can:{type:'can',source:'MYHORDES_CURRENT',mode:'consume',morphTo:'open_can',openableBy:MAIN_OPENERS,outputTable:canMorphTable},

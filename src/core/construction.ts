@@ -193,9 +193,25 @@ export const CONSTRUCTION_ORDER: ConstructionId[] = [...CONSTRUCTION_IDS]
 export function constructionBlueprintTier(projectId:ConstructionId):ConstructionBlueprintTier{return CONSTRUCTIONS[projectId].blueprintTier??4}
 export function constructionPlayable(projectId:ConstructionId):boolean{return CONSTRUCTIONS[projectId].playable===true}
 export function constructionMaxHp(projectId:ConstructionId):number{return Math.max(0,CONSTRUCTIONS[projectId].maxHp??CONSTRUCTIONS[projectId].apCost)}
-export function constructionInitiallyDiscovered(projectId:ConstructionId):boolean{
-  const definition=CONSTRUCTIONS[projectId]
-  return constructionPlayable(projectId)&&constructionBlueprintTier(projectId)===0&&!definition.parentId
+function noBlueprintPathFromRoot(projectId:ConstructionId,seen=new Set<ConstructionId>()):boolean{
+  if(seen.has(projectId)||!constructionPlayable(projectId)||constructionBlueprintTier(projectId)!==0)return false
+  seen.add(projectId)
+  const parent=CONSTRUCTIONS[projectId].parentId
+  return !parent||noBlueprintPathFromRoot(parent,seen)
+}
+export function constructionInitiallyDiscovered(projectId:ConstructionId):boolean{return noBlueprintPathFromRoot(projectId)}
+
+export function constructionDiscoveryCascade(projectId:ConstructionId):ConstructionId[]{
+  const discovered:ConstructionId[]=[projectId]
+  const queue:ConstructionId[]=[projectId]
+  while(queue.length){
+    const parentId=queue.shift()!
+    for(const id of CONSTRUCTION_ORDER){
+      if(discovered.includes(id)||!constructionPlayable(id)||constructionBlueprintTier(id)!==0||CONSTRUCTIONS[id].parentId!==parentId)continue
+      discovered.push(id);queue.push(id)
+    }
+  }
+  return discovered
 }
 
 export function createConstructionState(): Record<ConstructionId, ConstructionProjectState> {
@@ -208,10 +224,12 @@ export function constructionUnlocked(state: GameState, projectId: ConstructionId
   return constructionPlayable(projectId)&&constructionDiscovered(state,projectId)&&CONSTRUCTIONS[projectId].prerequisites.every((id) => state.town.construction[id]?.completed)
 }
 
-export function commonChildrenToDiscover(state:GameState,parentId:ConstructionId):ConstructionId[]{
+export function blueprintEligibleProjects(state:GameState,tier:ConstructionBlueprintTier):ConstructionId[]{
   return CONSTRUCTION_ORDER.filter((id)=>{
     const definition=CONSTRUCTIONS[id]
-    return constructionPlayable(id)&&constructionBlueprintTier(id)===0&&definition.parentId===parentId&&!state.town.construction[id]?.discovered
+    const project=state.town.construction[id]
+    if(!constructionPlayable(id)||project?.discovered||constructionBlueprintTier(id)!==tier)return false
+    return !definition.parentId||state.town.construction[definition.parentId]?.discovered===true
   })
 }
 
@@ -293,7 +311,7 @@ export function dailyConstructionOutputs(state:GameState):Array<{projectId:Const
 }
 export function constructionFlatDefenseForProject(projectId:ConstructionId):number{return CONSTRUCTIONS[projectId].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'town_defense_flat'}>=>effect.type==='town_defense_flat').reduce((sum,effect)=>sum+effect.amount,0)}
 
-function unlockValue(state:GameState,projectId:ConstructionId):number{return CONSTRUCTION_ORDER.filter((id)=>constructionPlayable(id)&&constructionBlueprintTier(id)===0&&!state.town.construction[id]?.discovered&&CONSTRUCTIONS[id].parentId===projectId).length}
+function unlockValue(state:GameState,projectId:ConstructionId):number{return CONSTRUCTION_ORDER.filter((id)=>constructionPlayable(id)&&state.town.construction[id]?.discovered&&!state.town.construction[id]?.completed&&CONSTRUCTIONS[id].parentId===projectId).length}
 function missingResourceBurden(state:GameState,projectId:ConstructionId):number{return Object.values(missingMaterials(state,projectId)).reduce((sum,value)=>sum+(value??0),0)}
 
 export function constructionPriority(state: GameState, projectId: ConstructionId): number {

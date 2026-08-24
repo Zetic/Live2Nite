@@ -98,6 +98,6 @@ The current-cost overlay is now paired with `src/core/constructionFidelity.ts`, 
 
 For active early construction, cost data is no longer sufficient by itself. A project also needs a verified parent/unlock path, temporary/permanent lifecycle, and an implemented gameplay effect before it is made playable.
 
-Schema v18 separates **known plans** from **completed buildings**. New towns begin with playable common roots; completing one reveals its playable common direct children. Blueprint-tier projects remain hidden until their acquisition mechanic is implemented.
+Schema v19 separates **known sites** from **completed buildings**. Playable rarity-0/no-blueprint descendants are registered recursively with their parent sites. Completion gates construction work; it does not discover sites. Blueprint tiers 1-4 are revealed one eligible project at a time by consumable construction blueprints.
 
 Representative corrections in this pass include the early armour wall variants, the Pump/Vaporiser branch, Watchtower/Cannon Mounds, Defensive Wall/Emergency Supplies, Foundations and Portal Lock costs, and the Soul Purifying Source as a root project.

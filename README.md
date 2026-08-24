@@ -114,4 +114,4 @@ npm run build
 
 See [`docs/architecture.md`](docs/architecture.md). Stateful item architecture is documented in [`docs/item-economy.md`](docs/item-economy.md).
 
-- Construction Sites now separate known plans from completed buildings; common branches reveal progressively and advanced blueprint tiers remain hidden until discovery.
+- Construction Sites separate known sites from completed buildings; no-blueprint branches are registered recursively while tiered blueprints reveal one random eligible advanced site. Successful camping at an uncovered ruin can leave an Uncommon/Rare blueprint on the zone floor, and Worn Leather Bags use the source 50/35/10/5 blueprint distribution.

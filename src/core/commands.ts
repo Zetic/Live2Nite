@@ -2,7 +2,7 @@ import { CONSTRUCTION_AP_COST, GATE_AP_COST, MOVE_AP_COST, SPECIAL_EXCAVATION_AP
 import { CAMP_IMPROVEMENT_AP_COST, campingChancePercent } from './camping'
 import { BAREHANDED_AP_COST, resolveBarehandedAttack, resolveWeaponAttack } from './combat'
 import { COMBINATION_RECIPES, resolveCombination } from './combinations'
-import { CONSTRUCTIONS, commonChildrenToDiscover } from './construction'
+import { CONSTRUCTIONS, blueprintEligibleProjects } from './construction'
 import { applyEvents } from './events'
 import { HOME_IMPROVEMENTS, homeImprovementDefense, improvementNextLevel, nextHomeDefinition } from './home'
 import { itemUseActionDefinition, resolveCitizenEffects, resolveFoodItemAction, resolveItemUseAction, resolveWaterItemAction } from './itemEffects'
@@ -31,6 +31,7 @@ function sameCommand(left:GameCommand,right:GameCommand):boolean{
   if(left.type==='MOVE_ITEM_TO_HOME'&&right.type==='MOVE_ITEM_TO_HOME')return left.itemId===right.itemId
   if(left.type==='MOVE_ITEM_TO_RUCKSACK'&&right.type==='MOVE_ITEM_TO_RUCKSACK')return left.itemId===right.itemId
   if(left.type==='OPEN_CONTAINER'&&right.type==='OPEN_CONTAINER')return left.itemId===right.itemId
+  if(left.type==='READ_BLUEPRINT'&&right.type==='READ_BLUEPRINT')return left.itemId===right.itemId
   if(left.type==='EAT_ITEM'&&right.type==='EAT_ITEM')return left.itemId===right.itemId
   if(left.type==='DRINK_ITEM'&&right.type==='DRINK_ITEM')return left.itemId===right.itemId
   if(left.type==='USE_ITEM_ACTION'&&right.type==='USE_ITEM_ACTION')return left.itemId===right.itemId&&left.actionId===right.actionId
@@ -97,6 +98,19 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
       }
       const pool=containerPool(located.item.type);if(!pool?.length)throw new InvalidCommandError(`${located.item.type} is not an openable container`);const roll=randomInt(state.rngState,0,pool.length-1);events.push({type:'CONTAINER_OPENED',day:state.day,citizenId:command.citizenId,containerId:located.item.id,containerType:located.item.type,source:located.source,zoneKey:located.zoneKey,output:itemAt(state,pool[roll.value]),rngStateAfter:roll.state});break
     }
+    case 'READ_BLUEPRINT':{
+      const located=locateItem(state,command.citizenId,command.itemId)
+      if(located.source==='ground')throw new InvalidCommandError('Blueprints must be carried into town before they can be read')
+      const tier=located.item.type==='common_blueprint'?1:located.item.type==='uncommon_blueprint'?2:located.item.type==='rare_blueprint'?3:located.item.type==='very_rare_blueprint'?4:null
+      if(tier===null)throw new InvalidCommandError(`${located.item.type} is not a construction blueprint`)
+      const candidates=blueprintEligibleProjects(state,tier)
+      const roll=candidates.length>0?randomInt(state.rngState,0,candidates.length-1):null
+      const projectId=roll?candidates[roll.value]:null
+      const rngStateAfter=roll?.state??state.rngState
+      events.push({type:'BLUEPRINT_READ',day:state.day,citizenId:command.citizenId,item:located.item,source:located.source,projectId,rngStateAfter})
+      if(projectId)events.push({type:'CONSTRUCTION_DISCOVERED',day:state.day,projectId,reason:'blueprint'})
+      break
+    }
     case 'TAKE_WATER':events.push({type:'WATER_TAKEN',day:state.day,citizenId:command.citizenId,item:itemAt(state,'water_ration')});break
     case 'EAT_ITEM':{const located=locateItem(state,command.citizenId,command.itemId);const outcome=resolveFoodItemAction(citizen,located.item,state.rngState);events.push({type:'ITEM_CONSUMED',day:state.day,citizenId:command.citizenId,item:located.item,source:located.source,zoneKey:located.zoneKey,kind:'food',restoresAp:outcome.restoresAp,apAfter:outcome.apAfter,statusAfter:outcome.statusAfter,dailyAfter:outcome.dailyAfter,rngStateAfter:outcome.rngStateAfter});break}
     case 'DRINK_ITEM':{const located=locateItem(state,command.citizenId,command.itemId);const outcome=resolveWaterItemAction(citizen,located.item,state.rngState);const charges=located.item.type==='water_cooler_bottle'?(normalizeItemState(located.item.type,located.item.state).charges??0):undefined;events.push({type:'ITEM_CONSUMED',day:state.day,citizenId:command.citizenId,item:located.item,source:located.source,zoneKey:located.zoneKey,kind:'water',restoresAp:outcome.restoresAp,chargesAfter:charges===undefined?undefined:Math.max(0,charges-1),apAfter:outcome.apAfter,statusAfter:outcome.statusAfter,dailyAfter:outcome.dailyAfter,rngStateAfter:outcome.rngStateAfter});break}
@@ -105,7 +119,7 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     case 'DISPOSE_CORPSE_WATER':{const water=[...citizen.inventory,...citizen.home.storage].find((item)=>item.type==='water_ration');if(!water)throw new InvalidCommandError('A Water Ration is required to dispose of the corpse');events.push({type:'CORPSE_DISPOSED',day:state.day,citizenId:command.citizenId,targetCitizenId:command.targetCitizenId,method:'watered',waterItemId:water.id});break}
     case 'UPGRADE_HOME':{const target=nextHomeDefinition(citizen.home.level);if(!target)throw new InvalidCommandError('No home upgrade is currently available');events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:target.apCost},{type:'HOME_UPGRADED',day:state.day,citizenId:command.citizenId,from:citizen.home.level,to:target.level,defenseAfter:target.defense,consumed:target.resources});break}
     case 'BUILD_HOME_IMPROVEMENT':{const nextLevel=improvementNextLevel(citizen,command.improvementId);if(nextLevel===null)throw new InvalidCommandError('Home improvement is already complete');const definition=HOME_IMPROVEMENTS[command.improvementId];const defenseAfter=citizen.home.defense+homeImprovementDefense(citizen)+definition.defensePerLevel;const storageCapacityAfter=citizen.home.storageCapacity+definition.storagePerLevel;events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:definition.apCost(nextLevel)},{type:'HOME_IMPROVEMENT_BUILT',day:state.day,citizenId:command.citizenId,improvementId:command.improvementId,level:nextLevel,consumed:definition.resources(nextLevel),defenseAfter,storageCapacityAfter});break}
-    case 'CONTRIBUTE_CONSTRUCTION':{const definition=CONSTRUCTIONS[command.projectId];const project=state.town.construction[command.projectId];const amount=Math.min(CONSTRUCTION_AP_COST,definition.apCost-project.apContributed);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount},{type:'CONSTRUCTION_AP_CONTRIBUTED',day:state.day,citizenId:command.citizenId,projectId:command.projectId,amount});if(project.apContributed+amount>=definition.apCost){events.push({type:'CONSTRUCTION_COMPLETED',day:state.day,citizenId:command.citizenId,projectId:command.projectId,consumed:definition.resources,defenseBonus:0});for(const childId of commonChildrenToDiscover(state,command.projectId))events.push({type:'CONSTRUCTION_DISCOVERED',day:state.day,projectId:childId,reason:'parent'})}break}
+    case 'CONTRIBUTE_CONSTRUCTION':{const definition=CONSTRUCTIONS[command.projectId];const project=state.town.construction[command.projectId];const amount=Math.min(CONSTRUCTION_AP_COST,definition.apCost-project.apContributed);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount},{type:'CONSTRUCTION_AP_CONTRIBUTED',day:state.day,citizenId:command.citizenId,projectId:command.projectId,amount});if(project.apContributed+amount>=definition.apCost)events.push({type:'CONSTRUCTION_COMPLETED',day:state.day,citizenId:command.citizenId,projectId:command.projectId,consumed:definition.resources,defenseBonus:0});break}
     case 'WORKSHOP_CONVERT':{const recipe=WORKSHOP_RECIPES[command.recipeId];const inputItemIds=workshopRecipeInputItemIds(state,command.recipeId);const outcome=resolveWorkshopRecipeOutput(state.rngState,command.recipeId);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:workshopRecipeApCost(state,command.recipeId,command.citizenId)},{type:'WORKSHOP_CONVERTED',day:state.day,citizenId:command.citizenId,recipeId:command.recipeId,input:recipe.input,inputCount:recipe.inputCount,inputItemIds,output:outcome.output,outputCount:outcome.outputCount,outputState:outcome.outputState,preserveInputId:outcome.preserveInputId,rngStateAfter:outcome.rngStateAfter});break}
     case 'COMBINE_ITEMS':{const recipe=COMBINATION_RECIPES[command.recipeId];const resolved=resolveCombination(state,citizen,command.recipeId,command.itemIds);if(recipe.apCost>0)events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:recipe.apCost});events.push({type:'ITEMS_COMBINED',day:state.day,citizenId:command.citizenId,recipeId:command.recipeId,consumedItemIds:resolved.consumedItemIds,outputs:resolved.outputs,createdCount:resolved.createdCount});break}
   }

@@ -23,8 +23,9 @@ export function ItemActionMenu({items,actions,act,sourceForItem}:{items:readonly
   const entries:Array<ActionEntry>=[]
   for(const item of items){
     const source=sourceForItem?.(item);const suffix=source?` · ${source}`:'Use item'
-    const open=commandFor(actions,'OPEN_CONTAINER',item.id);const eat=commandFor(actions,'EAT_ITEM',item.id);const drink=commandFor(actions,'DRINK_ITEM',item.id);const weapon=commandFor(actions,'USE_WEAPON',item.id)
+    const open=commandFor(actions,'OPEN_CONTAINER',item.id);const blueprint=commandFor(actions,'READ_BLUEPRINT',item.id);const eat=commandFor(actions,'EAT_ITEM',item.id);const drink=commandFor(actions,'DRINK_ITEM',item.id);const weapon=commandFor(actions,'USE_WEAPON',item.id)
     if(open)entries.push({key:`open-${item.id}`,label:`Open ${itemName(item.type)}`,detail:suffix,command:open})
+    if(blueprint)entries.push({key:`blueprint-${item.id}`,label:`Read ${itemName(item.type)}`,detail:`Study construction plan${source?` · ${source}`:''}`,command:blueprint})
     if(eat)entries.push({key:`eat-${item.id}`,label:`Eat ${itemName(item.type)}`,detail:suffix,command:eat})
     if(drink)entries.push({key:`drink-${item.id}`,label:`Drink ${itemName(item.type)}`,detail:suffix,command:drink})
     for(const command of actions.filter((candidate):candidate is Extract<GameCommand,{type:'USE_ITEM_ACTION'}>=>candidate.type==='USE_ITEM_ACTION'&&candidate.itemId===item.id)){
