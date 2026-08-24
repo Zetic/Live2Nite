@@ -18,7 +18,7 @@ export const ITEM_TYPE_IDS = [
   // Stateful foundation representatives retained from v16.
   'water_pistol','water_cooler_bottle','repair_kit',
   // Part 2 openables. Source variants such as 2- and 3-use resource packs are represented by state, not duplicate item types.
-  'resource_pack','toolbox','metal_chest','xl_chest','food_box','decoration_box','safe',
+  'resource_pack','toolbox','metal_chest','xl_chest','food_box','decoration_box','safe','worn_leather_bag',
   // Construction plans use Live2Nite-owned IDs while following current MyHordes read behavior.
   'common_blueprint','uncommon_blueprint','rare_blueprint','very_rare_blueprint',
 ] as const
