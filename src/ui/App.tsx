@@ -44,6 +44,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   const [screen, setScreen] = useState<GameScreen>('chronicle')
   const [controlledCitizenId, setControlledCitizenId] = useState('c01')
+  const [visitedCitizenId, setVisitedCitizenId] = useState<string | null>(null)
   useEffect(() => { repository.load().then((saved) => setGame(saved ?? createInitialGame(newSeed()))).catch(() => setGame(createInitialGame(newSeed()))).finally(() => setLoaded(true)) }, [])
   useEffect(() => { if (loaded) void repository.save(game) }, [game, loaded])
 
@@ -87,8 +88,10 @@ export function App() {
     try { setGame(advanceToHour(game,hour,botController,controlledCitizenId)); setError(null) }
     catch (caught) { setError(caught instanceof InvalidTimeAdvanceError ? caught.message : 'Time advance failed.') }
   }
-  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setScreen('chronicle'); setError(null) }
-  const controlCitizen = (citizenId: string) => { setControlledCitizenId(citizenId); setError(null) }
+  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setVisitedCitizenId(null); setScreen('chronicle'); setError(null) }
+  const controlCitizen = (citizenId: string) => { setControlledCitizenId(citizenId); setVisitedCitizenId(null); setError(null) }
+  const changeScreen = (next: GameScreen) => { if(next==='home')setVisitedCitizenId(null);setScreen(next) }
+  const visitHome = (citizenId:string) => { if(!player.alive||player.location.type!=='town')return;setVisitedCitizenId(citizenId);setScreen('home');setError(null) }
 
   if (!loaded) return <main className="shell loading-shell"><p>Opening the town gates…</p></main>
 
@@ -123,7 +126,7 @@ export function App() {
         <div className="night-report-copy">
           <span>Night {game.lastNight.day} report</span>
           <strong>{game.lastNight.breached ? `${zombiesInside} zombie${zombiesInside === 1 ? '' : 's'} got inside.` : 'The town held.'}</strong>
-          <p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}{(game.lastNight.campingSurvivors??0)>0&&` ${game.lastNight.campingSurvivors} citizen(s) survived camping outside.`}</p>
+          <p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}{(game.lastNight.campingSurvivors??0)>0&&` ${game.lastNight.campingSurvivors} citizen(s) survived camping outside.`}{(game.lastNight.corpseReanimations??0)>0&&` ${game.lastNight.corpseReanimations} undisposed corpse(s) reanimated; ${game.lastNight.corpseAttackDeaths??0} citizen(s) were killed and ${game.lastNight.corpseWaterLost??0} Well water was lost.`}</p>
           {(outsideDeathNames.length > 0 || campingDeathNames.length > 0 || homeDeathNames.length > 0 || dehydrationDeathNames.length > 0) && <div className="night-casualties">
             {outsideDeathNames.length > 0 && <span>Outside without shelter: {outsideDeathNames.join(', ')}</span>}
             {campingDeathNames.length > 0 && <span>Camping failed: {campingDeathNames.join(', ')}</span>}
@@ -132,20 +135,20 @@ export function App() {
           </div>}
         </div>
       </section>}
-      {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Controlled citizen is dead</span><strong>{controlledDeathReason === 'home_breach' ? `${player.name}'s home was overwhelmed.` : controlledDeathReason === 'dehydration' ? `${player.name} died of dehydration.` : controlledDeathReason === 'camping_failure' ? `${player.name}'s hiding place failed during the night.` : `${player.name} died outside without a prepared hiding place.`}</strong><p>Open Citizens and take control of another living citizen to continue testing this town.</p></div></section>}
+      {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Controlled citizen is dead</span><strong>{controlledDeathReason === 'home_breach' ? `${player.name}'s home was overwhelmed.` : controlledDeathReason === 'dehydration' ? `${player.name} died of dehydration.` : controlledDeathReason === 'camping_failure' ? `${player.name}'s hiding place failed during the night.` : controlledDeathReason === 'corpse_attack' ? `${player.name} was killed by a reanimated corpse inside town.` : `${player.name} died outside without a prepared hiding place.`}</strong><p>Open Citizens and take control of another living citizen to continue testing this town.</p></div></section>}
 
-      <GameNavigation game={game} screen={screen} outside={player.location.type === 'world'} onChange={setScreen}/>
+      <GameNavigation game={game} screen={screen} outside={player.location.type === 'world'} onChange={changeScreen}/>
 
       <div className="screen-stage">
         {screen === 'codex' && <CodexView/>}
-        {screen === 'home' && <HomeView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
+        {screen === 'home' && <HomeView game={game} citizenId={player.id} ownerCitizenId={visitedCitizenId??player.id} legalActions={legalActions} act={act} onReturnHome={()=>setVisitedCitizenId(null)}/>} 
         {screen === 'well' && <WellView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
         {screen === 'bank' && <BankView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
         {screen === 'construction' && <ConstructionView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'watchtower' && <WatchtowerView game={game}/>} 
         {screen === 'world' && <div className="world-screen-layout"><div className="world-primary-column"><WorldView game={game} citizenId={player.id} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move}/>{currentZone&&<CampingPanel game={game} citizen={player} zone={currentZone} legalActions={legalActions} act={act}/>}</div><section className="panel map-panel"><div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div><WorldMap game={game} citizenId={player.id}/><p className="map-key"><span>?</span> unknown <span>0–9</span> observed zombies <span>T</span> town <span>@</span> controlled citizen</p></section></div>}
-        {screen === 'citizens' && <CitizenRoster game={game} controlledCitizenId={player.id} onControl={controlCitizen}/>} 
+        {screen === 'citizens' && <CitizenRoster game={game} controlledCitizenId={player.id} onControl={controlCitizen} onVisit={visitHome}/>} 
         {screen === 'chronicle' && <TownRecords game={game}/>} 
       </div>
 
