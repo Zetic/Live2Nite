@@ -39,7 +39,8 @@ describe('citizen hydration status',()=>{
     game=withCitizen(game,'c01',{daily:{ate:false,drank:true,waterTaken:true},status:{hydration:'thirsty',desertStepsToday:3}})
     game=resolveNight(game)
     expect(game.citizens[0].alive).toBe(true)
-    expect(game.citizens[0].status).toEqual({hydration:'dehydrated',desertStepsToday:0})
+    expect(game.citizens[0].status.hydration).toBe('dehydrated')
+    expect(game.citizens[0].status.desertStepsToday).toBe(0)
   })
 
   it('kills an untreated Dehydrated citizen at midnight',()=>{
@@ -59,7 +60,9 @@ describe('citizen hydration status',()=>{
     const drink=getLegalActions(game,'c01').find((action)=>action.type==='DRINK_ITEM')!
     game=executeCommand(game,drink).state
     expect(game.citizens[0].ap).toBe(0)
-    expect(game.citizens[0].status).toEqual({hydration:'thirsty',desertStepsToday:0})
+    expect(game.citizens[0].status.hydration).toBe('thirsty')
+    expect(game.citizens[0].status.desertStepsToday).toBe(0)
+    expect(game.citizens[0].daily.drank).toBe(false)
   })
 
   it('allows another water ration to treat later thirst after the daily AP refresh has already been used',()=>{

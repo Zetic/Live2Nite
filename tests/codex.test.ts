@@ -48,6 +48,16 @@ describe('item codex',()=>{
     expect(knife.usedIn.find((group)=>group.id==='opening')?.entries.some((entry)=>entry.label==='Open Toolbox')).toBe(true)
   })
 
+  it('derives generalized condition item actions from the real effect definitions',()=>{
+    const steroids=codexItemEntry('anabolic_steroids')
+    expect(steroids.facts.some((fact)=>fact.label.includes('Take Anabolic Steroids')&&fact.value.toLowerCase().includes('addiction'))).toBe(true)
+    const paracetoid=codexItemEntry('paracetoid')
+    expect(paracetoid.facts.some((fact)=>fact.value.includes('remove infected')&&fact.value.includes('apply immune'))).toBe(true)
+    const valium=codexItemEntry('valium_shot')
+    expect(valium.facts.some((fact)=>fact.value.includes('remove terrorized'))).toBe(true)
+    expect(filterCodexItems('all','addiction').map((entry)=>entry.type)).toContain('anabolic_steroids')
+  })
+
   it('derives active acquisition sources and rarity from runtime pools',()=>{
     const log=codexItemEntry('rotten_log')
     expect(log.obtainedFrom.find((group)=>group.id==='scavenging')?.entries.some((entry)=>entry.label==='Depleted zones'&&entry.detail.includes('62.5%'))).toBe(true)
