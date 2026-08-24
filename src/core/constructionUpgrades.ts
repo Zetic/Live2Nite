@@ -1,8 +1,9 @@
 import { CONSTRUCTION_CATALOG } from './constructionCatalog'
+import { CONSTRUCTIONS } from './construction'
 import type { ConstructionId, GameState } from './types'
 import { randomInt } from './rng'
 
-export type ConstructionUpgradeKind='defense_total'|'well_once'
+export type ConstructionUpgradeKind='defense_total'|'well_once'|'construction_discount'
 export interface ConstructionUpgradeTrack {
   projectId:ConstructionId
   maxLevel:number
@@ -63,6 +64,16 @@ export const CONSTRUCTION_UPGRADE_TRACKS:Readonly<Partial<Record<ConstructionId,
       'Immediately adds 40 Water Rations to the Well.',
     ],sourceNote:'MyHordes Pump daily-upgrade one-time water additions.',
   },
+  workshop:{
+    projectId:'workshop',maxLevel:5,kind:'construction_discount',values:[0,6,12,18,24,30],
+    benefits:[
+      'Reduces every unfinished construction AP requirement by 6% of its base cost.',
+      'Total construction AP reduction becomes 12% of base cost.',
+      'Total construction AP reduction becomes 18% of base cost.',
+      'Total construction AP reduction becomes 24% of base cost.',
+      'Total construction AP reduction becomes 30% of base cost.',
+    ],sourceNote:'Current MyHordes behavior: one Workshop upgrade removes 18 AP from a 300 AP project (6%).',
+  },
 }
 export const ACTIVE_CONSTRUCTION_UPGRADE_IDS=Object.freeze(Object.keys(CONSTRUCTION_UPGRADE_TRACKS) as ConstructionId[])
 
@@ -103,6 +114,10 @@ export function castConstructionUpgradeVote(state:GameState,citizenId:string,pro
 export function botUpgradeProjectChoice(state:GameState,citizenId:string):ConstructionId|null{
   const candidates=availableConstructionUpgradeProjects(state);if(!candidates.length)return null
   if(candidates.includes('pump')&&state.town.well.water<80)return'pump'
+  if(candidates.includes('workshop')){
+    const unfinished=Object.values(state.town.construction).filter((project)=>project.discovered&&!project.completed).length
+    if(unfinished>=6)return'workshop'
+  }
   const defenseCandidates=candidates.filter((id)=>constructionUpgradeTrack(id)?.kind==='defense_total')
   if(defenseCandidates.length&&state.lastNight?.breached)return defenseCandidates[0]
   const hash=[...citizenId].reduce((sum,char)=>sum+char.charCodeAt(0),0)
@@ -118,6 +133,18 @@ export function castAutonomousConstructionUpgradeVotes(state:GameState,controlle
   return next
 }
 
+function workshopDiscountFreeProgress(baseAp:number,level:number):number{return Math.max(0,baseAp-Math.ceil(baseAp*(100-(6*level))/100))}
+function applyWorkshopDiscount(state:GameState,fromLevel:number,toLevel:number):GameState['town']['construction']{
+  const next={...state.town.construction}
+  for(const [id,project] of Object.entries(state.town.construction)){
+    if(project.completed||id==='workshop')continue
+    const baseAp=CONSTRUCTIONS[id as ConstructionId].apCost
+    const delta=workshopDiscountFreeProgress(baseAp,toLevel)-workshopDiscountFreeProgress(baseAp,fromLevel)
+    if(delta<=0)continue
+    next[id as ConstructionId]={...project,apContributed:Math.min(baseAp,project.apContributed+delta)}
+  }
+  return next
+}
 function applyWinningUpgrade(state:GameState,projectId:ConstructionId):GameState{
   const track=constructionUpgradeTrack(projectId);if(!track)return state
   const current=upgradeState(state);const fromLevel=constructionUpgradeLevel(state,projectId);if(fromLevel>=track.maxLevel)return state
@@ -129,7 +156,7 @@ function applyWinningUpgrade(state:GameState,projectId:ConstructionId):GameState
   }else if(track.kind==='well_once'){
     const amount=track.values[toLevel]??0
     townPatch={well:{water:state.town.well.water+amount}}
-  }
+  }else if(track.kind==='construction_discount')townPatch={construction:applyWorkshopDiscount(state,fromLevel,toLevel)}
   return withUpgradeState(state,{...current,levels:{...current.levels,[projectId]:toLevel}},townPatch)
 }
 export function resolveConstructionUpgradeVotesAtMidnight(state:GameState):GameState{
