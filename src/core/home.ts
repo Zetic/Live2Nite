@@ -95,6 +95,8 @@ export function createStarterHome(citizenId: string): CitizenHome {
     ],
     upgradedDay:null,
     improvements:{reinforcements:0,fence:0,storage:0},
+    holdsBody:false,
+    corpseAttacked:false,
   }
 }
 
