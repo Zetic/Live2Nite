@@ -39,6 +39,13 @@ describe('complete current construction catalog',()=>{
     expect(rarityCounts).toEqual({0:53,1:41,2:17,3:35,4:13,5:1,6:6})
   })
 
+  it('tracks the implementation backlog explicitly',()=>{
+    const counts={implemented:0,partial:0,wip:0}
+    for(const id of CONSTRUCTION_CATALOG_ORDER)counts[CONSTRUCTION_CATALOG[id].implementation]+=1
+    expect(counts).toEqual({implemented:55,partial:24,wip:87})
+    expect(CONSTRUCTION_CATALOG.henhouse.implementation).toBe('partial')
+  })
+
   it('keeps every parent inside the same complete Live2Nite tree',()=>{
     const ids=new Set(CONSTRUCTION_CATALOG_ORDER)
     for(const id of CONSTRUCTION_CATALOG_ORDER){
