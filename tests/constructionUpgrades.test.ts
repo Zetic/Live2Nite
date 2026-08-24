@@ -19,6 +19,7 @@ import {
 } from '../src/core/constructionUpgrades'
 import { totalTownDefense } from '../src/core/defense'
 import type { ConstructionId, GameState } from '../src/core/types'
+import { migrateStoredGame } from '../src/persistence/IndexedDbGameRepository'
 import { facilitySlots } from '../src/ui/navigation'
 
 function complete(game:GameState,...ids:ConstructionId[]):GameState{
@@ -36,6 +37,14 @@ describe('Upgrade Projects facility and voting',()=>{
     const after=complete(before,'great_pit')
     expect(hasUpgradeProjectsFacility(after)).toBe(true)
     expect(facilitySlots(after).some((entry)=>entry?.id==='upgrade_projects')).toBe(true)
+  })
+
+  it('initializes typed state and migrates older schema-19 saves that lack it',()=>{
+    const current=createInitialGame(107,4)
+    expect(current.town.upgradeProjects).toEqual({levels:{},votes:{},resolvedDay:null,lastWinner:null,lastWinnerDay:null,lastWinningVotes:0})
+    const {upgradeProjects:_removed,...legacyTown}=current.town
+    const migrated=migrateStoredGame({...current,town:legacyTown} as unknown as Record<string,unknown>)
+    expect(migrated?.town.upgradeProjects).toEqual({levels:{},votes:{},resolvedDay:null,lastWinner:null,lastWinnerDay:null,lastWinningVotes:0})
   })
 
   it('activates faithful tracks and leaves unsupported source tracks pending',()=>{
