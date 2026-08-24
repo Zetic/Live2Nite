@@ -34,7 +34,7 @@ export function ItemActionMenu({items,actions,act,sourceForItem}:{items:readonly
     if(weapon)entries.push({key:`weapon-${item.id}`,label:`Use ${itemName(item.type)}`,detail:`Weapon${source?` · ${source}`:''}`,command:weapon})
   }
   return <div className="item-action-menu">{entries.length===0?<span className="compact-empty">No direct item actions available.</span>:entries.map((entry)=><button key={entry.key} onClick={()=>act(entry.command)}><span>{entry.label}</span><small>{entry.detail}</small></button>)}</div>
-}}
+}
 
 const COMBINATION_GROUPS:Array<{id:CombinationCategory;label:string}>=[{id:'assemble',label:'Combine / Assemble'},{id:'reload',label:'Reload / Refill'},{id:'repair',label:'Repair'}]
 export function CombinationActionMenu({actions,act}:{actions:readonly GameCommand[];act:(command:GameCommand|undefined)=>void}){
