@@ -94,6 +94,15 @@ describe('source-backed wound acquisition',()=>{
     expect(game.citizens[0].inventory.some((item)=>item.type==='battery')).toBe(false)
   })
 
+  it('allows the source Battery recharge action even with a hand wound, while the charged EMS itself still requires no wound',()=>{
+    let game=inventory(createInitialGame(8210,1),'c01',['ems_system_empty','battery'])
+    game=patchCitizen(game,'c01',{status:{...game.citizens[0].status,wound:'hands'}})
+    expect(getLegalActions(game,'c01').some((action)=>action.type==='COMBINE_ITEMS'&&action.recipeId==='load_ems_battery')).toBe(true)
+    game=executeCommand(game,combination(game,'c01','load_ems_battery')).state
+    expect(game.citizens[0].inventory.some((item)=>item.type==='ems_system_charged')).toBe(true)
+    expect(getLegalActions(game,'c01').some((action)=>action.type==='USE_ITEM_ACTION'&&action.actionId==='ems_system')).toBe(false)
+  })
+
   it('uses the charged EMS to restore toward 6 AP, guarantee a wound, and discharge the same unit',()=>{
     let game=inventory(createInitialGame(8208,1),'c01',['ems_system_charged'])
     const emsId=game.citizens[0].inventory[0].id
@@ -106,7 +115,7 @@ describe('source-backed wound acquisition',()=>{
   })
 
   it('makes the discharged EMS an active ordinary scavenging item with the source mapping represented',()=>{
-    expect(NORMAL_SCAVENGE_LOOT_POOL.filter((type)=>type==='ems_system_empty')).toHaveLength(4)
+    expect(NORMAL_SCAVENGE_LOOT_POOL.filter((type)=>type==='ems_system_empty')).toHaveLength(1)
     expect(MYHORDES_NORMAL_LOOT_MAPPING['sport_elec_empty_#00']).toEqual({type:'ems_system_empty'})
   })
 

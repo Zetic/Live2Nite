@@ -48,7 +48,7 @@ export const CITIZEN_STATUS_DEFINITIONS: Record<CitizenStatusId, CitizenStatusDe
     id:'thirsty',label:'Thirsty',family:'hydration',severity:'warning',
     effect:'Drink before the attack. Another hydration stage worsens this to Dehydrated.',
     systemSources:[
-      {label:'Desert travel',detail:'Every 11 desert movements advances hydration one stage.'},
+      {label:'Desert travel',detail:`Every ${DESERT_STEPS_PER_HYDRATION_STAGE} desert movements advances hydration one stage.`},
       {label:'Nightly progression',detail:'A normally hydrated citizen who did not refresh with water becomes Thirsty at the attack.'},
       {label:'Treat Dehydration',detail:'Drinking while Dehydrated improves the citizen to Thirsty but does not restore AP.'},
     ],
@@ -59,7 +59,7 @@ export const CITIZEN_STATUS_DEFINITIONS: Record<CitizenStatusId, CitizenStatusDe
     id:'dehydrated',label:'Dehydrated',family:'hydration',severity:'danger',
     effect:'Water reduces this to Thirsty without restoring AP. Remaining Dehydrated through the attack is fatal.',
     systemSources:[
-      {label:'Desert travel',detail:'Another 11 movements while Thirsty causes Dehydrated.'},
+      {label:'Desert travel',detail:`Another ${DESERT_STEPS_PER_HYDRATION_STAGE} movements while Thirsty causes Dehydrated.`},
       {label:'Nightly progression',detail:'A Thirsty citizen becomes Dehydrated at the attack.'},
     ],
     systemClears:[{label:'Drink water',detail:'Water improves Dehydrated to Thirsty; that ration does not grant the daily AP refresh.'}],
@@ -78,15 +78,15 @@ export const CITIZEN_STATUS_DEFINITIONS: Record<CitizenStatusId, CitizenStatusDe
       {id:'eye',label:'Eye',detail:'Location tracked. The exact source scavenging penalty is deferred until its current resolver value is verified.',active:false},
       {id:'arms',label:'Arms',detail:'Cannot operate the town gate or contribute construction AP.',active:true},
       {id:'hands',label:'Hands',detail:'Blocks container opening, portable combinations/repairs, bare-handed fighting, and ordinary hand-operated weapons.',active:true},
-      {id:'leg',label:'Leg',detail:'Movement spends AP normally but can fail with the current documented 25% approximation.',active:true},
+      {id:'leg',label:'Leg',detail:`Movement spends AP normally but can fail with the current documented ${LEG_WOUND_MOVE_FAILURE_PERCENT}% approximation.`,active:true},
       {id:'foot',label:'Foot',detail:'No additional broad restriction beyond the normal Wounded AP penalty.',active:true},
     ],
   },
   infected: {
     id:'infected',label:'Infected',family:'disease',severity:'danger',
-    effect:'At the attack, Infection has a 50% death risk. Paracetoid cures Infection.',
+    effect:`At the attack, Infection has a ${INFECTION_DEATH_CHANCE_PERCENT}% death risk. Paracetoid cures Infection.`,
     systemSources:[{label:'Untreated wound at the attack',detail:'An unresolved wound produces Infection unless Immune protects that nightly transition.'}],
-    progression:[{label:'Infection death check',detail:'Each attack while already Infected has a 50% death risk in the current town rules.'}],
+    progression:[{label:'Infection death check',detail:`Each attack while already Infected has a ${INFECTION_DEATH_CHANCE_PERCENT}% death risk in the current town rules.`}],
   },
   terrorized: {
     id:'terrorized',label:'Terrorized',family:'mental',severity:'danger',

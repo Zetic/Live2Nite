@@ -61,7 +61,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   if(citizen.camping.hidden)return[{type:'LEAVE_HIDEOUT',citizenId}]
   const actions:GameCommand[]=[]
   addConsumableActions(state,actions,citizen,citizen.inventory,'inventory')
-  if(!hasHandWound(citizen)&&!terrorBlocksOrdinaryItems(state,citizen))actions.push(...combinationCommandsForCitizen(state,citizen))
+  if(!terrorBlocksOrdinaryItems(state,citizen)){const combinations=combinationCommandsForCitizen(state,citizen);actions.push(...combinations.filter((action)=>!hasHandWound(citizen)||action.recipeId==='load_ems_battery'))}
 
   if(citizen.location.type==='town'){
     addConsumableActions(state,actions,citizen,citizen.home.storage,'home')

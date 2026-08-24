@@ -153,7 +153,7 @@ export const NORMAL_SCAVENGE_LOOT_POOL:ItemType[]=[
   'wrought_iron','wrought_iron','wrought_iron','wrought_iron','wrought_iron',
   'resource_pack','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
   'human_bone','human_bone','pathetic_penknife','staff','serrated_knife','water_bomb','battery','box_of_matches','pharmaceutical_products',
-  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag','toolbox','ems_system_empty','ems_system_empty','ems_system_empty','ems_system_empty',
+  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag','toolbox','ems_system_empty',
 ]
 export const DEPLETED_SCAVENGE_LOOT_POOL:ItemType[]=['rotten_log','rotten_log','rotten_log','scrap_metal','scrap_metal','scrap_metal']
 
