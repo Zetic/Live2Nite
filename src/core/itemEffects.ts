@@ -49,6 +49,7 @@ export const ITEM_USE_ACTIONS:Partial<Record<ItemType,readonly ItemUseActionDefi
   valium_shot:[action({id:'valium_shot',itemType:'valium_shot',label:'Use Valium Shot',sourceActionIds:['drug_xana1','drug_xana2','drug_xana3','drug_xana4'],requirements:[],effects:[{type:'drug_cycle'},{type:'remove_status',status:'terrorized'}],consume:true,allowWhenTerrorized:true})],
   vodka_marinostov:[action({id:'drink_alcohol',itemType:'vodka_marinostov',label:'Drink Vodka Marinostov',sourceActionIds:['alcohol'],requirements:[{type:'status',status:'drunk',present:false},{type:'status',status:'hangover',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'apply_status',status:'drunk'}],consume:true})],
   wake_the_dead:[action({id:'drink_alcohol',itemType:'wake_the_dead',label:'Drink “Wake The Dead”',sourceActionIds:['alcohol'],requirements:[{type:'status',status:'drunk',present:false},{type:'status',status:'hangover',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'apply_status',status:'drunk'}],consume:true})],
+  ems_system_charged:[action({id:'ems_system',itemType:'ems_system_charged',label:'Use EMS System',sourceActionIds:['emt'],requirements:[{type:'status',status:'wounded',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'inflict_wound'}],consume:false,morphTo:'ems_system_empty'})],
 }
 
 export function itemUseActionsForType(type:ItemType):readonly ItemUseActionDefinition[]{return ITEM_USE_ACTIONS[type]??[]}
