@@ -40,7 +40,7 @@ function generateSpecialSite(type: SpecialSiteState['type'], rngState: number): 
     hiddenLoot.push(pool[loot.value])
   }
   return {
-    site: { type, status: 'buried', excavationRequired: excavation.value, excavationProgress: 0, hiddenLoot, searchedBy: [] },
+    site: { type, status: 'buried', excavationRequired: excavation.value, excavationProgress: 0, hiddenLoot, searchedBy: [], blueprintFound:false },
     rngState: next,
   }
 }
