@@ -222,12 +222,17 @@ function applyCurrentConstructionFidelity():void {
     project.breakable=snapshot.breakable
     project.playable=project.implementationStatus!=='wip'
     project.expiresAfterAttack=snapshot.temporary
-    project.effects=project.effects.filter((effect)=>effect.type!=='town_defense_flat'&&effect.type!=='well_water_on_complete')
-    if(snapshot.defense>0)project.effects.unshift({type:'town_defense_flat',amount:snapshot.defense})
-    if((snapshot.completionWater??0)>0)project.effects.push({type:'well_water_on_complete',amount:snapshot.completionWater!})
-    if(project.effects.length===1&&project.effects[0].type==='town_defense_flat')project.effectLabel=snapshot.temporary?`+${snapshot.defense} defense for the next attack`:`+${snapshot.defense} town defense`
-    else if(project.id==='pump')project.effectLabel=`+${snapshot.completionWater??0} water and +1 daily Well withdrawal`
-    else if(snapshot.completionWater&&project.effects.every((effect)=>effect.type==='well_water_on_complete'))project.effectLabel=`+${snapshot.completionWater} Well water on completion`
+    if(project.implementationStatus==='wip'){
+      project.effects=[]
+      project.effectLabel=`WIP — ${project.wipReason??'mechanics not implemented'}`
+    }else{
+      project.effects=project.effects.filter((effect)=>effect.type!=='town_defense_flat'&&effect.type!=='well_water_on_complete')
+      if(snapshot.defense>0)project.effects.unshift({type:'town_defense_flat',amount:snapshot.defense})
+      if((snapshot.completionWater??0)>0)project.effects.push({type:'well_water_on_complete',amount:snapshot.completionWater!})
+      if(project.effects.length===1&&project.effects[0].type==='town_defense_flat')project.effectLabel=snapshot.temporary?`+${snapshot.defense} defense for the next attack`:`+${snapshot.defense} town defense`
+      else if(project.id==='pump')project.effectLabel=`+${snapshot.completionWater??0} water and +1 daily Well withdrawal`
+      else if(snapshot.completionWater&&project.effects.every((effect)=>effect.type==='well_water_on_complete'))project.effectLabel=`+${snapshot.completionWater} Well water on completion`
+    }
     project.source='MYHORDES_CURRENT'
     project.sourceConfidence='confirmed'
   }
