@@ -252,8 +252,20 @@ function effectsOfType<T extends ConstructionEffect['type']>(state:GameState,typ
   return completedConstructionEffects(state).filter((effect):effect is Extract<ConstructionEffect,{type:T}>=>effect.type===type)
 }
 
+export function constructionConditionRatio(state:GameState,projectId:ConstructionId):number{
+  const project=state.town.construction[projectId]
+  if(!project?.completed)return 0
+  const definition=CONSTRUCTIONS[projectId]
+  if(definition.breakable===false)return 1
+  const maxHp=constructionMaxHp(projectId)
+  return maxHp>0?Math.max(0,Math.min(1,project.hp/maxHp)):1
+}
 export function constructionTownDefense(state:GameState):number{
-  const flat=effectsOfType(state,'town_defense_flat').reduce((sum,effect)=>sum+effect.amount,0)
+  const flat=CONSTRUCTION_ORDER.reduce((sum,id)=>{
+    if(!state.town.construction[id]?.completed)return sum
+    const base=CONSTRUCTIONS[id].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'town_defense_flat'}>=>effect.type==='town_defense_flat').reduce((value,effect)=>value+effect.amount,0)
+    return sum+Math.floor(base*constructionConditionRatio(state,id))
+  },0)
   const dead=state.citizens.filter((citizen)=>!citizen.alive).length
   const perDead=effectsOfType(state,'defense_per_dead_citizen').reduce((sum,effect)=>sum+effect.amount,0)
   return flat+dead*perDead
