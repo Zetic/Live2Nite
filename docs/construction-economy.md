@@ -90,3 +90,14 @@ This does not introduce a hidden town-wide production planner. Citizens still se
 This pass intentionally does not implement every MyHordes item or every recipe. Items are activated when they support an owned gameplay loop and have legitimate acquisition/use paths.
 
 Profession-only, social, shaman, status-heavy, event-only and quest systems remain deferred until their owning gameplay systems exist.
+
+
+## Construction Fidelity I
+
+The current-cost overlay is now paired with `src/core/constructionFidelity.ts`, which records source-verified lifecycle metadata in Live2Nite terms. The runtime does not retain upstream prototype IDs or fixture keys.
+
+For active early construction, cost data is no longer sufficient by itself. A project also needs a verified parent/unlock path, temporary/permanent lifecycle, and an implemented gameplay effect before it is made playable.
+
+Schema v18 separates **known plans** from **completed buildings**. New towns begin with playable common roots; completing one reveals its playable common direct children. Blueprint-tier projects remain hidden until their acquisition mechanic is implemented.
+
+Representative corrections in this pass include the early armour wall variants, the Pump/Vaporiser branch, Watchtower/Cannon Mounds, Defensive Wall/Emergency Supplies, Foundations and Portal Lock costs, and the Soul Purifying Source as a root project.

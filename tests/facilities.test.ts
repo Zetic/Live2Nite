@@ -39,9 +39,9 @@ describe('facility navigation', () => {
 })
 
 describe('undepleted and depleted scavenging', () => {
-  it('starts schema v16 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
+  it('starts the current schema and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
     const game = createInitialGame(123, 2)
-    expect(game.schemaVersion).toBe(17)
+    expect(game.schemaVersion).toBe(18)
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
@@ -93,7 +93,7 @@ describe('Workshop gating', () => {
     let game = createInitialGame(321, 2)
     game = { ...game, town: { ...game.town, bank: bankFromCounts({ rotten_log: 2, scrap_metal: 2 },'facility-workshop') } }
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'WORKSHOP_CONVERT')).toBe(false)
-    game = { ...game, town: { ...game.town, construction: { ...game.town.construction, workshop: { id: 'workshop', completed: true, apContributed: 25 } } } }
+    game = { ...game, town: { ...game.town, construction: { ...game.town.construction, workshop: { id: 'workshop', discovered: true, completed: true, apContributed: 25, hp: 25 } } } }
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'WORKSHOP_CONVERT')).toBe(true)
   })
 })

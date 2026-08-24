@@ -63,7 +63,7 @@ describe('schema v16 stateful item economy',()=>{
 
   it('initializes new-game starter objects through canonical item normalization',()=>{
     const game=createInitialGame(2602,2)
-    expect(game.schemaVersion).toBe(17)
+    expect(game.schemaVersion).toBe(18)
     expect(game.citizens.flatMap((citizen)=>citizen.home.storage).every((item)=>item.state!==undefined)).toBe(true)
   })
 
@@ -73,9 +73,23 @@ describe('schema v16 stateful item economy',()=>{
     const current={...game,town:{...game.town,bank:[...game.town.bank,pistol]}}
     const loaded=migrateStoredGame(current as unknown as Record<string,unknown>)
     const reloaded=loaded?.town.bank.find((item)=>item.id===pistol.id)
-    expect(loaded?.schemaVersion).toBe(17)
+    expect(loaded?.schemaVersion).toBe(18)
     expect(reloaded).toEqual(pistol)
     expect(reloaded?.state).toEqual({charges:2})
+  })
+
+  it('migrates v17 construction progress into known plans and valid condition',()=>{
+    const current=createInitialGame(2605,1)
+    const legacyConstruction=Object.fromEntries(Object.entries(current.town.construction).map(([id,project])=>[
+      id,
+      {id,apContributed:id==='wall_upgrade'?25:project.apContributed,completed:id==='wall_upgrade'},
+    ]))
+    const legacy={...current,schemaVersion:17,town:{...current.town,construction:legacyConstruction}} as unknown as Record<string,unknown>
+    const migrated=migrateStoredGame(legacy)
+    expect(migrated?.schemaVersion).toBe(18)
+    expect(migrated?.town.construction.wall_upgrade).toMatchObject({discovered:true,completed:true,hp:25})
+    expect(migrated?.town.construction.great_pit.discovered).toBe(true)
+    expect(migrated?.town.construction.reinforcing_beams.discovered).toBe(false)
   })
 
   it('materializes legacy Bank counts as unique normalized objects without colliding with existing IDs',()=>{
@@ -90,7 +104,7 @@ describe('schema v16 stateful item economy',()=>{
       events:[],
     } as unknown as Record<string,unknown>
     const migrated=migrateStoredGame(legacy)
-    expect(migrated?.schemaVersion).toBe(17)
+    expect(migrated?.schemaVersion).toBe(18)
     expect(migrated?.town.bank).toHaveLength(3)
     expect(migrated?.town.bank.filter((item)=>item.type==='water_ration')).toHaveLength(2)
     expect(migrated?.town.bank.every((item)=>item.state?.contamination==='clean')).toBe(true)

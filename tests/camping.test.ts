@@ -23,7 +23,7 @@ function mission(targetX=4,phase:BotMissionAssignment['phase']='camp',allowsCamp
 describe('camping and overnight survival',()=>{
   it('starts schema v16 with camping state and campsite state initialized',()=>{
     const game=createInitialGame(123,2)
-    expect(game.schemaVersion).toBe(17)
+    expect(game.schemaVersion).toBe(18)
     expect(game.citizens.every((citizen)=>citizen.camping.hidden===false&&citizen.camping.nightsSurvived===0)).toBe(true)
     expect(Object.values(game.world.zones).every((zone)=>zone.campImprovements===0)).toBe(true)
   })

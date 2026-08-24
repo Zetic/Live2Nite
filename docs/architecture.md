@@ -169,7 +169,7 @@ See `docs/item-economy.md`.
 
 ## Citizen home visits and corpse lifecycle
 
-Schema v17 adds source-backed dead-citizen body state without treating a citizen corpse as an `ItemInstance`.
+Schema v18 adds source-backed dead-citizen body state without treating a citizen corpse as an `ItemInstance`.
 
 When a citizen dies while located in town, their home is marked `holdsBody = true`; carried items are transferred into the home chest and the dead citizen remains the identity attached to the body. Deaths outside town do not create a home corpse. This is intentionally separate from MyHordes item `cadaver_#00` (Traveller's Corpse), which belongs to the item/loot/food system.
 
@@ -247,7 +247,7 @@ The World Beyond map displays shared town knowledge, not hidden zombie truth. Th
 
 Town Records is the first permanent navigation destination and the default screen. Its default **Town Bulletin** tab exposes public coordination and defense planning in one place: defense outlook/source, strategic construction need, gate volunteers, construction intentions, and active field claims. Chronicle and Statistics remain sibling Town Records tabs. There is no separate Communications screen in this slice.
 
-The controlled citizen's Home screen separates **Inventory & Actions**, **Building Upgrades**, and **Home Improvements**. From Citizens, an in-town controlled citizen may also visit another citizen's home. Foreign-home visits are deliberately narrow in schema v17: basic home state is visible and a present corpse can be disposed of, while theft, complaints, descriptions, recycling, and other social-home actions remain separate future mechanics.
+The controlled citizen's Home screen separates **Inventory & Actions**, **Building Upgrades**, and **Home Improvements**. From Citizens, an in-town controlled citizen may also visit another citizen's home. Foreign-home visits are deliberately narrow in schema v18: basic home state is visible and a present corpse can be disposed of, while theft, complaints, descriptions, recycling, and other social-home actions remain separate future mechanics.
 
 The Bank screen derives visual stacks from authoritative objects. State-bearing objects with different normalized state remain separate stacks and withdrawals resolve to one exact legal item ID.
 
@@ -278,7 +278,7 @@ Benchmarks still run deterministically on every test run so large shifts remain 
 
 ## Future forum and social integration
 
-The v14 commitment model remains the public-coordination substrate under schema v17 and is intentionally compatible with a later real forum/chat system. Human or bot posts can eventually produce the same public intentions: "I'll close the gate", "I'll be backup", "I'm working on the wall", "we need planks", or "I'm scouting east".
+The v14 commitment model remains the public-coordination substrate under schema v18 and is intentionally compatible with a later real forum/chat system. Human or bot posts can eventually produce the same public intentions: "I'll close the gate", "I'll be backup", "I'm working on the wall", "we need planks", or "I'm scouting east".
 
 Future personality/social systems may affect whether citizens communicate, volunteer, keep commitments, hoard, or accept risk. They must not bypass legal commands, private-resource ownership, exact item ownership, or the World Knowledge/public-defense boundaries.
 
@@ -291,3 +291,8 @@ Current:
 Future:
 
 `React -> network commands/time -> authoritative server using the same core/controllers -> database`
+
+
+## Construction discovery and condition
+
+Construction state distinguishes a plan being **known** from the building being **completed**. New towns know only playable common roots; completing a common parent reveals its playable common children. Blueprint-tier projects remain hidden until blueprint discovery is implemented. Completed buildings also track condition so source-backed defense can scale with damage in later attack/repair work. See `docs/construction-fidelity.md`.

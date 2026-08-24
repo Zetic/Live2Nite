@@ -113,3 +113,5 @@ npm run build
 ## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md). Stateful item architecture is documented in [`docs/item-economy.md`](docs/item-economy.md).
+
+- Construction Sites now separate known plans from completed buildings; common branches reveal progressively and advanced blueprint tiers remain hidden until discovery.

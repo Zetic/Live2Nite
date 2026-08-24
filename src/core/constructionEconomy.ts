@@ -24,6 +24,7 @@ export const MYHORDES_CURRENT_CONSTRUCTION_COSTS:Partial<Record<ConstructionId,C
   moat:{referenceName:'Great Moat',apCost:60,resources:r({water_ration:20})},
   spiked_pit:{referenceName:'Spiked Pit',apCost:35,resources:r({wrought_iron:2,patchwork_beam:8})},
   barbed_wire:{referenceName:'Barbed Wire',apCost:10,resources:r({wrought_iron:1,wire_reel:2})},
+  bait:{referenceName:'Bait',apCost:10,resources:r({meaty_bone:2})},
   advanced_ramparts:{referenceName:'Wall Upgrade V2',apCost:40,resources:r({nuts_and_bolts:2,patchwork_beam:5,metal_support:5})},
   reinforcing_beams:{referenceName:'Metal Patches',apCost:15,resources:r({patchwork_beam:5,metal_support:3})},
   spiked_wall:{referenceName:'Spiked Wall',apCost:35,resources:r({twisted_plank:5,wrought_iron:2,unshaped_concrete_block:1})},
@@ -40,6 +41,10 @@ export const MYHORDES_CURRENT_CONSTRUCTION_COSTS:Partial<Record<ConstructionId,C
   acid_projection:{referenceName:'Acid Spray',apCost:25,resources:r({water_ration:3,pharmaceutical_products:2})},
   neurotoxin:{referenceName:'Gas Gun',apCost:60,resources:r({metal_support:5,water_ration:5,nuts_and_bolts:1,copper_pipe:1,pharmaceutical_products:2,poison_gland:1})},
   plywood:{referenceName:'Plywood',apCost:30,resources:r({twisted_plank:2,wrought_iron:2})},
+  timber_armour:{referenceName:'Armour Plating',apCost:30,resources:r({twisted_plank:10})},
+  metal_armour:{referenceName:'Armour Plating v2',apCost:30,resources:r({wrought_iron:10})},
+  heavy_armour:{referenceName:'Armour Plating v3',apCost:30,resources:r({twisted_plank:8,wrought_iron:8})},
+  slick_wall:{referenceName:"Slip 'n' Slide",apCost:35,resources:r({wrought_iron:10,water_ration:10,copper_pipe:1,sheet_metal:2,pharmaceutical_products:2})},
   bastion:{referenceName:'Extrawall',apCost:25,resources:r({twisted_plank:15,wrought_iron:15})},
 
   pump:{referenceName:'Pump',apCost:25,resources:r({wrought_iron:8,copper_pipe:1})},
@@ -91,4 +96,11 @@ export const MYHORDES_CURRENT_CONSTRUCTION_COSTS:Partial<Record<ConstructionId,C
   scarecrow_fields:{referenceName:'Scarecrows',apCost:40,resources:r({twisted_plank:5,patchwork_beam:3,duct_tape:3})},
   fortified_homes:{referenceName:'Fortifications',apCost:50,resources:r({unshaped_concrete_block:2,patchwork_beam:15,metal_support:10,wrought_iron:5})},
   false_town:{referenceName:'False Town',apCost:400,resources:r({nuts_and_bolts:15,twisted_plank:20,wrought_iron:20,patchwork_beam:20,metal_support:20})},
+
+  foundations:{referenceName:'Foundations',apCost:30,resources:r({twisted_plank:8,wrought_iron:8,unshaped_concrete_block:2})},
+  portal_lock:{referenceName:'Portal Lock',apCost:15,resources:r({wrought_iron:2})},
+  reinforced_gates:{referenceName:'Reinforced Gates',apCost:35,resources:r({twisted_plank:3})},
+  soul_purifying_source:{referenceName:'Soul Purifying Source',apCost:30,resources:r({wrought_iron:1,duct_tape:1,bag_of_damp_grass:2,empty_oil_can:1})},
+  sanctuary:{referenceName:'Sanctuary',apCost:20,resources:r({twisted_plank:2,patchwork_beam:3,bag_of_damp_grass:1})},
+  hammam:{referenceName:'Hammam',apCost:20,resources:r({twisted_plank:2,sheet_metal:2})},
 }

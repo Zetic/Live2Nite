@@ -32,9 +32,9 @@ function withWorkshopResources(game: GameState): GameState {return { ...game, to
 function withInventory(game: GameState, types: ItemType[]): GameState {return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, inventory: types.map((type,index) => ({ id:`test-${index}`, type })) } : citizen) }}
 
 describe('Citizen homes, starter supplies, and well', () => {
-  it('starts schema v16 citizens at 1 AM with starter home, packages, hydration, camping, control, and coordination state', () => {
+  it('starts current-schema citizens at 1 AM with starter home, packages, hydration, camping, control, and coordination state', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(17)
+    expect(game.schemaVersion).toBe(18)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
@@ -230,7 +230,7 @@ describe('Town construction and Workshop', () => {
 
   it('converts 1 raw resource into 1 refined resource for 3 AP', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: bankFromCounts({rotten_log:1},'game-recipe'), construction: { ...game.town.construction, workshop: { id: 'workshop', apContributed: 25, completed: true } } } }
+    game = { ...game, town: { ...game.town, bank: bankFromCounts({rotten_log:1},'game-recipe'), construction: { ...game.town.construction, workshop: { id: 'workshop', discovered: true, apContributed: 25, completed: true, hp: 25 } } } }
     const action = getLegalActions(game, 'c01').find((a) => a.type === 'WORKSHOP_CONVERT' && a.recipeId === 'logs_to_planks')!
     game = executeCommand(game, action).state
     expect(game.citizens[0].ap).toBe(3)
@@ -240,7 +240,7 @@ describe('Town construction and Workshop', () => {
 
   it('completing the Watchtower adds derived town defense without mutating the bootstrap base', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: bankFromCounts({twisted_plank:3,patchwork_beam:1,wrought_iron:1},'watchtower'), construction: { ...game.town.construction, watchtower: { id: 'watchtower', apContributed: 14, completed: false } } } }
+    game = { ...game, town: { ...game.town, bank: bankFromCounts({twisted_plank:3,patchwork_beam:1,wrought_iron:1},'watchtower'), construction: { ...game.town.construction, watchtower: { ...game.town.construction.watchtower, discovered: true, apContributed: 14, completed: false, hp: 0 } } } }
     game = executeCommand(game, projectCommand(game,'c01','watchtower')).state
     expect(game.town.construction.watchtower.completed).toBe(true)
     expect(game.town.defense).toBe(40)

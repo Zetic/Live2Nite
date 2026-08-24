@@ -47,7 +47,7 @@ describe('portable combinations',()=>{
 
   it('lets town AI prepare construction combinations by withdrawing Bank ingredients',()=>{
     let game=createInitialGame(2808,1)
-    game={...game,town:{...game.town,bank:bankFromCounts({bag_of_cement:1,water_ration:1},'concrete-prep'),construction:{...game.town.construction,advanced_ramparts:{...game.town.construction.advanced_ramparts,completed:true,apContributed:CONSTRUCTIONS.advanced_ramparts.apCost},spiked_wall:{...game.town.construction.spiked_wall,apContributed:1}}}}
+    game={...game,day:4,town:{...game.town,bank:bankFromCounts({bag_of_cement:1,water_ration:1},'concrete-prep'),construction:{...game.town.construction,foundations:{...game.town.construction.foundations,discovered:true,apContributed:29}}}}
     let citizen=game.citizens[0];let actions=getLegalActions(game,citizen.id);let work=chooseTownWork(game,citizen,actions)
     expect(work?.type).toBe('WITHDRAW_BANK_ITEM')
     if(!work)throw new Error('Expected concrete ingredient withdrawal')
@@ -86,7 +86,7 @@ describe('portable combinations',()=>{
     expect(game.citizens[0].inventory.find((item)=>item.id==='staff-object')?.type).toBe('staff')
     expect(game.citizens[0].inventory.find((item)=>item.id==='kit-object')?.state?.condition).toBe('damaged')
     const damaged=game.citizens[0].inventory.find((item)=>item.id==='kit-object')!
-    game={...game,town:{...game.town,bank:[damaged],construction:{...game.town.construction,workshop:{id:'workshop',completed:true,apContributed:CONSTRUCTIONS.workshop.apCost}}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:citizen.inventory.filter((item)=>item.id!=='kit-object')}:citizen)}
+    game={...game,town:{...game.town,bank:[damaged],construction:{...game.town.construction,workshop:{...game.town.construction.workshop,discovered:true,completed:true,apContributed:CONSTRUCTIONS.workshop.apCost,hp:CONSTRUCTIONS.workshop.maxHp??CONSTRUCTIONS.workshop.apCost}}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:citizen.inventory.filter((item)=>item.id!=='kit-object')}:citizen)}
     game=executeCommand(game,workshop(game,'repair_repair_kit')).state
     const restored=game.town.bank.find((item)=>item.id==='kit-object');expect(restored?.type).toBe('repair_kit');expect(restored?.state?.condition).toBe('intact')
   })

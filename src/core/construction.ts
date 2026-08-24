@@ -1,5 +1,6 @@
 import { bankCount } from './bank'
 import { CONSTRUCTION_IDS } from './constructionIds'
+import { CURRENT_CONSTRUCTION_FIDELITY, type ConstructionBlueprintTier } from './constructionFidelity'
 import type { ConstructionId, ConstructionProjectState, GameState, ItemType } from './types'
 
 export type ConstructionCategory = 'wall' | 'pump' | 'workshop' | 'watchtower' | 'foundations' | 'portal' | 'sanctuary'
@@ -41,6 +42,10 @@ export interface ConstructionDefinition {
   source: ConstructionSource
   sourceConfidence: ConstructionConfidence
   historicalCostConfidence: ConstructionConfidence
+  blueprintTier?: ConstructionBlueprintTier
+  maxHp?: number
+  breakable?: boolean
+  playable?: boolean
 }
 
 const H = 'HORDES_V4_4' as const
@@ -88,6 +93,10 @@ export const CONSTRUCTIONS: Record<ConstructionId, ConstructionDefinition> = {
   acid_projection: { id:'acid_projection', name:'Acid Projection', category:'wall', parentId:'sprayer', description:'A one-night chemical projection that burns through the attacking horde.', apCost:40, resources:{...c(2,4), pharmaceutical_products:1}, prerequisites:['sprayer'], effects:def(40), effectLabel:'+40 defense for the next attack', expiresAfterAttack:true, source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   neurotoxin: { id:'neurotoxin', name:'Neurotoxin', category:'wall', parentId:'acid_projection', description:'A powerful disposable chemical defense for an emergency night.', apCost:60, resources:{...c(2,5), pharmaceutical_products:2}, prerequisites:['acid_projection'], effects:def(150), effectLabel:'+150 defense for the next attack', expiresAfterAttack:true, source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   plywood: { id:'plywood', name:'Plywood', category:'wall', parentId:'wall_upgrade', description:'Additional wooden plating covers weak wall sections.', apCost:30, resources:c(7,1), prerequisites:['wall_upgrade'], effects:def(25), effectLabel:'+25 town defense', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
+  timber_armour: { id:'timber_armour', name:'Armour Plating', category:'wall', parentId:'wall_upgrade', description:'Simple timber plating reinforces the town perimeter.', apCost:30, resources:{twisted_plank:10}, prerequisites:['wall_upgrade'], effects:def(30), effectLabel:'+30 town defense', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'confirmed' },
+  metal_armour: { id:'metal_armour', name:'Armour Plating v2', category:'wall', parentId:'wall_upgrade', description:'A basic metal-plating layer reinforces the perimeter.', apCost:30, resources:{wrought_iron:10}, prerequisites:['wall_upgrade'], effects:def(30), effectLabel:'+30 town defense', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'confirmed' },
+  heavy_armour: { id:'heavy_armour', name:'Armour Plating v3', category:'wall', parentId:'wall_upgrade', description:'A thicker mixed-material wall layer adds a larger defensive gain.', apCost:30, resources:{twisted_plank:8,wrought_iron:8}, prerequisites:['wall_upgrade'], effects:def(45), effectLabel:'+45 town defense', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'confirmed' },
+  slick_wall: { id:'slick_wall', name:"Slip 'n' Slide", category:'wall', parentId:'wall_upgrade', description:'A treated wall surface makes the perimeter more difficult for the horde to climb.', apCost:35, resources:{wrought_iron:10,water_ration:10,copper_pipe:1,sheet_metal:2,pharmaceutical_products:2}, prerequisites:['wall_upgrade'], effects:def(60), effectLabel:'+60 town defense', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'confirmed' },
   bastion: { id:'bastion', name:'Bastion', category:'wall', parentId:'advanced_ramparts', description:'A reinforced strongpoint anchors the town perimeter.', apCost:55, resources:c(5,6,1), prerequisites:['advanced_ramparts'], effects:def(45), effectLabel:'+45 town defense', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
 
   pump: { id:'pump', name:'Pump', category:'pump', description:'Expands access to the town well and grants a second daily ration withdrawal.', apCost:25, resources:c(8,1), prerequisites:[], effects:[{type:'well_water_on_complete',amount:10},{type:'well_daily_withdrawals',amount:1}], effectLabel:'+10 water and +1 daily Well withdrawal', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
@@ -154,14 +163,56 @@ export const CONSTRUCTIONS: Record<ConstructionId, ConstructionDefinition> = {
   hammam: { id:'hammam', name:'Hammam', category:'sanctuary', parentId:'sanctuary', description:'A substantial communal building whose future status effects are deferred.', apCost:50, resources:c(5,4,1), prerequisites:['sanctuary'], effects:def(20), effectLabel:'+20 town defense; status effects deferred', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
 }
 
-export const CONSTRUCTION_ORDER: ConstructionId[] = [...CONSTRUCTION_IDS]
-
-export function createConstructionState(): Record<ConstructionId, ConstructionProjectState> {
-  return Object.fromEntries(CONSTRUCTION_ORDER.map((id) => [id, { id, apContributed: 0, completed: false }])) as Record<ConstructionId, ConstructionProjectState>
+function applyCurrentConstructionFidelity():void {
+  for(const [id,snapshot] of Object.entries(CURRENT_CONSTRUCTION_FIDELITY) as Array<[ConstructionId,NonNullable<(typeof CURRENT_CONSTRUCTION_FIDELITY)[ConstructionId]>]>) {
+    const project=CONSTRUCTIONS[id]
+    if(!project||!snapshot)continue
+    project.parentId=snapshot.parentId??undefined
+    project.prerequisites=snapshot.parentId?[snapshot.parentId]:[]
+    if(snapshot.category)project.category=snapshot.category
+    project.blueprintTier=snapshot.blueprintTier
+    project.maxHp=snapshot.maxHp
+    project.breakable=snapshot.breakable
+    project.playable=snapshot.playable
+    project.expiresAfterAttack=snapshot.temporary
+    project.effects=project.effects.filter((effect)=>effect.type!=='town_defense_flat'&&effect.type!=='well_water_on_complete')
+    if(snapshot.defense>0)project.effects.unshift({type:'town_defense_flat',amount:snapshot.defense})
+    if((snapshot.completionWater??0)>0)project.effects.push({type:'well_water_on_complete',amount:snapshot.completionWater!})
+    if(project.effects.length===1&&project.effects[0].type==='town_defense_flat')project.effectLabel=snapshot.temporary?`+${snapshot.defense} defense for the next attack`:`+${snapshot.defense} town defense`
+    else if(project.id==='pump')project.effectLabel=`+${snapshot.completionWater??0} water and +1 daily Well withdrawal`
+    else if(snapshot.completionWater&&project.effects.every((effect)=>effect.type==='well_water_on_complete'))project.effectLabel=`+${snapshot.completionWater} Well water on completion`
+    project.source='MYHORDES_CURRENT'
+    project.sourceConfidence='confirmed'
+  }
 }
 
+applyCurrentConstructionFidelity()
+
+export const CONSTRUCTION_ORDER: ConstructionId[] = [...CONSTRUCTION_IDS]
+
+export function constructionBlueprintTier(projectId:ConstructionId):ConstructionBlueprintTier{return CONSTRUCTIONS[projectId].blueprintTier??4}
+export function constructionPlayable(projectId:ConstructionId):boolean{return CONSTRUCTIONS[projectId].playable===true}
+export function constructionMaxHp(projectId:ConstructionId):number{return Math.max(0,CONSTRUCTIONS[projectId].maxHp??CONSTRUCTIONS[projectId].apCost)}
+export function constructionInitiallyDiscovered(projectId:ConstructionId):boolean{
+  const definition=CONSTRUCTIONS[projectId]
+  return constructionPlayable(projectId)&&constructionBlueprintTier(projectId)===0&&!definition.parentId
+}
+
+export function createConstructionState(): Record<ConstructionId, ConstructionProjectState> {
+  return Object.fromEntries(CONSTRUCTION_ORDER.map((id) => [id, { id, discovered:constructionInitiallyDiscovered(id), apContributed:0, completed:false, hp:0 }])) as Record<ConstructionId, ConstructionProjectState>
+}
+
+export function constructionDiscovered(state:GameState,projectId:ConstructionId):boolean{return state.town.construction[projectId]?.discovered===true}
+
 export function constructionUnlocked(state: GameState, projectId: ConstructionId): boolean {
-  return CONSTRUCTIONS[projectId].prerequisites.every((id) => state.town.construction[id]?.completed)
+  return constructionPlayable(projectId)&&constructionDiscovered(state,projectId)&&CONSTRUCTIONS[projectId].prerequisites.every((id) => state.town.construction[id]?.completed)
+}
+
+export function commonChildrenToDiscover(state:GameState,parentId:ConstructionId):ConstructionId[]{
+  return CONSTRUCTION_ORDER.filter((id)=>{
+    const definition=CONSTRUCTIONS[id]
+    return constructionPlayable(id)&&constructionBlueprintTier(id)===0&&definition.parentId===parentId&&!state.town.construction[id]?.discovered
+  })
 }
 
 export function hasRequiredMaterials(state: GameState, projectId: ConstructionId): boolean {
@@ -201,8 +252,20 @@ function effectsOfType<T extends ConstructionEffect['type']>(state:GameState,typ
   return completedConstructionEffects(state).filter((effect):effect is Extract<ConstructionEffect,{type:T}>=>effect.type===type)
 }
 
+export function constructionConditionRatio(state:GameState,projectId:ConstructionId):number{
+  const project=state.town.construction[projectId]
+  if(!project?.completed)return 0
+  const definition=CONSTRUCTIONS[projectId]
+  if(definition.breakable===false)return 1
+  const maxHp=constructionMaxHp(projectId)
+  return maxHp>0?Math.max(0,Math.min(1,project.hp/maxHp)):1
+}
 export function constructionTownDefense(state:GameState):number{
-  const flat=effectsOfType(state,'town_defense_flat').reduce((sum,effect)=>sum+effect.amount,0)
+  const flat=CONSTRUCTION_ORDER.reduce((sum,id)=>{
+    if(!state.town.construction[id]?.completed)return sum
+    const base=CONSTRUCTIONS[id].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'town_defense_flat'}>=>effect.type==='town_defense_flat').reduce((value,effect)=>value+effect.amount,0)
+    return sum+Math.floor(base*constructionConditionRatio(state,id))
+  },0)
   const dead=state.citizens.filter((citizen)=>!citizen.alive).length
   const perDead=effectsOfType(state,'defense_per_dead_citizen').reduce((sum,effect)=>sum+effect.amount,0)
   return flat+dead*perDead
@@ -230,7 +293,7 @@ export function dailyConstructionOutputs(state:GameState):Array<{projectId:Const
 }
 export function constructionFlatDefenseForProject(projectId:ConstructionId):number{return CONSTRUCTIONS[projectId].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'town_defense_flat'}>=>effect.type==='town_defense_flat').reduce((sum,effect)=>sum+effect.amount,0)}
 
-function unlockValue(state:GameState,projectId:ConstructionId):number{return CONSTRUCTION_ORDER.filter((id)=>!state.town.construction[id]?.completed&&CONSTRUCTIONS[id].prerequisites.includes(projectId)).length}
+function unlockValue(state:GameState,projectId:ConstructionId):number{return CONSTRUCTION_ORDER.filter((id)=>constructionPlayable(id)&&constructionBlueprintTier(id)===0&&!state.town.construction[id]?.discovered&&CONSTRUCTIONS[id].parentId===projectId).length}
 function missingResourceBurden(state:GameState,projectId:ConstructionId):number{return Object.values(missingMaterials(state,projectId)).reduce((sum,value)=>sum+(value??0),0)}
 
 export function constructionPriority(state: GameState, projectId: ConstructionId): number {
