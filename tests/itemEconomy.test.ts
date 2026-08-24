@@ -78,6 +78,20 @@ describe('schema v16 stateful item economy',()=>{
     expect(reloaded?.state).toEqual({charges:2})
   })
 
+  it('migrates v17 construction progress into known plans and valid condition',()=>{
+    const current=createInitialGame(2605,1)
+    const legacyConstruction=Object.fromEntries(Object.entries(current.town.construction).map(([id,project])=>[
+      id,
+      {id,apContributed:id==='wall_upgrade'?25:project.apContributed,completed:id==='wall_upgrade'},
+    ]))
+    const legacy={...current,schemaVersion:17,town:{...current.town,construction:legacyConstruction}} as unknown as Record<string,unknown>
+    const migrated=migrateStoredGame(legacy)
+    expect(migrated?.schemaVersion).toBe(18)
+    expect(migrated?.town.construction.wall_upgrade).toMatchObject({discovered:true,completed:true,hp:25})
+    expect(migrated?.town.construction.great_pit.discovered).toBe(true)
+    expect(migrated?.town.construction.reinforcing_beams.discovered).toBe(false)
+  })
+
   it('materializes legacy Bank counts as unique normalized objects without colliding with existing IDs',()=>{
     const current=createInitialGame(2603,1)
     const existing=createItemInstance('i000007','water_pistol',{charges:1})
