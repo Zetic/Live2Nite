@@ -25,6 +25,8 @@ describe('ordinary MyHordes opener tool repair chains',()=>{
       ['broken_box_cutter','box_cutter','repair_box_cutter'],
       ['broken_chain','chain','repair_chain'],
       ['broken_can_opener','can_opener','repair_can_opener'],
+      ['broken_ektorp_gluten_chair','ektorp_gluten_chair','repair_ektorp_gluten_chair'],
+      ['broken_pc_base_unit','pc_base_unit','repair_pc_base_unit'],
     ]
     for(const [brokenType,repairedType,recipeId] of cases){
       let game=withInventory([createItemInstance('broken-object',brokenType),createItemInstance('kit','repair_kit')])
@@ -36,10 +38,17 @@ describe('ordinary MyHordes opener tool repair chains',()=>{
     }
   })
 
-  it('lets Kwik-Fix repair a broken opener in place and consumes the fix',()=>{
-    let game=withInventory([createItemInstance('cutter','broken_box_cutter'),createItemInstance('fix','kwik_fix')])
-    game=executeCommand(game,combination(game,'kwik_fix_box_cutter')).state
-    expect(game.citizens[0].inventory.find((item)=>item.id==='cutter')?.type).toBe('box_cutter')
-    expect(game.citizens[0].inventory.some((item)=>item.id==='fix')).toBe(false)
+  it('lets Kwik-Fix repair broken ordinary openers in place and consumes the fix',()=>{
+    const cases:Array<[ItemType,ItemType,CombinationRecipeId]>=[
+      ['broken_box_cutter','box_cutter','kwik_fix_box_cutter'],
+      ['broken_ektorp_gluten_chair','ektorp_gluten_chair','kwik_fix_ektorp_gluten_chair'],
+      ['broken_pc_base_unit','pc_base_unit','kwik_fix_pc_base_unit'],
+    ]
+    for(const [brokenType,repairedType,recipeId] of cases){
+      let game=withInventory([createItemInstance('target',brokenType),createItemInstance('fix','kwik_fix')])
+      game=executeCommand(game,combination(game,recipeId)).state
+      expect(game.citizens[0].inventory.find((item)=>item.id==='target')?.type,recipeId).toBe(repairedType)
+      expect(game.citizens[0].inventory.some((item)=>item.id==='fix'),recipeId).toBe(false)
+    }
   })
 })
