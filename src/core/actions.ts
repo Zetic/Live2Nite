@@ -2,7 +2,7 @@ import { bankCount } from './bank'
 import { CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
-import { CONSTRUCTION_ORDER, CONSTRUCTIONS, gateLockedAtHour, wellDailyWithdrawals } from './construction'
+import { CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
 import { HOME_IMPROVEMENTS, hasPersonalMaterials, improvementNextLevel, nextHomeDefinition } from './home'
 import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
 import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
@@ -17,15 +17,7 @@ export const MOVE_AP_COST=1
 export const CONSTRUCTION_AP_COST=1
 export const SPECIAL_EXCAVATION_AP_COST=1
 
-const ROOT_CONSTRUCTIONS=CONSTRUCTION_ORDER.filter((id)=>CONSTRUCTIONS[id].prerequisites.length===0)
-const CONSTRUCTION_CHILDREN=new Map<ConstructionId,ConstructionId[]>()
-for(const id of CONSTRUCTION_ORDER){for(const prerequisite of CONSTRUCTIONS[id].prerequisites){const children=CONSTRUCTION_CHILDREN.get(prerequisite)??[];children.push(id);CONSTRUCTION_CHILDREN.set(prerequisite,children)}}
-
-function constructionFrontier(state:GameState):ConstructionId[]{
-  const frontier:ConstructionId[]=[];const queue=[...ROOT_CONSTRUCTIONS];const seen=new Set<ConstructionId>()
-  while(queue.length){const id=queue.shift()!;if(seen.has(id))continue;seen.add(id);const project=state.town.construction[id];if(!project)continue;if(!project.completed){frontier.push(id);continue}for(const child of CONSTRUCTION_CHILDREN.get(id)??[]){if(CONSTRUCTIONS[child].prerequisites.every((required)=>state.town.construction[required]?.completed))queue.push(child)}}
-  return frontier
-}
+function constructionFrontier(state:GameState):ConstructionId[]{return CONSTRUCTION_ORDER.filter((id)=>{const project=state.town.construction[id];return Boolean(project?.discovered&&!project.completed&&constructionUnlocked(state,id))})}
 function hasProjectMaterials(state:GameState,projectId:ConstructionId):boolean{return Object.entries(CONSTRUCTIONS[projectId].resources).every(([type,required])=>bankCount(state,type as Parameters<typeof bankCount>[1])>=(required??0))}
 function availableOpeners(citizen:Citizen):ItemInstance[]{return citizen.location.type==='town'?[...citizen.inventory,...citizen.home.storage]:citizen.inventory}
 function terrorBlocksOrdinaryItems(state:GameState,citizen:Citizen):boolean{return citizen.status.terrorized&&citizen.location.type==='world'&&zoneControl(state,citizen.location.x,citizen.location.y).trapped}
