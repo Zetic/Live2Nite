@@ -8,15 +8,29 @@ import { CombinationActionMenu, ItemActionMenu, ItemStrip } from './InventoryIte
 type HomeTab='inventory'|'upgrades'|'improvements'
 function commandFor(actions:GameCommand[],type:GameCommand['type'],itemId:string):GameCommand|undefined{return actions.find((action)=>action.type===type&&'itemId'in action&&action.itemId===itemId)}
 function improvementCommand(actions:GameCommand[],id:HomeImprovementId):GameCommand|undefined{return actions.find((action)=>action.type==='BUILD_HOME_IMPROVEMENT'&&action.improvementId===id)}
+function corpseCommand(actions:GameCommand[],type:'DISPOSE_CORPSE_OUTSIDE'|'DISPOSE_CORPSE_WATER',targetCitizenId:string):GameCommand|undefined{return actions.find((action)=>action.type===type&&'targetCitizenId'in action&&action.targetCitizenId===targetCitizenId)}
 function resourceText(resources:Partial<Record<ItemType,number>>):string{const entries=Object.entries(resources) as Array<[ItemType,number|undefined]>;return entries.length?entries.map(([type,count])=>`${itemName(type)} × ${count??0}`).join(' · '):'No materials'}
 function homeRegisterEvent(event:GameEvent,citizenId:string):boolean{if(!('citizenId'in event)||event.citizenId!==citizenId)return false;return['ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','CONTAINER_OPENED','ITEM_CONSUMED','ITEMS_COMBINED','HOME_UPGRADED','HOME_IMPROVEMENT_BUILT'].includes(event.type)}
+function foreignHomeRegisterEvent(event:GameEvent,citizenId:string):boolean{return(event.type==='CORPSE_DISPOSED'&&event.targetCitizenId===citizenId)||(event.type==='CORPSE_REANIMATED'&&event.corpseCitizenId===citizenId)||(event.type==='CITIZEN_DIED'&&event.citizenId===citizenId)}
 
-export function HomeView({game,citizenId,legalActions,act}:{game:GameState;citizenId:string;legalActions:GameCommand[];act:(command:GameCommand|undefined)=>void}){
+export function HomeView({game,citizenId,ownerCitizenId,legalActions,act,onReturnHome}:{game:GameState;citizenId:string;ownerCitizenId?:string;legalActions:GameCommand[];act:(command:GameCommand|undefined)=>void;onReturnHome?:()=>void}){
   const[tab,setTab]=useState<HomeTab>('inventory')
-  const player=game.citizens.find((citizen)=>citizen.id===citizenId)??game.citizens[0]
+  const actor=game.citizens.find((citizen)=>citizen.id===citizenId)??game.citizens[0]
+  const player=game.citizens.find((citizen)=>citizen.id===(ownerCitizenId??citizenId))??actor
+  const visiting=player.id!==actor.id
   const upgrade=legalActions.find((action)=>action.type==='UPGRADE_HOME')
   const currentDefense=personalDefense(player,game);const structuralDefense=HOME_LEVELS[player.home.level].defense;const currentIndex=HOME_LEVEL_ORDER.indexOf(player.home.level);const nextLevel=currentIndex<HOME_LEVEL_ORDER.length-1?HOME_LEVEL_ORDER[currentIndex+1]:null;const nextDefinition=nextLevel?HOME_LEVELS[nextLevel]:null
   const defenseTooltip=`Total defense protecting this home during a breach. Structure: ${structuralDefense}. Defensive objects and installed improvements are included here.`
+  if(visiting){
+    const drag=corpseCommand(legalActions,'DISPOSE_CORPSE_OUTSIDE',player.id)
+    const water=corpseCommand(legalActions,'DISPOSE_CORPSE_WATER',player.id)
+    const disposition=player.corpseDisposition==='dragged_out'?'The body was dragged outside town.':player.corpseDisposition==='watered'?'The body was destroyed with a Water Ration.':player.home.corpseAttacked?'The corpse already reanimated during a nightly internal attack.':'No body is present in this home.'
+    return <section className="panel screen-panel home-screen">
+      <div className="panel-heading"><div><p className="section-kicker">Visiting {player.name}</p><h2>{homeName(player.home.level)}</h2></div><div className="home-defense-compact" title={defenseTooltip}><span>Defense</span><strong>{currentDefense}</strong></div></div>
+      <div className="home-upgrade-layout"><section className="home-upgrade-next"><p className="section-kicker">{player.alive?'Citizen home':'Dead citizen home'}</p><h3>{player.name}</h3><p>{player.alive?'The resident is alive. This first visit-home pass is read-only for living citizens.':player.home.holdsBody?(player.home.corpseAttacked?'The body remains here, but it already reanimated during an internal attack and will not attack again.':'The resident died in town and the body remains here. An undisposed corpse can reanimate during the next nightly attack.'):disposition}</p><div className="upgrade-cost"><span>{player.home.storage.length} item{player.home.storage.length===1?'':'s'} in chest</span><span>{player.home.level.replaceAll('_',' ')}</span></div>{!player.alive&&player.home.holdsBody&&<div className="inventory-actions-block"><div className="inventory-heading"><h3>Corpse disposal</h3><span className="micro-stat">source-backed</span></div><p className="adaptation-note">Pouring water consumes 1 Water Ration. Dragging the corpse outside costs 2 AP. Disposing of a body before it reanimates prevents its internal attack.</p><div className="home-tabs"><button disabled={!drag} onClick={()=>act(drag)}><strong>Drag outside town</strong><small>2 AP</small></button><button disabled={!water} onClick={()=>act(water)}><strong>Pour water on corpse</strong><small>1 Water Ration</small></button></div></div>}{onReturnHome&&<button className="secondary" onClick={onReturnHome}>Return to my home</button>}</section><section className="home-level-table"><div className="home-level-row header"><span>Status</span><span>Body</span><span>Defense</span><span>Chest</span></div><div className="home-level-row current"><span>{player.alive?'ALIVE':'DEAD'}</span><strong>{player.home.holdsBody?'PRESENT':'CLEAR'}</strong><span>{currentDefense}</span><span>{player.home.storage.length}/{player.home.storageCapacity}</span></div></section></div>
+      <ContextRegister game={game} title={`${player.name}'s Home Register`} matches={(event)=>foreignHomeRegisterEvent(event,player.id)}/>
+    </section>
+  }
   const toHome=(itemId:string)=>commandFor(legalActions,'MOVE_ITEM_TO_HOME',itemId);const toRucksack=(itemId:string)=>commandFor(legalActions,'MOVE_ITEM_TO_RUCKSACK',itemId)
   const actionableItems=[...player.inventory,...player.home.storage];const itemSource=(item:ItemInstance)=>player.home.storage.some((stored)=>stored.id===item.id)?'Chest':'Rucksack'
   return <section className="panel screen-panel home-screen">

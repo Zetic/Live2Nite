@@ -63,7 +63,7 @@ describe('schema v16 stateful item economy',()=>{
 
   it('initializes new-game starter objects through canonical item normalization',()=>{
     const game=createInitialGame(2602,2)
-    expect(game.schemaVersion).toBe(16)
+    expect(game.schemaVersion).toBe(17)
     expect(game.citizens.flatMap((citizen)=>citizen.home.storage).every((item)=>item.state!==undefined)).toBe(true)
   })
 
@@ -73,7 +73,7 @@ describe('schema v16 stateful item economy',()=>{
     const current={...game,town:{...game.town,bank:[...game.town.bank,pistol]}}
     const loaded=migrateStoredGame(current as unknown as Record<string,unknown>)
     const reloaded=loaded?.town.bank.find((item)=>item.id===pistol.id)
-    expect(loaded?.schemaVersion).toBe(16)
+    expect(loaded?.schemaVersion).toBe(17)
     expect(reloaded).toEqual(pistol)
     expect(reloaded?.state).toEqual({charges:2})
   })
@@ -90,7 +90,7 @@ describe('schema v16 stateful item economy',()=>{
       events:[],
     } as unknown as Record<string,unknown>
     const migrated=migrateStoredGame(legacy)
-    expect(migrated?.schemaVersion).toBe(16)
+    expect(migrated?.schemaVersion).toBe(17)
     expect(migrated?.town.bank).toHaveLength(3)
     expect(migrated?.town.bank.filter((item)=>item.type==='water_ration')).toHaveLength(2)
     expect(migrated?.town.bank.every((item)=>item.state?.contamination==='clean')).toBe(true)

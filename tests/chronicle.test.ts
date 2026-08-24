@@ -8,6 +8,8 @@ const events: GameEvent[] = [
   { type: 'COMBAT_RESOLVED', day: 2, hour: 7, citizenId: 'c02', zoneKey: '1,1', method: 'fists', kills: 2, item: null, consumed: false, rngStateAfter: 22 },
   { type: 'AP_SPENT', day: 2, hour: 7, citizenId: 'c02', amount: 1 },
   { type: 'CITIZEN_DIED', day: 2, hour: 0, citizenId: 'c02', reason: 'outside_at_night' },
+  { type: 'CORPSE_DISPOSED', day: 2, hour: 8, citizenId: 'c01', targetCitizenId: 'c02', method: 'dragged_out' },
+  { type: 'CORPSE_REANIMATED', day: 2, hour: 0, corpseCitizenId: 'c03', outcome: 'well', waterLost: 20 },
 ]
 
 describe('Chronicle event metadata', () => {
@@ -17,6 +19,8 @@ describe('Chronicle event metadata', () => {
     expect(chronicleCategory(events[2])).toBe('combat')
     expect(chronicleCategory(events[3])).toBe('system')
     expect(chronicleCategory(events[4])).toBe('survival')
+    expect(chronicleCategory(events[5])).toBe('home')
+    expect(chronicleCategory(events[6])).toBe('survival')
   })
 
   it('attributes only citizen-owned events to citizen filters', () => {

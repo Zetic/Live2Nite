@@ -41,7 +41,7 @@ describe('facility navigation', () => {
 describe('undepleted and depleted scavenging', () => {
   it('starts schema v16 and keeps low-grade Workshop feedstock out of the normal loot pool', () => {
     const game = createInitialGame(123, 2)
-    expect(game.schemaVersion).toBe(16)
+    expect(game.schemaVersion).toBe(17)
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })

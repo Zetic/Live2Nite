@@ -9,6 +9,7 @@ function constructionActions(actions:GameCommand[]):Array<Extract<GameCommand,{t
 function recipeAction(actions:GameCommand[],recipeId:WorkshopRecipeId):GameCommand|null{return actions.find((action)=>action.type==='WORKSHOP_CONVERT'&&action.recipeId===recipeId)??null}
 function combinationAction(actions:GameCommand[],recipeId:CombinationRecipeId):GameCommand|null{return actions.find((action)=>action.type==='COMBINE_ITEMS'&&action.recipeId===recipeId)??null}
 function homeUpgradeAction(actions:GameCommand[]):GameCommand|null{return actions.find((action)=>action.type==='UPGRADE_HOME')??null}
+function corpseDisposalAction(actions:GameCommand[]):GameCommand|null{return actions.find((action)=>action.type==='DISPOSE_CORPSE_OUTSIDE')??actions.find((action)=>action.type==='DISPOSE_CORPSE_WATER')??null}
 function improvementAction(actions:GameCommand[],id:HomeImprovementId):GameCommand|null{return actions.find((action)=>action.type==='BUILD_HOME_IMPROVEMENT'&&action.improvementId===id)??null}
 function withdrawAction(state:GameState,actions:GameCommand[],type:ItemType):GameCommand|null{return actions.find((action)=>action.type==='WITHDRAW_BANK_ITEM'&&state.town.bank.some((item)=>item.id===action.itemId&&item.type===type))??null}
 function communalReserve(state:GameState,type:ItemType,projectId:ConstructionId|null):number{if(!projectId||state.town.construction[projectId]?.completed)return 0;return CONSTRUCTIONS[projectId].resources[type]??0}
@@ -32,6 +33,7 @@ function materialRecipe(state:GameState,citizen:Citizen,actions:GameCommand[],mi
 }
 export function chooseTownWork(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
   if(citizen.location.type!=='town')return null
+  const corpse=corpseDisposalAction(actions);if(corpse)return corpse
   const assessment=publicDefenseAssessment(state);const builds=constructionActions(actions);const rankedBuildIds=rankStrategicConstruction(state,builds.map((action)=>action.projectId),assessment)
   if(rankedBuildIds[0]){const build=builds.find((action)=>action.projectId===rankedBuildIds[0]);if(build)return build}
   const inProgress=(Object.entries(state.town.construction) as Array<[ConstructionId,GameState['town']['construction'][ConstructionId]]>).filter(([,project])=>!project.completed&&project.apContributed>0)

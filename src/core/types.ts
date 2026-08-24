@@ -60,6 +60,7 @@ export type CombinationRecipeId =
   | 'kwik_fix_pc_base_unit'
 export type HomeLevel = 'camp_bed' | 'tent' | 'hovel' | 'shack' | 'house' | 'fenced_house' | 'fortified_shelter' | 'bunker' | 'castle'
 export type HomeImprovementId = 'reinforcements' | 'fence' | 'storage'
+export type CorpseDisposition = 'dragged_out' | 'watered'
 export type ItemStorage = 'inventory' | 'home' | 'ground'
 export type PersonalItemStorage = 'inventory' | 'home'
 export type ConsumableKind = 'food' | 'water'
@@ -87,7 +88,7 @@ export type CoordinationCommitmentKind = 'gate_primary' | 'gate_backup' | 'const
 export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType; state?: ItemState }
 export type CitizenLocation = { type: 'town' } | { type: 'world'; x: number; y: number }
-export interface CitizenHome { level:HomeLevel; defense:number; storage:ItemInstance[]; storageCapacity:number; upgradedDay:number|null; improvements:Record<HomeImprovementId,number> }
+export interface CitizenHome { level:HomeLevel; defense:number; storage:ItemInstance[]; storageCapacity:number; upgradedDay:number|null; improvements:Record<HomeImprovementId,number>; holdsBody:boolean; corpseAttacked:boolean }
 export interface CitizenDailyState { ate:boolean; drank:boolean; waterTaken:boolean; bonusWaterTaken?:boolean; woundTreated?:boolean }
 export interface CitizenStatusState {
   hydration:HydrationStatus
@@ -104,7 +105,7 @@ export interface CitizenStatusState {
 export interface CitizenCampingState { hidden:boolean; survivalChance:number|null; hiddenDay:number|null; nightsSurvived:number; lastSurvivedDay:number|null }
 export interface TemporaryControlState { zoneKey:string; grantedDay:number; grantedHour:number }
 export interface RelativeControlState { zoneKey:string }
-export interface Citizen { id:string; name:string; controller:CitizenControllerKind; alive:boolean; ap:number; maxAp:number; location:CitizenLocation; inventory:ItemInstance[]; inventoryCapacity:number; home:CitizenHome; daily:CitizenDailyState; status:CitizenStatusState; camping:CitizenCampingState; temporaryControl:TemporaryControlState|null; relativeControl:RelativeControlState|null }
+export interface Citizen { id:string; name:string; controller:CitizenControllerKind; alive:boolean; ap:number; maxAp:number; location:CitizenLocation; inventory:ItemInstance[]; inventoryCapacity:number; home:CitizenHome; corpseDisposition:CorpseDisposition|null; daily:CitizenDailyState; status:CitizenStatusState; camping:CitizenCampingState; temporaryControl:TemporaryControlState|null; relativeControl:RelativeControlState|null }
 export interface BotMissionAssignment { missionId:string; role:BotMissionRole; purpose:BotMissionPurpose; target:{x:number;y:number}; targetLabel:string; reason:string; phase:BotMissionPhase; assignedDay:number; assignedHour:number; returnByHour:number; safetyReserve:number; emergency:boolean; allowsCamping?:boolean; overnightPlanned?:boolean; scoutKind?:ScoutMissionKind; searchMode?:SearchMode }
 export interface CoordinationCommitment { id:string; citizenId:string; kind:CoordinationCommitmentKind; taskKey:string; label:string; reservedAp:number; day:number; hour:number; expiresHour:number; projectId?:ConstructionId }
 export interface TownCoordinationState { commitments:CoordinationCommitment[] }
@@ -116,9 +117,9 @@ export interface ConstructionProjectState { id:ConstructionId; apContributed:num
 export interface TownWellState { water:number }
 export interface TownState { gateOpen:boolean; defense:number; bank:ItemInstance[]; construction:Record<ConstructionId,ConstructionProjectState>; well:TownWellState }
 export interface HomeAttackOutcome { citizenId:string; zombies:number; defense:number; survived:boolean }
-export interface NightReport { day:number; attackStrength:number; defenseBeforeAttack:number; effectiveDefense:number; gateOpen:boolean; breached:boolean; outsideDeaths:number; campingSurvivors?:number; campingDeaths?:number; zombiesInside?:number; homeDeaths?:number; dehydrationDeaths?:number; infectionDeaths?:number; withdrawalDeaths?:number; homeAttacks?:HomeAttackOutcome[] }
+export interface NightReport { day:number; attackStrength:number; defenseBeforeAttack:number; effectiveDefense:number; gateOpen:boolean; breached:boolean; outsideDeaths:number; campingSurvivors?:number; campingDeaths?:number; zombiesInside?:number; homeDeaths?:number; dehydrationDeaths?:number; infectionDeaths?:number; withdrawalDeaths?:number; corpseReanimations?:number; corpseAttackDeaths?:number; corpseWaterLost?:number; homeAttacks?:HomeAttackOutcome[] }
 export interface WorldZombieChange { zoneKey:string; before:number; after:number }
-export interface GameState { schemaVersion:16; gameId:string; seed:number; rngState:number; nextItemId:number; day:number; clock:GameClock; citizens:Citizen[]; botMissions:Record<string,BotMissionAssignment>; coordination:TownCoordinationState; town:TownState; world:WorldState; lastNight:NightReport|null; events:GameEvent[] }
+export interface GameState { schemaVersion:17; gameId:string; seed:number; rngState:number; nextItemId:number; day:number; clock:GameClock; citizens:Citizen[]; botMissions:Record<string,BotMissionAssignment>; coordination:TownCoordinationState; town:TownState; world:WorldState; lastNight:NightReport|null; events:GameEvent[] }
 
 export type Direction='NORTH'|'SOUTH'|'EAST'|'WEST'
 export type GameCommand =
@@ -149,12 +150,14 @@ export type GameCommand =
   | {type:'USE_ITEM_ACTION';citizenId:string;itemId:string;actionId:ItemUseActionId}
   | {type:'UPGRADE_HOME';citizenId:string}
   | {type:'BUILD_HOME_IMPROVEMENT';citizenId:string;improvementId:HomeImprovementId}
+  | {type:'DISPOSE_CORPSE_OUTSIDE';citizenId:string;targetCitizenId:string}
+  | {type:'DISPOSE_CORPSE_WATER';citizenId:string;targetCitizenId:string}
   | {type:'CONTRIBUTE_CONSTRUCTION';citizenId:string;projectId:ConstructionId}
   | {type:'WORKSHOP_CONVERT';citizenId:string;recipeId:WorkshopRecipeId}
   | {type:'COMBINE_ITEMS';citizenId:string;recipeId:CombinationRecipeId;itemIds:string[]}
 
 export interface CombinationEventOutput { item:ItemInstance; storage:PersonalItemStorage }
-export type DeathReason='outside_at_night'|'camping_failure'|'home_breach'|'dehydration'|'infection'|'drug_withdrawal'
+export type DeathReason='outside_at_night'|'camping_failure'|'home_breach'|'corpse_attack'|'dehydration'|'infection'|'drug_withdrawal'
 export type GameEvent = (
   | {type:'AP_SPENT';day:number;citizenId:string;amount:number}
   | {type:'GATE_SET';day:number;open:boolean;citizenId:string}
@@ -191,6 +194,8 @@ export type GameEvent = (
   | {type:'FLEE_ZOMBIES_RESOLVED';day:number;citizenId:string;zoneKey:string;statusAfter:CitizenStatusState;rngStateAfter:number}
   | {type:'HOME_UPGRADED';day:number;citizenId:string;from:HomeLevel;to:HomeLevel;defenseAfter:number;consumed:Partial<Record<ItemType,number>>}
   | {type:'HOME_IMPROVEMENT_BUILT';day:number;citizenId:string;improvementId:HomeImprovementId;level:number;consumed:Partial<Record<ItemType,number>>;defenseAfter:number;storageCapacityAfter:number}
+  | {type:'CORPSE_DISPOSED';day:number;citizenId:string;targetCitizenId:string;method:CorpseDisposition;waterItemId?:string}
+  | {type:'CORPSE_REANIMATED';day:number;corpseCitizenId:string;outcome:'well'|'citizen'|'nothing';victimCitizenId?:string;waterLost:number}
   | {type:'CONSTRUCTION_AP_CONTRIBUTED';day:number;citizenId:string;projectId:ConstructionId;amount:number}
   | {type:'CONSTRUCTION_COMPLETED';day:number;citizenId:string;projectId:ConstructionId;consumed:Partial<Record<ItemType,number>>;defenseBonus:number}
   | {type:'CONSTRUCTION_EXPIRED';day:number;projectId:ConstructionId}

@@ -7,6 +7,7 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - React + Vite + TypeScript
 - 40 citizen slots: 1 human, 39 basic bots
 - temporary per-citizen **Control** switcher for testing simulated citizens directly
+- Citizens screen defaults to a compact fixed-height **Overview** table, with the previous diagnostic cards preserved under **Details**
 - persistent town clock; playable days run from 1:00 AM to midnight
 - forward-only time controls for +1 hour, noon, 11 PM, and midnight
 - every skipped hour is simulated rather than teleported over
@@ -24,6 +25,10 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - bots prioritize hydration treatment and account for hydration when planning expedition water
 - Camp Bed home for every citizen with 4-slot private chest storage
 - documented 2 AP Camp Bed -> Tent upgrade with +1 personal defense
+- citizens can visit another citizen's home from the Citizens screen while inside town
+- citizens who die in town leave a persistent body at their home rather than creating a portable corpse item
+- source-backed corpse disposal supports dragging the body outside for 2 AP or destroying it with 1 Water Ration
+- undisposed bodies can reanimate during the nightly internal-attack stage, killing a living in-town citizen or spoiling up to 20 Well water
 - defensive objects can protect the Bank or be kept at Home for reduced personal/town defense value
 - Citizen's Welcome Pack + Doggy Bag starter supplies
 - seeded town well with original-English-style 80–140 starting rations
@@ -71,7 +76,7 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - Search Tower nightly depleted-zone replenishment prototype
 - compact inventory UI with contextual item actions and screen-specific registers
 - nightly breaches distribute zombies across surviving citizens; personal home defense decides who survives
-- bots use the same legal actions for scavenging, excavation/search, supply preparation, rescue, construction, Workshop work, home upgrades, combat, hydration treatment, camping preparation, hiding, and returns
+- bots use the same legal actions for scavenging, excavation/search, supply preparation, rescue, construction, Workshop work, home upgrades, corpse disposal, combat, hydration treatment, camping preparation, hiding, and returns
 - command/event-driven game core
 - legal-action API shared by humans and bots
 - seeded deterministic simulation
@@ -81,7 +86,7 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 
 Historical mechanic notes live under [`docs/die2nite-reference`](docs/die2nite-reference). The first ten nightly attack ranges are anchored to surviving English Die2Nite sample data. Special-zone identities, the broad early combat model, two-hour ordinary autosearch, hydration chain, and the broad camping lifecycle/risk factors have surviving English references. Live2Nite's exact special-site count, current excavation requirements, loot weights, mission staffing, reserve policies, safety margins, water-conservation bands, several construction costs/effects, weapon break probabilities, exact camping probability coefficients, campsite-degradation amount, and autonomous expedition heuristics remain explicit adaptations.
 
-Hydration/status evidence is recorded in [`docs/die2nite-reference/status-hydration.md`](docs/die2nite-reference/status-hydration.md), and camping evidence/uncertainties are recorded in [`docs/die2nite-reference/camping.md`](docs/die2nite-reference/camping.md). Later wound/infection/terror/addiction statuses, broader weapon/reload/ammunition systems, camping-specific equipment, tomb searching, a larger special-zone catalog, and deeper item/content fidelity remain deferred reconstruction areas.
+Hydration/status evidence is recorded in [`docs/die2nite-reference/status-hydration.md`](docs/die2nite-reference/status-hydration.md), and camping evidence/uncertainties are recorded in [`docs/die2nite-reference/camping.md`](docs/die2nite-reference/camping.md). Current corpse behavior is reconstructed from MyHordes `DeathHandler`, `TownController`, and `NightlyHandler`: an in-town death leaves a body attached to the dead citizen's home, while the scavengable `cadaver_#00` remains a separate Traveller's Corpse item. Cooking, torch-burning/fertilizer, Ghoul corpse-devouring, broader weapon/reload/ammunition systems, camping-specific equipment, tomb searching, a larger special-zone catalog, and deeper item/content fidelity remain deferred reconstruction areas.
 
 The clock/fast-forward and autonomous mission-planning systems are **Live2Nite single-player simulation interfaces**, not claims that the original browser game used player-controlled hourly ticks or these AI heuristics. They exist so autonomous citizens can evolve over a day while preserving the original-style AP economy: actions do not themselves consume clock hours.
 

@@ -62,6 +62,33 @@ function campingNightEvents(state:GameState):{events:GameEvent[];survivors:numbe
   }
   return{events,survivors,deaths,strandedDeaths}
 }
+function corpseReanimationEvents(state:GameState):{events:GameEvent[];reanimations:number;attackDeaths:number;waterLost:number}{
+  const corpses=state.citizens.filter((citizen)=>!citizen.alive&&citizen.home.holdsBody&&!citizen.home.corpseAttacked).sort((a,b)=>a.id.localeCompare(b.id))
+  const targets=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town').map((citizen)=>citizen.id)
+  const events:GameEvent[]=[]
+  let rng=isolatedNightSeed(state.seed,state.day,0x0c0ff5e)
+  let well=state.town.well.water
+  let attackDeaths=0
+  let waterLost=0
+  for(const corpse of corpses){
+    const attackPlayer=well>0?66:100
+    const choice=randomInt(rng,0,100);rng=choice.state
+    if(choice.value>attackPlayer){
+      const loss=Math.min(well,20)
+      if(loss<=0)continue
+      well-=loss;waterLost+=loss
+      events.push({type:'CORPSE_REANIMATED',day:state.day,hour:ATTACK_HOUR,corpseCitizenId:corpse.id,outcome:'well',waterLost:loss})
+      continue
+    }
+    if(targets.length===0)continue
+    const victimRoll=randomInt(rng,0,targets.length-1);rng=victimRoll.state
+    const[victimCitizenId]=targets.splice(victimRoll.value,1)
+    events.push({type:'CORPSE_REANIMATED',day:state.day,hour:ATTACK_HOUR,corpseCitizenId:corpse.id,outcome:'citizen',victimCitizenId,waterLost:0})
+    events.push({type:'CITIZEN_DIED',day:state.day,hour:ATTACK_HOUR,citizenId:victimCitizenId,reason:'corpse_attack'})
+    attackDeaths+=1
+  }
+  return{events,reanimations:events.filter((event)=>event.type==='CORPSE_REANIMATED').length,attackDeaths,waterLost}
+}
 function campDecayEvents(state:GameState):GameEvent[]{return Object.entries(state.world.zones).flatMap(([key,zone])=>(zone.campImprovements??0)>0?[{type:'CAMP_IMPROVEMENTS_DECAYED',day:state.day,hour:ATTACK_HOUR,zoneKey:key,amount:1} as GameEvent]:[])}
 function constructionExpiryEvents(state:GameState):GameEvent[]{return temporaryCompletedProjects(state).map((projectId)=>({type:'CONSTRUCTION_EXPIRED',day:state.day,hour:ATTACK_HOUR,projectId}))}
 function stableStringSalt(value:string):number{let hash=2166136261;for(let index=0;index<value.length;index+=1){hash^=value.charCodeAt(index);hash=Math.imul(hash,16777619)}return hash>>>0}
@@ -76,19 +103,21 @@ function constructionOutputEvents(state:GameState):GameEvent[]{
 export function resolveNightAttack(state:GameState):GameState{
   const camping=campingNightEvents(state)
   const afterOutside=applyEvents(state,camping.events)
-  const attackStrength=attackStrengthForDay(afterOutside.seed,afterOutside.day)
-  const defenseBeforeAttack=totalTownDefense(afterOutside)
-  const effectiveDefense=afterOutside.town.gateOpen?0:defenseBeforeAttack
+  const corpseStage=corpseReanimationEvents(afterOutside)
+  const afterCorpses=applyEvents(afterOutside,corpseStage.events)
+  const attackStrength=attackStrengthForDay(afterCorpses.seed,afterCorpses.day)
+  const defenseBeforeAttack=totalTownDefense(afterCorpses)
+  const effectiveDefense=afterCorpses.town.gateOpen?0:defenseBeforeAttack
   const zombiesInside=Math.max(0,attackStrength-effectiveDefense)
-  const homeAttacks=distributeBreachedZombies(afterOutside,zombiesInside)
+  const homeAttacks=distributeBreachedZombies(afterCorpses,zombiesInside)
   const homeDeathEvents:GameEvent[]=homeAttacks.filter((outcome)=>!outcome.survived).map((outcome)=>({type:'CITIZEN_DIED',day:state.day,hour:ATTACK_HOUR,citizenId:outcome.citizenId,reason:'home_breach'}))
-  const afterHomeDeaths=applyEvents(afterOutside,homeDeathEvents)
+  const afterHomeDeaths=applyEvents(afterCorpses,homeDeathEvents)
   const statusEvents=nightlyStatusEvents(afterHomeDeaths,(citizenId)=>randomInt(isolatedNightSeed(afterHomeDeaths.seed,afterHomeDeaths.day,stableStringSalt(`infection:${citizenId}`)),1,100).value)
   const dehydrationDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='dehydration').length
   const infectionDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='infection').length
   const withdrawalDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='drug_withdrawal').length
   const afterStatuses=applyEvents(afterHomeDeaths,statusEvents)
-  const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,infectionDeaths,withdrawalDeaths,homeAttacks}
+  const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,infectionDeaths,withdrawalDeaths,corpseReanimations:corpseStage.reanimations,corpseAttackDeaths:corpseStage.attackDeaths,corpseWaterLost:corpseStage.waterLost,homeAttacks}
   const replenishment=searchTowerReplenishmentEvents(afterStatuses)
   const outputs=constructionOutputEvents(afterStatuses)
   const expiries=constructionExpiryEvents(afterStatuses)
