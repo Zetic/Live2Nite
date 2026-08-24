@@ -1,6 +1,7 @@
 import { CONSTRUCTION_CATALOG } from './constructionCatalog'
-import type { ConstructionId, GameState } from './types'
 import { randomInt } from './rng'
+import type { ConstructionId, GameState } from './types'
+import type { UpgradeProjectsState } from './upgradeProjectsState'
 
 export type ConstructionUpgradeKind='defense_total'|'well_once'|'construction_discount'
 export interface ConstructionUpgradeTrack {
@@ -11,19 +12,9 @@ export interface ConstructionUpgradeTrack {
   benefits:readonly string[]
   sourceNote:string
 }
-export interface UpgradeProjectsState {
-  levels:Partial<Record<ConstructionId,number>>
-  votes:Record<string,ConstructionId>
-  resolvedDay:number|null
-  lastWinner:ConstructionId|null
-  lastWinnerDay:number|null
-  lastWinningVotes:number
-}
-type UpgradeAwareTown=GameState['town']&{upgradeProjects?:UpgradeProjectsState}
 
-const EMPTY_UPGRADES:UpgradeProjectsState={levels:{},votes:{},resolvedDay:null,lastWinner:null,lastWinnerDay:null,lastWinningVotes:0}
-function upgradeState(state:GameState):UpgradeProjectsState{return (state.town as UpgradeAwareTown).upgradeProjects??EMPTY_UPGRADES}
-function withUpgradeState(state:GameState,upgrades:UpgradeProjectsState,townPatch:Partial<GameState['town']>={}):GameState{return{...state,town:{...state.town,...townPatch,upgradeProjects:upgrades} as GameState['town']}}
+function upgradeState(state:GameState):UpgradeProjectsState{return state.town.upgradeProjects}
+function withUpgradeState(state:GameState,upgrades:UpgradeProjectsState,townPatch:Partial<GameState['town']>={}):GameState{return{...state,town:{...state.town,...townPatch,upgradeProjects:upgrades}}}
 
 /** Active tracks whose effects can be represented faithfully by current Live2Nite systems. */
 export const CONSTRUCTION_UPGRADE_TRACKS:Readonly<Partial<Record<ConstructionId,ConstructionUpgradeTrack>>>={
