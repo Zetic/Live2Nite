@@ -4,7 +4,7 @@ import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { CONSTRUCTION_ORDER, CONSTRUCTIONS, gateLockedAtHour, wellDailyWithdrawals } from './construction'
 import { HOME_IMPROVEMENTS, hasPersonalMaterials, improvementNextLevel, nextHomeDefinition } from './home'
-import { consumableKind, isContainer, itemHasCapability, normalizeItemState } from './items'
+import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
 import { canToolOpen, openableDefinition } from './openables'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, zoneControl } from './world'
@@ -37,9 +37,7 @@ function canOpenContainer(citizen:Citizen,item:ItemInstance,source:ItemStorage):
     }
     return true
   }
-  if(item.type!=='construction_kit')return true
-  if(source==='ground')return true
-  return source==='inventory'?citizen.inventory.length<citizen.inventoryCapacity:citizen.home.storage.length<citizen.home.storageCapacity
+  return Boolean(containerPool(item.type)?.length)
 }
 function hasUsableCharges(item:ItemInstance):boolean{return !itemHasCapability(item.type,'charge_bearing')||(normalizeItemState(item.type,item.state).charges??0)>0}
 function addConsumableActions(actions:GameCommand[],citizen:Citizen,items:ItemInstance[],source:ItemStorage):void{
