@@ -30,6 +30,7 @@ export interface ItemUseActionDefinition {
   morphTo?:ItemType
   allowWhenTerrorized?:boolean
 }
+export interface CitizenEffectResolution { ap:number;status:CitizenStatusState;daily:CitizenDailyState;rng:number;restoresAp:boolean }
 export interface ItemEffectResolution {
   apAfter:number
   statusAfter:CitizenStatusState
@@ -62,7 +63,7 @@ export function itemUseActionAvailable(citizen:Citizen,definition:ItemUseActionD
 function cloneDaily(daily:CitizenDailyState):CitizenDailyState{return{...daily}}
 function cloneStatus(status:CitizenStatusState):CitizenStatusState{return{...status}}
 function setBooleanStatus(status:CitizenStatusState,key:MutableBooleanStatus,value:boolean):void{status[key]=value}
-function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngState:number):{ap:number;status:CitizenStatusState;daily:CitizenDailyState;rng:number;restoresAp:boolean}{
+function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngState:number):CitizenEffectResolution{
   let ap=citizen.ap,status=cloneStatus(citizen.status),daily=cloneDaily(citizen.daily),rng=rngState,restoresAp=false
   const apply=(effect:ItemActionEffect):void=>{
     switch(effect.type){
@@ -99,6 +100,7 @@ function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngSta
   for(const effect of effects)apply(effect)
   return{ap,status,daily,rng,restoresAp}
 }
+export function resolveCitizenEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngState:number):CitizenEffectResolution{return applyEffects(citizen,effects,rngState)}
 export function resolveItemUseAction(citizen:Citizen,definition:ItemUseActionDefinition,rngState:number):ItemEffectResolution{
   const resolved=applyEffects(citizen,definition.effects,rngState)
   return{apAfter:resolved.ap,statusAfter:resolved.status,dailyAfter:resolved.daily,rngStateAfter:resolved.rng,restoresAp:resolved.restoresAp,consumed:definition.consume,morphTo:definition.morphTo}
