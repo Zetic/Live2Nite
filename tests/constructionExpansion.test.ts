@@ -58,11 +58,11 @@ describe('expanded construction catalog', () => {
     ])
   })
 
-  it('keeps only root common plans known at town creation', () => {
+  it('registers no-blueprint descendants while keeping their construction gated by parent completion', () => {
     const game = createInitialGame(1901, 2)
     expect(constructionUnlocked(game, 'workshop')).toBe(true)
     expect(game.town.construction.wall_upgrade.discovered).toBe(true)
-    expect(game.town.construction.great_pit.discovered).toBe(false)
+    expect(game.town.construction.great_pit.discovered).toBe(true)
     expect(game.town.construction.reinforcing_beams.discovered).toBe(false)
     expect(constructionUnlocked(game, 'great_pit')).toBe(false)
   })
