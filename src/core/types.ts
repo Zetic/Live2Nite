@@ -109,7 +109,7 @@ export interface Citizen { id:string; name:string; controller:CitizenControllerK
 export interface BotMissionAssignment { missionId:string; role:BotMissionRole; purpose:BotMissionPurpose; target:{x:number;y:number}; targetLabel:string; reason:string; phase:BotMissionPhase; assignedDay:number; assignedHour:number; returnByHour:number; safetyReserve:number; emergency:boolean; allowsCamping?:boolean; overnightPlanned?:boolean; scoutKind?:ScoutMissionKind; searchMode?:SearchMode }
 export interface CoordinationCommitment { id:string; citizenId:string; kind:CoordinationCommitmentKind; taskKey:string; label:string; reservedAp:number; day:number; hour:number; expiresHour:number; projectId?:ConstructionId }
 export interface TownCoordinationState { commitments:CoordinationCommitment[] }
-export interface SpecialSiteState { type:SpecialSiteType; status:SpecialSiteStatus; excavationRequired:number; excavationProgress:number; hiddenLoot:ItemType[]; searchedBy:string[] }
+export interface SpecialSiteState { type:SpecialSiteType; status:SpecialSiteStatus; excavationRequired:number; excavationProgress:number; hiddenLoot:ItemType[]; searchedBy:string[]; blueprintFound:boolean }
 export interface WorldZone { x:number; y:number; discovered:boolean; zombies:number; searchesRemaining:number; searchedBy:string[]; depletedSearchedBy:string[]; hiddenLoot:ItemType[]; groundItems:ItemInstance[]; campImprovements:number; specialSite?:SpecialSiteState }
 export interface ZoneIntelState { observedZombies:number|null; lastObservedDay:number|null; lastObservedHour:number|null }
 export interface WorldState { minX:number; maxX:number; minY:number; maxY:number; zones:Record<string,WorldZone>; intel:Record<string,ZoneIntelState> }
@@ -119,7 +119,7 @@ export interface TownState { gateOpen:boolean; defense:number; bank:ItemInstance
 export interface HomeAttackOutcome { citizenId:string; zombies:number; defense:number; survived:boolean }
 export interface NightReport { day:number; attackStrength:number; defenseBeforeAttack:number; effectiveDefense:number; gateOpen:boolean; breached:boolean; outsideDeaths:number; campingSurvivors?:number; campingDeaths?:number; zombiesInside?:number; homeDeaths?:number; dehydrationDeaths?:number; infectionDeaths?:number; withdrawalDeaths?:number; corpseReanimations?:number; corpseAttackDeaths?:number; corpseWaterLost?:number; homeAttacks?:HomeAttackOutcome[] }
 export interface WorldZombieChange { zoneKey:string; before:number; after:number }
-export interface GameState { schemaVersion:18; gameId:string; seed:number; rngState:number; nextItemId:number; day:number; clock:GameClock; citizens:Citizen[]; botMissions:Record<string,BotMissionAssignment>; coordination:TownCoordinationState; town:TownState; world:WorldState; lastNight:NightReport|null; events:GameEvent[] }
+export interface GameState { schemaVersion:19; gameId:string; seed:number; rngState:number; nextItemId:number; day:number; clock:GameClock; citizens:Citizen[]; botMissions:Record<string,BotMissionAssignment>; coordination:TownCoordinationState; town:TownState; world:WorldState; lastNight:NightReport|null; events:GameEvent[] }
 
 export type Direction='NORTH'|'SOUTH'|'EAST'|'WEST'
 export type GameCommand =
@@ -144,6 +144,7 @@ export type GameCommand =
   | {type:'MOVE_ITEM_TO_HOME';citizenId:string;itemId:string}
   | {type:'MOVE_ITEM_TO_RUCKSACK';citizenId:string;itemId:string}
   | {type:'OPEN_CONTAINER';citizenId:string;itemId:string}
+  | {type:'READ_BLUEPRINT';citizenId:string;itemId:string}
   | {type:'TAKE_WATER';citizenId:string}
   | {type:'EAT_ITEM';citizenId:string;itemId:string}
   | {type:'DRINK_ITEM';citizenId:string;itemId:string}
@@ -167,6 +168,7 @@ export type GameEvent = (
   | {type:'CAMP_IMPROVEMENTS_DECAYED';day:number;zoneKey:string;amount:number}
   | {type:'CITIZEN_HIDING_SET';day:number;citizenId:string;hidden:boolean;survivalChance:number|null}
   | {type:'CAMPING_RESOLVED';day:number;citizenId:string;survivalChance:number;roll:number;survived:boolean}
+  | {type:'CAMPING_BLUEPRINT_DROPPED';day:number;citizenId:string;zoneKey:string;item:ItemInstance;distanceKm:number}
   | {type:'ZONE_DISCOVERED';day:number;zoneKey:string}
   | {type:'ZONE_OBSERVED';day:number;zoneKey:string;zombies:number;citizenId?:string}
   | {type:'WORLD_ZOMBIES_EVOLVED';day:number;changes:WorldZombieChange[]}
@@ -196,6 +198,7 @@ export type GameEvent = (
   | {type:'HOME_IMPROVEMENT_BUILT';day:number;citizenId:string;improvementId:HomeImprovementId;level:number;consumed:Partial<Record<ItemType,number>>;defenseAfter:number;storageCapacityAfter:number}
   | {type:'CORPSE_DISPOSED';day:number;citizenId:string;targetCitizenId:string;method:CorpseDisposition;waterItemId?:string}
   | {type:'CORPSE_REANIMATED';day:number;corpseCitizenId:string;outcome:'well'|'citizen'|'nothing';victimCitizenId?:string;waterLost:number}
+  | {type:'BLUEPRINT_READ';day:number;citizenId:string;item:ItemInstance;source:PersonalItemStorage;projectId:ConstructionId|null;rngStateAfter:number}
   | {type:'CONSTRUCTION_DISCOVERED';day:number;projectId:ConstructionId;reason:'parent'|'blueprint'}
   | {type:'CONSTRUCTION_AP_CONTRIBUTED';day:number;citizenId:string;projectId:ConstructionId;amount:number}
   | {type:'CONSTRUCTION_COMPLETED';day:number;citizenId:string;projectId:ConstructionId;consumed:Partial<Record<ItemType,number>>;defenseBonus:number}
