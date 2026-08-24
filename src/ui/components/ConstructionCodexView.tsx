@@ -44,7 +44,6 @@ function Detail({entry,onJump}:{entry:ConstructionCodexEntry;onJump:(id:Construc
         <div><dt>Blueprint</dt><dd>{entry.blueprintLabel}</dd></div>
         <div><dt>Labor</dt><dd>{entry.apCost} AP</dd></div>
         <div><dt>Defense</dt><dd>{entry.defense>0?`+${entry.defense}`:'None'}</dd></div>
-        <div><dt>Condition</dt><dd>{entry.maxHp} HP · {entry.breakable?'breakable':'not breakable'}</dd></div>
         <div><dt>Lifecycle</dt><dd>{entry.temporary?'Temporary · expires after the attack':'Permanent'}</dd></div>
         <div><dt>Upgrades</dt><dd>{entry.hasUpgrade?'Has building-level upgrades':'No building-level upgrade track'}</dd></div>
       </dl>
@@ -99,8 +98,8 @@ export function ConstructionCodexView(){
 
   return <>
     <div className="construction-codex-mode-tabs" role="tablist" aria-label="Construction Codex views">
-      <button type="button" className={mode==='branches'?'active':''} aria-selected={mode==='branches'} onClick={()=>setMode('branches')}><strong>Construction branches</strong><small>Complete parent/child trees</small></button>
-      <button type="button" className={mode==='blueprints'?'active':''} aria-selected={mode==='blueprints'} onClick={()=>setMode('blueprints')}><strong>Blueprint unlocks</strong><small>Grouped by rarity</small></button>
+      <button type="button" className={mode==='branches'?'active':''} aria-selected={mode==='branches'} onClick={()=>setMode('branches')}><strong>Branches</strong><small>Construction tree</small></button>
+      <button type="button" className={mode==='blueprints'?'active':''} aria-selected={mode==='blueprints'} onClick={()=>setMode('blueprints')}><strong>Blueprints</strong><small>Grouped by rarity</small></button>
     </div>
     {mode==='branches'&&<div className="construction-codex-branch-tabs" role="tablist" aria-label="Construction branches">{CONSTRUCTION_CODEX_BRANCHES.map((entry)=><button type="button" key={entry.id} className={branch===entry.id?'active':''} aria-selected={branch===entry.id} onClick={()=>setBranch(entry.id)}><span>{entry.label}</span><small>{entry.count}</small></button>)}</div>}
     <div className="codex-toolbar"><label><span>Search constructions</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Name, branch, blueprint, material, mechanic…"/></label><strong>{mode==='blueprints'?`${visible.length} construction unlocks · ${specializedBlueprints.length} specialized shown / ${SPECIALIZED_RUIN_BLUEPRINTS.length} total`:`${visible.length} shown · 166 total`}</strong></div>

@@ -12,7 +12,6 @@ Reference data is translated into Live2Nite concepts:
 - plan/blueprint tier
 - AP and material requirements
 - base defense
-- maximum condition
 - breakability
 - temporary/permanent lifecycle
 - simple verified completion effects
@@ -25,9 +24,11 @@ At town creation, generic rarity-0 projects are registered recursively from thei
 
 This prevents late-game projects from appearing on Day 1 merely because their definitions exist in the catalog.
 
-## Durability foundation
+## Construction damage boundary
 
-Completed buildings now carry condition (`hp`) and source-backed maximum condition metadata. Breakable construction defense scales with remaining condition. The current pass establishes the state model; attack damage and repair actions remain a later fidelity step.
+Ordinary Live2Nite constructions do **not** carry structural HP, breakability state, nightly structure damage, repair actions, or defense scaling from condition. Those generic mechanics were removed after source review showed they belong to special/harder-mode behavior rather than the normal construction loop represented here.
+
+The Reactor is the exception boundary: when its source-faithful mechanic is implemented, any structural condition/damage it requires must live in Reactor-specific state and resolution rather than reintroducing generic durability to every construction.
 
 ## Activation rule
 
@@ -42,6 +43,6 @@ A source-known project can remain in the catalog as WIP until a required depende
 
 ## Current pass boundary
 
-Construction Fidelity I established the construction metadata and durability foundation. The blueprint pass corrected discovery and added consumable tiered plans. The complete catalogue pass now accounts for all 166 current constructions and explicitly separates Implemented, Partial, and WIP behavior; see `docs/blueprints.md` and `docs/construction-catalog.md`.
+Construction Fidelity I established the construction metadata and discovery foundation. The blueprint pass corrected discovery and added consumable tiered plans. The complete catalogue pass now accounts for all 166 current constructions and explicitly separates Implemented, Partial, and WIP behavior; see `docs/blueprints.md` and `docs/construction-catalog.md`.
 
 Some utility systems remain partial, including full building damage/repair, upgrade levels, complete Searchtower behavior, soul mechanics, and specialized construction effects. Those should be implemented from their current behavior before the related project is promoted to full parity.
