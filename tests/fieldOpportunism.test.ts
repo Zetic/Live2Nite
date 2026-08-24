@@ -9,10 +9,11 @@ import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
 import { consumableKind } from '../src/core/items'
 import { resolveNightAttack } from '../src/core/night'
-import type { BotMissionAssignment, GameState, ItemInstance } from '../src/core/types'
+import type { BotMissionAssignment, CitizenStatusState, GameState, ItemInstance } from '../src/core/types'
 import { runBotHour } from '../src/simulation/runBotHour'
 
 function patchCitizen(game:GameState,id:string,patch:Partial<GameState['citizens'][number]>):GameState{return {...game,citizens:game.citizens.map((citizen)=>citizen.id===id?{...citizen,...patch}:citizen)}}
+function status(game:GameState,id:string,patch:Partial<CitizenStatusState>):CitizenStatusState{return{...game.citizens.find((candidate)=>candidate.id===id)!.status,...patch}}
 function mission(overrides:Partial<BotMissionAssignment>={}):BotMissionAssignment{return {missionId:'test-route',role:'scout',purpose:'explore',target:{x:3,y:0},targetLabel:'test',reason:'test',phase:'outbound',assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false,overnightPlanned:false,...overrides}}
 function item(id:string,type:ItemInstance['type']):ItemInstance{return{id,type}}
 
@@ -31,7 +32,7 @@ describe('field opportunism and hydration assurance',()=>{
 
   it('drinks a Water Ration directly from the ground without picking it up first',()=>{
     let game=createInitialGame(8110,2)
-    game=patchCitizen(game,'c02',{location:{type:'world',x:1,y:0},inventory:[],ap:1,status:{hydration:'thirsty',desertStepsToday:0},daily:{ate:false,drank:false,waterTaken:false}})
+    game=patchCitizen(game,'c02',{location:{type:'world',x:1,y:0},inventory:[],ap:1,status:status(game,'c02',{hydration:'thirsty',desertStepsToday:0}),daily:{ate:false,drank:false,waterTaken:false}})
     game={...game,world:{...game.world,zones:{...game.world.zones,'1,0':{...game.world.zones['1,0'],discovered:true,zombies:0,groundItems:[item('ground-water','water_ration')]}}}}
     const drink=getLegalActions(game,'c02').find((candidate)=>candidate.type==='DRINK_ITEM'&&candidate.itemId==='ground-water')
     expect(drink).toBeTruthy()
@@ -90,7 +91,7 @@ describe('field opportunism and hydration assurance',()=>{
 
   it('does not count an exhausted Well allowance as expedition water availability',()=>{
     let game=createInitialGame(8105,2)
-    game=patchCitizen(game,'c02',{daily:{ate:false,drank:false,waterTaken:true},status:{hydration:'normal',desertStepsToday:8},inventory:[],home:{...game.citizens[1].home,storage:[]}})
+    game=patchCitizen(game,'c02',{daily:{ate:false,drank:false,waterTaken:true},status:status(game,'c02',{hydration:'normal',desertStepsToday:8}),inventory:[],home:{...game.citizens[1].home,storage:[]}})
     game={...game,town:{...game.town,well:{water:50},bank:[]}}
     const citizen=game.citizens.find((candidate)=>candidate.id==='c02')!
     expect(wellAllowanceRemaining(game,citizen)).toBe(0)
@@ -102,7 +103,7 @@ describe('field opportunism and hydration assurance',()=>{
   it('lets a zero-AP thirsty reserve citizen use available Well water before the attack',()=>{
     let game=createInitialGame(8106,2)
     game={...game,day:3,clock:{hour:23,phase:'day'},town:{...game.town,well:{water:20}}}
-    game=patchCitizen(game,'c02',{ap:0,status:{hydration:'thirsty',desertStepsToday:0},daily:{ate:false,drank:false,waterTaken:false},home:{...game.citizens[1].home,upgradedDay:3,storage:[]}})
+    game=patchCitizen(game,'c02',{ap:0,status:status(game,'c02',{hydration:'thirsty',desertStepsToday:0}),daily:{ate:false,drank:false,waterTaken:false},home:{...game.citizens[1].home,upgradedDay:3,storage:[]}})
     const after=runBotHour(game,new BasicBotController(),'c01')
     const citizen=after.citizens.find((candidate)=>candidate.id==='c02')!
     expect(citizen.status.hydration).toBe('normal')
@@ -113,7 +114,7 @@ describe('field opportunism and hydration assurance',()=>{
   it('does not roll a thirsty autonomous citizen into Dehydrated when town water was legally available before the attack',()=>{
     let game=createInitialGame(8107,2)
     game={...game,day:3,clock:{hour:23,phase:'day'},town:{...game.town,defense:10_000,well:{water:20}}}
-    game=patchCitizen(game,'c02',{ap:4,status:{hydration:'thirsty',desertStepsToday:0},daily:{ate:false,drank:false,waterTaken:false},inventory:[],home:{...game.citizens[1].home,storage:[]}})
+    game=patchCitizen(game,'c02',{ap:4,status:status(game,'c02',{hydration:'thirsty',desertStepsToday:0}),daily:{ate:false,drank:false,waterTaken:false},inventory:[],home:{...game.citizens[1].home,storage:[]}})
     const beforeAttack=runBotHour(game,new BasicBotController(),'c01')
     const prepared=beforeAttack.citizens.find((candidate)=>candidate.id==='c02')!
     expect(prepared.daily.drank).toBe(true)
