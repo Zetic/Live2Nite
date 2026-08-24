@@ -1,4 +1,4 @@
-import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER, blueprintClassLabel, type ConstructionBlueprintClass, type ConstructionBranchId, type ConstructionImplementationStatus } from './constructionCatalog'
+import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER, blueprintClassLabel, constructionCatalogChildren, constructionCatalogRoots, type ConstructionBlueprintClass, type ConstructionBranchId, type ConstructionImplementationStatus } from './constructionCatalog'
 import type { ConstructionId } from './constructionIds'
 
 export interface ConstructionCodexEntry{
@@ -61,7 +61,14 @@ export function constructionCodexEntry(id:ConstructionId):ConstructionCodexEntry
   }
 }
 
-export const CONSTRUCTION_CODEX_ENTRIES:readonly ConstructionCodexEntry[]=CONSTRUCTION_CATALOG_ORDER.map(constructionCodexEntry)
+function treeOrder():ConstructionId[]{
+  const result:ConstructionId[]=[]
+  const visit=(id:ConstructionId)=>{result.push(id);for(const child of constructionCatalogChildren(id))visit(child)}
+  for(const branch of CONSTRUCTION_BRANCHES)for(const root of constructionCatalogRoots(branch.id))visit(root)
+  return result
+}
+export const CONSTRUCTION_CODEX_TREE_ORDER:readonly ConstructionId[]=treeOrder()
+export const CONSTRUCTION_CODEX_ENTRIES:readonly ConstructionCodexEntry[]=CONSTRUCTION_CODEX_TREE_ORDER.map(constructionCodexEntry)
 
 export const CONSTRUCTION_CODEX_BRANCHES:readonly {id:'all'|ConstructionBranchId;label:string;count:number}[]=[
   {id:'all',label:'All branches',count:CONSTRUCTION_CODEX_ENTRIES.length},
