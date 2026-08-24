@@ -78,7 +78,6 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
         events.push({type:'OPENABLE_RESOLVED',day:state.day,citizenId:command.citizenId,container:located.item,source:located.source,zoneKey:located.zoneKey,success:resolution.success,outputs:resolution.outputs,containerAfter:resolution.containerAfter,rngStateAfter:resolution.rngStateAfter})
         break
       }
-      if(located.item.type==='construction_kit'){const pool:ItemType[]=['twisted_plank','wrought_iron'];const first=randomInt(state.rngState,0,pool.length-1);const second=randomInt(first.state,0,pool.length-1);events.push({type:'CONSTRUCTION_KIT_OPENED',day:state.day,citizenId:command.citizenId,containerId:located.item.id,source:located.source,zoneKey:located.zoneKey,outputs:[itemAt(state,pool[first.value],0),itemAt(state,pool[second.value],1)],rngStateAfter:second.state});break}
       const pool=containerPool(located.item.type);if(!pool?.length)throw new InvalidCommandError(`${located.item.type} is not an openable container`);const roll=randomInt(state.rngState,0,pool.length-1);events.push({type:'CONTAINER_OPENED',day:state.day,citizenId:command.citizenId,containerId:located.item.id,containerType:located.item.type,source:located.source,zoneKey:located.zoneKey,output:itemAt(state,pool[roll.value]),rngStateAfter:roll.state});break
     }
     case 'TAKE_WATER':events.push({type:'WATER_TAKEN',day:state.day,citizenId:command.citizenId,item:itemAt(state,'water_ration')});break
