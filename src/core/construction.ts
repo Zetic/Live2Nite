@@ -241,6 +241,7 @@ export function constructionBlueprintTier(projectId:ConstructionId):Construction
 export function constructionPlayable(projectId:ConstructionId):boolean{return CONSTRUCTIONS[projectId].playable===true}
 export function constructionImplementationStatus(projectId:ConstructionId):ConstructionImplementationStatus{return CONSTRUCTIONS[projectId].implementationStatus??'wip'}
 export function constructionWipReason(projectId:ConstructionId):string|null{return CONSTRUCTIONS[projectId].wipReason??null}
+export const BUILDABLE_CONSTRUCTION_IDS:readonly ConstructionId[]=CONSTRUCTION_ORDER.filter((id)=>constructionPlayable(id))
 export function constructionGenericDiscoverable(projectId:ConstructionId):boolean{return constructionBlueprintTier(projectId)<=4}
 export function constructionMaxHp(projectId:ConstructionId):number{return Math.max(0,CONSTRUCTIONS[projectId].maxHp??CONSTRUCTIONS[projectId].apCost)}
 function noBlueprintPathFromRoot(projectId:ConstructionId,seen=new Set<ConstructionId>()):boolean{
@@ -389,9 +390,11 @@ export function constructionPriority(state: GameState, projectId: ConstructionId
 }
 
 export function prioritizedConstruction(state: GameState): ConstructionId[] {
-  return CONSTRUCTION_ORDER
+  return BUILDABLE_CONSTRUCTION_IDS
     .filter((id)=>!state.town.construction[id]?.completed&&constructionUnlocked(state,id))
-    .sort((a,b)=>constructionPriority(state,b)-constructionPriority(state,a)||CONSTRUCTION_ORDER.indexOf(a)-CONSTRUCTION_ORDER.indexOf(b))
+    .map((id,index)=>({id,index,score:constructionPriority(state,id)}))
+    .sort((a,b)=>b.score-a.score||a.index-b.index)
+    .map((entry)=>entry.id)
 }
 
 // Guard against a catalog/type list drifting apart during development.
