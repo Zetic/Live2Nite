@@ -34,7 +34,7 @@ function complete(game: GameState, ...projectIds: ConstructionId[]): GameState {
 
 describe('expanded construction catalog', () => {
   it('keeps a broad, internally valid seven-branch catalog', () => {
-    expect(CONSTRUCTION_ORDER.length).toBeGreaterThanOrEqual(75)
+    expect(CONSTRUCTION_ORDER.length).toBe(166)
     expect(new Set(CONSTRUCTION_ORDER).size).toBe(CONSTRUCTION_ORDER.length)
 
     const ids = new Set(CONSTRUCTION_ORDER)
