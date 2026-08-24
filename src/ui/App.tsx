@@ -24,6 +24,7 @@ import { WatchtowerView } from './components/WatchtowerView'
 import { WellView } from './components/WellView'
 import { WorkshopView } from './components/WorkshopView'
 import { WorldMap } from './components/WorldMap'
+import { WorldTownReturn, WorldTravelControls } from './components/WorldTravelControls'
 import { WorldView } from './components/WorldView'
 import { citizenName } from './eventText'
 import { isTownOnlyScreen, type GameScreen } from './navigation'
@@ -53,6 +54,7 @@ export function App() {
   const outsideCitizens = useMemo(() => game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world'), [game.citizens])
   const townDefense = useMemo(() => totalTownDefense(game), [game])
   const legalActions = useMemo(() => getLegalActions(game, player.id), [game, player.id])
+  const enterTownAction=legalActions.find((action):action is Extract<GameCommand,{type:'ENTER_TOWN'}>=>action.type==='ENTER_TOWN')
   const currentZone = player.location.type === 'world' ? getZone(game.world, player.location.x, player.location.y) : null
   const control = player.location.type === 'world' ? zoneControl(game, player.location.x, player.location.y) : null
   const lastNightDeaths = useMemo(() => {
@@ -118,6 +120,8 @@ export function App() {
         <article><span>Gate</span><strong className={game.town.gateOpen ? 'danger-value' : 'safe-value'}>{game.town.gateOpen ? 'OPEN' : 'SEALED'}</strong></article>
       </section>
 
+      <TimeControls game={game} onAdvanceOne={advanceHour} onAdvanceTarget={advanceTarget}/>
+
       {attackPhase && <section className="night-report danger attack-hour-banner">
         <div className="night-icon" aria-hidden="true">☾</div>
         <div className="night-report-copy"><span>00:00–01:00 · attack hour</span><strong>The horde is attacking.</strong><p>Normal actions are locked. Advance one hour to resolve the town attack, camping attempts, casualties, status progression, and the start of Day {game.day + 1} at 1:00 AM.</p></div>
@@ -149,7 +153,18 @@ export function App() {
         {screen === 'construction' && <ConstructionView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'watchtower' && <WatchtowerView game={game}/>} 
-        {screen === 'world' && <div className="world-screen-layout"><div className="world-primary-column"><WorldView game={game} citizenId={player.id} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move}/>{currentZone&&<CampingPanel game={game} citizen={player} zone={currentZone} legalActions={legalActions} act={act}/>}</div><section className="panel map-panel"><div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div><WorldMap game={game} citizenId={player.id}/><p className="map-key"><span>?</span> unknown <span>0–9</span> observed zombies <span>T</span> town <span>@</span> controlled citizen</p></section></div>}
+        {screen === 'world' && <div className="world-screen-layout">
+          <div className="world-primary-column">
+            {player.location.type==='world'&&<WorldTownReturn action={enterTownAction} act={act}/>} 
+            <WorldView game={game} citizenId={player.id} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move}/>
+            {currentZone&&<CampingPanel game={game} citizen={player} zone={currentZone} legalActions={legalActions} act={act}/>} 
+          </div>
+          <section className="panel map-panel">
+            <div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div>
+            <WorldMap game={game} citizenId={player.id}/>
+            {player.location.type==='world'&&<WorldTravelControls legalActions={legalActions} move={move}/>} 
+          </section>
+        </div>}
         {screen === 'citizens' && <CitizenRoster game={game} controlledCitizenId={player.id} onControl={controlCitizen} onVisit={visitHome}/>} 
         {screen === 'chronicle' && <TownRecords game={game}/>} 
       </div>
@@ -158,7 +173,6 @@ export function App() {
       {control?.trapped && !attackPhase && <div className="rescue-hint global-rescue"><strong>Zone control lost.</strong><span>Search, fight, use a carried weapon, prepare to hide, or advance time so autonomous citizens can react during the current hour.</span></div>}
 
       <div className="controlled-clock-context"><span>Controlling {player.name}</span><strong>{player.alive ? (player.location.type === 'town' ? 'Inside town' : player.camping.hidden ? `Hidden outside [${player.location.x},${player.location.y}]` : `Outside [${player.location.x},${player.location.y}]`) : 'DEAD · switch citizens to continue testing'}</strong></div>
-      <TimeControls game={game} onAdvanceOne={advanceHour} onAdvanceTarget={advanceTarget}/>
     </>}
   </main>
 }
