@@ -46,8 +46,6 @@ export interface ConstructionDefinition {
   blueprintTier?: ConstructionBlueprintClass
   implementationStatus?: ConstructionImplementationStatus
   wipReason?: string
-  maxHp?: number
-  breakable?: boolean
   playable?: boolean
 }
 
@@ -193,8 +191,6 @@ export const CONSTRUCTIONS:Record<ConstructionId,ConstructionDefinition>=Object.
     project.description=meta.description
     project.apCost=meta.apCost
     project.blueprintTier=meta.blueprintClass
-    project.maxHp=meta.maxHp
-    project.breakable=meta.breakable
     project.expiresAfterAttack=meta.temporary
     project.implementationStatus=meta.implementation
     project.wipReason=meta.wipReason??undefined
@@ -218,8 +214,6 @@ function applyCurrentConstructionFidelity():void {
     project.prerequisites=snapshot.parentId?[snapshot.parentId]:[]
     if(snapshot.category)project.category=snapshot.category
     project.blueprintTier=snapshot.blueprintTier
-    project.maxHp=snapshot.maxHp
-    project.breakable=snapshot.breakable
     project.playable=project.implementationStatus!=='wip'
     project.expiresAfterAttack=snapshot.temporary
     if(project.implementationStatus==='wip'){
@@ -248,7 +242,6 @@ export function constructionImplementationStatus(projectId:ConstructionId):Const
 export function constructionWipReason(projectId:ConstructionId):string|null{return CONSTRUCTIONS[projectId].wipReason??null}
 export const BUILDABLE_CONSTRUCTION_IDS:readonly ConstructionId[]=CONSTRUCTION_ORDER.filter((id)=>constructionPlayable(id))
 export function constructionGenericDiscoverable(projectId:ConstructionId):boolean{return constructionBlueprintTier(projectId)<=4}
-export function constructionMaxHp(projectId:ConstructionId):number{return Math.max(0,CONSTRUCTIONS[projectId].maxHp??CONSTRUCTIONS[projectId].apCost)}
 function noBlueprintPathFromRoot(projectId:ConstructionId,seen=new Set<ConstructionId>()):boolean{
   if(seen.has(projectId)||!constructionGenericDiscoverable(projectId)||constructionBlueprintTier(projectId)!==0)return false
   seen.add(projectId)
@@ -271,7 +264,7 @@ export function constructionDiscoveryCascade(projectId:ConstructionId):Construct
 }
 
 export function createConstructionState(): Record<ConstructionId, ConstructionProjectState> {
-  return Object.fromEntries(CONSTRUCTION_ORDER.map((id) => [id, { id, discovered:constructionInitiallyDiscovered(id), apContributed:0, completed:false, hp:0 }])) as Record<ConstructionId, ConstructionProjectState>
+  return Object.fromEntries(CONSTRUCTION_ORDER.map((id) => [id, { id, discovered:constructionInitiallyDiscovered(id), apContributed:0, completed:false }])) as Record<ConstructionId, ConstructionProjectState>
 }
 
 export function constructionDiscovered(state:GameState,projectId:ConstructionId):boolean{return state.town.construction[projectId]?.discovered===true}
@@ -326,19 +319,11 @@ function effectsOfType<T extends ConstructionEffect['type']>(state:GameState,typ
   return completedConstructionEffects(state).filter((effect):effect is Extract<ConstructionEffect,{type:T}>=>effect.type===type)
 }
 
-export function constructionConditionRatio(state:GameState,projectId:ConstructionId):number{
-  const project=state.town.construction[projectId]
-  if(!project?.completed)return 0
-  const definition=CONSTRUCTIONS[projectId]
-  if(definition.breakable===false)return 1
-  const maxHp=constructionMaxHp(projectId)
-  return maxHp>0?Math.max(0,Math.min(1,project.hp/maxHp)):1
-}
 export function constructionTownDefense(state:GameState):number{
   const flat=BUILDABLE_CONSTRUCTION_IDS.reduce((sum,id)=>{
     if(!state.town.construction[id]?.completed)return sum
     const base=CONSTRUCTIONS[id].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'town_defense_flat'}>=>effect.type==='town_defense_flat').reduce((value,effect)=>value+effect.amount,0)
-    return sum+Math.floor(base*constructionConditionRatio(state,id))
+    return sum+base
   },0)
   const dead=state.citizens.filter((citizen)=>!citizen.alive).length
   const perDead=effectsOfType(state,'defense_per_dead_citizen').reduce((sum,effect)=>sum+effect.amount,0)

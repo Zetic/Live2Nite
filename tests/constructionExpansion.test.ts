@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   CONSTRUCTION_ORDER,
   CONSTRUCTIONS,
-  constructionMaxHp,
   constructionUnlocked,
   homeContributionRatio,
   temporaryCompletedProjects,
@@ -26,7 +25,6 @@ function complete(game: GameState, ...projectIds: ConstructionId[]): GameState {
       discovered: true,
       apContributed: CONSTRUCTIONS[projectId].apCost,
       completed: true,
-      hp: constructionMaxHp(projectId),
     }
   }
   return { ...game, town: { ...game.town, construction } }

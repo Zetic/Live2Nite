@@ -230,7 +230,7 @@ describe('Town construction and Workshop', () => {
 
   it('converts 1 raw resource into 1 refined resource for 3 AP', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: bankFromCounts({rotten_log:1},'game-recipe'), construction: { ...game.town.construction, workshop: { id: 'workshop', discovered: true, apContributed: 25, completed: true, hp: 25 } } } }
+    game = { ...game, town: { ...game.town, bank: bankFromCounts({rotten_log:1},'game-recipe'), construction: { ...game.town.construction, workshop: { id: 'workshop', discovered: true, apContributed: 25, completed: true } } } }
     const action = getLegalActions(game, 'c01').find((a) => a.type === 'WORKSHOP_CONVERT' && a.recipeId === 'logs_to_planks')!
     game = executeCommand(game, action).state
     expect(game.citizens[0].ap).toBe(3)
@@ -240,7 +240,7 @@ describe('Town construction and Workshop', () => {
 
   it('completing the Watchtower adds derived town defense without mutating the bootstrap base', () => {
     let game = createInitialGame(321, 2)
-    game = { ...game, town: { ...game.town, bank: bankFromCounts({twisted_plank:3,patchwork_beam:1,wrought_iron:1},'watchtower'), construction: { ...game.town.construction, watchtower: { ...game.town.construction.watchtower, discovered: true, apContributed: 14, completed: false, hp: 0 } } } }
+    game = { ...game, town: { ...game.town, bank: bankFromCounts({twisted_plank:3,patchwork_beam:1,wrought_iron:1},'watchtower'), construction: { ...game.town.construction, watchtower: { ...game.town.construction.watchtower, discovered: true, apContributed: 14, completed: false } } } }
     game = executeCommand(game, projectCommand(game,'c01','watchtower')).state
     expect(game.town.construction.watchtower.completed).toBe(true)
     expect(game.town.defense).toBe(40)

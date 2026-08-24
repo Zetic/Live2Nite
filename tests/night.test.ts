@@ -14,7 +14,7 @@ function withWatchtower(game: GameState): GameState {
       ...game.town,
       construction: {
         ...game.town.construction,
-        watchtower: { id: 'watchtower', discovered: true, apContributed: 15, completed: true, hp: 15 },
+        watchtower: { id: 'watchtower', discovered: true, apContributed: 15, completed: true },
       },
     },
   }

@@ -30,7 +30,7 @@ Blueprint/unlock classes:
 | 5 | Special/manual | 1 |
 | 6 | Dump specialization | 6 |
 
-The repository stores Live2Nite semantic construction IDs, English source names/descriptions, source hierarchy, sibling order, blueprint class, AP, material display names/amounts, defense, HP, breakability, temporary lifecycle and whether a source upgrade track exists.
+The repository stores Live2Nite semantic construction IDs, English source names/descriptions, source hierarchy, sibling order, blueprint class, AP, material display names/amounts, defense, temporary lifecycle and whether a source upgrade track exists.
 
 Upstream numeric/prototype IDs and upstream implementation code are deliberately not retained.
 
@@ -81,8 +81,7 @@ The full parent/child tree is grouped under the seven branch roots. Each detail 
 - blueprint class;
 - AP;
 - source material cost;
-- defense and HP;
-- breakability;
+- defense;
 - temporary/permanent lifecycle;
 - source upgrade-track flag;
 - acquisition note.

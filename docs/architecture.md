@@ -257,7 +257,7 @@ The Citizens screen defaults to a dense fixed-height **Overview** table for scan
 
 Core rules do not use scattered `Math.random()`. A seed plus the same ordered commands/time advances should reproduce the same result.
 
-Save schema is **v19**. Current-schema save/load correctness is a hard requirement: v19 item identity/state, construction discovery/condition, ruin blueprint state, citizen/home corpse state, missions, coordination, and deterministic simulation state must survive persistence.
+Save schema is **v19**. Current-schema save/load correctness is a hard requirement: v19 item identity/state, construction discovery/readiness, ruin blueprint state, citizen/home corpse state, missions, coordination, and deterministic simulation state must survive persistence.
 
 Older development saves are **not** guaranteed to migrate forward during this rapid-development phase. Schema-breaking changes may require starting a new town, and backward migration completeness must not delay otherwise-correct gameplay or architecture work. See `instructions.md` for the project policy.
 
@@ -293,6 +293,6 @@ Future:
 `React -> network commands/time -> authoritative server using the same core/controllers -> database`
 
 
-## Construction discovery and condition
+## Construction discovery and implementation readiness
 
-Construction state distinguishes a site being **known**, its **implementation readiness**, and the building being **completed**. Generic rarity-0/no-blueprint descendants are registered recursively with their parent sites, including WIP catalogue entries. Tiered blueprint items reveal one random eligible class 1-4 site whose direct parent is already known; WIP status does not remove a site from that candidate pool, but it prevents AP/material spending. The Construction Codex exposes all 166 current constructions independently of town discovery. Completed buildings also track condition so source-backed defense can scale with damage in later attack/repair work. See `docs/construction-fidelity.md`, `docs/blueprints.md`, and `docs/construction-catalog.md`.
+Construction state distinguishes a site being **known**, its **implementation readiness**, and the building being **completed**. Generic rarity-0/no-blueprint descendants are registered recursively with their parent sites, including WIP catalogue entries. Tiered blueprint items reveal one random eligible class 1-4 site whose direct parent is already known; WIP status does not remove a site from that candidate pool, but it prevents AP/material spending. The Construction Codex exposes all 166 current constructions independently of town discovery. Ordinary constructions do not carry generic structural HP or breakability state; any future Reactor condition/damage behavior is isolated to the Reactor mechanic. See `docs/construction-fidelity.md`, `docs/blueprints.md`, and `docs/construction-catalog.md`.

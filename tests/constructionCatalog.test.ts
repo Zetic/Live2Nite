@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER } from '../src/core/constructionCatalog'
+import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER, constructionCatalogTreeRows } from '../src/core/constructionCatalog'
 import { CONSTRUCTION_CODEX_ENTRIES, GENERIC_BLUEPRINT_CLASSES, SPECIALIZED_RUIN_BLUEPRINTS, filterSpecializedRuinBlueprints } from '../src/core/constructionCodex'
 import { CONSTRUCTION_ORDER, CONSTRUCTIONS, blueprintEligibleProjects, constructionBlueprintTier, constructionImplementationStatus, constructionPlayable, constructionUnlocked } from '../src/core/construction'
 import { createInitialGame } from '../src/core/game'
@@ -39,6 +39,26 @@ describe('complete current construction catalog',()=>{
     expect(rarityCounts).toEqual({0:53,1:41,2:17,3:35,4:13,5:1,6:6})
   })
 
+  it('renders each source branch in true parent-first tree order',()=>{
+    const pumpRows=constructionCatalogTreeRows(CONSTRUCTION_CATALOG_ORDER,'pump')
+    expect(pumpRows[0]?.id).toBe('pump')
+    expect(pumpRows[0]?.depth).toBe(0)
+    expect(pumpRows[0]?.prefix).toBe('◆ ')
+    const pumpIndex=new Map(pumpRows.map((row,index)=>[row.id,index]))
+    for(const row of pumpRows){
+      const parent=CONSTRUCTION_CATALOG[row.id].parentId
+      if(parent)expect(pumpIndex.get(parent)).toBeLessThan(pumpIndex.get(row.id)!)
+    }
+    expect(pumpRows.some((row)=>row.prefix.includes('├─')||row.prefix.includes('└─'))).toBe(true)
+
+    const allRows=constructionCatalogTreeRows()
+    expect(allRows).toHaveLength(166)
+    for(const branch of CONSTRUCTION_BRANCHES){
+      const root=allRows.find((row)=>CONSTRUCTION_CATALOG[row.id].branchId===branch.id&&CONSTRUCTION_CATALOG[row.id].parentId===null)
+      expect(root?.depth).toBe(0)
+    }
+  })
+
   it('tracks the implementation backlog explicitly',()=>{
     const counts={implemented:0,partial:0,wip:0}
     for(const id of CONSTRUCTION_CATALOG_ORDER)counts[CONSTRUCTION_CATALOG[id].implementation]+=1
@@ -53,8 +73,6 @@ describe('complete current construction catalog',()=>{
       expect(CONSTRUCTIONS[id].id).toBe(id)
       expect(CONSTRUCTIONS[id].name).toBe(entry.name)
       expect(constructionBlueprintTier(id)).toBe(entry.blueprintClass)
-      expect(CONSTRUCTIONS[id].maxHp).toBe(entry.maxHp)
-      expect(CONSTRUCTIONS[id].breakable).toBe(entry.breakable)
       expect(Boolean(CONSTRUCTIONS[id].expiresAfterAttack)).toBe(entry.temporary)
       if(entry.parentId){
         expect(ids.has(entry.parentId)).toBe(true)
@@ -98,12 +116,13 @@ describe('complete current construction catalog',()=>{
     const game=createInitialGame(8803,1)
     const legacy={
       ...game,
-      town:{...game.town,construction:{...game.town.construction,improved_drill:{id:'improved_drill',discovered:true,apContributed:90,completed:true,hp:90}}},
+      town:{...game.town,construction:{...game.town.construction,wall_upgrade:{...game.town.construction.wall_upgrade,completed:true,apContributed:25,hp:25},improved_drill:{id:'improved_drill',discovered:true,apContributed:90,completed:true,hp:90}}},
     } as unknown as Record<string,unknown>
     const migrated=migrateStoredGame(legacy)
     expect(migrated).not.toBeNull()
     expect(Object.keys(migrated!.town.construction)).toHaveLength(166)
     expect('improved_drill' in migrated!.town.construction).toBe(false)
+    expect('hp' in migrated!.town.construction.wall_upgrade).toBe(false)
   })
 
   it('stores source costs for Codex reference even when a WIP project is not buildable',()=>{
