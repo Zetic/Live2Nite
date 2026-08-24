@@ -14,7 +14,8 @@ describe('construction discovery progression', () => {
     expect(game.town.construction.reinforcing_beams.discovered).toBe(false)
     expect(game.town.construction.second_layer.discovered).toBe(false)
     expect(game.town.construction.water_detector.discovered).toBe(false)
-    expect(game.town.construction.sanctuary.discovered).toBe(false)
+    expect(game.town.construction.sanctuary.discovered).toBe(true)
+    expect(constructionUnlocked(game,'sanctuary')).toBe(false)
   })
 
   it('shows known child sites before their parents are complete but blocks construction work', () => {
@@ -43,10 +44,11 @@ describe('construction discovery progression', () => {
     expect(result.events.some((event)=>event.type==='CONSTRUCTION_DISCOVERED')).toBe(false)
   })
 
-  it('does not expose non-playable no-blueprint descendants', () => {
+  it('shows WIP no-blueprint descendants without making them buildable', () => {
     const game=createInitialGame(2603,2)
     expect(game.town.construction.soul_purifying_source.discovered).toBe(true)
-    expect(game.town.construction.sanctuary.discovered).toBe(false)
+    expect(game.town.construction.sanctuary.discovered).toBe(true)
+    expect(constructionUnlocked(game,'sanctuary')).toBe(false)
   })
 
   it('keeps temporary plans known after their one-night construction expires', () => {
