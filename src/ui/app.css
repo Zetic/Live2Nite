@@ -226,6 +226,32 @@ button.secondary { background: transparent; }
 .roster-filters button, .segmented button { padding: 6px 8px; background: #10171b; font-size: .67rem; color: var(--muted); }
 .roster-filters button.active, .segmented button.active { border-color: #8f5839; color: #f0c09b; background: #22170f; }
 .roster-filters button span { margin-left: 4px; color: #d6c3b3; }
+.roster-view-tabs { display: flex; gap: 6px; margin: 10px 0 8px; }
+.roster-view-tabs button { display: grid; gap: 1px; min-width: 118px; padding: 7px 10px; text-align: left; background: #10171b; color: var(--muted); }
+.roster-view-tabs button strong { font-size: .7rem; }
+.roster-view-tabs button small { font-size: .55rem; color: #6f7c7f; }
+.roster-view-tabs button.active { border-color: #8f5839; color: #f0c09b; background: #22170f; }
+.citizen-overview-wrap { max-height: 720px; overflow: auto; margin-top: 10px; border: 1px solid #29353a; border-radius: 7px; background: #0d1417; }
+.citizen-overview-table { min-width: 1020px; }
+.citizen-overview-header, .citizen-overview-row { display: grid; grid-template-columns: minmax(125px,1.25fr) minmax(125px,1.2fr) 82px 58px 78px minmax(105px,1fr) minmax(120px,1.2fr) 142px; align-items: center; column-gap: 8px; }
+.citizen-overview-header { position: sticky; top: 0; z-index: 2; min-height: 30px; padding: 0 9px; border-bottom: 1px solid #354249; background: #131c20; color: #718084; font-size: .53rem; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.citizen-overview-row { height: 42px; padding: 0 9px; border-bottom: 1px solid #202b30; color: #aeb9b8; font-size: .65rem; }
+.citizen-overview-row:last-child { border-bottom: 0; }
+.citizen-overview-row:hover { background: #121b1f; }
+.citizen-overview-row.dead { background: #151315; color: #7f797a; }
+.citizen-overview-row.controlled-citizen { box-shadow: inset 3px 0 #9d6544; }
+.citizen-overview-name, .citizen-overview-actions { display: flex; align-items: center; min-width: 0; }
+.citizen-overview-name { gap: 4px; overflow: hidden; white-space: nowrap; }
+.citizen-overview-name strong { overflow: hidden; text-overflow: ellipsis; font-size: .7rem; color: #d0d8d6; }
+.citizen-overview-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .57rem; font-weight: 850; letter-spacing: .03em; }
+.citizen-overview-status.neutral { color: #91aaa0; }
+.citizen-overview-status.warning { color: #d5a966; }
+.citizen-overview-status.danger { color: #d37d70; }
+.citizen-overview-number { font: 750 .64rem ui-monospace,SFMono-Regular,Menlo,monospace; color: #b9c4c2; }
+.citizen-overview-home { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; color: #9ea8a7; }
+.citizen-overview-assignment { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #829296; font-size: .57rem; font-weight: 800; letter-spacing: .03em; }
+.citizen-overview-actions { justify-content: flex-end; gap: 4px; }
+.citizen-overview-actions button { padding: 4px 6px; min-width: 55px; font-size: .56rem; line-height: 1.1; }
 .citizen-roster { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; max-height: 720px; overflow: auto; padding-right: 5px; margin-top: 12px; }
 .citizen-card { border: 1px solid #29353a; border-radius: 7px; padding: 10px; background: #10171a; }
 .citizen-card.dead { opacity: .5; }
@@ -281,8 +307,8 @@ button.secondary { background: transparent; }
 .turn-bar button span { font-weight: 820; }
 .turn-bar button small { font-size: .64rem; }
 
-.event-log::-webkit-scrollbar, .citizen-roster::-webkit-scrollbar, .world-map::-webkit-scrollbar { width: 9px; height: 9px; }
-.event-log::-webkit-scrollbar-thumb, .citizen-roster::-webkit-scrollbar-thumb, .world-map::-webkit-scrollbar-thumb { background: #38474d; border-radius: 9px; border: 2px solid #10171a; }
+.event-log::-webkit-scrollbar, .citizen-roster::-webkit-scrollbar, .citizen-overview-wrap::-webkit-scrollbar, .world-map::-webkit-scrollbar { width: 9px; height: 9px; }
+.event-log::-webkit-scrollbar-thumb, .citizen-roster::-webkit-scrollbar-thumb, .citizen-overview-wrap::-webkit-scrollbar-thumb, .world-map::-webkit-scrollbar-thumb { background: #38474d; border-radius: 9px; border: 2px solid #10171a; }
 
 @media (max-width: 1050px) {
   .status-strip { grid-template-columns: repeat(3,1fr); }
@@ -290,6 +316,7 @@ button.secondary { background: transparent; }
   .status-strip article:nth-child(-n+3) { border-bottom: 1px solid var(--line); }
   .world-screen-layout { grid-template-columns: 1fr; }
   .citizen-roster { grid-template-columns: 1fr; max-height: 620px; }
+  .citizen-overview-wrap { max-height: 620px; }
   .town-overview-grid { grid-template-columns: 1fr; }
 }
 
