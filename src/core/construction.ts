@@ -70,7 +70,7 @@ export const CONSTRUCTION_CATEGORIES: ReadonlyArray<{ id: ConstructionCategory |
   { id: 'watchtower', label: 'Watchtower' },
   { id: 'foundations', label: 'Foundations' },
   { id: 'portal', label: 'Portal' },
-  { id: 'sanctuary', label: 'Sanctuary' },
+  { id: 'sanctuary', label: 'Soul Purifying Source' },
 ]
 
 const EXISTING_CONSTRUCTIONS: Partial<Record<ConstructionId, ConstructionDefinition>> = {
