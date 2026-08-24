@@ -58,7 +58,7 @@ describe('pinned MyHordes loot manifest',()=>{
     expect(MYHORDES_NORMAL_LOOT_MAPPING['chair_basic_#00']).toEqual({type:'ektorp_gluten_chair'})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['pc_#00']).toEqual({type:'pc_base_unit'})
     const pending=new Set(unmappedOrdinarySourceLootIds())
-    for(const closed of ['fence_#00','pet_chick_#00','food_noodles_#00','spices_#00','chama_#00','chair_basic_#00','pc_#00','grenade_empty_#00','engine_#00','repair_kit_#00','watergun_1_#00','watergun_2_#00','water_can_1_#00','water_can_2_#00','water_can_3_#00'])expect(pending.has(closed),closed).toBe(false)
+    for(const closed of ['fence_#00','pet_chick_#00','food_noodles_#00','spices_#00','chama_#00','chair_basic_#00','pc_#00','grenade_empty_#00','engine_#00','repair_kit_#00','watergun_1_#00','watergun_2_#00','water_can_1_#00','water_can_2_#00','water_can_3_#00','bplan_drop_#00'])expect(pending.has(closed),closed).toBe(false)
   })
 
   it('keeps still-unmapped ordinary ids visible instead of dropping them',()=>{
