@@ -30,6 +30,7 @@ export type CombinationRecipeId =
   | 'reload_water_pistol'
   | 'refill_water_cooler'
   | 'reload_battery_launcher'
+  | 'load_radio_battery'
   | 'repair_human_bone'
   | 'repair_penknife'
   | 'repair_staff'
