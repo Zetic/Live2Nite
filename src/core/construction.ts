@@ -193,9 +193,25 @@ export const CONSTRUCTION_ORDER: ConstructionId[] = [...CONSTRUCTION_IDS]
 export function constructionBlueprintTier(projectId:ConstructionId):ConstructionBlueprintTier{return CONSTRUCTIONS[projectId].blueprintTier??4}
 export function constructionPlayable(projectId:ConstructionId):boolean{return CONSTRUCTIONS[projectId].playable===true}
 export function constructionMaxHp(projectId:ConstructionId):number{return Math.max(0,CONSTRUCTIONS[projectId].maxHp??CONSTRUCTIONS[projectId].apCost)}
-export function constructionInitiallyDiscovered(projectId:ConstructionId):boolean{
-  const definition=CONSTRUCTIONS[projectId]
-  return constructionPlayable(projectId)&&constructionBlueprintTier(projectId)===0&&!definition.parentId
+function noBlueprintPathFromRoot(projectId:ConstructionId,seen=new Set<ConstructionId>()):boolean{
+  if(seen.has(projectId)||!constructionPlayable(projectId)||constructionBlueprintTier(projectId)!==0)return false
+  seen.add(projectId)
+  const parent=CONSTRUCTIONS[projectId].parentId
+  return !parent||noBlueprintPathFromRoot(parent,seen)
+}
+export function constructionInitiallyDiscovered(projectId:ConstructionId):boolean{return noBlueprintPathFromRoot(projectId)}
+
+export function constructionDiscoveryCascade(projectId:ConstructionId):ConstructionId[]{
+  const discovered:ConstructionId[]=[projectId]
+  const queue:ConstructionId[]=[projectId]
+  while(queue.length){
+    const parentId=queue.shift()!
+    for(const id of CONSTRUCTION_ORDER){
+      if(discovered.includes(id)||!constructionPlayable(id)||constructionBlueprintTier(id)!==0||CONSTRUCTIONS[id].parentId!==parentId)continue
+      discovered.push(id);queue.push(id)
+    }
+  }
+  return discovered
 }
 
 export function createConstructionState(): Record<ConstructionId, ConstructionProjectState> {
