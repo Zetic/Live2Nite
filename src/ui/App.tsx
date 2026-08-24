@@ -62,6 +62,7 @@ export function App() {
   const outsideDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'outside_at_night').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const campingDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'camping_failure').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const homeDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'home_breach').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
+  const corpseDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'corpse_attack').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const dehydrationDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'dehydration').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const controlledDeathReason = useMemo(() => [...game.events].reverse().find((event): event is Extract<GameEvent,{type:'CITIZEN_DIED'}> => event.type === 'CITIZEN_DIED' && event.citizenId === player.id)?.reason ?? null, [game.events, player.id])
 
@@ -127,10 +128,10 @@ export function App() {
           <span>Night {game.lastNight.day} report</span>
           <strong>{game.lastNight.breached ? `${zombiesInside} zombie${zombiesInside === 1 ? '' : 's'} got inside.` : 'The town held.'}</strong>
           <p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}{(game.lastNight.campingSurvivors??0)>0&&` ${game.lastNight.campingSurvivors} citizen(s) survived camping outside.`}{(game.lastNight.corpseReanimations??0)>0&&` ${game.lastNight.corpseReanimations} undisposed corpse(s) reanimated; ${game.lastNight.corpseAttackDeaths??0} citizen(s) were killed and ${game.lastNight.corpseWaterLost??0} Well water was lost.`}</p>
-          {(outsideDeathNames.length > 0 || campingDeathNames.length > 0 || homeDeathNames.length > 0 || dehydrationDeathNames.length > 0) && <div className="night-casualties">
+          {(outsideDeathNames.length > 0 || campingDeathNames.length > 0 || homeDeathNames.length > 0 || corpseDeathNames.length > 0 || dehydrationDeathNames.length > 0) && <div className="night-casualties">
             {outsideDeathNames.length > 0 && <span>Outside without shelter: {outsideDeathNames.join(', ')}</span>}
             {campingDeathNames.length > 0 && <span>Camping failed: {campingDeathNames.join(', ')}</span>}
-            {homeDeathNames.length > 0 && <span>Homes breached: {homeDeathNames.join(', ')}</span>}
+            {homeDeathNames.length > 0 && <span>Homes breached: {homeDeathNames.join(', ')}</span>}{corpseDeathNames.length > 0 && <span>Reanimated corpses: {corpseDeathNames.join(', ')}</span>}
             {dehydrationDeathNames.length > 0 && <span>Dehydration: {dehydrationDeathNames.join(', ')}</span>}
           </div>}
         </div>
