@@ -26,7 +26,7 @@ export function CodexView() {
   const [query,setQuery]=useState('')
   const [selected,setSelected]=useState<ItemType|null>(CODEX_ITEM_ENTRIES[0]?.type??null)
   const visible=useMemo(()=>filterCodexItems(category,query),[category,query])
-  const selectedEntry=(selected?CODEX_ITEM_ENTRIES.find((entry)=>entry.type===selected):undefined)??visible[0]??CODEX_ITEM_ENTRIES[0]
+  const selectedEntry=(selected?visible.find((entry)=>entry.type===selected):undefined)??visible[0]??null
 
   return <section className="panel screen-panel codex-screen">
     <div className="panel-heading codex-heading"><div><p className="section-kicker">Reference</p><h2>Codex</h2><p className="section-note">A live reference built from the same item definitions and mechanics used by the game.</p></div><span className="panel-count">{CODEX_ITEM_ENTRIES.length} items</span></div>
@@ -42,7 +42,7 @@ export function CodexView() {
           {!visible.length&&<p className="empty-state">No items match this category and search.</p>}
         </div>
       </section>
-      {selectedEntry?<ItemDetail entry={selectedEntry}/>:<article className="codex-detail"><p className="empty-state">Choose an item to view its codex entry.</p></article>}
+      {selectedEntry?<ItemDetail entry={selectedEntry}/>:<article className="codex-detail"><p className="empty-state">No item is available for the current filter.</p></article>}
     </div>
   </section>
 }
