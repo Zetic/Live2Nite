@@ -1,7 +1,7 @@
 export const ITEM_TYPE_IDS = [
   'rotten_log','scrap_metal','quality_log','sheet_metal_bits','water_ration','food','old_door','twisted_plank','wrought_iron','unshaped_concrete_block','construction_kit','water_bomb','human_bone','broken_human_bone','pathetic_penknife','broken_pathetic_penknife','staff','broken_staff','serrated_knife','broken_serrated_knife','machete','broken_machete',
   // Ordinary MyHordes Armoury tools used as weapons and container openers.
-  'adjustable_spanner','broken_adjustable_spanner','screwdriver','broken_screwdriver','swiss_army_knife','broken_swiss_army_knife','box_cutter','broken_box_cutter','chain','broken_chain','can_opener','broken_can_opener',
+  'adjustable_spanner','broken_adjustable_spanner','screwdriver','broken_screwdriver','swiss_army_knife','broken_swiss_army_knife','box_cutter','broken_box_cutter','chain','broken_chain','can_opener','broken_can_opener','ektorp_gluten_chair','broken_ektorp_gluten_chair','pc_base_unit','broken_pc_base_unit',
   // Source utility opener/tool family. Hacksaw is assembled from the damaged source item.
   'saw_tool_part','saw_tool',
   // Ordinary source food outcomes. food itself maps to food_sandw_#00 (Mouldy Ham Sandwich).
