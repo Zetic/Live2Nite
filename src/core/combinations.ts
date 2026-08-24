@@ -57,6 +57,8 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
   repair_box_cutter:repairRecipe('repair_box_cutter','Repair Box Cutter','broken_box_cutter','box_cutter','repair_kit'),
   repair_chain:repairRecipe('repair_chain','Repair Chain','broken_chain','chain','repair_kit'),
   repair_can_opener:repairRecipe('repair_can_opener','Repair Can Opener','broken_can_opener','can_opener','repair_kit'),
+  repair_ektorp_gluten_chair:repairRecipe('repair_ektorp_gluten_chair','Repair Ektorp-Gluten Chair','broken_ektorp_gluten_chair','ektorp_gluten_chair','repair_kit'),
+  repair_pc_base_unit:repairRecipe('repair_pc_base_unit','Repair PC Base Unit','broken_pc_base_unit','pc_base_unit','repair_kit'),
 
   kwik_fix_human_bone:repairRecipe('kwik_fix_human_bone','Kwik-Fix Human Bone','broken_human_bone','human_bone','kwik_fix'),
   kwik_fix_penknife:repairRecipe('kwik_fix_penknife','Kwik-Fix Pathetic Penknife','broken_pathetic_penknife','pathetic_penknife','kwik_fix'),
@@ -69,13 +71,15 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
   kwik_fix_box_cutter:repairRecipe('kwik_fix_box_cutter','Kwik-Fix Box Cutter','broken_box_cutter','box_cutter','kwik_fix'),
   kwik_fix_chain:repairRecipe('kwik_fix_chain','Kwik-Fix Chain','broken_chain','chain','kwik_fix'),
   kwik_fix_can_opener:repairRecipe('kwik_fix_can_opener','Kwik-Fix Can Opener','broken_can_opener','can_opener','kwik_fix'),
+  kwik_fix_ektorp_gluten_chair:repairRecipe('kwik_fix_ektorp_gluten_chair','Kwik-Fix Ektorp-Gluten Chair','broken_ektorp_gluten_chair','ektorp_gluten_chair','kwik_fix'),
+  kwik_fix_pc_base_unit:repairRecipe('kwik_fix_pc_base_unit','Kwik-Fix PC Base Unit','broken_pc_base_unit','pc_base_unit','kwik_fix'),
 }
 
 export const COMBINATION_RECIPE_ORDER:CombinationRecipeId[]=[
   'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','assemble_hacksaw','prepare_spicy_noodles','mix_concrete','fill_water_bomb',
   'reload_water_pistol','refill_water_cooler','reload_battery_launcher',
-  'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete','repair_adjustable_spanner','repair_screwdriver','repair_swiss_army_knife','repair_box_cutter','repair_chain','repair_can_opener',
-  'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete','kwik_fix_adjustable_spanner','kwik_fix_screwdriver','kwik_fix_swiss_army_knife','kwik_fix_box_cutter','kwik_fix_chain','kwik_fix_can_opener',
+  'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete','repair_adjustable_spanner','repair_screwdriver','repair_swiss_army_knife','repair_box_cutter','repair_chain','repair_can_opener','repair_ektorp_gluten_chair','repair_pc_base_unit',
+  'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete','kwik_fix_adjustable_spanner','kwik_fix_screwdriver','kwik_fix_swiss_army_knife','kwik_fix_box_cutter','kwik_fix_chain','kwik_fix_can_opener','kwik_fix_ektorp_gluten_chair','kwik_fix_pc_base_unit',
 ]
 
 function personalRefs(citizen:Citizen):PersonalRef[]{
