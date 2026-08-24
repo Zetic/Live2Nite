@@ -17,10 +17,10 @@ function command(game: GameState, citizenId: string, type: ReturnType<typeof get
 function outsideAt(game: GameState, x: number, y: number): GameState {return { ...game, citizens: game.citizens.map((citizen) => citizen.id === 'c01' ? { ...citizen, location: { type: 'world' as const, x, y } } : citizen) }}
 
 describe('facility navigation', () => {
-  it('keeps Town Records first in the primary navigation row', () => {
+  it('keeps Town Records first, Citizens second, and Codex last in the primary navigation row', () => {
     const game=createInitialGame(123,2)
     const primary=PRIMARY_SCREENS.map((entry)=>entry.id)
-    expect(primary).toEqual(['chronicle','codex','home','well','bank','construction','world','citizens'])
+    expect(primary).toEqual(['chronicle','citizens','home','well','bank','construction','world','codex'])
     expect(availableScreens(game).map((entry)=>entry.id)).toEqual(primary)
     expect(primary).not.toContain('town')
   })
