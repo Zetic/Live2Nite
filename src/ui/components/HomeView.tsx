@@ -9,7 +9,7 @@ type HomeTab='inventory'|'upgrades'|'improvements'
 function commandFor(actions:GameCommand[],type:GameCommand['type'],itemId:string):GameCommand|undefined{return actions.find((action)=>action.type===type&&'itemId'in action&&action.itemId===itemId)}
 function improvementCommand(actions:GameCommand[],id:HomeImprovementId):GameCommand|undefined{return actions.find((action)=>action.type==='BUILD_HOME_IMPROVEMENT'&&action.improvementId===id)}
 function resourceText(resources:Partial<Record<ItemType,number>>):string{const entries=Object.entries(resources) as Array<[ItemType,number|undefined]>;return entries.length?entries.map(([type,count])=>`${itemName(type)} × ${count??0}`).join(' · '):'No materials'}
-function homeRegisterEvent(event:GameEvent,citizenId:string):boolean{if(!('citizenId'in event)||event.citizenId!==citizenId)return false;return['ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','CONTAINER_OPENED','CONSTRUCTION_KIT_OPENED','ITEM_CONSUMED','ITEMS_COMBINED','HOME_UPGRADED','HOME_IMPROVEMENT_BUILT'].includes(event.type)}
+function homeRegisterEvent(event:GameEvent,citizenId:string):boolean{if(!('citizenId'in event)||event.citizenId!==citizenId)return false;return['ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','CONTAINER_OPENED','ITEM_CONSUMED','ITEMS_COMBINED','HOME_UPGRADED','HOME_IMPROVEMENT_BUILT'].includes(event.type)}
 
 export function HomeView({game,citizenId,legalActions,act}:{game:GameState;citizenId:string;legalActions:GameCommand[];act:(command:GameCommand|undefined)=>void}){
   const[tab,setTab]=useState<HomeTab>('inventory')

@@ -81,16 +81,16 @@ describe('World Beyond combat', () => {
     expect(game.events.some((event)=>event.type==='COMBAT_RESOLVED'&&event.method==='can_opener'&&event.brokenInto==='broken_can_opener')).toBe(true)
   })
 
-  it('uses a Water Bomb for 0 AP, consumes it, and kills between 1 and 5 zombies', () => {
+  it('uses a Water Bomb for 0 AP, consumes it, and kills between 2 and 4 zombies', () => {
     let game = combatState('c01', 5, ['water_bomb'])
     const beforeAp = game.citizens[0].ap
     game = executeCommand(game, action(game, 'c01', 'USE_WEAPON')).state
     const remaining = game.world.zones[zoneKey(1,0)].zombies
     expect(game.citizens[0].ap).toBe(beforeAp)
     expect(game.citizens[0].inventory).toHaveLength(0)
-    expect(remaining).toBeGreaterThanOrEqual(0)
-    expect(remaining).toBeLessThanOrEqual(4)
-    expect(game.events.some((event) => event.type === 'COMBAT_RESOLVED' && event.method === 'water_bomb' && event.kills >= 1 && event.kills <= 5)).toBe(true)
+    expect(remaining).toBeGreaterThanOrEqual(1)
+    expect(remaining).toBeLessThanOrEqual(3)
+    expect(game.events.some((event) => event.type === 'COMBAT_RESOLVED' && event.method === 'water_bomb' && event.kills >= 2 && event.kills <= 4)).toBe(true)
   })
 
   it('depletes Water Pistol charges in place and disables the empty weapon',()=>{

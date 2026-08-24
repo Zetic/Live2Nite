@@ -20,7 +20,7 @@ export interface WeaponDefinition {
 }
 
 export const WEAPONS:Partial<Record<ItemType,WeaponDefinition>>={
-  water_bomb:{itemType:'water_bomb',minKills:1,maxKills:5,killChancePercent:100,consumesOnUse:true,apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  water_bomb:{itemType:'water_bomb',minKills:2,maxKills:4,killChancePercent:100,consumesOnUse:true,apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
   water_pistol:{itemType:'water_pistol',minKills:1,maxKills:1,killChancePercent:100,consumesOnUse:false,usesCharges:true,apCost:0,requiresPositiveAp:true,confidence:'approximate'},
   battery_launcher:{itemType:'battery_launcher',minKills:1,maxKills:1,killChancePercent:100,consumesOnUse:false,usesCharges:true,apCost:0,requiresPositiveAp:true,confidence:'approximate'},
   claymore:{itemType:'claymore',minKills:2,maxKills:5,killChancePercent:100,consumesOnUse:true,apCost:0,requiresPositiveAp:true,confidence:'approximate'},
