@@ -67,6 +67,11 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     addConsumableActions(state,actions,citizen,citizen.home.storage,'home')
     for(const item of citizen.inventory){actions.push({type:'DEPOSIT_ITEM',citizenId,itemId:item.id});if(citizen.home.storage.length<citizen.home.storageCapacity)actions.push({type:'MOVE_ITEM_TO_HOME',citizenId,itemId:item.id})}
     if(citizen.inventory.length<citizen.inventoryCapacity){for(const item of citizen.home.storage)actions.push({type:'MOVE_ITEM_TO_RUCKSACK',citizenId,itemId:item.id});for(const item of state.town.bank)actions.push({type:'WITHDRAW_BANK_ITEM',citizenId,itemId:item.id});const waterTaken=Number(citizen.daily.waterTaken)+Number(Boolean(citizen.daily.bonusWaterTaken));if(waterTaken<wellDailyWithdrawals(state)&&state.town.well.water>0)actions.push({type:'TAKE_WATER',citizenId})}
+    const corpses=state.citizens.filter((target)=>target.id!==citizen.id&&!target.alive&&target.home.holdsBody)
+    for(const corpse of corpses){
+      if(citizen.ap>=2)actions.push({type:'DISPOSE_CORPSE_OUTSIDE',citizenId,targetCitizenId:corpse.id})
+      if([...citizen.inventory,...citizen.home.storage].some((item)=>item.type==='water_ration'))actions.push({type:'DISPOSE_CORPSE_WATER',citizenId,targetCitizenId:corpse.id})
+    }
     const nextHome=nextHomeDefinition(citizen.home.level)
     if(nextHome&&citizen.home.upgradedDay!==state.day&&citizen.ap>=nextHome.apCost&&hasPersonalMaterials(citizen,nextHome.resources))actions.push({type:'UPGRADE_HOME',citizenId})
     if(citizen.home.level!=='camp_bed'){for(const improvementId of Object.keys(HOME_IMPROVEMENTS) as HomeImprovementId[]){const nextLevel=improvementNextLevel(citizen,improvementId);if(nextLevel===null)continue;const definition=HOME_IMPROVEMENTS[improvementId];if(citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})}}
