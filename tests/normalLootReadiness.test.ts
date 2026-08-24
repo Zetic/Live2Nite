@@ -8,6 +8,7 @@ describe('normal MyHordes loot activation gate',()=>{
     expect(unresolved).toContain('drug_#00')
     expect(unresolved).toContain('jerrycan_#00')
     expect(unresolved).toContain('bag_#00')
+    expect(unresolved).toContain('chama_#00')
     expect(unresolved).not.toContain('grenade_empty_#00')
     expect(unresolved).not.toContain('water_can_3_#00')
     expect(()=>buildMyHordesNormalZoneLoot()).toThrow(/not dependency-complete/)
