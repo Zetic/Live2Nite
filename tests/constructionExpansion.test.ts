@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CONSTRUCTION_ORDER,
   CONSTRUCTIONS,
+  constructionMaxHp,
   constructionUnlocked,
   homeContributionRatio,
   temporaryCompletedProjects,
@@ -22,8 +23,10 @@ function complete(game: GameState, ...projectIds: ConstructionId[]): GameState {
   for (const projectId of projectIds) {
     construction[projectId] = {
       ...construction[projectId],
+      discovered: true,
       apContributed: CONSTRUCTIONS[projectId].apCost,
       completed: true,
+      hp: constructionMaxHp(projectId),
     }
   }
   return { ...game, town: { ...game.town, construction } }
@@ -55,18 +58,13 @@ describe('expanded construction catalog', () => {
     ])
   })
 
-  it('exposes descendants only as their prerequisite frontier is completed', () => {
-    let game = createInitialGame(1901, 2)
+  it('keeps only root common plans known at town creation', () => {
+    const game = createInitialGame(1901, 2)
     expect(constructionUnlocked(game, 'workshop')).toBe(true)
+    expect(game.town.construction.wall_upgrade.discovered).toBe(true)
+    expect(game.town.construction.great_pit.discovered).toBe(false)
+    expect(game.town.construction.reinforcing_beams.discovered).toBe(false)
     expect(constructionUnlocked(game, 'great_pit')).toBe(false)
-    expect(constructionUnlocked(game, 'moat')).toBe(false)
-
-    game = complete(game, 'wall_upgrade')
-    expect(constructionUnlocked(game, 'great_pit')).toBe(true)
-    expect(constructionUnlocked(game, 'moat')).toBe(false)
-
-    game = complete(game, 'great_pit')
-    expect(constructionUnlocked(game, 'moat')).toBe(true)
   })
 })
 
