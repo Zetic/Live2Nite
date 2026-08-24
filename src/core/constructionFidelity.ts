@@ -11,6 +11,7 @@ export interface ConstructionFidelitySnapshot {
   temporary: boolean
   playable: boolean
   completionWater?: number
+  category?: 'wall' | 'pump' | 'workshop' | 'watchtower' | 'foundations' | 'portal' | 'sanctuary'
 }
 
 /**
@@ -37,24 +38,24 @@ export const CURRENT_CONSTRUCTION_FIDELITY: Partial<Record<ConstructionId, Const
   metal_armour:{parentId:'wall_upgrade',blueprintTier:0,defense:30,maxHp:30,breakable:true,temporary:false,playable:true},
   heavy_armour:{parentId:'wall_upgrade',blueprintTier:0,defense:45,maxHp:30,breakable:true,temporary:false,playable:true},
   slick_wall:{parentId:'wall_upgrade',blueprintTier:0,defense:60,maxHp:35,breakable:true,temporary:false,playable:true},
-  emergency_devices:{parentId:'wall_upgrade',blueprintTier:0,defense:0,maxHp:40,breakable:true,temporary:false,playable:true},
-  emergency_reinforcements:{parentId:'emergency_devices',blueprintTier:0,defense:40,maxHp:20,breakable:true,temporary:true,playable:true},
-  guerrilla:{parentId:'emergency_devices',blueprintTier:0,defense:60,maxHp:30,breakable:true,temporary:true,playable:true},
-  rubbish_heap:{parentId:'emergency_devices',blueprintTier:0,defense:5,maxHp:10,breakable:true,temporary:true,playable:true},
-  trapped_fields:{parentId:'rubbish_heap',blueprintTier:0,defense:30,maxHp:15,breakable:true,temporary:true,playable:true},
-  wolf_trap:{parentId:'rubbish_heap',blueprintTier:0,defense:30,maxHp:15,breakable:true,temporary:true,playable:true},
+  emergency_devices:{parentId:'wall_upgrade',blueprintTier:0,defense:0,maxHp:40,breakable:true,temporary:false,playable:true,category:'wall'},
+  emergency_reinforcements:{parentId:'emergency_devices',blueprintTier:0,defense:40,maxHp:20,breakable:true,temporary:true,playable:true,category:'wall'},
+  guerrilla:{parentId:'emergency_devices',blueprintTier:0,defense:60,maxHp:30,breakable:true,temporary:true,playable:true,category:'wall'},
+  rubbish_heap:{parentId:'emergency_devices',blueprintTier:0,defense:5,maxHp:10,breakable:true,temporary:true,playable:true,category:'wall'},
+  trapped_fields:{parentId:'rubbish_heap',blueprintTier:0,defense:30,maxHp:15,breakable:true,temporary:true,playable:true,category:'wall'},
+  wolf_trap:{parentId:'rubbish_heap',blueprintTier:0,defense:30,maxHp:15,breakable:true,temporary:true,playable:true,category:'wall'},
 
   pump:{parentId:null,blueprintTier:0,defense:0,maxHp:25,breakable:false,temporary:false,playable:true,completionWater:15},
   drilling_rig:{parentId:'pump',blueprintTier:0,defense:0,maxHp:55,breakable:false,temporary:false,playable:true,completionWater:50},
   hydraulic_network:{parentId:'pump',blueprintTier:0,defense:0,maxHp:40,breakable:false,temporary:false,playable:true,completionWater:5},
-  sprayer:{parentId:'pump',blueprintTier:0,defense:0,maxHp:50,breakable:true,temporary:false,playable:true},
+  sprayer:{parentId:'pump',blueprintTier:0,defense:0,maxHp:50,breakable:true,temporary:false,playable:true,category:'pump'},
 
   workshop:{parentId:null,blueprintTier:0,defense:0,maxHp:25,breakable:true,temporary:false,playable:true},
   factory:{parentId:'workshop',blueprintTier:0,defense:0,maxHp:40,breakable:true,temporary:false,playable:true},
 
   watchtower:{parentId:null,blueprintTier:0,defense:10,maxHp:15,breakable:true,temporary:false,playable:true},
   search_tower:{parentId:'watchtower',blueprintTier:0,defense:0,maxHp:30,breakable:true,temporary:false,playable:true},
-  cannon_mounds:{parentId:'watchtower',blueprintTier:0,defense:30,maxHp:60,breakable:true,temporary:false,playable:true},
+  cannon_mounds:{parentId:'watchtower',blueprintTier:0,defense:30,maxHp:60,breakable:true,temporary:false,playable:true,category:'watchtower'},
 
   foundations:{parentId:null,blueprintTier:0,defense:0,maxHp:30,breakable:true,temporary:false,playable:true},
   portal_lock:{parentId:null,blueprintTier:0,defense:5,maxHp:15,breakable:true,temporary:false,playable:true},
@@ -77,10 +78,10 @@ export const CURRENT_CONSTRUCTION_FIDELITY: Partial<Record<ConstructionId, Const
   water_turrets:{parentId:'pump',blueprintTier:3,defense:70,maxHp:50,breakable:true,temporary:false,playable:true},
   outer_world_apple_tree:{parentId:'vegetable_plot',blueprintTier:3,defense:0,maxHp:30,breakable:true,temporary:false,playable:false},
   water_detector:{parentId:'pump',blueprintTier:4,defense:0,maxHp:130,breakable:false,temporary:false,playable:true,completionWater:100},
-  brick_cannon:{parentId:'cannon_mounds',blueprintTier:1,defense:50,maxHp:40,breakable:true,temporary:false,playable:true},
-  perforator:{parentId:'cannon_mounds',blueprintTier:2,defense:50,maxHp:35,breakable:true,temporary:false,playable:true},
-  shrapnel_launcher:{parentId:'cannon_mounds',blueprintTier:1,defense:60,maxHp:50,breakable:true,temporary:false,playable:true},
-  brutal_cannon:{parentId:'cannon_mounds',blueprintTier:1,defense:50,maxHp:25,breakable:true,temporary:true,playable:true},
+  brick_cannon:{parentId:'cannon_mounds',blueprintTier:1,defense:50,maxHp:40,breakable:true,temporary:false,playable:true,category:'watchtower'},
+  perforator:{parentId:'cannon_mounds',blueprintTier:2,defense:50,maxHp:35,breakable:true,temporary:false,playable:true,category:'watchtower'},
+  shrapnel_launcher:{parentId:'cannon_mounds',blueprintTier:1,defense:60,maxHp:50,breakable:true,temporary:false,playable:true,category:'watchtower'},
+  brutal_cannon:{parentId:'cannon_mounds',blueprintTier:1,defense:50,maxHp:25,breakable:true,temporary:true,playable:true,category:'watchtower'},
   planner:{parentId:'watchtower',blueprintTier:1,defense:0,maxHp:20,breakable:true,temporary:false,playable:true},
   henhouse:{parentId:'workshop',blueprintTier:2,defense:0,maxHp:25,breakable:true,temporary:false,playable:false},
   derrick:{parentId:'eden_project',blueprintTier:3,defense:0,maxHp:86,breakable:false,temporary:false,playable:true,completionWater:75},
