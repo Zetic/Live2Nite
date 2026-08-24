@@ -2,6 +2,8 @@
 
 Live2Nite now carries a complete reference catalogue for the current MyHordes construction set while keeping runtime identity and implementation entirely Live2Nite-owned.
 
+The numeric catalogue is transcribed from the pinned generated v5.1.1-era fixture snapshot. That pin was revalidated against the current source line for this pass: v5.1.1 → v5.1.2 contains no building/catalogue-file changes, and v5.1.2 → current master changes only ruin exploration. No newer construction-tree delta is therefore being omitted.
+
 ## Catalogue boundary
 
 The catalogue contains **166 constructions** across seven source branches:
