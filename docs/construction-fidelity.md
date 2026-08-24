@@ -19,9 +19,9 @@ Reference data is translated into Live2Nite concepts:
 
 ## Discovery and completion are separate
 
-Schema v18 gives each construction project both a `discovered` state and a `completed` state.
+Schema v19 gives each construction project both a `discovered` state and a `completed` state.
 
-At town creation, only playable common root projects are known. Completing a common project reveals its playable common direct children. Higher blueprint tiers remain hidden until the World Beyond blueprint acquisition flow is implemented.
+At town creation, playable rarity-0 projects are registered recursively from their rarity-0 roots, matching the source behavior that adds no-blueprint descendants with their parent sites. Completing a parent does not discover a site; it only makes already-known descendants buildable. Blueprint tiers 1-4 remain hidden until a matching blueprint reveals one eligible site.
 
 This prevents late-game projects from appearing on Day 1 merely because their definitions exist in the catalog.
 
@@ -42,6 +42,6 @@ A source-known project can remain in the catalog but be marked non-playable unti
 
 ## Current pass boundary
 
-Construction Fidelity I concentrates on the early/common town tree and establishes the discovery model that the blueprint pass will consume. Advanced projects with verified metadata may already have a blueprint tier recorded, but they are not discovered automatically.
+Construction Fidelity I established the construction metadata and durability foundation. The blueprint pass corrects the discovery model to current behavior and adds consumable tiered plans; see `docs/blueprints.md`.
 
 Some utility systems remain partial, including full building damage/repair, upgrade levels, complete Searchtower behavior, soul mechanics, and specialized construction effects. Those should be implemented from their current behavior before the related project is promoted to full parity.
