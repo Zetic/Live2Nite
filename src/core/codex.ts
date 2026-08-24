@@ -2,6 +2,7 @@ import { weaponDefinition } from './combat'
 import { COMBINATION_RECIPES, COMBINATION_RECIPE_ORDER } from './combinations'
 import { CONSTRUCTIONS } from './construction'
 import { ITEM_TYPE_IDS, type ItemDisplayCategory, type ItemType } from './itemCatalog'
+import { itemUseActionSummary, itemUseActionsForType } from './itemEffects'
 import { ITEMS, NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import { totalLootWeight, type WeightedLootTable } from './loot'
 import { OPENABLES, openableDefinition } from './openables'
@@ -186,6 +187,7 @@ export function codexItemEntry(type: ItemType): CodexItemEntry {
   if (definition.consumableKind) facts.push({ label: 'Consumable', value: titleCase(definition.consumableKind) })
   if (definition.bankDefense) facts.push({ label: 'Bank defense', value: `+${definition.bankDefense}` })
   if (definition.homeDefense) facts.push({ label: 'Home defense', value: `+${definition.homeDefense}` })
+  for(const action of itemUseActionsForType(type))facts.push({label:`Action · ${action.label}`,value:itemUseActionSummary(action)})
 
   const weapon = weaponDefinition(type)
   if (weapon) {
@@ -234,7 +236,8 @@ export function filterCodexItems(category: CodexItemCategory, query: string, ent
     if (category !== 'all' && entry.category !== category) return false
     if (!needle) return true
     const relationships=[...entry.usedIn,...entry.obtainedFrom].flatMap((group)=>[group.label,...group.entries.flatMap((relation)=>[relation.label,relation.detail,relation.badge??''])])
-    return [entry.name, entry.purpose, entry.categoryLabel, entry.sourceLabel, ...entry.capabilities, ...relationships].some((value) => value.toLocaleLowerCase().includes(needle))
+    const facts=entry.facts.flatMap((fact)=>[fact.label,fact.value])
+    return [entry.name, entry.purpose, entry.categoryLabel, entry.sourceLabel, ...entry.capabilities, ...facts, ...relationships].some((value) => value.toLocaleLowerCase().includes(needle))
   })
 }
 

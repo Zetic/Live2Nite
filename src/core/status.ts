@@ -71,6 +71,7 @@ export function hasCitizenStatus(citizen:Citizen,id:CitizenStatusId):boolean{
     case'hangover':return citizen.status.hangover
     case'immune':return citizen.status.immune
   }
+  return false
 }
 export function activeCitizenStatuses(citizen:Citizen):CitizenStatusId[]{
   if(!citizen.alive)return[]
@@ -103,23 +104,24 @@ export function nightlyStatusEvents(state:GameState,infectionRoll:(citizenId:str
   const events:GameEvent[]=[]
   for(const citizen of state.citizens){
     if(!citizen.alive)continue
-    if(citizen.status.hydration==='dehydrated'){events.push({type:'CITIZEN_DIED',day:state.day,hour:0,citizenId:citizen.id,reason:'dehydration'});continue}
-    if(citizen.status.addicted&&!citizen.status.drugged){events.push({type:'CITIZEN_DIED',day:state.day,hour:0,citizenId:citizen.id,reason:'drug_withdrawal'});continue}
-    if(citizen.status.infected&&infectionRoll(citizen.id)<=INFECTION_DEATH_CHANCE_PERCENT){events.push({type:'CITIZEN_DIED',day:state.day,hour:0,citizenId:citizen.id,reason:'infection'});continue}
-    let hydration:HydrationStatus=citizen.status.hydration
+    const current=normalizeCitizenStatusState(citizen.status)
+    if(current.hydration==='dehydrated'){events.push({type:'CITIZEN_DIED',day:state.day,hour:0,citizenId:citizen.id,reason:'dehydration'});continue}
+    if(current.addicted&&!current.drugged){events.push({type:'CITIZEN_DIED',day:state.day,hour:0,citizenId:citizen.id,reason:'drug_withdrawal'});continue}
+    if(current.infected&&infectionRoll(citizen.id)<=INFECTION_DEATH_CHANCE_PERCENT){events.push({type:'CITIZEN_DIED',day:state.day,hour:0,citizenId:citizen.id,reason:'infection'});continue}
+    let hydration:HydrationStatus=current.hydration
     if(hydration==='thirsty')hydration='dehydrated'
     else if(!citizen.daily.drank)hydration='thirsty'
     const statusAfter:CitizenStatusState={
-      ...citizen.status,
+      ...current,
       hydration,
       desertStepsToday:0,
-      infected:citizen.status.infected||Boolean(citizen.status.wound&&!citizen.status.immune),
+      infected:current.infected||Boolean(current.wound&&!current.immune),
       drugged:false,
       drunk:false,
-      hangover:citizen.status.drunk,
+      hangover:current.drunk,
       immune:false,
     }
-    if(JSON.stringify(statusAfter)!==JSON.stringify(citizen.status))events.push({type:'CITIZEN_STATUS_CHANGED',day:state.day,hour:0,citizenId:citizen.id,status:statusAfter,reason:'nightly_progression'})
+    if(JSON.stringify(statusAfter)!==JSON.stringify(current))events.push({type:'CITIZEN_STATUS_CHANGED',day:state.day,hour:0,citizenId:citizen.id,status:statusAfter,reason:'nightly_progression'})
   }
   return events
 }

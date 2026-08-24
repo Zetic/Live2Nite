@@ -66,7 +66,7 @@ function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngSta
   let ap=citizen.ap,status=cloneStatus(citizen.status),daily=cloneDaily(citizen.daily),rng=rngState,restoresAp=false
   const apply=(effect:ItemActionEffect):void=>{
     switch(effect.type){
-      case'restore_ap_to':{const target=woundAdjustedApTarget(status,effect.target);const before=ap;ap=Math.max(ap,target);restoresAp=restoresAp||ap>before;break}
+      case'restore_ap_to':{const target=woundAdjustedApTarget(status,effect.target);ap=Math.max(ap,target);restoresAp=true;break}
       case'apply_status':setBooleanStatus(status,effect.status,true);break
       case'remove_status':setBooleanStatus(status,effect.status,false);break
       case'drug_cycle':if(status.drugged)status.addicted=true;else status.drugged=true;break
@@ -83,7 +83,7 @@ function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngSta
         const outcome=waterConsumptionOutcome(pseudo)
         status=outcome.statusAfter
         if(outcome.restoresAp){
-          const target=woundAdjustedApTarget(status,6);const before=ap;ap=Math.max(ap,target);restoresAp=restoresAp||ap>before;daily.drank=true
+          const target=woundAdjustedApTarget(status,6);ap=Math.max(ap,target);restoresAp=true;daily.drank=true
         }
         break
       }
