@@ -45,6 +45,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
   reload_water_pistol:recipe({id:'reload_water_pistol',name:'Reload Water Pistol',category:'reload',apCost:0,inputs:[{type:'water_pistol',chargesBelow:3},{type:'water_ration'}],outputType:'water_pistol',summary:'Water Pistol + Water Ration → 3 shots',source:'MYHORDES_CURRENT'}),
   refill_water_cooler:recipe({id:'refill_water_cooler',name:'Refill Water Cooler Bottle',category:'reload',apCost:0,inputs:[{type:'water_cooler_bottle',chargesBelow:3},{type:'water_ration'}],outputType:'water_cooler_bottle',summary:'Water Cooler Bottle + Water Ration → +1 ration',source:'MYHORDES_CURRENT'}),
   reload_battery_launcher:recipe({id:'reload_battery_launcher',name:'Reload Battery Launcher',category:'reload',apCost:0,inputs:[{type:'battery_launcher',chargesBelow:1},{type:'battery'}],outputType:'battery_launcher',summary:'Battery Launcher + Battery → loaded',source:'MYHORDES_CURRENT'}),
+  load_radio_battery:recipe({id:'load_radio_battery',name:'Load Radio Battery',category:'reload',apCost:0,inputs:[{type:'radio_cassette_player_off'},{type:'battery'}],outputType:'working_radio',summary:'Radio Cassette Player (no battery) + Battery → Working Radio',source:'MYHORDES_CURRENT'}),
 
   repair_human_bone:repairRecipe('repair_human_bone','Repair Human Bone','broken_human_bone','human_bone','repair_kit'),
   repair_penknife:repairRecipe('repair_penknife','Repair Pathetic Penknife','broken_pathetic_penknife','pathetic_penknife','repair_kit'),
@@ -77,7 +78,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
 
 export const COMBINATION_RECIPE_ORDER:CombinationRecipeId[]=[
   'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','assemble_hacksaw','prepare_spicy_noodles','mix_concrete','fill_water_bomb',
-  'reload_water_pistol','refill_water_cooler','reload_battery_launcher',
+  'reload_water_pistol','refill_water_cooler','reload_battery_launcher','load_radio_battery',
   'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete','repair_adjustable_spanner','repair_screwdriver','repair_swiss_army_knife','repair_box_cutter','repair_chain','repair_can_opener','repair_ektorp_gluten_chair','repair_pc_base_unit',
   'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete','kwik_fix_adjustable_spanner','kwik_fix_screwdriver','kwik_fix_swiss_army_knife','kwik_fix_box_cutter','kwik_fix_chain','kwik_fix_can_opener','kwik_fix_ektorp_gluten_chair','kwik_fix_pc_base_unit',
 ]
@@ -155,6 +156,10 @@ export function resolveCombination(state:GameState,citizen:Citizen,recipeId:Comb
   if(recipeId==='reload_battery_launcher'){
     const target=refs[0];const stateAfter={...normalizeItemState(target.item.type,target.item.state),charges:1}
     return{consumedItemIds:itemIds,outputs:[{item:createItemInstance(target.item.id,'battery_launcher',stateAfter),storage:target.storage}],createdCount:0}
+  }
+  if(recipeId==='load_radio_battery'){
+    const target=refs[0]
+    return{consumedItemIds:itemIds,outputs:[{item:createItemInstance(target.item.id,'working_radio'),storage:target.storage}],createdCount:0}
   }
   if(isRepairKitRecipe(recipeId)){
     const target=refs[0];const kit=refs[1]
