@@ -50,6 +50,8 @@ Proof items:
 - Paracetoid 7g: drug cycle + remove Infection + apply Immune.
 - Valium Shot: drug cycle + remove Terrorized when present.
 
+All three source drug actions, and the source alcohol action below, also invoke `contaminated_zone_infect`. Live2Nite does not yet model contaminated zones as a disease source, so that environmental hook is explicitly deferred rather than silently approximated. The item actions in this PR are source-faithful within the citizen-condition systems that currently exist.
+
 ## Terror
 
 Terrorized persists until treated. Valium removes it.
