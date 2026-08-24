@@ -6,6 +6,7 @@ import { evaluateTownNeeds, type TownNeeds } from './TownNeeds'
 
 const BASE_LOOT_VALUE:Record<ItemType,number>={
   resource_pack:105,toolbox:104,metal_chest:96,xl_chest:120,food_box:88,decoration_box:64,safe:118,
+  common_blueprint:150,uncommon_blueprint:165,rare_blueprint:180,very_rare_blueprint:195,
   twisted_plank:72,wrought_iron:72,patchwork_beam:82,metal_support:86,sheet_metal:80,unshaped_concrete_block:76,rotten_log:38,scrap_metal:38,quality_log:66,sheet_metal_bits:74,
   nuts_and_bolts:92,copper_pipe:86,wire_reel:82,duct_tape:78,compact_detonator:96,semtex:100,electronic_component:90,laser_diode:96,telescope:94,convex_lens:72,battery:70,empty_oil_can:64,
   mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,radio_cassette_player_off:68,guitar:66,table:70,chicken:62,wire_mesh:72,grain_sack:58,
@@ -46,7 +47,7 @@ function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:Bo
   return score
 }
 export function lootScore(state:GameState,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null=null):number{return scoreWithNeeds(evaluateTownNeeds(state),citizen,type,mission)}
-function isProtectedCarry(state:GameState,citizen:Citizen,item:ItemInstance,mission:BotMissionAssignment|null):boolean{if(item.type==='water_ration')return citizen.status.hydration!=='normal'||(!citizen.daily.drank&&(citizen.status.desertStepsToday>=6||(citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)));if(isFood(item.type)&&!citizen.daily.ate&&citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)return true;if(isWeapon(item.type)){const workingWeapons=citizen.inventory.filter((candidate)=>isWeapon(candidate.type));return workingWeapons.length<=1&&(mission?.purpose==='rescue'||mission?.purpose==='gather_weapons')}return false}
+function isProtectedCarry(state:GameState,citizen:Citizen,item:ItemInstance,mission:BotMissionAssignment|null):boolean{if(ITEMS[item.type].capabilities.includes('blueprint'))return true;if(item.type==='water_ration')return citizen.status.hydration!=='normal'||(!citizen.daily.drank&&(citizen.status.desertStepsToday>=6||(citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)));if(isFood(item.type)&&!citizen.daily.ate&&citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)return true;if(isWeapon(item.type)){const workingWeapons=citizen.inventory.filter((candidate)=>isWeapon(candidate.type));return workingWeapons.length<=1&&(mission?.purpose==='rescue'||mission?.purpose==='gather_weapons')}return false}
 function pickupAction(actions:GameCommand[],itemId:string):GameCommand|null{return actions.find((action)=>action.type==='PICK_UP_ITEM'&&action.itemId===itemId)??null}
 function dropAction(actions:GameCommand[],itemId:string):GameCommand|null{return actions.find((action)=>action.type==='DROP_ITEM'&&action.itemId===itemId)??null}
 export function opportunisticFieldAction(state:GameState,citizen:Citizen,actions:GameCommand[],mission:BotMissionAssignment|null):GameCommand|null{
