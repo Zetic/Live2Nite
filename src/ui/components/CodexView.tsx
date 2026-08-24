@@ -83,14 +83,14 @@ export function CodexView(){
   const itemEntry=(selectedItem?visibleItems.find((entry)=>entry.id===selectedItem):undefined)??visibleItems[0]??null
   const statusEntry=(selectedStatus?visibleStatuses.find((entry)=>entry.id===selectedStatus):undefined)??visibleStatuses[0]??null
   const shown=section==='items'?visibleItems.length:section==='statuses'?visibleStatuses.length:CONSTRUCTION_CODEX_ENTRIES.length
-  const countLabel=section==='items'?`${CODEX_ITEM_FAMILY_COUNT} items · ${CODEX_SOURCE_ITEM_COUNT} source states`:section==='statuses'?`${STATUS_CODEX_ENTRIES.length} statuses`:`${CONSTRUCTION_CODEX_ENTRIES.length} constructions`
+  const countLabel=section==='items'?`${CODEX_ITEM_FAMILY_COUNT} items · ${CODEX_SOURCE_ITEM_COUNT} source states`:section==='statuses'?`${STATUS_CODEX_ENTRIES.length} statuses`:`${CONSTRUCTION_CODEX_ENTRIES.length} construction entries`
 
   return <section className="panel screen-panel codex-screen">
     <div className="panel-heading codex-heading"><div><p className="section-kicker">Reference</p><h2>Codex</h2><p className="section-note">A live reference generated from the same item, condition, construction, blueprint and acquisition definitions used by gameplay.</p></div><span className="panel-count">{countLabel}</span></div>
     <div className="codex-section-tabs" role="tablist" aria-label="Codex sections">
       <button type="button" className={section==='items'?'active':''} aria-selected={section==='items'} onClick={()=>setSection('items')}><strong>Items</strong><small>Item families & states</small></button>
       <button type="button" className={section==='statuses'?'active':''} aria-selected={section==='statuses'} onClick={()=>setSection('statuses')}><strong>Status Effects</strong><small>Runtime citizen conditions</small></button>
-      <button type="button" className={section==='constructions'?'active':''} aria-selected={section==='constructions'} onClick={()=>setSection('constructions')}><strong>Constructions</strong><small>Branches & blueprint unlocks</small></button>
+      <button type="button" className={section==='constructions'?'active':''} aria-selected={section==='constructions'} onClick={()=>setSection('constructions')}><strong>Construction</strong><small>Branches & blueprint unlocks</small></button>
     </div>
 
     {section==='constructions'?<ConstructionCodexView/>:<>

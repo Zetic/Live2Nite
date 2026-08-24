@@ -5,10 +5,24 @@ import type { GameState, ItemType } from '../../core/types'
 import { citizensInZone, zoneControlState, zoneKey } from '../../core/world'
 import '../worldMap.css'
 
+export type MapZombieBand='unknown'|'clear'|'low'|'medium'|'high'
+export function mapZombieBand(zombies:number|null|undefined):MapZombieBand{
+  if(zombies===null||zombies===undefined)return'unknown'
+  if(zombies===0)return'clear'
+  if(zombies<=2)return'low'
+  if(zombies<=4)return'medium'
+  return'high'
+}
+
 function stackedGroundLabel(items:readonly {type:ItemType}[]):string{
   const counts=new Map<ItemType,number>()
   for(const item of items)counts.set(item.type,(counts.get(item.type)??0)+1)
   return [...counts.entries()].map(([type,count])=>`${itemName(type)}${count>1?` [${count}]`:''}`).join(', ')
+}
+
+function peopleDots(count:number){
+  if(count<=0)return null
+  return <span className="map-people" aria-label={`${count} citizen${count===1?'':'s'} here`}>{Array.from({length:count},(_,index)=><i className="map-person-dot" key={index}/>)}</span>
 }
 
 export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
@@ -28,15 +42,15 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
       const controlState=humanCount>0?zoneControlState(game,x,y,isPlayer?player.id:undefined):null
       const known=knowledge.zone(x,y)
       const siteLabel=site?specialSiteCode(site.type):null
-      const humanLabel=humanCount>0?`H${humanCount}`:''
-      const zombieLabel=isTown?'T':!known?.discovered||known.zombies===null?'Z?':known.freshness==='fresh'?`Z${known.zombies}`:`Z~${known.zombies}`
+      const zombieBand=mapZombieBand(known?.zombies)
+      const intelClass=!zone.discovered?'intel-unknown':known?.freshness==='fresh'?'intel-current':known?.freshness==='stale'?'intel-stale':'intel-visited-unknown'
       const depleted=zone.discovered&&zone.searchesRemaining===0
       const titleParts=[`[${x},${y}]`]
-      if(!zone.discovered)titleParts.push('unexplored')
+      if(!zone.discovered)titleParts.push('unexplored · zombie count unknown')
       else {
-        if(known?.zombies===null||known?.zombies===undefined)titleParts.push('zombie count unknown')
+        if(known?.zombies===null||known?.zombies===undefined)titleParts.push('visited · zombie count unknown')
         else if(known.freshness==='fresh')titleParts.push(`${known.zombies} zombies observed today${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
-        else titleParts.push(`stale report: ${known.zombies} zombies last observed on Day ${known.lastObservedDay??'?'}${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
+        else titleParts.push(`last known: ${known.zombies} zombies · Day ${known.lastObservedDay??'?'}${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
         titleParts.push(depleted?'search: depleted':'search: available')
         titleParts.push(zone.groundItems.length?`ground: ${stackedGroundLabel(zone.groundItems)}`:'ground: empty')
       }
@@ -47,12 +61,12 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
       cells.push(
         <span
           key={zoneKey(x,y)}
-          className={`map-cell ${zone.discovered?'known':''} ${known?.freshness==='stale'?'intel-stale':''} ${site?'special-site-cell':''} ${isTown?'town':''} ${isPlayer?'player':''} ${depleted?'depleted':''} ${controlState?`control-${controlState}`:''} ${rescueInbound?'rescue-active':''}`}
+          className={`map-cell zombies-${zombieBand} ${intelClass} ${site?'special-site-cell':''} ${isTown?'town':''} ${isPlayer?'player':''} ${depleted?'depleted':''} ${controlState?`control-${controlState}`:''} ${rescueInbound?'rescue-active':''}`}
           title={titleParts.join(' · ')}
         >
-          <span className="map-cell-top">{humanLabel||(siteLabel??(isTown?'T':''))}</span>
-          <span className="map-cell-bottom">{zombieLabel}</span>
-          {siteLabel&&humanCount>0&&<span className="map-site-marker">{siteLabel}</span>}
+          {isTown&&<span className="map-town-marker">T</span>}
+          {siteLabel&&<span className="map-site-marker">{siteLabel}</span>}
+          {peopleDots(humanCount)}
           {rescueInbound&&<span className="map-rescue-marker">R</span>}
           {depleted&&!isTown&&<span className="map-depleted-marker">D</span>}
         </span>,
@@ -60,5 +74,17 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
     }
     rows.push(<div className="map-row" key={y}>{cells}</div>)
   }
-  return <><div className="world-map">{rows}</div><div className="map-key"><span>H# citizens</span><span>Z# fresh zombies</span><span>Z~# stale report</span><span>Z? unknown</span><span>D depleted</span><span>R rescue</span></div></>
+  return <>
+    <div className="world-map">{rows}</div>
+    <div className="map-key" aria-label="World map legend">
+      <span><i className="map-key-swatch zombies-clear"/>0 zombies</span>
+      <span><i className="map-key-swatch zombies-low"/>1–2</span>
+      <span><i className="map-key-swatch zombies-medium"/>3–4</span>
+      <span><i className="map-key-swatch zombies-high"/>5+</span>
+      <span><i className="map-key-swatch intel-unknown"/>unknown</span>
+      <span><i className="map-key-swatch intel-stale"/>old intel</span>
+      <span><i className="map-person-dot"/>citizen</span>
+      <span><b>D</b> depleted</span>
+    </div>
+  </>
 }
