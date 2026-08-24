@@ -9,7 +9,7 @@ import { consumableKind, containerPool, isContainer, itemHasCapability, normaliz
 import { canToolOpen, openableDefinition } from './openables'
 import { canContributeConstructionByStatus, canFightBarehandedByStatus, canOperateGateByStatus, canUseWeaponByStatus, hasHandWound } from './status'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
-import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, zoneControl } from './world'
+import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, relativeControlActive, temporaryControlActive, zoneControl } from './world'
 import { WORKSHOP_RECIPES, WORKSHOP_RECIPE_ORDER, canRunWorkshopRecipe, workshopRecipeApCost } from './workshop'
 
 export const GATE_AP_COST=1
@@ -86,6 +86,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   if(citizen.inventory.length<citizen.inventoryCapacity)for(const item of zone.groundItems)actions.push({type:'PICK_UP_ITEM',citizenId,itemId:item.id})
   for(const item of citizen.inventory)actions.push({type:'DROP_ITEM',citizenId,itemId:item.id})
   if(zone.zombies>0&&citizen.ap>0){const terrorBlocked=terrorBlocksOrdinaryItems(state,citizen);for(const item of [...citizen.inventory,...zone.groundItems]){const weapon=weaponDefinition(item.type);if(!terrorBlocked&&weapon&&isWeapon(item.type)&&canUseWeaponByStatus(citizen,item.type)&&hasUsableCharges(item)&&(!weapon.requiresPositiveAp||citizen.ap>0))actions.push({type:'USE_WEAPON',citizenId,itemId:item.id})}if(citizen.ap>=BAREHANDED_AP_COST&&canFightBarehandedByStatus(citizen))actions.push({type:'ATTACK_BAREHANDED',citizenId})}
+  if(control.trapped&&!temporaryControlActive(state,citizenId)&&!relativeControlActive(state,citizenId)&&!citizen.status.wound&&!citizen.status.terrorized)actions.push({type:'FLEE_ZOMBIES',citizenId})
   if(canCitizenMoveFromZone(state,citizenId)&&citizen.ap>=MOVE_AP_COST&&!(citizen.status.terrorized&&control.trapped)){for(const direction of ['NORTH','SOUTH','EAST','WEST'] as const){const target=moveCoordinates(x,y,direction);if(getZone(state.world,target.x,target.y))actions.push({type:'MOVE',citizenId,direction})}}
   return actions
 }
