@@ -1,6 +1,7 @@
 import type { AgentController } from '../agents/AgentController'
 import { canAdvanceToHour, nextClockHour, phaseForHour } from '../core/clock'
 import { gateAutoCloseAtHour } from '../core/construction'
+import { castAutonomousConstructionUpgradeVotes, resetConstructionUpgradeVotesForNewDay, resolveConstructionUpgradeVotesAtMidnight } from '../core/constructionUpgrades'
 import { applyEvents } from '../core/events'
 import { resolveNightAttack } from '../core/night'
 import { runAutomaticSearches } from '../core/search'
@@ -23,22 +24,24 @@ export function advanceOneHour(
   controller: AgentController,
   controlledCitizenId?: string,
 ): GameState {
-  if (state.clock.phase === 'attack') return resolveNightAttack(state)
+  if (state.clock.phase === 'attack') return resetConstructionUpgradeVotesForNewDay(resolveNightAttack(state))
   const currentHour = state.clock.hour
   const afterAutomaticGate=applyEvents(state,automaticGateEvents(state))
   const afterAutoSearch = runAutomaticSearches(afterAutomaticGate)
   const afterBots = runBotHour(afterAutoSearch, controller, controlledCitizenId)
-  const afterGraceExpiry=applyEvents(afterBots,temporaryControlExpiryEvents(afterBots))
+  const afterUpgradeVotes=castAutonomousConstructionUpgradeVotes(afterBots,controlledCitizenId)
+  const afterGraceExpiry=applyEvents(afterUpgradeVotes,temporaryControlExpiryEvents(afterUpgradeVotes))
   const toHour = nextClockHour(currentHour)
+  const beforeClock=toHour===0?resolveConstructionUpgradeVotesAtMidnight(afterGraceExpiry):afterGraceExpiry
   const event: GameEvent = {
     type: 'TIME_ADVANCED',
-    day: afterGraceExpiry.day,
+    day: beforeClock.day,
     hour: currentHour,
     fromHour: currentHour,
     toHour,
     phase: phaseForHour(toHour),
   }
-  return applyEvents(afterGraceExpiry, [event])
+  return applyEvents(beforeClock, [event])
 }
 
 export function advanceToHour(

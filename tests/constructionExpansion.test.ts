@@ -147,6 +147,7 @@ describe('stable facility navigation', () => {
     expect(slots).toHaveLength(FACILITY_SLOT_COUNT)
     expect(slots[0]?.id).toBe('workshop')
     expect(slots[1]?.id).toBe('watchtower')
-    expect(slots.slice(2)).toEqual(Array(FACILITY_SLOT_COUNT - 2).fill(null))
+    expect(slots[2]?.id).toBe('upgrade_projects')
+    expect(slots.slice(3)).toEqual(Array(FACILITY_SLOT_COUNT - 3).fill(null))
   })
 })

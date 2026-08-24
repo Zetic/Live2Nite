@@ -3,6 +3,7 @@ import { BasicBotController } from '../agents/BasicBotController'
 import { getLegalActions } from '../core/actions'
 import { formatGameHour } from '../core/clock'
 import { executeCommand, InvalidCommandError } from '../core/commands'
+import { hasUpgradeProjectsFacility } from '../core/constructionUpgrades'
 import { totalTownDefense } from '../core/defense'
 import { createInitialGame } from '../core/game'
 import type { Direction, GameCommand, GameEvent, GameState } from '../core/types'
@@ -20,6 +21,7 @@ import { HomeView } from './components/HomeView'
 import { TimeControls } from './components/TimeControls'
 import { TownEndScreen } from './components/TownEndScreen'
 import { TownRecords } from './components/TownRecords'
+import { UpgradeProjectsView } from './components/UpgradeProjectsView'
 import { WatchtowerView } from './components/WatchtowerView'
 import { WellView } from './components/WellView'
 import { WorkshopView } from './components/WorkshopView'
@@ -75,7 +77,8 @@ export function App() {
     if (player.location.type === 'world' && isTownOnlyScreen(screen)) setScreen('world')
     if (screen === 'workshop' && !game.town.construction.workshop.completed) setScreen('construction')
     if (screen === 'watchtower' && !game.town.construction.watchtower.completed) setScreen('construction')
-  }, [player.location.type, screen, game.town.construction.workshop.completed, game.town.construction.watchtower.completed])
+    if (screen === 'upgrade_projects' && !hasUpgradeProjectsFacility(game)) setScreen('construction')
+  }, [player.location.type, screen, game])
 
   const act = (command: GameCommand | undefined) => {
     if (!command) return
@@ -153,6 +156,7 @@ export function App() {
         {screen === 'construction' && <ConstructionView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'watchtower' && <WatchtowerView game={game}/>} 
+        {screen === 'upgrade_projects' && <UpgradeProjectsView game={game} citizenId={player.id} onVote={(next)=>{setGame(next);setError(null)}}/>}
         {screen === 'world' && <div className="world-screen-layout">
           <div className="world-primary-column">
             {player.location.type==='world'&&<WorldTownReturn action={enterTownAction} act={act}/>} 

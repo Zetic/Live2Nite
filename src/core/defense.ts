@@ -1,4 +1,5 @@
 import { bankDefenseMultiplier, constructionTownDefense, constructionTownDefenseMultiplier, homeContributionRatio } from './construction'
+import { totalConstructionUpgradeDefenseBonus } from './constructionUpgrades'
 import { contributableHomeDefense } from './home'
 import { bankDefenseFor } from './items'
 import type { GameState } from './types'
@@ -12,6 +13,6 @@ export function homeTownDefense(state:GameState):number{
   return Math.floor(raw*homeContributionRatio(state))
 }
 export function totalTownDefense(state:GameState):number{
-  const beforeMultiplier=state.town.defense+bankTownDefense(state)+homeTownDefense(state)+constructionTownDefense(state)
+  const beforeMultiplier=state.town.defense+bankTownDefense(state)+homeTownDefense(state)+constructionTownDefense(state)+totalConstructionUpgradeDefenseBonus(state)
   return Math.floor(beforeMultiplier*constructionTownDefenseMultiplier(state))
 }
