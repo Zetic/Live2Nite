@@ -7,6 +7,7 @@ Live2Nite is an experimental, text-forward survival town game inspired by asynch
 - React + Vite + TypeScript
 - 40 citizen slots: 1 human, 39 basic bots
 - temporary per-citizen **Control** switcher for testing simulated citizens directly
+- Citizens screen defaults to a compact fixed-height **Overview** table, with the previous diagnostic cards preserved under **Details**
 - persistent town clock; playable days run from 1:00 AM to midnight
 - forward-only time controls for +1 hour, noon, 11 PM, and midnight
 - every skipped hour is simulated rather than teleported over
