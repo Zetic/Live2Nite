@@ -4,7 +4,7 @@ import { dailyConstructionOutputs, searchReplenishmentChance, temporaryCompleted
 import { totalTownDefense } from './defense'
 import { applyEvents } from './events'
 import { personalDefense } from './home'
-import { NORMAL_SCAVENGE_LOOT_POOL } from './items'
+import { NORMAL_SCAVENGE_LOOT_POOL, createItemInstance } from './items'
 import { randomInt } from './rng'
 import { nightlyStatusEvents } from './status'
 import type { GameEvent, GameState, HomeAttackOutcome, NightReport } from './types'
@@ -52,13 +52,27 @@ export function searchTowerReplenishmentEvents(state:GameState):GameEvent[]{
 function campingNightEvents(state:GameState):{events:GameEvent[];survivors:number;deaths:number;strandedDeaths:number}{
   const outside=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world')
   const events:GameEvent[]=[]
+  const claimedBlueprintZones=new Set(Object.entries(state.world.zones).filter(([,zone])=>zone.specialSite?.blueprintFound).map(([key])=>key))
+  let nextBlueprintItemId=state.nextItemId
   let survivors=0;let deaths=0;let strandedDeaths=0
   for(const citizen of outside){
     if(!citizen.camping.hidden||citizen.camping.hiddenDay!==state.day){events.push({type:'CITIZEN_DIED',day:state.day,hour:ATTACK_HOUR,citizenId:citizen.id,reason:'outside_at_night'});strandedDeaths+=1;continue}
     const outcome=resolveCampingRoll(state,citizen);const chance=citizen.camping.survivalChance??0
     events.push({type:'CAMPING_RESOLVED',day:state.day,hour:ATTACK_HOUR,citizenId:citizen.id,survivalChance:chance,roll:outcome.roll,survived:outcome.survived})
-    if(outcome.survived)survivors+=1
-    else{deaths+=1;events.push({type:'CITIZEN_DIED',day:state.day,hour:ATTACK_HOUR,citizenId:citizen.id,reason:'camping_failure'})}
+    if(outcome.survived){
+      survivors+=1
+      const location=citizen.location
+      const key=zoneKey(location.x,location.y)
+      const zone=state.world.zones[key]
+      if(zone?.specialSite&&zone.specialSite.status!=='buried'&&!claimedBlueprintZones.has(key)){
+        const distanceKm=Math.round(Math.sqrt(location.x*location.x+location.y*location.y))
+        const type=distanceKm<10?'uncommon_blueprint':'rare_blueprint'
+        const item=createItemInstance(`i${String(nextBlueprintItemId).padStart(6,'0')}`,type)
+        nextBlueprintItemId+=1
+        claimedBlueprintZones.add(key)
+        events.push({type:'CAMPING_BLUEPRINT_DROPPED',day:state.day,hour:ATTACK_HOUR,citizenId:citizen.id,zoneKey:key,item,distanceKm})
+      }
+    }else{deaths+=1;events.push({type:'CITIZEN_DIED',day:state.day,hour:ATTACK_HOUR,citizenId:citizen.id,reason:'camping_failure'})}
   }
   return{events,survivors,deaths,strandedDeaths}
 }
