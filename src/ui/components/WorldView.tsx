@@ -1,5 +1,6 @@
 import { BAREHANDED_KILL_CHANCE_PERCENT } from '../../core/combat'
 import { specialSiteName, specialSitePurpose } from '../../core/specialSites'
+import { effectiveMaxAp } from '../../core/status'
 import type { Direction, GameCommand, GameEvent, GameState } from '../../core/types'
 import { getZone, zoneControl, zoneControlState, zoneKey } from '../../core/world'
 import { findAction } from '../actionHelpers'
