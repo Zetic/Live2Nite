@@ -34,7 +34,7 @@ function withInventory(game: GameState, types: ItemType[]): GameState {return { 
 describe('Citizen homes, starter supplies, and well', () => {
   it('starts schema v16 citizens at 1 AM with starter home, packages, hydration, camping, control, and coordination state', () => {
     const game = createInitialGame(123, 4)
-    expect(game.schemaVersion).toBe(16)
+    expect(game.schemaVersion).toBe(17)
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
