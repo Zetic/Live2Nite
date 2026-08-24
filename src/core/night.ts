@@ -56,6 +56,7 @@ function campingNightEvents(state:GameState):{events:GameEvent[];survivors:numbe
   let nextBlueprintItemId=state.nextItemId
   let survivors=0;let deaths=0;let strandedDeaths=0
   for(const citizen of outside){
+    if(citizen.location.type!=='world')continue
     if(!citizen.camping.hidden||citizen.camping.hiddenDay!==state.day){events.push({type:'CITIZEN_DIED',day:state.day,hour:ATTACK_HOUR,citizenId:citizen.id,reason:'outside_at_night'});strandedDeaths+=1;continue}
     const outcome=resolveCampingRoll(state,citizen);const chance=citizen.camping.survivalChance??0
     events.push({type:'CAMPING_RESOLVED',day:state.day,hour:ATTACK_HOUR,citizenId:citizen.id,survivalChance:chance,roll:outcome.roll,survived:outcome.survived})
