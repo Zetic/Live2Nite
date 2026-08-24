@@ -1,155 +1,132 @@
-# Loot economy, openables, and ruins
+# Loot/openable foundation
 
-Part 2 replaces Live2Nite's adapted loot arrays with source-backed MyHordes acquisition systems. The implementation follows dependency closure rather than pruning source entries to the subset of items that already happen to exist.
+PR #29 establishes reusable source-backed loot and openable infrastructure plus a first mechanically complete MyHordes item pass. It deliberately does **not** activate the complete MyHordes normal-zone table or replace the current ruin runtime.
 
 ## Source policy
 
-Primary behavioral authority is the current Eternaltwin/MyHordes source and release line. Structured data is cross-checked against:
+Primary behavioral authority is the current Eternaltwin/MyHordes source/release line.
 
-- `Zenoo/zen-hordes@f301c05f2527a341f663eea05e6ebd893f181ed6`
-- generated from MyHordes 5.1.1
+Structured source data in this branch is cross-checked against:
 
-Before Part 2 is marked review-ready, differences against the current MyHordes v5.1.2/master line must be audited and material differences documented here.
+- `Zenoo/zen-hordes@f301c05f2527a341f663eea05e6ebd893f181ed6`;
+- generated from MyHordes 5.1.1.
 
-Weights copied from MyHordes are fidelity data. Part 2 does not tune those values to compensate for Live2Nite's formerly incomplete item catalogue.
+At finalization, implemented/activated mechanics are checked against the current public MyHordes release line. The full manifests may contain future dependencies; their presence does not make those items obtainable in PR #29.
 
-## Dependency closure
+Source weights are fidelity data. Live2Nite does not rebalance copied MyHordes weights simply to fit the current partial item catalogue.
 
-A normally obtainable source entry is not removed because Live2Nite does not yet implement its result.
+## Merge boundary
 
-For example:
+The dependency-closure rule applies to **activated acquisition paths**, not recursively to every source ID recorded in a manifest.
 
-`Large Metal Chest -> Chainsaw Part -> Chainsaw assembly -> charged/empty state -> combat use -> break/repair/reload -> AI valuation`
+For PR #29:
 
-All normal links required to make that chain meaningful belong to Part 2.
+- anything made obtainable by this PR must have the mechanics required to make it meaningful;
+- manifest-only entries may remain unresolved while their acquisition layer is inactive;
+- seasonal, hero, profession, event and other conditional source paths remain gated rather than being promoted to ordinary loot;
+- future PRs can close additional dependency clusters before activating the corresponding full source table.
 
-A source condition is different from a missing dependency. Seasonal event items, profession-only paths, hero-only actions, shaman systems, and similar explicitly gated content remain gated until their corresponding source system exists. They must not be made normal loot merely to make a table look complete.
+This keeps the source manifests useful as an auditable dependency map without forcing unrelated drug, equipment, pet, firearm, inventory-extension and ruin systems into one pull request.
 
-## Loot layers
+## Landed foundation
 
-MyHordes data is represented as separate acquisition layers:
+### Weighted loot
 
-1. normal-zone weighted search table;
-2. depleted-zone weighted search table;
-3. ruin definitions with source spawn chance, empty chance, distance band, camping data, and weighted drops;
-4. item-level openables with their own weighted outputs and opening rules.
+`WeightedLootTable` and `rollWeightedLoot` provide a deterministic shared resolver for source-backed weighted outcomes.
 
-These layers share the deterministic `WeightedLootTable` resolver but remain separate definitions.
+The complete normal-zone source manifest and the initial ruin manifest are reference/dependency data in this PR. The normal table has a fail-closed readiness gate so unresolved ordinary source IDs cannot be silently discarded during activation.
 
-## Openable model
+### Depleted zones
 
-Openables use exact `ItemInstance` identity and emit `OPENABLE_RESOLVED` through the normal command/event/reducer pipeline.
+The depleted-zone table is active and source-backed:
 
-Supported model requirements include:
+| Output | Weight |
+| --- | ---: |
+| Rotting Log | 20 |
+| Scrap Metal | 12 |
+
+Both outputs have Workshop conversion paths, so this acquisition layer is mechanically closed.
+
+### Openables
+
+Openables use exact `ItemInstance` identity and emit `OPENABLE_RESOLVED` through the command/event/reducer pipeline.
+
+The model supports:
 
 - consume-on-open containers;
 - stateful containers with remaining contents;
-- source item opener requirements;
-- AP-costed attempts;
-- probabilistic failed opening attempts that preserve the container;
-- deterministic weighted outputs;
-- capacity validation before an action is offered.
+- source opener requirements;
+- deterministic morphs;
+- AP-costed/probabilistic attempts when required by a definition;
+- output-capacity validation.
+
+Source-backed definitions currently included in this pass are Resource Pack, Doggy Bag, Can, Food Box and Toolbox. Containers that still depend on larger mechanic clusters remain future work rather than being partially activated.
 
 ### Resource Pack
 
-MyHordes has 3-, 2-, and 1-content resource-pack item forms. Live2Nite represents these as one physical `resource_pack` item with `ItemState.contents`.
+MyHordes 3-, 2- and 1-content pack forms are represented as one physical `resource_pack` item with `ItemState.contents`.
 
-Opening produces either a Twisted Plank (`WOOD2`) or Wrought Iron (`METAL`). A retained pack keeps the same item ID and decrements `contents`; the final opening consumes it.
+Each opening produces either a Twisted Plank or Wrought Iron. If contents remain, the same item ID is retained and its contents decrement; the final opening consumes the pack.
 
 ### Toolbox
 
-Pinned MyHordes output weights:
+Pinned generated source weights:
 
 | Output | Weight |
 | --- | ---: |
 | Pharmaceutical Products | 25 |
-| Semtex / explosive | 19 |
-| Handful of Nuts and Bolts / mechanical parts | 17 |
-| Kwik-Fix / repair supply | 13 |
+| Semtex | 19 |
+| Handful of Nuts and Bolts | 17 |
+| Kwik-Fix | 13 |
 | Copper Pipe | 13 |
 | Battery | 12 |
 
-The generated source metadata lists Toolbox openers including Chair, PC, Adjustable Spanner, Cutter, Human Bone, CUTCUT, Small Knife, Chain, Knife, Staff, Can Opener, Screwdriver, Swiss Knife, and Hurling Stick.
+The ordinary source opener family represented by Live2Nite is enforced and opening does not consume the opener. Hurling Stick remains event-gated.
 
-The following ordinary source opener mappings are now implemented end-to-end and accepted by the Toolbox action:
+The ordinary opener/tool items introduced in this pass are real breakable weapons where source behavior is represented, with Repair Kit / Kwik-Fix restoration paths rather than inert keys.
 
-- `WRENCH` -> Adjustable Spanner;
-- `CUTTER` -> Box Cutter;
-- `BONE` -> Human Bone;
-- `CUTCUT` -> Machete;
-- `SMALL_KNIFE` -> Pathetic Penknife;
-- `CHAIN` -> Chain;
-- `KNIFE` -> Serrated Knife;
-- `STAFF` -> Staff;
-- `CAN_OPENER` -> Can Opener;
-- `SCREW` -> Screwdriver;
-- `SWISS_KNIFE` -> Swiss Army Knife.
+### Can
 
-Chair and PC remain ordinary-item dependencies to close before the complete normal-zone table is activated. Hurling Stick is event-gated and is intentionally not promoted to ordinary loot. Toolbox openers are reusable; the opening action does not consume them.
+The closed Can uses the source main-opener family and deterministically morphs into Open Can while preserving physical identity semantics. The opener is not consumed by opening.
 
-The new ordinary tool families are real breakable weapons rather than inert keys. Pinned generated MyHordes combat values currently represented as confirmed are:
+### Doggy Bag and Food Box
 
-| Tool | Kill chance | Kills | Break chance |
-| --- | ---: | ---: | ---: |
-| Human Bone | 100% | 1 | 80% |
-| Pathetic Penknife | 15% | 1 | 45% |
-| Serrated Knife | 100% | 1 | 33% |
-| Machete | 100% | 2 | 25% |
-| Adjustable Spanner | 33% | 1 | 20% |
-| Screwdriver | 20% | 1 | 40% |
-| Swiss Army Knife | 15% | 1 | 50% |
-| Box Cutter | 60% | 1 | 70% |
-| Chain | 50% | 1 | 25% |
-| Can Opener | 50% | 1 | 100% |
+Their source output tables are represented by the generic openable engine. Food Box normal acquisition remains gated because not every downstream food/status dependency belongs to this PR.
 
-All have matching broken forms and portable Repair Kit / Kwik-Fix restoration paths. The generated 5.1.1 Staff break group is internally inconsistent (60/60); Staff therefore remains explicitly marked approximate until the current-source audit resolves it.
+### Plastic Bag and Water Bomb
 
-### Citizen's Welcome Pack
+`grenade_empty_#00` is the source Plastic Bag, distinct from `bag_#00` (Manbag). Plastic Bag + Water Ration creates a Water Bomb.
 
-The pinned `spawn_c_chest` table is:
+Current MyHordes combat behavior represented by Live2Nite for Water Bomb is a single-use, 0-AP action requiring positive AP that kills **2–4 zombies**.
 
-| Output | Weight |
-| --- | ---: |
-| Shoe | 10 |
-| Battery | 20 |
-| Box of Matches | 25 |
-| Pharmaceutical Products | 25 |
-| Radio Cassette Player (empty/off) | 20 |
+### Chair, PC and Radio
 
-Battery, matches and pharmaceutical products are already meaningful. The Shoe and Radio Cassette Player are being closed before this pack is migrated from its legacy simplified pool. The Shoe participates in MyHordes' EP progression, while the radio consumes a Battery to enter its powered form; these mechanics are dependencies, not entries to omit from the table.
+The Ektorp-Gluten Chair and PC Base Unit are source-valid container openers and breakable weapons with their source-backed repair paths. Radio Cassette Player (off) can consume a Battery through the portable combination to become the existing working radio identity.
 
-## Activation policy
+## Intentionally deferred activation
 
-A source table is activated when its ordinary dependency graph is mechanically meaningful. This is sequencing, not balance tuning and not permission to delete source entries.
+The following are explicit follow-up work and do not block PR #29:
 
-The depleted table is closed (`WOOD_BAD` 20 / `METAL_BAD` 12), because Rotting Log and Scrap Metal both have Workshop processing paths. Depleted-zone `SEARCH_ZONE` now resolves directly through this source-weighted table and advances deterministic RNG state.
+- closing every ordinary normal-loot source ID;
+- Manbag / expanded rucksack capacity;
+- medicine, drug, addiction and broader status mechanics;
+- ghoul/Human Flesh behavior;
+- Citizen Welcome Pack migration and Shoe mechanics;
+- Metal Chest, XL Chest, Safe, Decoration Box and other remaining containers;
+- replacing `NORMAL_SCAVENGE_LOOT_POOL` with the complete MyHordes normal table;
+- replacing transitional `SPECIAL_SITES` with the full MyHordes ruin runtime;
+- ruin-only item dependencies, firearms, pets and other unrelated source systems.
 
-The full normal-zone table is activated only after its ordinary entries and downstream mechanics are implemented. During development, focused tests may inject newly implemented items directly before their complete acquisition layer is switched on.
+## Ruin manifest
 
-## Ruins
+The MyHordes ruin manifest added by this PR is reference data for a later focused ruin implementation. It records source identity, spawn chance, empty chance, distance band, camping values and raw weighted drops without forcing those unresolved drops into the current runtime.
 
-The current adapted `specialSites` model is transitional. Part 2 replaces it with actual MyHordes ruins rather than mapping generic Live2Nite categories onto approximate source loot.
-
-The eventual authoritative ruin definition carries at minimum:
-
-- source ruin identity and display name;
-- spawn chance;
-- empty chance;
-- minimum/maximum distance from town;
-- explorable flag;
-- camping base value and spots;
-- exact weighted drop table.
-
-Existing examples in the source include Citizen's Home, Scottish Smith's Superstore, Once-inhabited Cave, Old Hydraulic Pump, Old Bicycle Hire Shop, Deserted Freight Yard, Old Field Hospital, Old Aerodrome, Old Police Station, Nuclear Bunker, Motorway Services, Wrecked Cars, Home Depot, Construction Site Shelter, Dark Woods, Collapsed Mineshaft, Collapsed Quarry, and many others.
+The existing `SPECIAL_SITES` runtime therefore remains transitional by design in PR #29.
 
 ## AI expectation
 
-Bots evaluate closed containers as potential loot, but opening remains an ordinary legal action:
+For the items and openables actually active in this pass, bots use the ordinary legal-action layer and must not bypass tool, AP, capacity or item-state requirements. AI strategic values may affect decisions but never source loot probabilities.
 
-- open immediately when legal and useful;
-- unload enough items first when a retained container needs output space;
-- carry/bank a gated container if the required opener is unavailable;
-- never bypass AP/tool/capacity requirements;
-- preserve room for mission-critical supplies and return loot.
+## Follow-up activation rule
 
-AI weights may express strategy, but they must not modify source loot probabilities.
+A later PR may activate a complete source acquisition layer only when that layer's ordinary dependency graph is mechanically ready. Until then, the fail-closed mapping/readiness infrastructure prevents accidental partial activation.
