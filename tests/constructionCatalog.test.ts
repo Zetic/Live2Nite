@@ -105,5 +105,7 @@ describe('complete current construction catalog',()=>{
     ]))
     expect(CONSTRUCTIONS.shredder_wall.playable).toBe(false)
     expect(CONSTRUCTIONS.shredder_wall.effects).toEqual([])
+    expect(CONSTRUCTIONS.hammam.playable).toBe(false)
+    expect(CONSTRUCTIONS.hammam.effects).toEqual([])
   })
 })
