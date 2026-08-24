@@ -22,12 +22,13 @@ describe('item codex',()=>{
     }
   })
 
-  it('filters by category and free-text item information',()=>{
+  it('filters by category and free-text item information including relationships',()=>{
     const armoury=filterCodexItems('armoury','')
     expect(armoury.length).toBeGreaterThan(0)
     expect(armoury.every((entry)=>entry.category==='armoury')).toBe(true)
     expect(filterCodexItems('all','water bomb').map((entry)=>entry.type)).toContain('water_bomb')
     expect(filterCodexItems('all','myhordes').length).toBeGreaterThan(0)
+    expect(filterCodexItems('all','defensive wall').map((entry)=>entry.type)).toContain('twisted_plank')
   })
 
   it('derives structured combat and openable facts from gameplay systems',()=>{
@@ -36,5 +37,25 @@ describe('item codex',()=>{
     const toolbox=codexItemEntry('toolbox')
     expect(toolbox.facts.some((fact)=>fact.label==='Open with')).toBe(true)
     expect(toolbox.facts.some((fact)=>fact.label==='Possible contents'&&fact.value.includes('Pharmaceutical Products'))).toBe(true)
+  })
+
+  it('reverse-indexes downstream uses by category',()=>{
+    const plank=codexItemEntry('twisted_plank')
+    expect(plank.usedIn.find((group)=>group.id==='constructions')?.entries.some((entry)=>entry.label==='Defensive Wall')).toBe(true)
+    expect(plank.usedIn.find((group)=>group.id==='workshop')?.entries.some((entry)=>entry.label.includes('Patchwork Beam'))).toBe(true)
+    expect(plank.usedIn.find((group)=>group.id==='combinations')?.entries.some((entry)=>entry.label==='Assemble Repair Kit')).toBe(true)
+    const knife=codexItemEntry('serrated_knife')
+    expect(knife.usedIn.find((group)=>group.id==='opening')?.entries.some((entry)=>entry.label==='Open Toolbox')).toBe(true)
+  })
+
+  it('derives active acquisition sources and rarity from runtime pools',()=>{
+    const log=codexItemEntry('rotten_log')
+    expect(log.obtainedFrom.find((group)=>group.id==='scavenging')?.entries.some((entry)=>entry.label==='Depleted zones'&&entry.detail.includes('62.5%'))).toBe(true)
+    const pharma=codexItemEntry('pharmaceutical_products')
+    expect(pharma.obtainedFrom.find((group)=>group.id==='containers')?.entries.some((entry)=>entry.label==='Toolbox'&&entry.detail.includes('25.3%'))).toBe(true)
+    const staff=codexItemEntry('staff')
+    expect(staff.obtainedFrom.find((group)=>group.id==='special-locations')?.entries.some((entry)=>entry.label==='Dark Woods'&&entry.badge==='Unique location')).toBe(true)
+    const food=codexItemEntry('food')
+    expect(food.obtainedFrom.find((group)=>group.id==='constructions')?.entries.some((entry)=>entry.label==='Vegetable Plot')).toBe(true)
   })
 })
