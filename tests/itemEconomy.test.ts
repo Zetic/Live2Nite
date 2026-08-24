@@ -87,7 +87,8 @@ describe('schema v16 stateful item economy',()=>{
     const legacy={...current,schemaVersion:17,town:{...current.town,construction:legacyConstruction}} as unknown as Record<string,unknown>
     const migrated=migrateStoredGame(legacy)
     expect(migrated?.schemaVersion).toBe(19)
-    expect(migrated?.town.construction.wall_upgrade).toMatchObject({discovered:true,completed:true,hp:25})
+    expect(migrated?.town.construction.wall_upgrade).toMatchObject({discovered:true,completed:true})
+    expect('hp' in migrated!.town.construction.wall_upgrade).toBe(false)
     expect(migrated?.town.construction.great_pit.discovered).toBe(true)
     expect(migrated?.town.construction.reinforcing_beams.discovered).toBe(false)
   })

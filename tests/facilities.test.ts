@@ -93,7 +93,7 @@ describe('Workshop gating', () => {
     let game = createInitialGame(321, 2)
     game = { ...game, town: { ...game.town, bank: bankFromCounts({ rotten_log: 2, scrap_metal: 2 },'facility-workshop') } }
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'WORKSHOP_CONVERT')).toBe(false)
-    game = { ...game, town: { ...game.town, construction: { ...game.town.construction, workshop: { id: 'workshop', discovered: true, completed: true, apContributed: 25, hp: 25 } } } }
+    game = { ...game, town: { ...game.town, construction: { ...game.town.construction, workshop: { id: 'workshop', discovered: true, completed: true, apContributed: 25 } } } }
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'WORKSHOP_CONVERT')).toBe(true)
   })
 })

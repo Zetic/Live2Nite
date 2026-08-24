@@ -86,7 +86,7 @@ describe('portable combinations',()=>{
     expect(game.citizens[0].inventory.find((item)=>item.id==='staff-object')?.type).toBe('staff')
     expect(game.citizens[0].inventory.find((item)=>item.id==='kit-object')?.state?.condition).toBe('damaged')
     const damaged=game.citizens[0].inventory.find((item)=>item.id==='kit-object')!
-    game={...game,town:{...game.town,bank:[damaged],construction:{...game.town.construction,workshop:{...game.town.construction.workshop,discovered:true,completed:true,apContributed:CONSTRUCTIONS.workshop.apCost,hp:CONSTRUCTIONS.workshop.maxHp??CONSTRUCTIONS.workshop.apCost}}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:citizen.inventory.filter((item)=>item.id!=='kit-object')}:citizen)}
+    game={...game,town:{...game.town,bank:[damaged],construction:{...game.town.construction,workshop:{...game.town.construction.workshop,discovered:true,completed:true,apContributed:CONSTRUCTIONS.workshop.apCost}}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:citizen.inventory.filter((item)=>item.id!=='kit-object')}:citizen)}
     game=executeCommand(game,workshop(game,'repair_repair_kit')).state
     const restored=game.town.bank.find((item)=>item.id==='kit-object');expect(restored?.type).toBe('repair_kit');expect(restored?.state?.condition).toBe('intact')
   })
