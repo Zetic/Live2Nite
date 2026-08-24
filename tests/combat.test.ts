@@ -57,6 +57,8 @@ describe('World Beyond combat', () => {
       box_cutter:[60,1,70,'broken_box_cutter'],
       chain:[50,1,25,'broken_chain'],
       can_opener:[50,1,100,'broken_can_opener'],
+      ektorp_gluten_chair:[50,1,50,'broken_ektorp_gluten_chair'],
+      pc_base_unit:[100,1,50,'broken_pc_base_unit'],
     }
     for(const [type,[killChance,maxKills,breakChance,brokenType]] of Object.entries(expected) as Array<[ItemType,[number,number,number,ItemType]]>){
       const definition=weaponDefinition(type)
