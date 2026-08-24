@@ -12,9 +12,9 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
   tool_bag:78,kwik_fix:82,plastic_bag:36,engine_incomplete:86,engine:90,claymore:94,torch:48,battery_launcher:74,strong_spices:44,
   water_ration:62,food:52,mouldy_twinkies:52,half_eaten_chicken_wings:52,rancid_shortbread_pack:52,out_of_date_jaffa_cakes:52,dried_chewing_gum:52,stale_tart:52,soft_crisps:52,can:58,open_can:52,vegetable:52,tasty_looking_steak:64,chinese_noodles:52,spicy_chinese_noodles:64,
   old_door:58,water_bomb:70,machete:72,serrated_knife:66,staff:50,pathetic_penknife:40,human_bone:58,doggy_bag:58,citizen_welcome_pack:42,pharmaceutical_products:72,box_of_matches:22,
-  adjustable_spanner:62,screwdriver:54,swiss_army_knife:52,box_cutter:60,chain:60,can_opener:58,saw_tool_part:72,saw_tool:92,
+  adjustable_spanner:62,screwdriver:54,swiss_army_knife:52,box_cutter:60,chain:60,can_opener:58,ektorp_gluten_chair:60,pc_base_unit:68,saw_tool_part:72,saw_tool:92,
   broken_machete:20,broken_serrated_knife:18,broken_staff:26,broken_pathetic_penknife:14,broken_human_bone:12,
-  broken_adjustable_spanner:18,broken_screwdriver:16,broken_swiss_army_knife:16,broken_box_cutter:16,broken_chain:18,broken_can_opener:14,
+  broken_adjustable_spanner:18,broken_screwdriver:16,broken_swiss_army_knife:16,broken_box_cutter:16,broken_chain:18,broken_can_opener:14,broken_ektorp_gluten_chair:18,broken_pc_base_unit:20,
   water_pistol:68,water_cooler_bottle:66,repair_kit:84,
 }
 
