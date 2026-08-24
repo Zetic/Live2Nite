@@ -65,7 +65,7 @@ export const CONSTRUCTION_IDS = [
   'gallows',
   'small_cafe',
   'spring_coffins',
-  'small_cemetary',
+  'locked_cemetery',
   'henhouse',
   'slaughterhouse',
   'defensive_supports',
@@ -162,7 +162,7 @@ export const CONSTRUCTION_IDS = [
   'guardroom',
   'manual_grinder',
   'pet_shop',
-  'filtering_gutters',
+  'gutters',
   'tamer_s_trap_system',
   'sacrificial_blaze',
 ] as const
