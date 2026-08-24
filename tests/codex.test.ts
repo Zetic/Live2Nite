@@ -1,44 +1,84 @@
 import { describe, expect, it } from 'vitest'
-import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, CODEX_SOURCE_ITEM_COUNT, CODEX_SUPPLEMENTAL_ITEM_COUNT, codexCategoryCount, codexItemEntry, filterCodexItems } from '../src/core/codex'
+import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, CODEX_ITEM_FAMILY_COUNT, CODEX_SOURCE_ITEM_COUNT, codexCategoryCount, codexItemEntry, filterCodexItems } from '../src/core/codex'
 import { ITEM_TYPE_IDS } from '../src/core/itemCatalog'
-import { ITEMS } from '../src/core/items'
+import { ITEM_CODEX_FAMILIES, ITEM_CODEX_SOURCE_STATE_COUNT } from '../src/core/itemCodexFamilies'
 import { ITEM_SOURCE_CATALOG } from '../src/core/itemSourceCatalog'
 import { CITIZEN_STATUS_DEFINITIONS } from '../src/core/status'
 import { STATUS_CODEX_ENTRIES, codexStatusEntry, filterCodexStatuses } from '../src/core/statusCodex'
 
-
 describe('item codex',()=>{
-  it('combines the complete 383-entry MyHordes source catalogue with supplemental Live2Nite runtime variants',()=>{
+  it('keeps all 383 source states while collapsing them into conceptual item families',()=>{
     expect(CODEX_SOURCE_ITEM_COUNT).toBe(383)
+    expect(ITEM_CODEX_SOURCE_STATE_COUNT).toBe(383)
     expect(ITEM_SOURCE_CATALOG).toHaveLength(383)
-    const sourceEntries=CODEX_ITEM_ENTRIES.filter((entry)=>entry.sourceCatalog)
-    expect(sourceEntries).toHaveLength(383)
-    expect(CODEX_ITEM_ENTRIES).toHaveLength(CODEX_SOURCE_ITEM_COUNT+CODEX_SUPPLEMENTAL_ITEM_COUNT)
-    expect(new Set(sourceEntries.map((entry)=>entry.id)).size).toBe(383)
-    for(const type of ITEM_TYPE_IDS)expect(CODEX_ITEM_ENTRIES.some((entry)=>entry.type===type),type).toBe(true)
-    for(const entry of CODEX_ITEM_ENTRIES.filter((candidate)=>!candidate.sourceCatalog&&candidate.type)){
-      expect(entry.name).toBe(ITEMS[entry.type!].name)
-      expect(entry.purpose).toBe(ITEMS[entry.type!].purpose)
-    }
+    expect(CODEX_ITEM_FAMILY_COUNT).toBe(CODEX_ITEM_ENTRIES.length)
+    expect(CODEX_ITEM_FAMILY_COUNT).toBeLessThan(383)
+    expect(new Set(CODEX_ITEM_ENTRIES.map((entry)=>entry.id)).size).toBe(CODEX_ITEM_ENTRIES.length)
+    const representedSourceStates=CODEX_ITEM_ENTRIES.flatMap((entry)=>entry.states.filter((state)=>state.sourceCatalog))
+    expect(representedSourceStates).toHaveLength(383)
+    for(const type of ITEM_TYPE_IDS)expect(CODEX_ITEM_ENTRIES.some((entry)=>entry.runtimeTypes.includes(type)),type).toBe(true)
+  })
+
+  it('groups physical state variants into one list entry',()=>{
+    const waterPistol=codexItemEntry('water_pistol')
+    expect(CODEX_ITEM_ENTRIES.filter((entry)=>entry.runtimeTypes.includes('water_pistol'))).toHaveLength(1)
+    expect(waterPistol.states.map((state)=>state.name)).toEqual(expect.arrayContaining(['Water Pistol (empty)','Water Pistol (1 shot)','Water Pistol (2 shots)','Water Pistol (3 shots)']))
+
+    const can=codexItemEntry('can')
+    expect(can.runtimeTypes).toEqual(expect.arrayContaining(['can','open_can']))
+    expect(can.states.map((state)=>state.name)).toEqual(expect.arrayContaining(['Can','Open Can']))
+
+    const repairKit=codexItemEntry('repair_kit')
+    expect(repairKit.states.some((state)=>state.name==='Repair Kit (damaged)')).toBe(true)
+  })
+
+  it('uses player-facing categories instead of leaking raw source categories into tabs',()=>{
+    expect(codexItemEntry('doggy_bag').category).toBe('containers')
+    expect(codexItemEntry('food_box').category).toBe('containers')
+    expect(codexItemEntry('can').category).toBe('containers')
+    expect(codexItemEntry('bag_of_cement').category).toBe('resources')
+    expect(codexItemEntry('chicken').category).toBe('creatures')
+    expect(codexItemEntry('common_blueprint').category).toBe('blueprints')
+    expect(filterCodexItems('documents','dusty book').some((entry)=>entry.name==='Dusty Book')).toBe(true)
+    expect(filterCodexItems('food','').some((entry)=>entry.name==='Doggy Bag')).toBe(false)
+    expect(filterCodexItems('containers','').filter((entry)=>entry.name==='Doggy Bag')).toHaveLength(1)
   })
 
   it('keeps category counts derived instead of hard-coded',()=>{
     expect(codexCategoryCount('all')).toBe(CODEX_ITEM_ENTRIES.length)
-    for(const category of CODEX_ITEM_CATEGORIES.filter((entry)=>entry.id!=='all')){
-      expect(codexCategoryCount(category.id)).toBe(CODEX_ITEM_ENTRIES.filter((entry)=>entry.category===category.id).length)
-    }
+    expect(CODEX_ITEM_CATEGORIES.some((entry)=>entry.id==='creatures'&&entry.label==='Creatures')).toBe(true)
+    for(const category of CODEX_ITEM_CATEGORIES.filter((entry)=>entry.id!=='all'))expect(codexCategoryCount(category.id)).toBe(CODEX_ITEM_ENTRIES.filter((entry)=>entry.category===category.id).length)
   })
 
-  it('filters by category and free-text item information including relationships',()=>{
-    const armoury=filterCodexItems('armoury','')
-    expect(armoury.length).toBeGreaterThan(0)
-    expect(armoury.every((entry)=>entry.category==='armoury')).toBe(true)
-    expect(filterCodexItems('all','water bomb').map((entry)=>entry.type)).toContain('water_bomb')
+  it('filters by family, state, category and free-text relationships',()=>{
+    expect(filterCodexItems('armoury','').every((entry)=>entry.category==='armoury')).toBe(true)
+    expect(filterCodexItems('all','water pistol (2 shots)').map((entry)=>entry.type)).toContain('water_pistol')
     expect(filterCodexItems('all','myhordes').length).toBeGreaterThan(0)
     expect(filterCodexItems('all','defensive wall').map((entry)=>entry.type)).toContain('twisted_plank')
     const marshmallows=filterCodexItems('all','dried marshmallows')
     expect(marshmallows.some((entry)=>entry.name==='Dried Marshmallows'&&entry.implementation==='wip'&&entry.type===null)).toBe(true)
-    expect(filterCodexItems('all','WIP').some((entry)=>entry.implementation==='wip')).toBe(true)
+    expect(filterCodexItems('all','WIP').some((entry)=>entry.states.some((state)=>state.implementation==='wip'))).toBe(true)
+  })
+
+  it('shows complete construction and combination ingredient context',()=>{
+    const plank=codexItemEntry('twisted_plank')
+    const wall=plank.usedIn.find((group)=>group.id==='constructions')?.entries.find((entry)=>entry.label==='Defensive Wall')
+    expect(wall?.detail).toContain('Twisted Plank')
+    expect(wall?.detail).toContain('Wrought Iron')
+    expect(wall?.detail).toContain('AP')
+
+    const repair=plank.usedIn.find((group)=>group.id==='combinations')?.entries.find((entry)=>entry.label==='Assemble Repair Kit')
+    expect(repair?.detail).toContain('Tool Bag')
+    expect(repair?.detail).toContain('Duct Tape')
+    expect(repair?.detail).toContain('Handful of Nuts and Bolts')
+    expect(repair?.detail).toContain('Twisted Plank')
+    expect(repair?.detail).toContain('→ Repair Kit')
+
+    const telescope=codexItemEntry('telescope')
+    const telescopeRecipe=telescope.obtainedFrom.find((group)=>group.id==='combinations')?.entries.find((entry)=>entry.label==='Assemble Telescope')
+    expect(telescopeRecipe?.detail).toContain('Copper Pipe')
+    expect(telescopeRecipe?.detail).toContain('Convex Lens')
+    expect(telescopeRecipe?.detail).toContain('→ Telescope')
   })
 
   it('derives structured combat and openable facts from gameplay systems',()=>{
@@ -65,7 +105,7 @@ describe('item codex',()=>{
     expect(paracetoid.facts.some((fact)=>fact.value.includes('remove infected')&&fact.value.includes('apply immune'))).toBe(true)
     const valium=codexItemEntry('valium_shot')
     expect(valium.facts.some((fact)=>fact.value.includes('remove terrorized'))).toBe(true)
-    expect(filterCodexItems('all','addiction').map((entry)=>entry.type)).toContain('anabolic_steroids')
+    expect(filterCodexItems('all','addiction').flatMap((entry)=>entry.runtimeTypes)).toContain('anabolic_steroids')
   })
 
   it('derives active acquisition sources and rarity from runtime pools',()=>{
@@ -75,11 +115,12 @@ describe('item codex',()=>{
     expect(pharma.obtainedFrom.find((group)=>group.id==='containers')?.entries.some((entry)=>entry.label==='Toolbox'&&entry.detail.includes('25.3%'))).toBe(true)
     const staff=codexItemEntry('staff')
     expect(staff.obtainedFrom.find((group)=>group.id==='special-locations')?.entries.some((entry)=>entry.label==='Dark Woods'&&entry.badge==='Unique location')).toBe(true)
-    const food=codexItemEntry('food')
-    expect(food.obtainedFrom.find((group)=>group.id==='constructions')?.entries.some((entry)=>entry.label==='Vegetable Plot')??false).toBe(false)
+  })
+
+  it('keeps the family index deterministic and complete',()=>{
+    expect(ITEM_CODEX_FAMILIES.map((family)=>family.id)).toEqual([...ITEM_CODEX_FAMILIES].sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id)).map((family)=>family.id))
   })
 })
-
 
 describe('status effects codex',()=>{
   it('is generated from the complete runtime condition definition set',()=>{
