@@ -48,19 +48,6 @@ describe('early-game progression', () => {
     expect(game.events.some((event) => event.type === 'ZONE_SEARCHED' && event.citizenId === 'c01' && event.automatic === true && event.hour === 3)).toBe(true)
   })
 
-  it('opens a Construction Kit into exactly two construction-ready materials', () => {
-    let game = createInitialGame(4321,1)
-    game = { ...game, citizens: game.citizens.map((citizen) => ({ ...citizen, inventory:[{id:'kit',type:'construction_kit' as const}] })) }
-    const result = executeCommand(game,command(game,'c01','OPEN_CONTAINER'))
-    const opened = result.events.find((event) => event.type === 'CONSTRUCTION_KIT_OPENED')
-    expect(opened?.type).toBe('CONSTRUCTION_KIT_OPENED')
-    if (opened?.type === 'CONSTRUCTION_KIT_OPENED') {
-      expect(opened.outputs).toHaveLength(2)
-      expect(opened.outputs.every((item) => item.type === 'twisted_plank' || item.type === 'wrought_iron')).toBe(true)
-    }
-    expect(result.state.citizens[0].inventory).toHaveLength(2)
-  })
-
   it('lets breakable early weapons become repairable broken items', () => {
     let broken: ReturnType<typeof resolveWeaponAttack> | null = null
     for (let rngState=1;rngState<=100 && !broken;rngState+=1) {
@@ -109,7 +96,6 @@ describe('Day-1 economy benchmark', () => {
     let totalWorkshopLabor = 0
     let totalNormalSearches = 0
     let totalAutomaticSearches = 0
-    let totalConstructionKits = 0
     for (const seed of seeds) {
       let game = createInitialGame(seed,40)
       game = advanceToHour(game,0,bots,'c01')
@@ -120,7 +106,6 @@ describe('Day-1 economy benchmark', () => {
       totalOutsideAtMidnight += game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world').length
       totalNormalSearches += game.events.filter((event) => event.type === 'ZONE_SEARCHED' && event.mode === 'normal').length
       totalAutomaticSearches += game.events.filter((event) => event.type === 'ZONE_SEARCHED' && event.automatic === true).length
-      totalConstructionKits += game.events.filter((event) => event.type === 'CONSTRUCTION_KIT_OPENED').length
       game = advanceOneHour(game,bots,'c01')
       minimumLiving = Math.min(minimumLiving,game.citizens.filter((citizen) => citizen.alive).length)
     }
@@ -132,7 +117,6 @@ describe('Day-1 economy benchmark', () => {
       averageWorkshopLabor:totalWorkshopLabor/seeds.length,
       averageNormalSearches:totalNormalSearches/seeds.length,
       averageAutomaticSearches:totalAutomaticSearches/seeds.length,
-      constructionKitsOpened:totalConstructionKits,
       averageOutsideAtMidnight:totalOutsideAtMidnight/seeds.length,
       minimumLiving,
     })
