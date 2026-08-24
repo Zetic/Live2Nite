@@ -27,6 +27,17 @@ Bandage removes the wound. Upstream also adds `healed`/bandaged state. Convalesc
 
 An unresolved wound causes Infection at the attack unless temporary immunity protects the citizen.
 
+### Active wound sources
+
+Live2Nite now has two ordinary, source-backed ways to acquire Wounded through gameplay:
+
+- **Flee from Zombies** — an unwounded, non-Terrorized citizen trapped by zombie control can accept a guaranteed random wound to gain personal relative control. Relative control allows departure but does not restore real zone control or re-enable scavenging/excavation. It persists until the citizen leaves or actual control is restored.
+- **EMS System** — `sport_elec_empty_#00` is the ordinary scavenged discharged form. A Battery charges it at 0 AP. Using the charged `sport_elec_#00` while unwounded restores toward 6 AP, guarantees a random wound, and morphs the same unit back to the discharged form. The current transitional Live2Nite normal pool exposes one EMS slot; the pinned full source manifest retains its upstream weight of 4 for the eventual source-table switchover.
+
+The EMS action restores AP before applying the wound, matching the source action order. A citizen can therefore temporarily hold 6 AP immediately after the device wounds them even though subsequent ordinary restoration targets are wound-adjusted.
+
+Additional source wound paths remain attached to systems not yet implemented: citizen aggression, Night Watch, explorable-ruin oxygen failure, Ghoul water/potion interactions, and one-off items such as Angry Cat. Ordinary zombie combat does not receive an invented generic wound roll.
+
 ## Infection and immunity
 
 - Existing Infection has a **50% death risk at the attack** in ordinary rules.

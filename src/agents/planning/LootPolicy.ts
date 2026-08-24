@@ -15,7 +15,7 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
   adjustable_spanner:62,screwdriver:54,swiss_army_knife:52,box_cutter:60,chain:60,can_opener:58,ektorp_gluten_chair:60,pc_base_unit:68,saw_tool_part:72,saw_tool:92,
   broken_machete:20,broken_serrated_knife:18,broken_staff:26,broken_pathetic_penknife:14,broken_human_bone:12,
   broken_adjustable_spanner:18,broken_screwdriver:16,broken_swiss_army_knife:16,broken_box_cutter:16,broken_chain:18,broken_can_opener:14,broken_ektorp_gluten_chair:18,broken_pc_base_unit:20,
-  water_pistol:68,water_cooler_bottle:66,repair_kit:84,bandage:92,paracetoid:96,anabolic_steroids:78,valium_shot:90,vodka_marinostov:50,wake_the_dead:54,
+  water_pistol:68,water_cooler_bottle:66,repair_kit:84,bandage:92,paracetoid:96,anabolic_steroids:78,valium_shot:90,vodka_marinostov:50,wake_the_dead:54,ems_system_empty:62,ems_system_charged:76,
 }
 
 function isFood(type:ItemType):boolean{return ITEMS[type].consumableKind==='food'}

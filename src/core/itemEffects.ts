@@ -30,6 +30,9 @@ export interface ItemUseActionDefinition {
   morphTo?:ItemType
   allowWhenTerrorized?:boolean
 }
+export interface CitizenEffectResolution { ap:number;status:CitizenStatusState;daily:CitizenDailyState;rng:number;restoresAp:boolean }
+export type StatusEffectRelationKind='acquire'|'clear'
+export interface StatusEffectRelation { status:CitizenStatusId; kind:StatusEffectRelationKind; detail:string }
 export interface ItemEffectResolution {
   apAfter:number
   statusAfter:CitizenStatusState
@@ -48,6 +51,7 @@ export const ITEM_USE_ACTIONS:Partial<Record<ItemType,readonly ItemUseActionDefi
   valium_shot:[action({id:'valium_shot',itemType:'valium_shot',label:'Use Valium Shot',sourceActionIds:['drug_xana1','drug_xana2','drug_xana3','drug_xana4'],requirements:[],effects:[{type:'drug_cycle'},{type:'remove_status',status:'terrorized'}],consume:true,allowWhenTerrorized:true})],
   vodka_marinostov:[action({id:'drink_alcohol',itemType:'vodka_marinostov',label:'Drink Vodka Marinostov',sourceActionIds:['alcohol'],requirements:[{type:'status',status:'drunk',present:false},{type:'status',status:'hangover',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'apply_status',status:'drunk'}],consume:true})],
   wake_the_dead:[action({id:'drink_alcohol',itemType:'wake_the_dead',label:'Drink “Wake The Dead”',sourceActionIds:['alcohol'],requirements:[{type:'status',status:'drunk',present:false},{type:'status',status:'hangover',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'apply_status',status:'drunk'}],consume:true})],
+  ems_system_charged:[action({id:'ems_system',itemType:'ems_system_charged',label:'Use EMS System',sourceActionIds:['emt'],requirements:[{type:'status',status:'wounded',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'inflict_wound'}],consume:false,morphTo:'ems_system_empty'})],
 }
 
 export function itemUseActionsForType(type:ItemType):readonly ItemUseActionDefinition[]{return ITEM_USE_ACTIONS[type]??[]}
@@ -62,7 +66,7 @@ export function itemUseActionAvailable(citizen:Citizen,definition:ItemUseActionD
 function cloneDaily(daily:CitizenDailyState):CitizenDailyState{return{...daily}}
 function cloneStatus(status:CitizenStatusState):CitizenStatusState{return{...status}}
 function setBooleanStatus(status:CitizenStatusState,key:MutableBooleanStatus,value:boolean):void{status[key]=value}
-function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngState:number):{ap:number;status:CitizenStatusState;daily:CitizenDailyState;rng:number;restoresAp:boolean}{
+function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngState:number):CitizenEffectResolution{
   let ap=citizen.ap,status=cloneStatus(citizen.status),daily=cloneDaily(citizen.daily),rng=rngState,restoresAp=false
   const apply=(effect:ItemActionEffect):void=>{
     switch(effect.type){
@@ -99,6 +103,7 @@ function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngSta
   for(const effect of effects)apply(effect)
   return{ap,status,daily,rng,restoresAp}
 }
+export function resolveCitizenEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngState:number):CitizenEffectResolution{return applyEffects(citizen,effects,rngState)}
 export function resolveItemUseAction(citizen:Citizen,definition:ItemUseActionDefinition,rngState:number):ItemEffectResolution{
   const resolved=applyEffects(citizen,definition.effects,rngState)
   return{apAfter:resolved.ap,statusAfter:resolved.status,dailyAfter:resolved.daily,rngStateAfter:resolved.rng,restoresAp:resolved.restoresAp,consumed:definition.consume,morphTo:definition.morphTo}
@@ -126,3 +131,34 @@ function effectLabel(effect:ItemActionEffect):string{
   }
 }
 export function itemUseActionSummary(definition:ItemUseActionDefinition):string{return definition.effects.map(effectLabel).join(' · ')}
+
+
+export function statusRelationsForEffects(effects:readonly ItemActionEffect[]):StatusEffectRelation[]{
+  const relations:StatusEffectRelation[]=[]
+  const add=(status:CitizenStatusId,kind:StatusEffectRelationKind,detail:string)=>relations.push({status,kind,detail})
+  const inspect=(effect:ItemActionEffect):void=>{
+    switch(effect.type){
+      case'apply_status':add(effect.status,'acquire','Applies '+effect.status.replaceAll('_',' ')+'.');break
+      case'remove_status':add(effect.status,'clear','Removes '+effect.status.replaceAll('_',' ')+'.');break
+      case'drug_cycle':
+        add('drugged','acquire','The first drug of the day applies Drugged.')
+        add('addicted','acquire','Taking another drug while already Drugged establishes Addiction.')
+        break
+      case'heal_wound':add('wounded','clear','Heals the current body-part wound.');break
+      case'inflict_wound':add('wounded','acquire',effect.location?'Inflicts a guaranteed '+effect.location+' wound.':'Inflicts a guaranteed random body-part wound.');break
+      case'restore_ap_to':if(effect.target>0)add('exhausted','clear','Restores AP toward '+effect.target+', clearing Exhausted when AP rises above 0.');break
+      case'set_daily':
+        if(effect.value&&effect.flag==='ate')add('satisfied_food','acquire','Marks the daily food refresh as used.')
+        if(effect.value&&effect.flag==='drank')add('satisfied_water','acquire','Marks the daily water refresh as used.')
+        break
+      case'drink_water':
+        add('dehydrated','clear','Improves Dehydrated to Thirsty without an AP refresh.')
+        add('thirsty','clear','Clears Thirsty to normal hydration.')
+        add('satisfied_water','acquire','Applies Refreshed when this water qualifies for the daily AP refresh.')
+        break
+      case'chance':for(const outcome of effect.outcomes)for(const nested of outcome.effects)inspect(nested);break
+    }
+  }
+  for(const effect of effects)inspect(effect)
+  return relations
+}

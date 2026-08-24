@@ -132,6 +132,12 @@ export function temporaryControlActive(state:GameState,citizenId:string):boolean
     && citizen.temporaryControl.grantedHour===state.clock.hour
 }
 
+export function relativeControlActive(state:GameState,citizenId:string):boolean{
+  const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
+  if(!citizen?.alive||citizen.location.type!=='world'||!citizen.relativeControl)return false
+  return citizen.relativeControl.zoneKey===zoneKey(citizen.location.x,citizen.location.y)
+}
+
 export function departureWouldLoseControl(state:GameState,citizenId:string):boolean{
   const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
   if(!citizen?.alive||citizen.location.type!=='world')return false
@@ -149,6 +155,7 @@ export function zoneControlState(state:GameState,x:number,y:number,citizenId?:st
     return fragile?'fragile':'secure'
   }
   if(citizenId&&temporaryControlActive(state,citizenId))return'temporary'
+  if(citizenId&&relativeControlActive(state,citizenId))return'relative'
   const residents=citizensInZone(state,x,y)
   if(residents.some((citizen)=>temporaryControlActive(state,citizen.id)))return'temporary'
   return'trapped'
@@ -158,5 +165,5 @@ export function canCitizenMoveFromZone(state:GameState,citizenId:string):boolean
   const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
   if(!citizen||citizen.location.type!=='world')return false
   const control=zoneControl(state,citizen.location.x,citizen.location.y)
-  return !control.trapped||temporaryControlActive(state,citizenId)
+  return !control.trapped||temporaryControlActive(state,citizenId)||relativeControlActive(state,citizenId)
 }

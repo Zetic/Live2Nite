@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, codexCategoryCount, codexItemEntry, filterCodexItems } from '../src/core/codex'
 import { ITEM_TYPE_IDS } from '../src/core/itemCatalog'
 import { ITEMS } from '../src/core/items'
+import { CITIZEN_STATUS_DEFINITIONS } from '../src/core/status'
+import { STATUS_CODEX_ENTRIES, codexStatusEntry, filterCodexStatuses } from '../src/core/statusCodex'
 
 
 describe('item codex',()=>{
@@ -67,5 +69,37 @@ describe('item codex',()=>{
     expect(staff.obtainedFrom.find((group)=>group.id==='special-locations')?.entries.some((entry)=>entry.label==='Dark Woods'&&entry.badge==='Unique location')).toBe(true)
     const food=codexItemEntry('food')
     expect(food.obtainedFrom.find((group)=>group.id==='constructions')?.entries.some((entry)=>entry.label==='Vegetable Plot')).toBe(true)
+  })
+})
+
+
+describe('status effects codex',()=>{
+  it('is generated from the complete runtime condition definition set',()=>{
+    expect(STATUS_CODEX_ENTRIES.map((entry)=>entry.id)).toEqual(Object.keys(CITIZEN_STATUS_DEFINITIONS))
+  })
+
+  it('reverse-indexes real world and item wound sources plus treatment',()=>{
+    const wounded=codexStatusEntry('wounded')
+    expect(wounded.obtainedFrom.find((group)=>group.id==='world-actions')?.entries.some((entry)=>entry.label==='Flee from Zombies')).toBe(true)
+    expect(wounded.obtainedFrom.find((group)=>group.id==='items')?.entries.some((entry)=>entry.label==='EMS System (charged)')).toBe(true)
+    expect(wounded.clearedBy.find((group)=>group.id==='items')?.entries.some((entry)=>entry.label==='Bandage')).toBe(true)
+    expect(wounded.variants).toHaveLength(6)
+    expect(wounded.variants.find((variant)=>variant.id==='arms')?.active).toBe(true)
+    expect(wounded.variants.find((variant)=>variant.id==='eye')?.active).toBe(false)
+  })
+
+  it('derives condition treatment and progression without inventing inactive acquisition routes',()=>{
+    const infected=codexStatusEntry('infected')
+    expect(infected.obtainedFrom.find((group)=>group.id==='system')?.entries.some((entry)=>entry.label.includes('Untreated wound'))).toBe(true)
+    expect(infected.clearedBy.find((group)=>group.id==='items')?.entries.some((entry)=>entry.label==='Paracetoid 7g')).toBe(true)
+    const terror=codexStatusEntry('terrorized')
+    expect(terror.obtainedFrom).toHaveLength(0)
+    expect(terror.clearedBy.find((group)=>group.id==='items')?.entries.some((entry)=>entry.label==='Valium Shot')).toBe(true)
+  })
+
+  it('searches status sources, treatments, effects, and progression',()=>{
+    expect(filterCodexStatuses('EMS').map((entry)=>entry.id)).toContain('wounded')
+    expect(filterCodexStatuses('withdrawal').map((entry)=>entry.id)).toContain('addicted')
+    expect(filterCodexStatuses('Paracetoid').map((entry)=>entry.id)).toContain('infected')
   })
 })

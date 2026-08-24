@@ -31,6 +31,7 @@ export type CombinationRecipeId =
   | 'refill_water_cooler'
   | 'reload_battery_launcher'
   | 'load_radio_battery'
+  | 'load_ems_battery'
   | 'repair_human_bone'
   | 'repair_penknife'
   | 'repair_staff'
@@ -77,10 +78,10 @@ export type CitizenStatusId =
   | 'exhausted' | 'satisfied_food' | 'satisfied_water' | 'thirsty' | 'dehydrated'
   | 'wounded' | 'infected' | 'terrorized' | 'drugged' | 'addicted' | 'drunk' | 'hangover' | 'immune'
 export type CitizenStatusChangeReason = 'desert_travel' | 'drank_water' | 'nightly_progression' | 'item_effect'
-export type ItemUseActionId = 'bandage' | 'paracetoid' | 'anabolic_steroids' | 'valium_shot' | 'drink_alcohol'
+export type ItemUseActionId = 'bandage' | 'paracetoid' | 'anabolic_steroids' | 'valium_shot' | 'drink_alcohol' | 'ems_system'
 export type CampingOutlook = 'suicidal' | 'very_poor' | 'poor' | 'limited' | 'satisfactory' | 'decent'
 export type ZoneIntelFreshness = 'fresh' | 'stale' | 'unknown'
-export type ZoneControlState = 'secure' | 'fragile' | 'temporary' | 'trapped'
+export type ZoneControlState = 'secure' | 'fragile' | 'temporary' | 'relative' | 'trapped'
 export type CoordinationCommitmentKind = 'gate_primary' | 'gate_backup' | 'construction'
 
 export interface GameClock { hour: number; phase: ClockPhase }
@@ -102,7 +103,8 @@ export interface CitizenStatusState {
 }
 export interface CitizenCampingState { hidden:boolean; survivalChance:number|null; hiddenDay:number|null; nightsSurvived:number; lastSurvivedDay:number|null }
 export interface TemporaryControlState { zoneKey:string; grantedDay:number; grantedHour:number }
-export interface Citizen { id:string; name:string; controller:CitizenControllerKind; alive:boolean; ap:number; maxAp:number; location:CitizenLocation; inventory:ItemInstance[]; inventoryCapacity:number; home:CitizenHome; daily:CitizenDailyState; status:CitizenStatusState; camping:CitizenCampingState; temporaryControl:TemporaryControlState|null }
+export interface RelativeControlState { zoneKey:string }
+export interface Citizen { id:string; name:string; controller:CitizenControllerKind; alive:boolean; ap:number; maxAp:number; location:CitizenLocation; inventory:ItemInstance[]; inventoryCapacity:number; home:CitizenHome; daily:CitizenDailyState; status:CitizenStatusState; camping:CitizenCampingState; temporaryControl:TemporaryControlState|null; relativeControl:RelativeControlState|null }
 export interface BotMissionAssignment { missionId:string; role:BotMissionRole; purpose:BotMissionPurpose; target:{x:number;y:number}; targetLabel:string; reason:string; phase:BotMissionPhase; assignedDay:number; assignedHour:number; returnByHour:number; safetyReserve:number; emergency:boolean; allowsCamping?:boolean; overnightPlanned?:boolean; scoutKind?:ScoutMissionKind; searchMode?:SearchMode }
 export interface CoordinationCommitment { id:string; citizenId:string; kind:CoordinationCommitmentKind; taskKey:string; label:string; reservedAp:number; day:number; hour:number; expiresHour:number; projectId?:ConstructionId }
 export interface TownCoordinationState { commitments:CoordinationCommitment[] }
@@ -132,6 +134,7 @@ export type GameCommand =
   | {type:'DROP_ITEM';citizenId:string;itemId:string}
   | {type:'ATTACK_BAREHANDED';citizenId:string}
   | {type:'USE_WEAPON';citizenId:string;itemId:string}
+  | {type:'FLEE_ZOMBIES';citizenId:string}
   | {type:'IMPROVE_CAMP';citizenId:string}
   | {type:'HIDE_FOR_NIGHT';citizenId:string}
   | {type:'LEAVE_HIDEOUT';citizenId:string}
@@ -185,6 +188,7 @@ export type GameEvent = (
   | {type:'ITEM_CONSUMED';day:number;citizenId:string;item:ItemInstance;source:ItemStorage;zoneKey?:string;kind:ConsumableKind;restoresAp:boolean;chargesAfter?:number;apAfter?:number;statusAfter?:CitizenStatusState;dailyAfter?:CitizenDailyState;rngStateAfter?:number}
   | {type:'ITEM_ACTION_RESOLVED';day:number;citizenId:string;actionId:ItemUseActionId;item:ItemInstance;source:ItemStorage;zoneKey?:string;consumed:boolean;morphTo?:ItemType;apAfter:number;statusAfter:CitizenStatusState;dailyAfter:CitizenDailyState;rngStateAfter:number}
   | {type:'WOUNDED_MOVEMENT_RESOLVED';day:number;citizenId:string;failed:boolean;rngStateAfter:number}
+  | {type:'FLEE_ZOMBIES_RESOLVED';day:number;citizenId:string;zoneKey:string;statusAfter:CitizenStatusState;rngStateAfter:number}
   | {type:'HOME_UPGRADED';day:number;citizenId:string;from:HomeLevel;to:HomeLevel;defenseAfter:number;consumed:Partial<Record<ItemType,number>>}
   | {type:'HOME_IMPROVEMENT_BUILT';day:number;citizenId:string;improvementId:HomeImprovementId;level:number;consumed:Partial<Record<ItemType,number>>;defenseAfter:number;storageCapacityAfter:number}
   | {type:'CONSTRUCTION_AP_CONTRIBUTED';day:number;citizenId:string;projectId:ConstructionId;amount:number}

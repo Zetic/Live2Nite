@@ -115,10 +115,11 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `xanax_#00` | `valium_shot` |
 | `vodka_#00` | `vodka_marinostov` |
 | `rhum_#00` | `wake_the_dead` |
+| `sport_elec_empty_#00` / `sport_elec_#00` | `ems_system_empty` / `ems_system_charged` |
 
 ## Ordinary normal-loot backlog
 
-These source IDs remain unresolved in the current ordinary normal-loot dependency pass. This is a development backlog, **not a merge blocker for the Codex PR**.
+These source IDs remain unresolved in the current ordinary normal-loot dependency pass. This is a development backlog for future source-item passes; entries leave this list only when their active runtime mechanic and mapping are represented.
 
 - [ ] `jerrycan_#00`
 - [ ] `gun_#00`
@@ -147,7 +148,6 @@ These source IDs remain unresolved in the current ordinary normal-loot dependenc
 - [ ] `vibr_empty_#00`
 - [ ] `cyanure_#00`
 - [ ] `coffee_machine_part_#00`
-- [ ] `sport_elec_empty_#00`
 - [ ] `tagger_#00`
 - [ ] `digger_#00`
 - [ ] `game_box_#00`

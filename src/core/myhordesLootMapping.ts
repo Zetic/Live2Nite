@@ -77,6 +77,7 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'repair_kit_#00':mapped('repair_kit'),
   'repair_one_#00':mapped('kwik_fix'),
   'saw_tool_part_#00':mapped('saw_tool_part'),
+  'sport_elec_empty_#00':mapped('ems_system_empty'),
   'chair_basic_#00':mapped('ektorp_gluten_chair'),
   'pc_#00':mapped('pc_base_unit'),
   'lights_#00':mapped('box_of_matches'),

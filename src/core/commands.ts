@@ -5,13 +5,14 @@ import { COMBINATION_RECIPES, resolveCombination } from './combinations'
 import { CONSTRUCTIONS } from './construction'
 import { applyEvents } from './events'
 import { HOME_IMPROVEMENTS, homeImprovementDefense, improvementNextLevel, nextHomeDefinition } from './home'
-import { itemUseActionDefinition, resolveFoodItemAction, resolveItemUseAction, resolveWaterItemAction } from './itemEffects'
+import { itemUseActionDefinition, resolveCitizenEffects, resolveFoodItemAction, resolveItemUseAction, resolveWaterItemAction } from './itemEffects'
 import { containerPool, createItemInstance, normalizeItemState } from './items'
 import { rollWeightedLoot } from './loot'
 import { openableDefinition, resolveOpenable } from './openables'
 import { randomInt } from './rng'
 import { MYHORDES_DEPLETED_ZONE_LOOT } from './scavengeLoot'
 import { LEG_WOUND_MOVE_FAILURE_PERCENT, citizenControlPoints, travelHydrationTransition } from './status'
+import { WORLD_STATUS_ACTIONS } from './statusSources'
 import type { Citizen, GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, SearchMode } from './types'
 import { citizensInZone, getZone, moveCoordinates, zoneControl, zoneKey } from './world'
 import { WORKSHOP_RECIPES, resolveWorkshopRecipeOutput, workshopRecipeApCost, workshopRecipeInputItemIds } from './workshop'
@@ -75,6 +76,7 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     case 'DROP_ITEM':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId);if(!item)throw new InvalidCommandError(`Missing carried item ${command.itemId}`);events.push({type:'ITEM_DROPPED',day:state.day,citizenId:command.citizenId,zoneKey:key,item});break}
     case 'ATTACK_BAREHANDED':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveBarehandedAttack(state);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:BAREHANDED_AP_COST},{type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:'fists',kills:outcome.kills,item:null,consumed:false,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills));break}
     case 'USE_WEAPON':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const zone=state.world.zones[key];const located=locateItem(state,command.citizenId,command.itemId);const outcome=resolveWeaponAttack(state,located.item,zone.zombies);events.push({type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:located.item.type,item:located.item,source:located.source,kills:outcome.kills,consumed:outcome.consumed,brokenInto:outcome.brokenInto,chargesAfter:outcome.chargesAfter,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills));break}
+    case 'FLEE_ZOMBIES':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveCitizenEffects(citizen,WORLD_STATUS_ACTIONS.flee_zombies.effects,state.rngState);events.push({type:'FLEE_ZOMBIES_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,statusAfter:outcome.status,rngStateAfter:outcome.rng});break}
     case 'IMPROVE_CAMP':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMP_IMPROVEMENT_AP_COST},{type:'CAMP_IMPROVED',day:state.day,citizenId:command.citizenId,zoneKey:key,amount:1});break}
     case 'HIDE_FOR_NIGHT':events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:true,survivalChance:campingChancePercent(state,command.citizenId)});break
     case 'LEAVE_HIDEOUT':events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:false,survivalChance:null});break

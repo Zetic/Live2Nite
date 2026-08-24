@@ -10,7 +10,7 @@ import { getLegalActions } from '../core/actions'
 import { executeCommand } from '../core/commands'
 import { applyEvents } from '../core/events'
 import type { GameEvent, GameState } from '../core/types'
-import { temporaryControlActive, zoneControl } from '../core/world'
+import { relativeControlActive, temporaryControlActive, zoneControl } from '../core/world'
 
 export type HourlyObjective = 'return_home' | 'mission' | 'town_work' | 'fight' | 'reserve' | 'idle'
 export const DEDICATED_RESCUE_AP_FLOOR = AI_TUNING.dedicatedRescueApFloor
@@ -19,7 +19,7 @@ export function chooseHourlyObjective(state: GameState, citizenId: string): Hour
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || !citizen.alive || state.clock.phase !== 'day') return 'idle'
   if (citizen.location.type === 'world' && zoneControl(state, citizen.location.x, citizen.location.y).trapped) {
-    return temporaryControlActive(state,citizenId)?'return_home':'fight'
+    return temporaryControlActive(state,citizenId)||relativeControlActive(state,citizenId)?'return_home':'fight'
   }
   const mission = state.botMissions[citizenId]
   if (mission) {
