@@ -319,7 +319,7 @@ export function constructionDepth(projectId: ConstructionId): number {
 }
 
 export function completedConstructionEffects(state: GameState): ConstructionEffect[] {
-  return CONSTRUCTION_ORDER.flatMap((id) => state.town.construction[id]?.completed ? CONSTRUCTIONS[id].effects : [])
+  return BUILDABLE_CONSTRUCTION_IDS.flatMap((id) => state.town.construction[id]?.completed ? CONSTRUCTIONS[id].effects : [])
 }
 
 function effectsOfType<T extends ConstructionEffect['type']>(state:GameState,type:T):Extract<ConstructionEffect,{type:T}>[]{
@@ -335,7 +335,7 @@ export function constructionConditionRatio(state:GameState,projectId:Constructio
   return maxHp>0?Math.max(0,Math.min(1,project.hp/maxHp)):1
 }
 export function constructionTownDefense(state:GameState):number{
-  const flat=CONSTRUCTION_ORDER.reduce((sum,id)=>{
+  const flat=BUILDABLE_CONSTRUCTION_IDS.reduce((sum,id)=>{
     if(!state.town.construction[id]?.completed)return sum
     const base=CONSTRUCTIONS[id].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'town_defense_flat'}>=>effect.type==='town_defense_flat').reduce((value,effect)=>value+effect.amount,0)
     return sum+Math.floor(base*constructionConditionRatio(state,id))
@@ -361,9 +361,9 @@ export function gateLockedAtHour(state:GameState,hour:number):boolean{return eff
 export function gateAutoCloseAtHour(state:GameState,hour:number):boolean{return effectsOfType(state,'gate_auto_close_hour').some((effect)=>effect.hour===hour)}
 export function completionWaterBonus(projectId:ConstructionId):number{return CONSTRUCTIONS[projectId].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'well_water_on_complete'}>=>effect.type==='well_water_on_complete').reduce((sum,effect)=>sum+effect.amount,0)}
 export function revealsAllTerrain(projectId:ConstructionId):boolean{return CONSTRUCTIONS[projectId].effects.some((effect)=>effect.type==='reveal_all_terrain_on_complete')}
-export function temporaryCompletedProjects(state:GameState):ConstructionId[]{return CONSTRUCTION_ORDER.filter((id)=>CONSTRUCTIONS[id].expiresAfterAttack&&state.town.construction[id]?.completed)}
+export function temporaryCompletedProjects(state:GameState):ConstructionId[]{return BUILDABLE_CONSTRUCTION_IDS.filter((id)=>CONSTRUCTIONS[id].expiresAfterAttack&&state.town.construction[id]?.completed)}
 export function dailyConstructionOutputs(state:GameState):Array<{projectId:ConstructionId;itemType:ItemType;min:number;max:number}>{
-  return CONSTRUCTION_ORDER.flatMap((projectId)=>state.town.construction[projectId]?.completed?CONSTRUCTIONS[projectId].effects.flatMap((effect)=>effect.type==='daily_bank_item'?[{projectId,itemType:effect.itemType,min:effect.min,max:effect.max}]:[]):[])
+  return BUILDABLE_CONSTRUCTION_IDS.flatMap((projectId)=>state.town.construction[projectId]?.completed?CONSTRUCTIONS[projectId].effects.flatMap((effect)=>effect.type==='daily_bank_item'?[{projectId,itemType:effect.itemType,min:effect.min,max:effect.max}]:[]):[])
 }
 export function constructionFlatDefenseForProject(projectId:ConstructionId):number{return CONSTRUCTIONS[projectId].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'town_defense_flat'}>=>effect.type==='town_defense_flat').reduce((sum,effect)=>sum+effect.amount,0)}
 
