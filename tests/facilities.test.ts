@@ -20,7 +20,7 @@ describe('facility navigation', () => {
   it('keeps Town Records first in the primary navigation row', () => {
     const game=createInitialGame(123,2)
     const primary=PRIMARY_SCREENS.map((entry)=>entry.id)
-    expect(primary).toEqual(['chronicle','home','well','bank','construction','world','citizens'])
+    expect(primary).toEqual(['chronicle','codex','home','well','bank','construction','world','citizens'])
     expect(availableScreens(game).map((entry)=>entry.id)).toEqual(primary)
     expect(primary).not.toContain('town')
   })

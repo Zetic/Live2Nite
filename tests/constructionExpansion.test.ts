@@ -136,6 +136,7 @@ describe('stable facility navigation', () => {
     const initial = createInitialGame(1907, 2)
     expect(PRIMARY_SCREENS.map((screen) => screen.id)).toEqual([
       'chronicle',
+      'codex',
       'home',
       'well',
       'bank',
