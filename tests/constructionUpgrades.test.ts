@@ -72,12 +72,14 @@ describe('Upgrade Projects facility and voting',()=>{
 })
 
 describe('daily upgrade resolution',()=>{
-  it('applies Great Pit defense before the attack and records level 1',()=>{
+  it('applies Great Pit defense before the attack and records level 1 without mutating bootstrap defense',()=>{
     let game=complete(createInitialGame(201,2),'great_pit')
     const defenseBefore=totalTownDefense(game)
+    const bootstrapDefense=game.town.defense
     game=castConstructionUpgradeVote(game,'c01','great_pit')
     game=resolveConstructionUpgradeVotesAtMidnight(game)
     expect(constructionUpgradeLevel(game,'great_pit')).toBe(1)
+    expect(game.town.defense).toBe(bootstrapDefense)
     expect(totalTownDefense(game)-defenseBefore).toBe(13)
   })
 
@@ -101,6 +103,16 @@ describe('daily upgrade resolution',()=>{
     expect(constructionUpgradeLevel(game,'workshop')).toBe(1)
     expect(game.town.construction[targetId].completed).toBe(false)
     expect(game.town.construction[targetId].apContributed).toBeGreaterThanOrEqual(before)
+  })
+
+  it('restores the Workshop credit floor after a nightly project reset',()=>{
+    let game=complete(createInitialGame(206,2),'workshop')
+    game=castConstructionUpgradeVote(game,'c01','workshop')
+    game=resolveConstructionUpgradeVotesAtMidnight(game)
+    const baseline=workshopCreditedLabor(CONSTRUCTION_CATALOG.great_pit.apCost,1)
+    game={...game,day:game.day+1,town:{...game.town,construction:{...game.town.construction,great_pit:{...game.town.construction.great_pit,apContributed:0}}}}
+    game=resetConstructionUpgradeVotesForNewDay(game)
+    expect(game.town.construction.great_pit.apContributed).toBe(baseline)
   })
 
   it('stops offering a project after level five',()=>{
