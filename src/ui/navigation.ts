@@ -1,6 +1,6 @@
 import type { ConstructionId, GameState } from '../core/types'
 
-export type GameScreen = 'home' | 'well' | 'bank' | 'construction' | 'workshop' | 'watchtower' | 'world' | 'citizens' | 'chronicle'
+export type GameScreen = 'home' | 'well' | 'bank' | 'construction' | 'workshop' | 'watchtower' | 'world' | 'citizens' | 'chronicle' | 'codex'
 
 export interface ScreenDefinition {
   id: GameScreen
@@ -12,6 +12,7 @@ export interface FacilityScreenDefinition extends ScreenDefinition { projectId: 
 
 export const PRIMARY_SCREENS: readonly ScreenDefinition[] = [
   { id: 'chronicle', label: 'Town Records', short: 'Bulletin, history & statistics' },
+  { id: 'codex', label: 'Codex', short: 'Items & game reference' },
   { id: 'home', label: 'Home', short: 'Private storage', townOnly: true },
   { id: 'well', label: 'The Well', short: 'Daily water', townOnly: true },
   { id: 'bank', label: 'The Bank', short: 'Shared inventory', townOnly: true },
