@@ -4,7 +4,8 @@ import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { CONSTRUCTION_ORDER, CONSTRUCTIONS, gateLockedAtHour, wellDailyWithdrawals } from './construction'
 import { HOME_IMPROVEMENTS, hasPersonalMaterials, improvementNextLevel, nextHomeDefinition } from './home'
-import { consumableKind, isContainer, itemHasCapability, normalizeItemState } from './items'
+import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
+import { canToolOpen, openableDefinition } from './openables'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, zoneControl } from './world'
 import { WORKSHOP_RECIPE_ORDER, canRunWorkshopRecipe, workshopRecipeApCost } from './workshop'
@@ -24,7 +25,20 @@ function constructionFrontier(state:GameState):ConstructionId[]{
   return frontier
 }
 function hasProjectMaterials(state:GameState,projectId:ConstructionId):boolean{return Object.entries(CONSTRUCTIONS[projectId].resources).every(([type,required])=>bankCount(state,type as Parameters<typeof bankCount>[1])>=(required??0))}
-function canOpenContainer(citizen:Citizen,item:ItemInstance,source:ItemStorage):boolean{if(item.type!=='construction_kit')return true;if(source==='ground')return true;return source==='inventory'?citizen.inventory.length<citizen.inventoryCapacity:citizen.home.storage.length<citizen.home.storageCapacity}
+function availableOpeners(citizen:Citizen):ItemInstance[]{return citizen.location.type==='town'?[...citizen.inventory,...citizen.home.storage]:citizen.inventory}
+function canOpenContainer(citizen:Citizen,item:ItemInstance,source:ItemStorage):boolean{
+  const openable=openableDefinition(item.type)
+  if(openable){
+    if(openable.openableBy?.length&&!availableOpeners(citizen).some((tool)=>canToolOpen(openable,tool.type)))return false
+    if((openable.apCost??0)>citizen.ap)return false
+    if(openable.mode==='remaining_contents'&&(normalizeItemState(item.type,item.state).contents??1)>1){
+      if(source==='inventory')return citizen.inventory.length<citizen.inventoryCapacity
+      if(source==='home')return citizen.home.storage.length<citizen.home.storageCapacity
+    }
+    return true
+  }
+  return Boolean(containerPool(item.type)?.length)
+}
 function hasUsableCharges(item:ItemInstance):boolean{return !itemHasCapability(item.type,'charge_bearing')||(normalizeItemState(item.type,item.state).charges??0)>0}
 function addConsumableActions(actions:GameCommand[],citizen:Citizen,items:ItemInstance[],source:ItemStorage):void{
   for(const item of items){const kind=consumableKind(item.type);if(kind==='food'&&!citizen.daily.ate)actions.push({type:'EAT_ITEM',citizenId:citizen.id,itemId:item.id});if(kind==='water'&&hasUsableCharges(item)&&(!citizen.daily.drank||citizen.status.hydration!=='normal'))actions.push({type:'DRINK_ITEM',citizenId:citizen.id,itemId:item.id});if(isContainer(item.type)&&canOpenContainer(citizen,item,source))actions.push({type:'OPEN_CONTAINER',citizenId:citizen.id,itemId:item.id})}
@@ -46,7 +60,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     if(nextHome&&citizen.home.upgradedDay!==state.day&&citizen.ap>=nextHome.apCost&&hasPersonalMaterials(citizen,nextHome.resources))actions.push({type:'UPGRADE_HOME',citizenId})
     if(citizen.home.level!=='camp_bed'){for(const improvementId of Object.keys(HOME_IMPROVEMENTS) as HomeImprovementId[]){const nextLevel=improvementNextLevel(citizen,improvementId);if(nextLevel===null)continue;const definition=HOME_IMPROVEMENTS[improvementId];if(citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})}}
     if(citizen.ap>=CONSTRUCTION_AP_COST){for(const projectId of constructionFrontier(state))if(hasProjectMaterials(state,projectId))actions.push({type:'CONTRIBUTE_CONSTRUCTION',citizenId,projectId})}
-    if(state.town.construction.workshop.completed){for(const recipeId of WORKSHOP_RECIPE_ORDER)if(citizen.ap>=workshopRecipeApCost(state,recipeId)&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})}
+    if(state.town.construction.workshop.completed){for(const recipeId of WORKSHOP_RECIPE_ORDER)if(citizen.ap>=workshopRecipeApCost(state,recipeId,citizen.id)&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})}
     if(state.town.gateOpen){if(citizen.ap>=GATE_AP_COST)actions.push({type:'CLOSE_GATE',citizenId});actions.push({type:'EXIT_TOWN',citizenId})}else if(citizen.ap>=GATE_AP_COST&&!gateLockedAtHour(state,state.clock.hour))actions.push({type:'OPEN_GATE',citizenId})
     return actions
   }

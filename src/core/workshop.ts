@@ -22,7 +22,9 @@ export interface WorkshopRecipe {
 
 export const WORKSHOP_RECIPES:Record<WorkshopRecipeId,WorkshopRecipe>={
   logs_to_planks:{id:'logs_to_planks',name:'Cut Rotting Log into a Twisted Plank',category:'transform',input:'rotten_log',inputCount:1,output:'twisted_plank',outputCount:1,apCost:3},
+  quality_log_to_planks:{id:'quality_log_to_planks',name:'Cut Quality Log into a Twisted Plank',category:'transform',input:'quality_log',inputCount:1,output:'twisted_plank',outputCount:1,apCost:3},
   scrap_to_iron:{id:'scrap_to_iron',name:'Work Scrap Metal into Wrought Iron',category:'transform',input:'scrap_metal',inputCount:1,output:'wrought_iron',outputCount:1,apCost:3},
+  sheet_metal_bits_to_sheet_metal:{id:'sheet_metal_bits_to_sheet_metal',name:'Process Sheet Metal (bits) into Sheet Metal',category:'transform',input:'sheet_metal_bits',inputCount:1,output:'sheet_metal',outputCount:1,apCost:3},
   planks_to_beams:{id:'planks_to_beams',name:'Reinforce Twisted Plank into a Patchwork Beam',category:'transform',input:'twisted_plank',inputCount:1,output:'patchwork_beam',outputCount:1,apCost:3},
   beams_to_planks:{id:'beams_to_planks',name:'Break Patchwork Beam down into a Twisted Plank',category:'transform',input:'patchwork_beam',inputCount:1,output:'twisted_plank',outputCount:1,apCost:3},
   iron_to_supports:{id:'iron_to_supports',name:'Reinforce Wrought Iron into a Metal Support',category:'transform',input:'wrought_iron',inputCount:1,output:'metal_support',outputCount:1,apCost:3},
@@ -51,7 +53,7 @@ export const WORKSHOP_RECIPES:Record<WorkshopRecipeId,WorkshopRecipe>={
 }
 
 export const WORKSHOP_RECIPE_ORDER:WorkshopRecipeId[]=[
-  'logs_to_planks','scrap_to_iron','planks_to_beams','beams_to_planks','iron_to_supports','supports_to_iron',
+  'logs_to_planks','quality_log_to_planks','scrap_to_iron','sheet_metal_bits_to_sheet_metal','planks_to_beams','beams_to_planks','iron_to_supports','supports_to_iron',
   'dismantle_electronic_device','dismantle_mechanism','repair_repair_kit',
 ]
 
@@ -63,7 +65,11 @@ function matchesState(item:ItemInstance,required:Partial<ItemState>|undefined):b
 export function workshopInputItems(state:GameState,recipeId:WorkshopRecipeId):ItemInstance[]{const recipe=WORKSHOP_RECIPES[recipeId];return state.town.bank.filter((item)=>item.type===recipe.input&&matchesState(item,recipe.inputState))}
 export function workshopRecipeStock(state:GameState,recipeId:WorkshopRecipeId):number{return workshopInputItems(state,recipeId).length}
 export function workshopRecipeInputItemIds(state:GameState,recipeId:WorkshopRecipeId):string[]{const recipe=WORKSHOP_RECIPES[recipeId];return workshopInputItems(state,recipeId).slice(0,recipe.inputCount).map((item)=>item.id)}
-export function workshopRecipeApCost(state:GameState,recipeId:WorkshopRecipeId):number{return Math.max(1,WORKSHOP_RECIPES[recipeId].apCost-workshopApDiscount(state))}
+export function carriedHacksawDiscount(state:GameState,citizenId:string|undefined):number{
+  if(!citizenId)return 0
+  return state.citizens.find((citizen)=>citizen.id===citizenId)?.inventory.some((item)=>item.type==='saw_tool')?1:0
+}
+export function workshopRecipeApCost(state:GameState,recipeId:WorkshopRecipeId,citizenId?:string):number{return Math.max(1,WORKSHOP_RECIPES[recipeId].apCost-workshopApDiscount(state)-carriedHacksawDiscount(state,citizenId))}
 export function canRunWorkshopRecipe(state:GameState,recipeId:WorkshopRecipeId):boolean{const recipe=WORKSHOP_RECIPES[recipeId];return state.town.construction.workshop.completed&&workshopRecipeStock(state,recipeId)>=recipe.inputCount}
 export function resolveWorkshopRecipeOutput(rngState:number,recipeId:WorkshopRecipeId):{output:ItemType;outputCount:number;outputState?:ItemState;preserveInputId?:boolean;rngStateAfter?:number}{
   const recipe=WORKSHOP_RECIPES[recipeId]

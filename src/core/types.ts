@@ -6,7 +6,9 @@ export type { ItemAssemblyState, ItemCondition, ItemContamination, ItemDisplayCa
 export type CitizenControllerKind = 'human' | 'basic-bot'
 export type WorkshopRecipeId =
   | 'logs_to_planks'
+  | 'quality_log_to_planks'
   | 'scrap_to_iron'
+  | 'sheet_metal_bits_to_sheet_metal'
   | 'planks_to_beams'
   | 'beams_to_planks'
   | 'iron_to_supports'
@@ -21,21 +23,40 @@ export type CombinationRecipeId =
   | 'assemble_engine'
   | 'assemble_claymore'
   | 'assemble_torch'
+  | 'assemble_hacksaw'
+  | 'prepare_spicy_noodles'
   | 'mix_concrete'
   | 'fill_water_bomb'
   | 'reload_water_pistol'
   | 'refill_water_cooler'
   | 'reload_battery_launcher'
+  | 'load_radio_battery'
   | 'repair_human_bone'
   | 'repair_penknife'
   | 'repair_staff'
   | 'repair_serrated_knife'
   | 'repair_machete'
+  | 'repair_adjustable_spanner'
+  | 'repair_screwdriver'
+  | 'repair_swiss_army_knife'
+  | 'repair_box_cutter'
+  | 'repair_chain'
+  | 'repair_can_opener'
+  | 'repair_ektorp_gluten_chair'
+  | 'repair_pc_base_unit'
   | 'kwik_fix_human_bone'
   | 'kwik_fix_penknife'
   | 'kwik_fix_staff'
   | 'kwik_fix_serrated_knife'
   | 'kwik_fix_machete'
+  | 'kwik_fix_adjustable_spanner'
+  | 'kwik_fix_screwdriver'
+  | 'kwik_fix_swiss_army_knife'
+  | 'kwik_fix_box_cutter'
+  | 'kwik_fix_chain'
+  | 'kwik_fix_can_opener'
+  | 'kwik_fix_ektorp_gluten_chair'
+  | 'kwik_fix_pc_base_unit'
 export type HomeLevel = 'camp_bed' | 'tent' | 'hovel' | 'shack' | 'house' | 'fenced_house' | 'fortified_shelter' | 'bunker' | 'castle'
 export type HomeImprovementId = 'reinforcements' | 'fence' | 'storage'
 export type ItemStorage = 'inventory' | 'home' | 'ground'
@@ -142,8 +163,8 @@ export type GameEvent = (
   | {type:'ITEM_WITHDRAWN';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_MOVED_TO_HOME';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_MOVED_TO_RUCKSACK';day:number;citizenId:string;item:ItemInstance}
+  | {type:'OPENABLE_RESOLVED';day:number;citizenId:string;container:ItemInstance;source:ItemStorage;zoneKey?:string;success:boolean;outputs:ItemInstance[];containerAfter?:ItemInstance;rngStateAfter:number}
   | {type:'CONTAINER_OPENED';day:number;citizenId:string;containerId:string;containerType:ItemType;source:ItemStorage;zoneKey?:string;output:ItemInstance;rngStateAfter:number}
-  | {type:'CONSTRUCTION_KIT_OPENED';day:number;citizenId:string;containerId:string;source:ItemStorage;zoneKey?:string;outputs:ItemInstance[];rngStateAfter:number}
   | {type:'WATER_TAKEN';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_CONSUMED';day:number;citizenId:string;item:ItemInstance;source:ItemStorage;zoneKey?:string;kind:ConsumableKind;restoresAp:boolean;chargesAfter?:number}
   | {type:'HOME_UPGRADED';day:number;citizenId:string;from:HomeLevel;to:HomeLevel;defenseAfter:number;consumed:Partial<Record<ItemType,number>>}

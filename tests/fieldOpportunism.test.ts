@@ -7,6 +7,7 @@ import { planLoadout, wellAllowanceRemaining } from '../src/agents/planning/Supp
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
+import { consumableKind } from '../src/core/items'
 import { resolveNightAttack } from '../src/core/night'
 import type { BotMissionAssignment, GameState, ItemInstance } from '../src/core/types'
 import { runBotHour } from '../src/simulation/runBotHour'
@@ -54,7 +55,7 @@ describe('field opportunism and hydration assurance',()=>{
     expect(citizen.inventory).toHaveLength(0)
     expect(after.world.zones['1,0'].groundItems).toHaveLength(1)
     expect(after.world.zones['1,0'].groundItems[0].id).not.toBe('ground-bag')
-    expect(after.world.zones['1,0'].groundItems[0].type).toBe('food')
+    expect(consumableKind(after.world.zones['1,0'].groundItems[0].type)).toBe('food')
   })
 
   it('searches a depleted route tile before spending another movement AP',()=>{
@@ -78,13 +79,13 @@ describe('field opportunism and hydration assurance',()=>{
   it('drops a low-value carry before taking a substantially better ground item',()=>{
     let game=createInitialGame(8104,2)
     game=patchCitizen(game,'c02',{location:{type:'world',x:2,y:0},inventory:[item('a','battery'),item('b','box_of_matches'),item('c','pharmaceutical_products'),item('d','broken_human_bone')],ap:4})
-    game={...game,botMissions:{c02:mission({phase:'return'})},world:{...game.world,zones:{...game.world.zones,'2,0':{...game.world.zones['2,0'],discovered:true,zombies:0,groundItems:[item('kit','construction_kit')],searchedBy:['c02']}}}}
+    game={...game,botMissions:{c02:mission({phase:'return'})},world:{...game.world,zones:{...game.world.zones,'2,0':{...game.world.zones['2,0'],discovered:true,zombies:0,groundItems:[item('pack','resource_pack')],searchedBy:['c02']}}}}
     const actions=getLegalActions(game,'c02')
     const first=opportunisticFieldAction(game,game.citizens.find((citizen)=>citizen.id==='c02')!,actions,game.botMissions.c02)
     expect(first?.type).toBe('DROP_ITEM')
     const afterDrop=executeCommand(game,first!).state
     const second=new BasicBotController().decide(createAgentDecisionContext(afterDrop),'c02')
-    expect(second).toEqual({type:'PICK_UP_ITEM',citizenId:'c02',itemId:'kit'})
+    expect(second).toEqual({type:'PICK_UP_ITEM',citizenId:'c02',itemId:'pack'})
   })
 
   it('does not count an exhausted Well allowance as expedition water availability',()=>{

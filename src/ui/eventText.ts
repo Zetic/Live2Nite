@@ -36,8 +36,8 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'ITEM_WITHDRAWN':return`${citizenName(game,event.citizenId)} took ${itemName(event.item.type)} from the town bank.`
     case 'ITEM_MOVED_TO_HOME':return`${citizenName(game,event.citizenId)} stored ${itemName(event.item.type)} at home.`
     case 'ITEM_MOVED_TO_RUCKSACK':return`${citizenName(game,event.citizenId)} packed ${itemName(event.item.type)} into their rucksack.`
+    case 'OPENABLE_RESOLVED':{const name=citizenName(game,event.citizenId);if(!event.success)return`${name} tried to open ${itemName(event.container.type)} but failed.`;const found=event.outputs.length?event.outputs.map((item)=>itemName(item.type)).join(' + '):'nothing';return`${name} opened ${itemName(event.container.type)} and found ${found}.`}
     case 'CONTAINER_OPENED':return`${citizenName(game,event.citizenId)} opened ${itemName(event.containerType)} and found ${itemName(event.output.type)}.`
-    case 'CONSTRUCTION_KIT_OPENED':return`${citizenName(game,event.citizenId)} opened a Construction Kit and recovered ${event.outputs.map((item)=>itemName(item.type)).join(' + ')}.`
     case 'WATER_TAKEN':return`${citizenName(game,event.citizenId)} took a Water Ration from the well.`
     case 'ITEM_CONSUMED':{const remaining=event.chargesAfter!==undefined?` ${event.chargesAfter} ration${event.chargesAfter===1?'':'s'} remain in the container.`:'';return`${citizenName(game,event.citizenId)} ${event.kind==='food'?'ate':'drank'} ${itemName(event.item.type)}${event.restoresAp?' and refreshed their AP':''}.${remaining}`}
     case 'HOME_UPGRADED':return`${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
@@ -70,7 +70,7 @@ export function eventTone(event:GameEvent):'town'|'world'|'night'|'danger'|'syst
     case 'NIGHT_RESOLVED':return event.report.breached?'danger':'night'
     case 'DAY_STARTED':case 'WORLD_ZOMBIES_EVOLVED':return'night'
     case 'ZONE_DISCOVERED':case 'ZONE_OBSERVED':case 'ZONE_CONTROL_RESTORED':case 'TEMPORARY_CONTROL_GRANTED':case 'TEMPORARY_CONTROL_EXPIRED':case 'ZONE_SEARCHED':case 'ZONE_REPLENISHED':case 'SPECIAL_SITE_EXCAVATED':case 'SPECIAL_SITE_SEARCHED':case 'ITEM_PICKED_UP':case 'ITEM_DROPPED':case 'COMBAT_RESOLVED':case 'CITIZEN_LOCATION_CHANGED':case 'BOT_MISSION_ASSIGNED':case 'BOT_MISSION_PHASE_SET':case 'BOT_MISSION_CLEARED':case 'CAMP_IMPROVED':case 'CAMP_IMPROVEMENTS_DECAYED':case 'CITIZEN_HIDING_SET':return'world'
-    case 'ITEM_MOVED_TO_HOME':case 'ITEM_MOVED_TO_RUCKSACK':case 'CONTAINER_OPENED':case 'CONSTRUCTION_KIT_OPENED':case 'ITEM_CONSUMED':case 'ITEMS_COMBINED':case 'HOME_UPGRADED':case 'HOME_IMPROVEMENT_BUILT':return'home'
+    case 'ITEM_MOVED_TO_HOME':case 'ITEM_MOVED_TO_RUCKSACK':case 'OPENABLE_RESOLVED':case 'CONTAINER_OPENED':case 'ITEM_CONSUMED':case 'ITEMS_COMBINED':case 'HOME_UPGRADED':case 'HOME_IMPROVEMENT_BUILT':return'home'
     case 'WATER_TAKEN':case 'ITEM_DEPOSITED':case 'ITEM_WITHDRAWN':case 'CONSTRUCTION_AP_CONTRIBUTED':case 'CONSTRUCTION_COMPLETED':case 'CONSTRUCTION_EXPIRED':case 'CONSTRUCTION_GENERATED_ITEM':case 'WORKSHOP_CONVERTED':case 'GATE_SET':case 'COORDINATION_COMMITMENT_POSTED':return'town'
     default:return'system'
   }

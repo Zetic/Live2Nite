@@ -17,24 +17,30 @@ export interface ItemDefinition {
   bankDefense?: number
   homeDefense?: number
   consumableKind?: ConsumableKind
+  /** Legacy simple pool retained until all containers are migrated to openables.ts. */
   containerPool?: ItemType[]
 }
 
 const def=(value:ItemDefinition):ItemDefinition=>value
 const resource=(type:ItemType,name:string,purpose:string,capabilities:ItemCapability[]=['component']):ItemDefinition=>def({type,name,purpose,category:'misc',displayCategory:'resources',capabilities,source:'MYHORDES_CURRENT'})
+const container=(type:ItemType,name:string,purpose:string,state?:ItemStateSchema):ItemDefinition=>def({type,name,purpose,category:'container',displayCategory:'containers',capabilities:state?.contents?['container','stateful_container']:['container'],state,source:'MYHORDES_CURRENT'})
+const sourceWeapon=(type:ItemType,name:string,purpose:string):ItemDefinition=>def({type,name,purpose,category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'})
+const brokenSourceWeapon=(type:ItemType,name:string):ItemDefinition=>def({type,name:`Broken ${name}`,purpose:`A broken ${name}. Repair it anywhere with a Repair Kit or Kwik-Fix.`,category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'MYHORDES_CURRENT'})
+const sourceFood=(type:ItemType,name:string,purpose='Ordinary MyHordes food. Eating restores the normal daily food AP refresh and consumes the item.'):ItemDefinition=>def({type,name,purpose,category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'MYHORDES_CURRENT',consumableKind:'food'})
 
 export const ITEMS:Record<ItemType,ItemDefinition>={
   rotten_log:def({type:'rotten_log',name:'Rotting Log',purpose:'Low-quality resource found abundantly in depleted zones. The Workshop converts it into a Twisted Plank.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
   scrap_metal:def({type:'scrap_metal',name:'Scrap Metal',purpose:'Low-quality resource found abundantly in depleted zones. The Workshop converts it into Wrought Iron.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
+  quality_log:def({type:'quality_log',name:'Quality Log',purpose:'Source wood_log_#00 furniture/raw material. The Workshop cuts it into a Twisted Plank.',category:'raw',displayCategory:'furniture',capabilities:['raw_material','decoration'],source:'MYHORDES_CURRENT'}),
+  sheet_metal_bits:def({type:'sheet_metal_bits',name:'Sheet Metal (bits)',purpose:'Source plate_raw_#00 fragments. The Workshop processes them into usable Sheet Metal.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
   twisted_plank:def({type:'twisted_plank',name:'Twisted Plank',purpose:'Basic wooden construction material. The Workshop can process it into a Patchwork Beam.',category:'construction',displayCategory:'resources',capabilities:['construction_material'],source:'MYHORDES_CURRENT'}),
   wrought_iron:def({type:'wrought_iron',name:'Wrought Iron',purpose:'Basic metal construction material. The Workshop can process it into a Metal Support.',category:'construction',displayCategory:'resources',capabilities:['construction_material'],source:'MYHORDES_CURRENT'}),
   patchwork_beam:def({type:'patchwork_beam',name:'Patchwork Beam',purpose:'Advanced wooden construction material produced from a Twisted Plank or recovered while scavenging.',category:'construction',displayCategory:'resources',capabilities:['construction_material'],source:'MYHORDES_CURRENT'}),
   metal_support:def({type:'metal_support',name:'Metal Support',purpose:'Advanced metal construction material produced from Wrought Iron or recovered while scavenging.',category:'construction',displayCategory:'resources',capabilities:['construction_material'],source:'MYHORDES_CURRENT'}),
   sheet_metal:def({type:'sheet_metal',name:'Sheet Metal',purpose:'Scarce construction supply used by defensive and mechanical projects.',category:'construction',displayCategory:'resources',capabilities:['construction_material','component','defense'],source:'MYHORDES_CURRENT'}),
   unshaped_concrete_block:def({type:'unshaped_concrete_block',name:'Unshaped Concrete Block',purpose:'Heavy construction material used by advanced fortifications. It can be mixed anywhere from a Bag of Cement and a Water Ration.',category:'construction',displayCategory:'resources',capabilities:['construction_material','defense'],source:'MYHORDES_CURRENT'}),
-
   bag_of_damp_grass:resource('bag_of_damp_grass','Bag of Damp Grass','Scarce supply used by combinations and specialist projects.'),
-  bag_of_cement:resource('bag_of_cement','Bag of Cement','Construction supply found while scavenging. Combine it with a Water Ration to make an Unshaped Concrete Block.', ['component','raw_material']),
+  bag_of_cement:resource('bag_of_cement','Bag of Cement','Construction supply found while scavenging. Combine it with a Water Ration to make an Unshaped Concrete Block.',['component','raw_material']),
   battery:resource('battery','Battery','Electrical supply used by electronic construction and reloadable equipment.'),
   belt:resource('belt','Belt','Mechanical supply used by tensioned and launching mechanisms.'),
   compact_detonator:resource('compact_detonator','Compact Detonator','Scarce explosive component used by demolition, combinations and hydraulic projects.'),
@@ -46,22 +52,20 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   empty_oil_can:resource('empty_oil_can','Empty Oil Can','Mechanical container used by hydraulic constructions and the Makeshift Guitar combination.'),
   nuts_and_bolts:resource('nuts_and_bolts','Handful of Nuts and Bolts','High-value mechanical fasteners used by many advanced constructions and combinations.'),
   laser_diode:resource('laser_diode','Laser Diode','Rare electronic/optical component used by advanced detection and water-defense systems.'),
-  semtex:resource('semtex','Semtex','Rare explosive supply used by demolition and high-end construction.', ['component','construction_material']),
+  semtex:resource('semtex','Semtex','Rare explosive supply used by demolition and high-end construction.',['component','construction_material']),
   telescope:resource('telescope','Telescope','Portable combination result made from a Copper Pipe and Convex Lens; required by advanced observation structures.'),
   wire_reel:resource('wire_reel','Wire Reel','Electrical/mechanical supply used by traps, defenses and portable equipment assembly.'),
   broken_electronic_device:def({type:'broken_electronic_device',name:'Broken Electronic Device',purpose:'Unprocessed salvage. The Workshop dismantles it into a useful electronic or mechanical supply.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
   mechanism:def({type:'mechanism',name:'Mechanism',purpose:'Unprocessed mechanical salvage. The Workshop dismantles it into metal, fasteners or pipe.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
-
   meaty_bone:resource('meaty_bone','Meaty Bone','Organic construction supply used as bait in current MyHordes construction costs.'),
   human_flesh:resource('human_flesh','Human Flesh','Organic supply used by a small number of current construction projects.'),
   poison_gland:resource('poison_gland','Poison Gland','Toxic component used by the neurotoxin construction.'),
-  working_radio:resource('working_radio','Working Radio','Electronic equipment consumed by several observation and emergency projects.'),
+  working_radio:resource('working_radio','Working Radio','MyHordes Radio Cassette Player with a battery installed; consumed by several observation and emergency projects.'),
   guitar:resource('guitar','Guitar','Portable combination result made from a Wire Reel, Empty Oil Can and Broken Staff; used by Frat House / La Bamba.'),
   table:def({type:'table',name:'Table',purpose:'Furniture used as a structural/work surface by Factory and observation constructions.',category:'misc',displayCategory:'furniture',capabilities:['component','decoration'],source:'MYHORDES_CURRENT'}),
   chicken:resource('chicken','Chicken','Living supply required by the Henhouse construction.'),
   wire_mesh:resource('wire_mesh','Wire Mesh','Fencing supply required by livestock and filtration constructions.'),
   grain_sack:resource('grain_sack','Grain Sack','Agricultural supply used by food-production constructions.'),
-
   tool_bag:def({type:'tool_bag',name:'Tool Bag',purpose:'Incomplete repair equipment used with Duct Tape, Nuts & Bolts and a Twisted Plank to assemble a Repair Kit.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   kwik_fix:def({type:'kwik_fix',name:'Kwik-Fix',purpose:'Single-use portable repair supply. Combine it with a broken item for 1 AP to repair that item.',category:'misc',displayCategory:'miscellaneous',capabilities:['repairable'],source:'MYHORDES_CURRENT'}),
   plastic_bag:def({type:'plastic_bag',name:'Plastic Bag',purpose:'Simple container component that can be filled with a Water Ration to make a Water Bomb.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
@@ -70,41 +74,78 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   claymore:def({type:'claymore',name:'Claymore Mine',purpose:'Portable explosive assembled from Wire Reel, Semtex, Nuts & Bolts and Duct Tape. It is a single-use field weapon.',category:'weapon',displayCategory:'armoury',capabilities:['weapon'],source:'MYHORDES_CURRENT'}),
   torch:def({type:'torch',name:'Torch',purpose:'Portable combination made from Box of Matches and a Rotting Log.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   battery_launcher:def({type:'battery_launcher',name:'Battery Launcher 1-ITF',purpose:'Reloadable improvised weapon recovered empty from electronic salvage. Combine with a Battery to load one shot.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','charge_bearing'],state:{charges:{min:0,max:1,initial:0}},source:'MYHORDES_CURRENT'}),
-
-  construction_kit:def({type:'construction_kit',name:'Construction Kit',purpose:'Open it to recover two basic construction-ready materials.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE'}),
   water_ration:def({type:'water_ration',name:'Water Ration',purpose:'Drinking treats hydration and can refresh AP once per day when AP is missing. It also refills several portable items.',category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'DIE2NITE_ARCHIVE',consumableKind:'water'}),
-  food:def({type:'food',name:'Mouldy Ham Sandwich',purpose:'Ordinary food. Eating can refresh AP once per day when AP is missing.',category:'consumable',displayCategory:'food',capabilities:['consumable'],state:{contamination:{initial:'clean'}},source:'DIE2NITE_ARCHIVE',consumableKind:'food'}),
+  food:sourceFood('food','Mouldy Ham Sandwich'),
+  mouldy_twinkies:sourceFood('mouldy_twinkies','Mouldy Twinkies'),
+  half_eaten_chicken_wings:sourceFood('half_eaten_chicken_wings','Half-eaten Chicken Wings'),
+  rancid_shortbread_pack:sourceFood('rancid_shortbread_pack','Rancid Shortbread Pack'),
+  out_of_date_jaffa_cakes:sourceFood('out_of_date_jaffa_cakes','Out-of-Date Jaffa Cakes'),
+  dried_chewing_gum:sourceFood('dried_chewing_gum','Dried Chewing Gum'),
+  stale_tart:sourceFood('stale_tart','Stale Tart'),
+  soft_crisps:sourceFood('soft_crisps','Packet of Soft Crisps'),
+  can:def({type:'can',name:'Can',purpose:'Closed MyHordes food can. Open it with a Hacksaw, Can Opener, Screwdriver, or Swiss Army Knife before eating.',category:'container',displayCategory:'food',capabilities:['container'],source:'MYHORDES_CURRENT'}),
+  open_can:sourceFood('open_can','Open Can'),
+  vegetable:sourceFood('vegetable','Vegetable','MyHordes Vegetable. Eating follows the ordinary 6 AP food action.'),
+  tasty_looking_steak:sourceFood('tasty_looking_steak','Tasty-looking Steak','Higher-value MyHordes food. Eating uses the source 7 AP food action.'),
+  chinese_noodles:sourceFood('chinese_noodles','Chinese Noodles','MyHordes Chinese Noodles. Eating follows the source 6 AP food action; combine with Strong Spices and a Water Ration for the spicy version.'),
+  spicy_chinese_noodles:sourceFood('spicy_chinese_noodles','Spicy Chinese Noodles','Prepared from Chinese Noodles, Strong Spices and a Water Ration. Eating follows the source 7 AP food action.'),
+  strong_spices:def({type:'strong_spices',name:'Strong Spices',purpose:'MyHordes cooking component. Combine with Chinese Noodles and a Water Ration to make Spicy Chinese Noodles.',category:'misc',displayCategory:'food',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   old_door:def({type:'old_door',name:'Old Door',purpose:'Defensive object: +2 town defense in the Bank, or +1 personal defense when stored at Home.',category:'defense',displayCategory:'defences',capabilities:['defense'],source:'DIE2NITE_ARCHIVE',bankDefense:2,homeDefense:1}),
-  water_bomb:def({type:'water_bomb',name:'Water Bomb',purpose:'Single-use weapon. While outside and not exhausted, it kills 1–5 zombies without spending AP. It can be made from a Plastic Bag and Water Ration.',category:'weapon',displayCategory:'armoury',capabilities:['weapon'],source:'DIE2NITE_ARCHIVE'}),
-  human_bone:def({type:'human_bone',name:'Human Bone',purpose:'Improvised low-chance breakable weapon.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'DIE2NITE_ARCHIVE'}),
-  broken_human_bone:def({type:'broken_human_bone',name:'Broken Human Bone',purpose:'A broken improvised weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'DIE2NITE_ARCHIVE'}),
-  pathetic_penknife:def({type:'pathetic_penknife',name:'Pathetic Penknife',purpose:'Low-chance breakable melee weapon.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'DIE2NITE_ARCHIVE'}),
-  broken_pathetic_penknife:def({type:'broken_pathetic_penknife',name:'Broken Pathetic Penknife',purpose:'A broken weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'DIE2NITE_ARCHIVE'}),
-  staff:def({type:'staff',name:'Staff',purpose:'Medium-chance breakable melee weapon.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'DIE2NITE_ARCHIVE'}),
+  water_bomb:def({type:'water_bomb',name:'Water Bomb',purpose:'Single-use MyHordes weapon. While outside and not exhausted, it kills 2–4 zombies without spending AP. It can be made from a Plastic Bag and Water Ration.',category:'weapon',displayCategory:'armoury',capabilities:['weapon'],source:'MYHORDES_CURRENT'}),
+  human_bone:def({type:'human_bone',name:'Human Bone',purpose:'Breakable improvised weapon and a source-valid opener for some containers.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
+  broken_human_bone:def({type:'broken_human_bone',name:'Broken Human Bone',purpose:'A broken improvised weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'MYHORDES_CURRENT'}),
+  pathetic_penknife:def({type:'pathetic_penknife',name:'Pathetic Penknife',purpose:'Fragile breakable melee weapon and source-valid box opener.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
+  broken_pathetic_penknife:def({type:'broken_pathetic_penknife',name:'Broken Pathetic Penknife',purpose:'A broken weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'MYHORDES_CURRENT'}),
+  staff:def({type:'staff',name:'Staff',purpose:'Breakable melee weapon and source-valid box opener.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
   broken_staff:def({type:'broken_staff',name:'Broken Staff',purpose:'A broken weapon that can be repaired anywhere or consumed in the Makeshift Guitar combination.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable','component'],state:{condition:{initial:'broken'}},source:'MYHORDES_CURRENT'}),
-  serrated_knife:def({type:'serrated_knife',name:'Serrated Knife',purpose:'Medium-chance breakable melee weapon.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'DIE2NITE_ARCHIVE'}),
-  broken_serrated_knife:def({type:'broken_serrated_knife',name:'Broken Serrated Knife',purpose:'A broken weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'DIE2NITE_ARCHIVE'}),
-  machete:def({type:'machete',name:'Machete',purpose:'Reliable breakable weapon that kills two zombies on a successful strike.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'DIE2NITE_ARCHIVE'}),
-  broken_machete:def({type:'broken_machete',name:'Broken Machete',purpose:'A broken weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'DIE2NITE_ARCHIVE'}),
-  doggy_bag:def({type:'doggy_bag',name:'Doggy Bag',purpose:'Starter food package. Open it to reveal one ordinary food item.',category:'container',displayCategory:'food',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['food']}),
-  citizen_welcome_pack:def({type:'citizen_welcome_pack',name:"Citizen's Welcome Pack",purpose:'Starter package using a small verified pool of common welcome-pack contents.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['battery','box_of_matches','pharmaceutical_products']}),
+  serrated_knife:def({type:'serrated_knife',name:'Serrated Knife',purpose:'Reliable breakable melee weapon and source-valid box opener.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
+  broken_serrated_knife:def({type:'broken_serrated_knife',name:'Broken Serrated Knife',purpose:'A broken weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'MYHORDES_CURRENT'}),
+  machete:def({type:'machete',name:'Machete',purpose:'Reliable breakable weapon that kills two zombies per successful use and can open boxes.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
+  broken_machete:def({type:'broken_machete',name:'Broken Machete',purpose:'A broken weapon. Repair it anywhere with a Repair Kit or Kwik-Fix.',category:'broken_weapon',displayCategory:'armoury',capabilities:['repairable'],state:{condition:{initial:'broken'}},source:'MYHORDES_CURRENT'}),
+  adjustable_spanner:sourceWeapon('adjustable_spanner','Adjustable Spanner','MyHordes WRENCH. Repair/building tool, breakable field weapon, and source-valid box opener.'),
+  broken_adjustable_spanner:brokenSourceWeapon('broken_adjustable_spanner','Adjustable Spanner'),
+  screwdriver:sourceWeapon('screwdriver','Screwdriver','MyHordes SCREW. General repair/can-opening tool, breakable field weapon, and source-valid box opener.'),
+  broken_screwdriver:brokenSourceWeapon('broken_screwdriver','Screwdriver'),
+  swiss_army_knife:sourceWeapon('swiss_army_knife','Swiss Army Knife','General-purpose MyHordes tool, breakable field weapon, and source-valid box opener.'),
+  broken_swiss_army_knife:brokenSourceWeapon('broken_swiss_army_knife','Swiss Army Knife'),
+  box_cutter:sourceWeapon('box_cutter','Box Cutter','MyHordes CUTTER. Fragile but effective breakable weapon and source-valid box opener.'),
+  broken_box_cutter:brokenSourceWeapon('broken_box_cutter','Box Cutter'),
+  chain:sourceWeapon('chain','Chain','Breakable improvised weapon and source-valid box opener.'),
+  broken_chain:brokenSourceWeapon('broken_chain','Chain'),
+  can_opener:sourceWeapon('can_opener','Can Opener','Tool for opening cans and metal containers. It can be used as a weapon, but doing so always breaks it.'),
+  broken_can_opener:brokenSourceWeapon('broken_can_opener','Can Opener'),
+  ektorp_gluten_chair:sourceWeapon('ektorp_gluten_chair','Ektorp-Gluten Chair','Ordinary MyHordes furniture, source-valid melee-box opener, and improvised weapon. A use has a 50% chance to kill one zombie and a 50% chance to break the chair.'),
+  broken_ektorp_gluten_chair:brokenSourceWeapon('broken_ektorp_gluten_chair','Ektorp-Gluten Chair'),
+  pc_base_unit:sourceWeapon('pc_base_unit','PC Base Unit','Ordinary MyHordes furniture/equipment, source-valid melee-box opener, and improvised weapon. A use kills one zombie and has a 50% chance to break the unit.'),
+  broken_pc_base_unit:brokenSourceWeapon('broken_pc_base_unit','PC Base Unit'),
+  saw_tool_part:def({type:'saw_tool_part',name:'Damaged Hacksaw',purpose:'Source saw_tool_part_#00. Combine with Kwik-Fix and Nuts & Bolts to repair it into a Hacksaw.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
+  saw_tool:def({type:'saw_tool',name:'Hacksaw',purpose:'Source saw_tool_#00 utility tool. While carried in the rucksack it reduces any Workshop action by 1 AP and it opens main-family containers such as Cans.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
+  doggy_bag:container('doggy_bag','Doggy Bag','MyHordes food bag. Opening consumes the bag and yields one of eight ordinary 6 AP foods.'),
+  citizen_welcome_pack:def({type:'citizen_welcome_pack',name:"Citizen's Welcome Pack",purpose:'Starter package retained while its source-backed output catalogue is expanded.',category:'container',displayCategory:'containers',capabilities:['container'],source:'DIE2NITE_ARCHIVE',containerPool:['battery','box_of_matches','pharmaceutical_products']}),
+  radio_cassette_player_off:def({type:'radio_cassette_player_off',name:'Radio Cassette Player (no battery)',purpose:'Batteryless MyHordes cassette player. Combine it with one Battery at 0 AP to produce a powered Working Radio while preserving the physical item.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   box_of_matches:def({type:'box_of_matches',name:'Box of Matches',purpose:'A utility component found in the desert and Welcome Packs. Combine with a Rotting Log to make a Torch.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'DIE2NITE_ARCHIVE'}),
   pharmaceutical_products:def({type:'pharmaceutical_products',name:'Pharmaceutical Products',purpose:'Medical/chemical supply also consumed by several current constructions.',category:'misc',displayCategory:'pharmacy',capabilities:['component','medical'],source:'MYHORDES_CURRENT'}),
-
   water_pistol:def({type:'water_pistol',name:'Water Pistol',purpose:'Three-shot water weapon. Each attack spends one charge; combine an empty/part-used pistol with a Water Ration to restore three shots.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','charge_bearing'],state:{charges:{min:0,max:3,initial:3}},source:'MYHORDES_CURRENT'}),
   water_cooler_bottle:def({type:'water_cooler_bottle',name:'Water Cooler Bottle',purpose:'Multi-ration water container. Drinking spends one stored ration; combine with Water Rations one at a time up to three.',category:'consumable',displayCategory:'food',capabilities:['consumable','charge_bearing'],state:{charges:{min:0,max:3,initial:3},contamination:{initial:'clean'}},source:'MYHORDES_CURRENT',consumableKind:'water'}),
   repair_kit:def({type:'repair_kit',name:'Repair Kit',purpose:'Portable repair tool. Repairing a broken item costs 1 AP and damages the kit; a damaged kit is restored at the Workshop.',category:'misc',displayCategory:'miscellaneous',capabilities:['repairable'],state:{condition:{initial:'intact'}},source:'MYHORDES_CURRENT'}),
+  resource_pack:container('resource_pack','Resource Pack','MyHordes material pack. Each opening yields one Twisted Plank or Wrought Iron and reduces the remaining contents until the pack is empty.',{contents:{min:1,max:3,initial:2}}),
+  toolbox:container('toolbox','Toolbox','Source-backed container of mechanical, pharmaceutical, explosive and repair supplies.'),
+  metal_chest:container('metal_chest','Metal Chest','Source-backed chest. Its full medical/drug output dependency chain is being completed in Part 2.'),
+  xl_chest:container('xl_chest','XL Chest','Rare source-backed container for advanced equipment parts. Part 2 follows each output into its complete equipment chain.'),
+  food_box:container('food_box','Food Box','Source-backed food container. Part 2 follows its outputs into the proper food mechanics.'),
+  decoration_box:container('decoration_box','Decoration Box','Source-backed furniture container.'),
+  safe:container('safe','Safe','Rare source-backed container opened through repeated 1 AP attempts; successful opening yields high-value equipment or components.'),
 }
 
 export const ITEM_TYPES:ItemType[]=Object.keys(ITEMS) as ItemType[]
 
+/** Legacy arrays retained temporarily for callers/tests while weighted tables replace acquisition. */
 export const NORMAL_SCAVENGE_LOOT_POOL:ItemType[]=[
   'twisted_plank','twisted_plank','twisted_plank','twisted_plank','twisted_plank',
   'wrought_iron','wrought_iron','wrought_iron','wrought_iron','wrought_iron',
-  'construction_kit','construction_kit','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
+  'resource_pack','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
   'human_bone','human_bone','pathetic_penknife','staff','serrated_knife','water_bomb','battery','box_of_matches','pharmaceutical_products',
-  // Construction/combination supplies are intentionally rarer than the basic resource stream.
-  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag',
+  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag','toolbox',
 ]
 export const DEPLETED_SCAVENGE_LOOT_POOL:ItemType[]=['rotten_log','rotten_log','rotten_log','scrap_metal','scrap_metal','scrap_metal']
 
@@ -113,6 +154,7 @@ export function defaultItemState(type:ItemType):ItemState{
   if(!schema)return{}
   const state:ItemState={}
   if(schema.charges)state.charges=schema.charges.initial
+  if(schema.contents)state.contents=schema.contents.initial
   if(schema.condition)state.condition=schema.condition.initial
   if(schema.contamination)state.contamination=schema.contamination.initial
   if(schema.powered)state.powered=schema.powered.initial
@@ -125,6 +167,7 @@ export function normalizeItemState(type:ItemType,input:ItemState|undefined):Item
   const base=defaultItemState(type)
   const next:ItemState={...base,...input}
   if(schema.charges){const value=typeof next.charges==='number'?next.charges:schema.charges.initial;next.charges=Math.min(schema.charges.max,Math.max(schema.charges.min,Math.trunc(value)))}else delete next.charges
+  if(schema.contents){const value=typeof next.contents==='number'?next.contents:schema.contents.initial;next.contents=Math.min(schema.contents.max,Math.max(schema.contents.min,Math.trunc(value)))}else delete next.contents
   if(!schema.condition)delete next.condition
   if(!schema.contamination)delete next.contamination
   if(!schema.powered)delete next.powered
@@ -136,6 +179,7 @@ export function itemStackKey(item:ItemInstance):string{return`${item.type}:${JSO
 export function itemStateLabel(item:ItemInstance):string{
   const state=normalizeItemState(item.type,item.state);const parts:string[]=[]
   if(state.charges!==undefined)parts.push(`${state.charges} ${state.charges===1?'charge':'charges'}`)
+  if(state.contents!==undefined)parts.push(`${state.contents} ${state.contents===1?'item':'items'} remaining`)
   if(state.condition&&state.condition!=='intact')parts.push(state.condition)
   if(state.contamination&&state.contamination!=='clean')parts.push(state.contamination)
   if(state.assembly&&state.assembly!=='complete')parts.push(state.assembly)

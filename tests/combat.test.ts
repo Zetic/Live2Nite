@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BasicBotController } from '../src/agents/BasicBotController'
 import { runBotHour } from '../src/agents/runBotHour'
 import { getLegalActions } from '../src/core/actions'
+import { weaponDefinition } from '../src/core/combat'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
 import { createItemInstance, NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
@@ -44,16 +45,52 @@ describe('World Beyond combat', () => {
     expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('water_bomb')
   })
 
-  it('uses a Water Bomb for 0 AP, consumes it, and kills between 1 and 5 zombies', () => {
+  it('pins current MyHordes combat values for ordinary box-opening tools',()=>{
+    const expected:Partial<Record<ItemType,[number,number,number,ItemType]>>={
+      human_bone:[100,1,80,'broken_human_bone'],
+      pathetic_penknife:[15,1,45,'broken_pathetic_penknife'],
+      serrated_knife:[100,1,33,'broken_serrated_knife'],
+      machete:[100,2,25,'broken_machete'],
+      adjustable_spanner:[33,1,20,'broken_adjustable_spanner'],
+      screwdriver:[20,1,40,'broken_screwdriver'],
+      swiss_army_knife:[15,1,50,'broken_swiss_army_knife'],
+      box_cutter:[60,1,70,'broken_box_cutter'],
+      chain:[50,1,25,'broken_chain'],
+      can_opener:[50,1,100,'broken_can_opener'],
+      ektorp_gluten_chair:[50,1,50,'broken_ektorp_gluten_chair'],
+      pc_base_unit:[100,1,50,'broken_pc_base_unit'],
+    }
+    for(const [type,[killChance,maxKills,breakChance,brokenType]] of Object.entries(expected) as Array<[ItemType,[number,number,number,ItemType]]>){
+      const definition=weaponDefinition(type)
+      expect(definition?.confidence,`${type} confidence`).toBe('confirmed')
+      expect(definition?.killChancePercent,`${type} kill chance`).toBe(killChance)
+      expect(definition?.maxKills,`${type} max kills`).toBe(maxKills)
+      expect(definition?.breakChancePercent,`${type} break chance`).toBe(breakChance)
+      expect(definition?.brokenType,`${type} broken type`).toBe(brokenType)
+      expect(definition?.apCost,`${type} AP`).toBe(0)
+      expect(definition?.requiresPositiveAp,`${type} exhausted restriction`).toBe(true)
+    }
+    expect(weaponDefinition('staff')?.confidence).toBe('approximate')
+  })
+
+  it('always breaks a Can Opener when it is used as a weapon',()=>{
+    let game=combatState('c01',3,['can_opener'])
+    game=executeCommand(game,action(game,'c01','USE_WEAPON')).state
+    const opener=game.citizens[0].inventory.find((item)=>item.id==='combat-0')
+    expect(opener?.type).toBe('broken_can_opener')
+    expect(game.events.some((event)=>event.type==='COMBAT_RESOLVED'&&event.method==='can_opener'&&event.brokenInto==='broken_can_opener')).toBe(true)
+  })
+
+  it('uses a Water Bomb for 0 AP, consumes it, and kills between 2 and 4 zombies', () => {
     let game = combatState('c01', 5, ['water_bomb'])
     const beforeAp = game.citizens[0].ap
     game = executeCommand(game, action(game, 'c01', 'USE_WEAPON')).state
     const remaining = game.world.zones[zoneKey(1,0)].zombies
     expect(game.citizens[0].ap).toBe(beforeAp)
     expect(game.citizens[0].inventory).toHaveLength(0)
-    expect(remaining).toBeGreaterThanOrEqual(0)
-    expect(remaining).toBeLessThanOrEqual(4)
-    expect(game.events.some((event) => event.type === 'COMBAT_RESOLVED' && event.method === 'water_bomb' && event.kills >= 1 && event.kills <= 5)).toBe(true)
+    expect(remaining).toBeGreaterThanOrEqual(1)
+    expect(remaining).toBeLessThanOrEqual(3)
+    expect(game.events.some((event) => event.type === 'COMBAT_RESOLVED' && event.method === 'water_bomb' && event.kills >= 2 && event.kills <= 4)).toBe(true)
   })
 
   it('depletes Water Pistol charges in place and disables the empty weapon',()=>{
