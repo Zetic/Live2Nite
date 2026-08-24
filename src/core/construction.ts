@@ -1,6 +1,6 @@
 import { bankCount } from './bank'
 import { CONSTRUCTION_IDS } from './constructionIds'
-import { CONSTRUCTION_CATALOG, type ConstructionBlueprintClass, type ConstructionImplementationStatus } from './constructionCatalog'
+import { CONSTRUCTION_CATALOG, constructionCatalogChildren, type ConstructionBlueprintClass, type ConstructionImplementationStatus } from './constructionCatalog'
 import { CURRENT_CONSTRUCTION_FIDELITY, type ConstructionBlueprintTier } from './constructionFidelity'
 import type { ConstructionId, ConstructionProjectState, GameState, ItemType } from './types'
 
@@ -220,7 +220,7 @@ function applyCurrentConstructionFidelity():void {
     project.blueprintTier=snapshot.blueprintTier
     project.maxHp=snapshot.maxHp
     project.breakable=snapshot.breakable
-    project.playable=snapshot.playable
+    project.playable=project.implementationStatus!=='wip'
     project.expiresAfterAttack=snapshot.temporary
     project.effects=project.effects.filter((effect)=>effect.type!=='town_defense_flat'&&effect.type!=='well_water_on_complete')
     if(snapshot.defense>0)project.effects.unshift({type:'town_defense_flat',amount:snapshot.defense})
@@ -361,7 +361,7 @@ export function dailyConstructionOutputs(state:GameState):Array<{projectId:Const
 }
 export function constructionFlatDefenseForProject(projectId:ConstructionId):number{return CONSTRUCTIONS[projectId].effects.filter((effect):effect is Extract<ConstructionEffect,{type:'town_defense_flat'}>=>effect.type==='town_defense_flat').reduce((sum,effect)=>sum+effect.amount,0)}
 
-function unlockValue(state:GameState,projectId:ConstructionId):number{return CONSTRUCTION_ORDER.filter((id)=>constructionPlayable(id)&&state.town.construction[id]?.discovered&&!state.town.construction[id]?.completed&&CONSTRUCTIONS[id].parentId===projectId).length}
+function unlockValue(state:GameState,projectId:ConstructionId):number{return constructionCatalogChildren(projectId).filter((id)=>constructionPlayable(id)&&state.town.construction[id]?.discovered&&!state.town.construction[id]?.completed).length}
 function missingResourceBurden(state:GameState,projectId:ConstructionId):number{return Object.values(missingMaterials(state,projectId)).reduce((sum,value)=>sum+(value??0),0)}
 
 export function constructionPriority(state: GameState, projectId: ConstructionId): number {
