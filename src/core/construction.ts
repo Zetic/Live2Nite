@@ -1,5 +1,6 @@
 import { bankCount } from './bank'
 import { CONSTRUCTION_IDS } from './constructionIds'
+import { CONSTRUCTION_CATALOG, type ConstructionBlueprintClass, type ConstructionImplementationStatus } from './constructionCatalog'
 import { CURRENT_CONSTRUCTION_FIDELITY, type ConstructionBlueprintTier } from './constructionFidelity'
 import type { ConstructionId, ConstructionProjectState, GameState, ItemType } from './types'
 
@@ -42,7 +43,9 @@ export interface ConstructionDefinition {
   source: ConstructionSource
   sourceConfidence: ConstructionConfidence
   historicalCostConfidence: ConstructionConfidence
-  blueprintTier?: ConstructionBlueprintTier
+  blueprintTier?: ConstructionBlueprintClass
+  implementationStatus?: ConstructionImplementationStatus
+  wipReason?: string
   maxHp?: number
   breakable?: boolean
   playable?: boolean
@@ -70,7 +73,7 @@ export const CONSTRUCTION_CATEGORIES: ReadonlyArray<{ id: ConstructionCategory |
   { id: 'sanctuary', label: 'Sanctuary' },
 ]
 
-export const CONSTRUCTIONS: Record<ConstructionId, ConstructionDefinition> = {
+const EXISTING_CONSTRUCTIONS: Partial<Record<ConstructionId, ConstructionDefinition>> = {
   wall_upgrade: { id:'wall_upgrade', name:'Defensive Wall', category:'wall', description:'The first serious perimeter reinforcement and root of the wall-defense branch.', apCost:30, resources:c(6,4), prerequisites:[], effects:def(30), effectLabel:'+30 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   great_pit: { id:'great_pit', name:'Great Pit', category:'wall', parentId:'wall_upgrade', description:'A broad defensive trench dug beyond the walls.', apCost:40, resources:c(4,1), prerequisites:['wall_upgrade'], effects:def(10), effectLabel:'+10 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   moat: { id:'moat', name:'Great Moat', category:'wall', parentId:'great_pit', description:'Extends the Great Pit into a formidable moat.', apCost:50, resources:c(5,2), prerequisites:['great_pit'], effects:def(65), effectLabel:'+65 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
@@ -150,7 +153,6 @@ export const CONSTRUCTIONS: Record<ConstructionId, ConstructionDefinition> = {
   scarecrow_fields: { id:'scarecrow_fields', name:'Scarecrow Fields', category:'foundations', parentId:'foundations', description:'A field of decoys and obstacles absorbs some pressure from the horde.', apCost:50, resources:c(8,2), prerequisites:['foundations'], effects:def(25), effectLabel:'+25 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   lighthouse: { id:'lighthouse', name:'Lighthouse', category:'foundations', parentId:'foundations', description:'A landmark and signal point helps citizens establish safer overnight routes and camps.', apCost:65, resources:{...c(7,5), battery:1}, prerequisites:['foundations'], effects:[{type:'camping_survival_bonus',amount:10}], effectLabel:'+10 percentage points to camping outlook', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   fortified_homes: { id:'fortified_homes', name:'Fortified Homes', category:'foundations', parentId:'foundations', description:'Every citizen home receives stronger structural reinforcement.', apCost:75, resources:c(10,7,2), prerequisites:['foundations'], effects:[{type:'home_defense_flat',amount:4}], effectLabel:'+4 personal defense to every home', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
-  improved_drill: { id:'improved_drill', name:'Improved Drill', category:'foundations', parentId:'derrick', description:'A major upgrade to deep-water extraction.', apCost:90, resources:c(8,9,3), prerequisites:['derrick'], effects:[{type:'well_water_on_complete',amount:150}], effectLabel:'+150 Well water on completion', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   hot_air_balloon: { id:'hot_air_balloon', name:'Hot-Air Balloon', category:'foundations', parentId:'foundations', description:'A high-altitude survey reveals the shape of the entire World Beyond without revealing current zombie counts.', apCost:80, resources:{...c(8,6), battery:1}, prerequisites:['foundations'], effects:[{type:'reveal_all_terrain_on_complete'}], effectLabel:'Reveals all terrain; zombie intelligence remains unknown/stale', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   false_town: { id:'false_town', name:'False Town', category:'foundations', parentId:'foundations', description:'An enormous decoy settlement draws pressure away from the real town.', apCost:140, resources:c(15,12,6), prerequisites:['foundations'], effects:def(400), effectLabel:'+400 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
 
@@ -162,6 +164,51 @@ export const CONSTRUCTIONS: Record<ConstructionId, ConstructionDefinition> = {
   soul_purifying_source: { id:'soul_purifying_source', name:'Soul-Purifying Source', category:'sanctuary', parentId:'sanctuary', description:'A fortified communal source that currently contributes defensive structure.', apCost:50, resources:c(4,4,1), prerequisites:['sanctuary'], effects:def(20), effectLabel:'+20 town defense; soul mechanics deferred', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   hammam: { id:'hammam', name:'Hammam', category:'sanctuary', parentId:'sanctuary', description:'A substantial communal building whose future status effects are deferred.', apCost:50, resources:c(5,4,1), prerequisites:['sanctuary'], effects:def(20), effectLabel:'+20 town defense; status effects deferred', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
 }
+
+
+export const CONSTRUCTIONS:Record<ConstructionId,ConstructionDefinition>=Object.fromEntries(
+  CONSTRUCTION_IDS.map((id)=>{
+    const meta=CONSTRUCTION_CATALOG[id]
+    const existing=EXISTING_CONSTRUCTIONS[id]
+    const project:ConstructionDefinition=existing
+      ? {...existing,resources:{...existing.resources},effects:[...existing.effects]}
+      : {
+          id,
+          name:meta.name,
+          category:meta.branchId,
+          description:meta.description,
+          apCost:meta.apCost,
+          resources:{},
+          prerequisites:meta.parentId?[meta.parentId]:[],
+          effects:[],
+          effectLabel:'WIP — source behavior not implemented',
+          source:'MYHORDES_CURRENT',
+          sourceConfidence:'confirmed',
+          historicalCostConfidence:'confirmed',
+        }
+    project.name=meta.name
+    project.category=meta.branchId
+    project.parentId=meta.parentId??undefined
+    project.prerequisites=meta.parentId?[meta.parentId]:[]
+    project.description=meta.description
+    project.apCost=meta.apCost
+    project.blueprintTier=meta.blueprintClass
+    project.maxHp=meta.maxHp
+    project.breakable=meta.breakable
+    project.expiresAfterAttack=meta.temporary
+    project.implementationStatus=meta.implementation
+    project.wipReason=meta.wipReason??undefined
+    project.playable=meta.implementation!=='wip'
+    project.source='MYHORDES_CURRENT'
+    project.sourceConfidence='confirmed'
+    if(meta.implementation==='wip'){
+      project.resources={}
+      project.effects=[]
+      project.effectLabel=`WIP — ${meta.wipReason??'mechanics not implemented'}`
+    }
+    return[id,project]
+  })
+) as Record<ConstructionId,ConstructionDefinition>
 
 function applyCurrentConstructionFidelity():void {
   for(const [id,snapshot] of Object.entries(CURRENT_CONSTRUCTION_FIDELITY) as Array<[ConstructionId,NonNullable<(typeof CURRENT_CONSTRUCTION_FIDELITY)[ConstructionId]>]>) {
@@ -190,11 +237,14 @@ applyCurrentConstructionFidelity()
 
 export const CONSTRUCTION_ORDER: ConstructionId[] = [...CONSTRUCTION_IDS]
 
-export function constructionBlueprintTier(projectId:ConstructionId):ConstructionBlueprintTier{return CONSTRUCTIONS[projectId].blueprintTier??4}
+export function constructionBlueprintTier(projectId:ConstructionId):ConstructionBlueprintClass{return CONSTRUCTIONS[projectId].blueprintTier??CONSTRUCTION_CATALOG[projectId].blueprintClass}
 export function constructionPlayable(projectId:ConstructionId):boolean{return CONSTRUCTIONS[projectId].playable===true}
+export function constructionImplementationStatus(projectId:ConstructionId):ConstructionImplementationStatus{return CONSTRUCTIONS[projectId].implementationStatus??'wip'}
+export function constructionWipReason(projectId:ConstructionId):string|null{return CONSTRUCTIONS[projectId].wipReason??null}
+export function constructionGenericDiscoverable(projectId:ConstructionId):boolean{return constructionBlueprintTier(projectId)<=4}
 export function constructionMaxHp(projectId:ConstructionId):number{return Math.max(0,CONSTRUCTIONS[projectId].maxHp??CONSTRUCTIONS[projectId].apCost)}
 function noBlueprintPathFromRoot(projectId:ConstructionId,seen=new Set<ConstructionId>()):boolean{
-  if(seen.has(projectId)||!constructionPlayable(projectId)||constructionBlueprintTier(projectId)!==0)return false
+  if(seen.has(projectId)||!constructionGenericDiscoverable(projectId)||constructionBlueprintTier(projectId)!==0)return false
   seen.add(projectId)
   const parent=CONSTRUCTIONS[projectId].parentId
   return !parent||noBlueprintPathFromRoot(parent,seen)
@@ -207,7 +257,7 @@ export function constructionDiscoveryCascade(projectId:ConstructionId):Construct
   while(queue.length){
     const parentId=queue.shift()!
     for(const id of CONSTRUCTION_ORDER){
-      if(discovered.includes(id)||!constructionPlayable(id)||constructionBlueprintTier(id)!==0||CONSTRUCTIONS[id].parentId!==parentId)continue
+      if(discovered.includes(id)||!constructionGenericDiscoverable(id)||constructionBlueprintTier(id)!==0||CONSTRUCTIONS[id].parentId!==parentId)continue
       discovered.push(id);queue.push(id)
     }
   }
@@ -228,7 +278,7 @@ export function blueprintEligibleProjects(state:GameState,tier:ConstructionBluep
   return CONSTRUCTION_ORDER.filter((id)=>{
     const definition=CONSTRUCTIONS[id]
     const project=state.town.construction[id]
-    if(!constructionPlayable(id)||project?.discovered||constructionBlueprintTier(id)!==tier)return false
+    if(!constructionGenericDiscoverable(id)||project?.discovered||constructionBlueprintTier(id)!==tier)return false
     return !definition.parentId||state.town.construction[definition.parentId]?.discovered===true
   })
 }
