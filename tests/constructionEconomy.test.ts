@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
-import { CONSTRUCTIONS } from '../src/core/construction'
+import { CONSTRUCTIONS, constructionMaxHp } from '../src/core/construction'
 import { MYHORDES_CURRENT_CONSTRUCTION_COSTS } from '../src/core/constructionEconomy'
 import { createInitialGame } from '../src/core/game'
 import { NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
@@ -9,11 +9,11 @@ import { SPECIAL_SITES } from '../src/core/specialSites'
 import type { GameState, WorkshopRecipeId } from '../src/core/types'
 import { bankFromCounts, bankCount as countBank } from './bankFixtures'
 
-function withWorkshop(game:GameState,bank:GameState['town']['bank']):GameState{return{...game,town:{...game.town,bank,construction:{...game.town.construction,workshop:{id:'workshop',completed:true,apContributed:CONSTRUCTIONS.workshop.apCost}}}}}
+function withWorkshop(game:GameState,bank:GameState['town']['bank']):GameState{return{...game,town:{...game.town,bank,construction:{...game.town.construction,workshop:{id:'workshop',discovered:true,completed:true,apContributed:CONSTRUCTIONS.workshop.apCost,hp:constructionMaxHp('workshop')}}}}}
 function recipeAction(game:GameState,recipeId:WorkshopRecipeId){const action=getLegalActions(game,'c01').find((candidate)=>candidate.type==='WORKSHOP_CONVERT'&&candidate.recipeId===recipeId);if(!action||action.type!=='WORKSHOP_CONVERT')throw new Error(`Missing Workshop recipe ${recipeId}`);return action}
 
 describe('current MyHordes construction cost layer',()=>{
-  it('pins representative early, advanced, observation, and extreme projects',()=>{createInitialGame(123,2);expect(MYHORDES_CURRENT_CONSTRUCTION_COSTS.wall_upgrade).toEqual({referenceName:'Defensive Wall',apCost:25,resources:{twisted_plank:8,wrought_iron:4}});expect(CONSTRUCTIONS.wall_upgrade.apCost).toBe(25);expect(CONSTRUCTIONS.wall_upgrade.resources).toEqual({twisted_plank:8,wrought_iron:4});expect(CONSTRUCTIONS.wall_upgrade.source).toBe('MYHORDES_CURRENT');expect(CONSTRUCTIONS.advanced_ramparts.apCost).toBe(40);expect(CONSTRUCTIONS.advanced_ramparts.resources).toEqual({nuts_and_bolts:2,patchwork_beam:5,metal_support:5});expect(CONSTRUCTIONS.watchtower.apCost).toBe(15);expect(CONSTRUCTIONS.watchtower.resources).toEqual({twisted_plank:3,patchwork_beam:1,wrought_iron:1});expect(CONSTRUCTIONS.false_town.apCost).toBe(400);expect(CONSTRUCTIONS.false_town.resources).toEqual({nuts_and_bolts:15,twisted_plank:20,wrought_iron:20,patchwork_beam:20,metal_support:20})})
+  it('pins representative early, advanced, observation, and extreme projects',()=>{createInitialGame(123,2);expect(MYHORDES_CURRENT_CONSTRUCTION_COSTS.wall_upgrade).toEqual({referenceName:'Defensive Wall',apCost:25,resources:{twisted_plank:8,wrought_iron:4}});expect(CONSTRUCTIONS.wall_upgrade.apCost).toBe(25);expect(CONSTRUCTIONS.wall_upgrade.resources).toEqual({twisted_plank:8,wrought_iron:4});expect(CONSTRUCTIONS.wall_upgrade.source).toBe('MYHORDES_CURRENT');expect(CONSTRUCTIONS.advanced_ramparts.apCost).toBe(40);expect(CONSTRUCTIONS.advanced_ramparts.resources).toEqual({nuts_and_bolts:2,patchwork_beam:5,metal_support:5});expect(CONSTRUCTIONS.bait.resources).toEqual({meaty_bone:2});expect(CONSTRUCTIONS.timber_armour.effects).toContainEqual({type:'town_defense_flat',amount:30});expect(CONSTRUCTIONS.portal_lock.apCost).toBe(15);expect(CONSTRUCTIONS.reinforced_gates.effects).toContainEqual({type:'town_defense_flat',amount:25});expect(CONSTRUCTIONS.watchtower.apCost).toBe(15);expect(CONSTRUCTIONS.watchtower.resources).toEqual({twisted_plank:3,patchwork_beam:1,wrought_iron:1});expect(CONSTRUCTIONS.false_town.apCost).toBe(400);expect(CONSTRUCTIONS.false_town.resources).toEqual({nuts_and_bolts:15,twisted_plank:20,wrought_iron:20,patchwork_beam:20,metal_support:20})})
   it('keeps source-backed acquisition paths and Telescope combination-only',()=>{expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('human_flesh');expect(NORMAL_SCAVENGE_LOOT_POOL).not.toContain('telescope');const siteLoot=Object.values(SPECIAL_SITES).flatMap((site)=>site.lootPool);expect(siteLoot).not.toContain('telescope');const game=withWorkshop(createInitialGame(456,2),bankFromCounts({convex_lens:1,copper_pipe:1},'telescope-not-workshop'));expect(getLegalActions(game,'c01').some((action)=>action.type==='WORKSHOP_CONVERT')).toBe(false)})
 })
 
