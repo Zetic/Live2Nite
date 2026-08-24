@@ -68,6 +68,8 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'repair_kit_part_raw_#00':mapped('tool_bag'),
   'repair_one_#00':mapped('kwik_fix'),
   'saw_tool_part_#00':mapped('saw_tool_part'),
+  'chair_basic_#00':mapped('ektorp_gluten_chair'),
+  'pc_#00':mapped('pc_base_unit'),
   'lights_#00':mapped('box_of_matches'),
   'wire_#00':mapped('wire_reel'),
   'oilcan_#00':mapped('empty_oil_can'),
