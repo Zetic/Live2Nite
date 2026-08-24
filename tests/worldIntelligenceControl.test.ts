@@ -62,7 +62,7 @@ describe('World Beyond shared intelligence',()=>{
 
   it('withholds ordinary gather assignments until the destination has current-day intel',()=>{
     let game=createInitialGame(7005,4)
-    game=zonePatch(game,1,0,{discovered:true,zombies:0,searchesRemaining:1,specialSite:{type:'supermarket',status:'accessible',excavationRequired:0,excavationProgress:0,hiddenLoot:['food'],searchedBy:[]}},0,game.day-1)
+    game=zonePatch(game,1,0,{discovered:true,zombies:0,searchesRemaining:1,specialSite:{type:'supermarket',status:'accessible',excavationRequired:0,excavationProgress:0,hiddenLoot:['food'],searchedBy:[],blueprintFound:false}},0,game.day-1)
     expect(knownOpportunities(game).some((opportunity)=>opportunity.target.x===1&&opportunity.target.y===0)).toBe(false)
     game=zonePatch(game,1,0,{},0,game.day)
     expect(knownOpportunities(game).some((opportunity)=>opportunity.target.x===1&&opportunity.target.y===0)).toBe(true)
