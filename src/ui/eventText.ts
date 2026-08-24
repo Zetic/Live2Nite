@@ -42,6 +42,7 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'WATER_TAKEN':return`${citizenName(game,event.citizenId)} took a Water Ration from the well.`
     case 'ITEM_CONSUMED':{const remaining=event.chargesAfter!==undefined?` ${event.chargesAfter} ration${event.chargesAfter===1?'':'s'} remain in the container.`:'';return`${citizenName(game,event.citizenId)} ${event.kind==='food'?'ate':'drank'} ${itemName(event.item.type)}${event.restoresAp?' and refreshed their AP':''}.${remaining}`}
     case 'ITEM_ACTION_RESOLVED':{const definition=itemUseActionDefinition(event.item.type,event.actionId);return`${citizenName(game,event.citizenId)} ${definition?.label.toLocaleLowerCase()??'used an item action'} with ${itemName(event.item.type)}.`}
+    case 'FLEE_ZOMBIES_RESOLVED':return`${citizenName(game,event.citizenId)} fled from zombie control at [${event.zoneKey}], suffered a ${event.statusAfter.wound??'body-part'} wound, and gained relative control to escape.`
     case 'WOUNDED_MOVEMENT_RESOLVED':return event.failed?`${citizenName(game,event.citizenId)} spent 1 AP trying to move, but their leg wound stopped them.`:`${citizenName(game,event.citizenId)} pushed through their leg wound and moved.`
     case 'HOME_UPGRADED':return`${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
     case 'HOME_IMPROVEMENT_BUILT':return`${citizenName(game,event.citizenId)} improved their home: ${HOME_IMPROVEMENTS[event.improvementId].name} level ${event.level}.`
@@ -67,7 +68,7 @@ export function isHighlightEvent(event:GameEvent):boolean{return !['AP_SPENT','C
 
 export function eventTone(event:GameEvent):'town'|'world'|'night'|'danger'|'system'|'home'{
   switch(event.type){
-    case 'CITIZEN_DIED':case 'ZONE_CONTROL_LOST':return'danger'
+    case 'CITIZEN_DIED':case 'ZONE_CONTROL_LOST':case 'FLEE_ZOMBIES_RESOLVED':return'danger'
     case 'CITIZEN_STATUS_CHANGED':return event.status.hydration==='dehydrated'||event.status.infected||event.status.terrorized||event.status.addicted?'danger':event.status.hydration==='thirsty'||Boolean(event.status.wound)||event.status.drunk||event.status.hangover?'home':'system'
     case 'CAMPING_RESOLVED':return event.survived?'world':'danger'
     case 'NIGHT_RESOLVED':return event.report.breached?'danger':'night'

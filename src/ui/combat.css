@@ -19,6 +19,8 @@
 .weapon-action { border-color: #41656b; background: #102025; }
 .weapon-action:not(:disabled):hover { border-color: #6c9ca3; }
 .fist-action { border-color: #614239; background: #211713; }
+.flee-action { border-color: #82483b; background: #281511; }
+.flee-action:not(:disabled):hover { border-color: #b86650; }
 .combat-warning { margin: 9px 0 0; color: #c29a77; font-size: .69rem; }
 .category-weapon { border-color: #41656b !important; }
 
