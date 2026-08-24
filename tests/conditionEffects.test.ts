@@ -210,6 +210,15 @@ describe('MyHordes citizen condition foundation',()=>{
     expect(game.citizens[0].ap).toBe(6)
   })
 
+  it('lets town bots withdraw urgent treatment from the Bank and then use the shared item action',()=>{
+    let game=statusPatch(createInitialGame(7123,2),{wound:'foot'},'c02')
+    game={...game,town:{...game.town,bank:bankFromCounts({bandage:1},'condition-treatment-bank')}}
+    const withdraw=bots.decide(game,'c02')
+    expect(withdraw?.type).toBe('WITHDRAW_BANK_ITEM')
+    game=executeCommand(game,withdraw!).state
+    expect(bots.decide(game,'c02')).toMatchObject({type:'USE_ITEM_ACTION',actionId:'bandage'})
+  })
+
   it('makes autonomous citizens use the same legal treatment actions as the human player',()=>{
     let game=inventory(statusPatch(createInitialGame(7120,2),{wound:'foot'},'c02'),['bandage'],'c02')
     expect(bots.decide(game,'c02')).toMatchObject({type:'USE_ITEM_ACTION',actionId:'bandage'})
