@@ -3,6 +3,7 @@ import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER
 import { CONSTRUCTION_CODEX_ENTRIES, GENERIC_BLUEPRINT_CLASSES } from '../src/core/constructionCodex'
 import { CONSTRUCTION_ORDER, CONSTRUCTIONS, blueprintEligibleProjects, constructionBlueprintTier, constructionImplementationStatus, constructionPlayable, constructionUnlocked } from '../src/core/construction'
 import { createInitialGame } from '../src/core/game'
+import { migrateStoredGame } from '../src/persistence/IndexedDbGameRepository'
 
 describe('complete current construction catalog',()=>{
   it('accounts for all 166 current constructions exactly once using Live2Nite identities',()=>{
@@ -73,6 +74,18 @@ describe('complete current construction catalog',()=>{
     expect(common.some((id)=>constructionImplementationStatus(id)==='wip')).toBe(true)
     for(const tier of GENERIC_BLUEPRINT_CLASSES)expect(blueprintEligibleProjects(game,tier).every((id)=>constructionBlueprintTier(id)===tier)).toBe(true)
     expect([...blueprintEligibleProjects(game,1),...blueprintEligibleProjects(game,2),...blueprintEligibleProjects(game,3),...blueprintEligibleProjects(game,4)].some((id)=>constructionBlueprintTier(id)>=5)).toBe(false)
+  })
+
+  it('normalizes schema-19 saves onto the complete catalog and drops the obsolete prototype-only drill',()=>{
+    const game=createInitialGame(8803,1)
+    const legacy={
+      ...game,
+      town:{...game.town,construction:{...game.town.construction,improved_drill:{id:'improved_drill',discovered:true,apContributed:90,completed:true,hp:90}}},
+    } as unknown as Record<string,unknown>
+    const migrated=migrateStoredGame(legacy)
+    expect(migrated).not.toBeNull()
+    expect(Object.keys(migrated!.town.construction)).toHaveLength(166)
+    expect('improved_drill' in migrated!.town.construction).toBe(false)
   })
 
   it('stores source costs for Codex reference even when a WIP project is not buildable',()=>{
