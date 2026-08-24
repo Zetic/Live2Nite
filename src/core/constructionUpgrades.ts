@@ -1,5 +1,4 @@
 import { CONSTRUCTION_CATALOG } from './constructionCatalog'
-import { CONSTRUCTIONS } from './construction'
 import type { ConstructionId, GameState } from './types'
 import { randomInt } from './rng'
 
@@ -48,6 +47,13 @@ export function constructionUpgradeVoteCounts(state:GameState):Partial<Record<Co
 export function lastUpgradeWinner(state:GameState):{projectId:ConstructionId|null;day:number|null;votes:number}{const u=upgradeState(state);return{projectId:u.lastWinner,day:u.lastWinnerDay,votes:u.lastWinningVotes}}
 export function workshopConstructionDiscountPercent(state:GameState):number{return Math.min(30,constructionUpgradeLevel(state,'workshop')*6)}
 export function workshopCreditedLabor(baseAp:number,level:number):number{return Math.max(0,baseAp-Math.ceil(baseAp*(100-Math.min(30,level*6))/100))}
+export function constructionUpgradeDefenseBonus(state:GameState,projectId:ConstructionId):number{
+  const track=constructionUpgradeTrack(projectId)
+  if(track?.kind!=='defense_total')return 0
+  const level=Math.min(constructionUpgradeLevel(state,projectId),track.maxLevel)
+  const base=track.values[0]??0
+  return Math.max(0,(track.values[level]??base)-base)
+}
 
 export function canCitizenVoteForUpgrade(state:GameState,citizenId:string,projectId:ConstructionId):boolean{const citizen=state.citizens.find((candidate)=>candidate.id===citizenId);return Boolean(citizen?.alive&&citizen.location.type==='town'&&state.clock.phase==='day'&&!citizenUpgradeVote(state,citizenId)&&constructionUpgradeAvailable(state,projectId))}
 export function castConstructionUpgradeVote(state:GameState,citizenId:string,projectId:ConstructionId):GameState{if(!canCitizenVoteForUpgrade(state,citizenId,projectId))return state;const current=upgradeState(state);return withUpgradeState(state,{...current,votes:{...current.votes,[citizenId]:projectId}})}
@@ -71,7 +77,7 @@ function applyWorkshopUpgradeLabor(state:GameState,fromLevel:number,toLevel:numb
   const construction={...state.town.construction}
   for(const [id,project] of Object.entries(state.town.construction) as Array<[ConstructionId,GameState['town']['construction'][ConstructionId]]>){
     if(project.completed||id==='workshop')continue
-    const baseAp=CONSTRUCTIONS[id].apCost
+    const baseAp=CONSTRUCTION_CATALOG[id].apCost
     const delta=workshopCreditedLabor(baseAp,toLevel)-workshopCreditedLabor(baseAp,fromLevel)
     if(delta>0)construction[id]={...project,apContributed:Math.min(baseAp,project.apContributed+delta)}
   }
@@ -81,8 +87,7 @@ function applyWinningUpgrade(state:GameState,projectId:ConstructionId):GameState
   const track=constructionUpgradeTrack(projectId);if(!track)return state
   const current=upgradeState(state);const fromLevel=constructionUpgradeLevel(state,projectId);if(fromLevel>=track.maxLevel)return state
   const toLevel=fromLevel+1;let townPatch:Partial<GameState['town']>={}
-  if(track.kind==='defense_total'){const before=track.values[fromLevel]??0;const after=track.values[toLevel]??before;townPatch={defense:state.town.defense+Math.max(0,after-before)}}
-  else if(track.kind==='well_once'){const amount=track.values[toLevel]??0;townPatch={well:{water:state.town.well.water+amount}}}
+  if(track.kind==='well_once'){const amount=track.values[toLevel]??0;townPatch={well:{water:state.town.well.water+amount}}}
   else if(track.kind==='construction_discount')townPatch={construction:applyWorkshopUpgradeLabor(state,fromLevel,toLevel)}
   return withUpgradeState(state,{...current,levels:{...current.levels,[projectId]:toLevel}},townPatch)
 }
