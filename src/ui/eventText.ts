@@ -73,7 +73,7 @@ export function eventTone(event:GameEvent):'town'|'world'|'night'|'danger'|'syst
     case 'CITIZEN_DIED':case 'CORPSE_REANIMATED':case 'ZONE_CONTROL_LOST':case 'FLEE_ZOMBIES_RESOLVED':return'danger'
     case 'CITIZEN_STATUS_CHANGED':return event.status.hydration==='dehydrated'||event.status.infected||event.status.terrorized||event.status.addicted?'danger':event.status.hydration==='thirsty'||Boolean(event.status.wound)||event.status.drunk||event.status.hangover?'home':'system'
     case 'CAMPING_RESOLVED':return event.survived?'world':'danger'
-    case 'NIGHT_RESOLVED':return event.report.breached?'danger':'night'
+    case 'NIGHT_RESOLVED':return event.report.breached||(event.report.corpseReanimations??0)>0?'danger':'night'
     case 'DAY_STARTED':case 'WORLD_ZOMBIES_EVOLVED':return'night'
     case 'WOUNDED_MOVEMENT_RESOLVED':case 'ZONE_DISCOVERED':case 'ZONE_OBSERVED':case 'ZONE_CONTROL_RESTORED':case 'TEMPORARY_CONTROL_GRANTED':case 'TEMPORARY_CONTROL_EXPIRED':case 'ZONE_SEARCHED':case 'ZONE_REPLENISHED':case 'SPECIAL_SITE_EXCAVATED':case 'SPECIAL_SITE_SEARCHED':case 'ITEM_PICKED_UP':case 'ITEM_DROPPED':case 'COMBAT_RESOLVED':case 'CITIZEN_LOCATION_CHANGED':case 'BOT_MISSION_ASSIGNED':case 'BOT_MISSION_PHASE_SET':case 'BOT_MISSION_CLEARED':case 'CAMP_IMPROVED':case 'CAMP_IMPROVEMENTS_DECAYED':case 'CITIZEN_HIDING_SET':return'world'
     case 'ITEM_MOVED_TO_HOME':case 'ITEM_MOVED_TO_RUCKSACK':case 'OPENABLE_RESOLVED':case 'CONTAINER_OPENED':case 'ITEM_CONSUMED':case 'ITEM_ACTION_RESOLVED':case 'ITEMS_COMBINED':case 'HOME_UPGRADED':case 'HOME_IMPROVEMENT_BUILT':case 'CORPSE_DISPOSED':return'home'
