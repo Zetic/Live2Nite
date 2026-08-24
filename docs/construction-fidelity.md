@@ -21,7 +21,7 @@ Reference data is translated into Live2Nite concepts:
 
 Schema v19 gives each construction project both a `discovered` state and a `completed` state.
 
-At town creation, playable rarity-0 projects are registered recursively from their rarity-0 roots, matching the source behavior that adds no-blueprint descendants with their parent sites. Completing a parent does not discover a site; it only makes already-known descendants buildable. Blueprint tiers 1-4 remain hidden until a matching blueprint reveals one eligible site.
+At town creation, generic rarity-0 projects are registered recursively from their rarity-0 roots, matching the source behavior that adds no-blueprint descendants with their parent sites. This includes catalogued WIP sites: discovery and implementation readiness are separate concerns. Completing a parent does not discover a site; it only satisfies one of the requirements for construction work. Blueprint tiers 1-4 remain hidden until a matching blueprint reveals one eligible site.
 
 This prevents late-game projects from appearing on Day 1 merely because their definitions exist in the catalog.
 
@@ -38,10 +38,10 @@ A construction should become player-reachable only when these four areas are ver
 3. lifecycle
 4. gameplay effect
 
-A source-known project can remain in the catalog but be marked non-playable until a required dependent mechanic exists. This is preferred over inventing a placeholder effect.
+A source-known project can remain in the catalog as WIP until a required dependent mechanic exists. WIP does not remove it from source-faithful discovery or blueprint candidate pools; it only blocks construction work and resource spending. This is preferred over inventing a placeholder effect.
 
 ## Current pass boundary
 
-Construction Fidelity I established the construction metadata and durability foundation. The blueprint pass corrects the discovery model to current behavior and adds consumable tiered plans; see `docs/blueprints.md`.
+Construction Fidelity I established the construction metadata and durability foundation. The blueprint pass corrected discovery and added consumable tiered plans. The complete catalogue pass now accounts for all 166 current constructions and explicitly separates Implemented, Partial, and WIP behavior; see `docs/blueprints.md` and `docs/construction-catalog.md`.
 
 Some utility systems remain partial, including full building damage/repair, upgrade levels, complete Searchtower behavior, soul mechanics, and specialized construction effects. Those should be implemented from their current behavior before the related project is promoted to full parity.
