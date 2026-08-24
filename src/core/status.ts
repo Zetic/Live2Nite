@@ -10,28 +10,117 @@ export const INFECTION_DEATH_CHANCE_PERCENT = 50
 export const LEG_WOUND_MOVE_FAILURE_PERCENT = 25
 export const WOUND_LOCATIONS:readonly WoundLocation[]=['head','eye','arms','hands','leg','foot']
 
+export interface StatusRelationDefinition { label:string; detail:string }
+export interface StatusVariantDefinition { id:string; label:string; detail:string; active:boolean }
 export interface CitizenStatusDefinition {
   id: CitizenStatusId
   label: string
   family: 'hydration' | 'energy' | 'daily' | 'injury' | 'disease' | 'mental' | 'drug' | 'alcohol' | 'protection'
   severity: 'neutral' | 'warning' | 'danger'
   effect: string
+  mechanics?:readonly string[]
+  systemSources?:readonly StatusRelationDefinition[]
+  systemClears?:readonly StatusRelationDefinition[]
+  progression?:readonly StatusRelationDefinition[]
+  variants?:readonly StatusVariantDefinition[]
 }
 
 export const CITIZEN_STATUS_DEFINITIONS: Record<CitizenStatusId, CitizenStatusDefinition> = {
-  exhausted: { id:'exhausted',label:'Exhausted',family:'energy',severity:'warning',effect:'At 0 AP, contact weapons and ordinary AP actions are unavailable until AP is restored.' },
-  satisfied_food: { id:'satisfied_food',label:'Fed',family:'daily',severity:'neutral',effect:'Food has already refreshed AP today.' },
-  satisfied_water: { id:'satisfied_water',label:'Refreshed',family:'daily',severity:'neutral',effect:'Water has refreshed AP today. Water used only to treat Dehydrated does not grant Refreshed.' },
-  thirsty: { id:'thirsty',label:'Thirsty',family:'hydration',severity:'warning',effect:'Drink before the attack. Another hydration stage worsens this to Dehydrated.' },
-  dehydrated: { id:'dehydrated',label:'Dehydrated',family:'hydration',severity:'danger',effect:'Water reduces this to Thirsty without restoring AP. Remaining Dehydrated through the attack is fatal.' },
-  wounded: { id:'wounded',label:'Wounded',family:'injury',severity:'warning',effect:'A body-part wound reduces normal AP restoration by 1 and can restrict actions. Untreated wounds can cause Infection at the attack.' },
-  infected: { id:'infected',label:'Infected',family:'disease',severity:'danger',effect:'At the attack, Infection has a 50% death risk. Paracetoid cures Infection.' },
-  terrorized: { id:'terrorized',label:'Terrorized',family:'mental',severity:'danger',effect:'Outside, Terrorized citizens contribute 0 control points and cannot fight bare-handed. Valium removes Terror.' },
-  drugged: { id:'drugged',label:'Drugged',family:'drug',severity:'warning',effect:'A drug has been taken today. Taking another drug while Drugged causes Addiction.' },
-  addicted: { id:'addicted',label:'Addicted',family:'drug',severity:'danger',effect:'Addiction persists. Reaching the attack without having taken a drug that day is fatal withdrawal.' },
-  drunk: { id:'drunk',label:'Drunk',family:'alcohol',severity:'warning',effect:'Alcohol was consumed today. Drunk becomes Hangover at the attack.' },
-  hangover: { id:'hangover',label:'Hangover',family:'alcohol',severity:'warning',effect:'Alcohol cannot be consumed while Hungover. Hangover clears at the following attack.' },
-  immune: { id:'immune',label:'Immune',family:'protection',severity:'neutral',effect:'Temporarily protected from Infection. The protection is consumed by the nightly status cycle.' },
+  exhausted: {
+    id:'exhausted',label:'Exhausted',family:'energy',severity:'warning',
+    effect:'At 0 AP, contact weapons and ordinary AP actions are unavailable until AP is restored.',
+    systemSources:[{label:'Spend all AP',detail:'Reaching 0 AP makes the citizen Exhausted.'}],
+    systemClears:[{label:'Restore AP',detail:'Any effect that restores AP above 0 clears Exhausted automatically.'}],
+  },
+  satisfied_food: {
+    id:'satisfied_food',label:'Fed',family:'daily',severity:'neutral',
+    effect:'Food has already refreshed AP today.',
+    systemSources:[{label:'Eat eligible food',detail:'The first qualifying food refresh of the day applies Fed.'}],
+    systemClears:[{label:'Day start',detail:'The daily food-use marker resets when the next day begins.'}],
+  },
+  satisfied_water: {
+    id:'satisfied_water',label:'Refreshed',family:'daily',severity:'neutral',
+    effect:'Water has refreshed AP today. Water used only to treat Dehydrated does not grant Refreshed.',
+    systemSources:[{label:'Drink eligible water',detail:'Water that qualifies for the daily AP refresh applies Refreshed.'}],
+    systemClears:[{label:'Day start',detail:'The daily water-refresh marker resets when the next day begins.'}],
+  },
+  thirsty: {
+    id:'thirsty',label:'Thirsty',family:'hydration',severity:'warning',
+    effect:'Drink before the attack. Another hydration stage worsens this to Dehydrated.',
+    systemSources:[
+      {label:'Desert travel',detail:'Every 11 desert movements advances hydration one stage.'},
+      {label:'Nightly progression',detail:'A normally hydrated citizen who did not refresh with water becomes Thirsty at the attack.'},
+      {label:'Treat Dehydration',detail:'Drinking while Dehydrated improves the citizen to Thirsty but does not restore AP.'},
+    ],
+    systemClears:[{label:'Drink water',detail:'Drinking while Thirsty returns hydration to Normal.'}],
+    progression:[{label:'Thirsty → Dehydrated',detail:'Another hydration stage from travel or the nightly cycle worsens Thirsty to Dehydrated.'}],
+  },
+  dehydrated: {
+    id:'dehydrated',label:'Dehydrated',family:'hydration',severity:'danger',
+    effect:'Water reduces this to Thirsty without restoring AP. Remaining Dehydrated through the attack is fatal.',
+    systemSources:[
+      {label:'Desert travel',detail:'Another 11 movements while Thirsty causes Dehydrated.'},
+      {label:'Nightly progression',detail:'A Thirsty citizen becomes Dehydrated at the attack.'},
+    ],
+    systemClears:[{label:'Drink water',detail:'Water improves Dehydrated to Thirsty; that ration does not grant the daily AP refresh.'}],
+    progression:[{label:'Dehydrated → death',detail:'Reaching the attack while still Dehydrated is fatal.'}],
+  },
+  wounded: {
+    id:'wounded',label:'Wounded',family:'injury',severity:'warning',
+    effect:'A body-part wound reduces normal AP restoration by 1 and can restrict actions. Untreated wounds can cause Infection at the attack.',
+    mechanics:[
+      'Ordinary 6 AP restoration targets become 5 while Wounded; 7 AP food targets become 6.',
+      'The wound location persists until treated and can impose an additional action restriction.',
+    ],
+    progression:[{label:'Wounded → Infected',detail:'At the attack, an unresolved wound causes Infection unless temporary immunity protects the citizen.'}],
+    variants:[
+      {id:'head',label:'Head',detail:'Location tracked. Source communication distortion is deferred until a communication system consumes it.',active:false},
+      {id:'eye',label:'Eye',detail:'Location tracked. The exact source scavenging penalty is deferred until its current resolver value is verified.',active:false},
+      {id:'arms',label:'Arms',detail:'Cannot operate the town gate or contribute construction AP.',active:true},
+      {id:'hands',label:'Hands',detail:'Blocks container opening, portable combinations/repairs, bare-handed fighting, and ordinary hand-operated weapons.',active:true},
+      {id:'leg',label:'Leg',detail:'Movement spends AP normally but can fail with the current documented 25% approximation.',active:true},
+      {id:'foot',label:'Foot',detail:'No additional broad restriction beyond the normal Wounded AP penalty.',active:true},
+    ],
+  },
+  infected: {
+    id:'infected',label:'Infected',family:'disease',severity:'danger',
+    effect:'At the attack, Infection has a 50% death risk. Paracetoid cures Infection.',
+    systemSources:[{label:'Untreated wound at the attack',detail:'An unresolved wound produces Infection unless Immune protects that nightly transition.'}],
+    progression:[{label:'Infection death check',detail:'Each attack while already Infected has a 50% death risk in the current town rules.'}],
+  },
+  terrorized: {
+    id:'terrorized',label:'Terrorized',family:'mental',severity:'danger',
+    effect:'Outside, Terrorized citizens contribute 0 control points and cannot fight bare-handed. Valium removes Terror.',
+    mechanics:['A Terrorized citizen cannot use Flee from Zombies.'],
+  },
+  drugged: {
+    id:'drugged',label:'Drugged',family:'drug',severity:'warning',
+    effect:'A drug has been taken today. Taking another drug while Drugged causes Addiction.',
+    systemClears:[{label:'Attack cycle',detail:'Drugged clears during the nightly condition cycle.'}],
+    progression:[{label:'Drugged + another drug → Addicted',detail:'Using another drug while already Drugged establishes Addiction.'}],
+  },
+  addicted: {
+    id:'addicted',label:'Addicted',family:'drug',severity:'danger',
+    effect:'Addiction persists. Reaching the attack without having taken a drug that day is fatal withdrawal.',
+    progression:[{label:'Withdrawal death',detail:'An Addicted citizen who reaches the attack without Drugged dies from withdrawal.'}],
+  },
+  drunk: {
+    id:'drunk',label:'Drunk',family:'alcohol',severity:'warning',
+    effect:'Alcohol was consumed today. Drunk becomes Hangover at the attack.',
+    progression:[{label:'Drunk → Hangover',detail:'The attack clears Drunk and applies Hangover.'}],
+  },
+  hangover: {
+    id:'hangover',label:'Hangover',family:'alcohol',severity:'warning',
+    effect:'Alcohol cannot be consumed while Hungover. Hangover clears at the following attack.',
+    systemSources:[{label:'Drunk at the attack',detail:'A citizen who reaches the nightly cycle Drunk becomes Hungover.'}],
+    systemClears:[{label:'Following attack',detail:'Hangover clears during the next nightly cycle.'}],
+  },
+  immune: {
+    id:'immune',label:'Immune',family:'protection',severity:'neutral',
+    effect:'Temporarily protected from Infection. The protection is consumed by the nightly status cycle.',
+    systemClears:[{label:'Attack cycle',detail:'Temporary immunity is consumed by the nightly condition cycle.'}],
+    mechanics:['Immune prevents an unresolved wound from creating a new Infection during that attack.'],
+  },
 }
 
 export function createCitizenStatusState():CitizenStatusState{

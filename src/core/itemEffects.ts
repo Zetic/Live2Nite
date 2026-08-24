@@ -31,6 +31,8 @@ export interface ItemUseActionDefinition {
   allowWhenTerrorized?:boolean
 }
 export interface CitizenEffectResolution { ap:number;status:CitizenStatusState;daily:CitizenDailyState;rng:number;restoresAp:boolean }
+export type StatusEffectRelationKind='acquire'|'clear'
+export interface StatusEffectRelation { status:CitizenStatusId; kind:StatusEffectRelationKind; detail:string }
 export interface ItemEffectResolution {
   apAfter:number
   statusAfter:CitizenStatusState
@@ -129,3 +131,34 @@ function effectLabel(effect:ItemActionEffect):string{
   }
 }
 export function itemUseActionSummary(definition:ItemUseActionDefinition):string{return definition.effects.map(effectLabel).join(' · ')}
+
+
+export function statusRelationsForEffects(effects:readonly ItemActionEffect[]):StatusEffectRelation[]{
+  const relations:StatusEffectRelation[]=[]
+  const add=(status:CitizenStatusId,kind:StatusEffectRelationKind,detail:string)=>relations.push({status,kind,detail})
+  const inspect=(effect:ItemActionEffect):void=>{
+    switch(effect.type){
+      case'apply_status':add(effect.status,'acquire','Applies '+effect.status.replaceAll('_',' ')+'.');break
+      case'remove_status':add(effect.status,'clear','Removes '+effect.status.replaceAll('_',' ')+'.');break
+      case'drug_cycle':
+        add('drugged','acquire','The first drug of the day applies Drugged.')
+        add('addicted','acquire','Taking another drug while already Drugged establishes Addiction.')
+        break
+      case'heal_wound':add('wounded','clear','Heals the current body-part wound.');break
+      case'inflict_wound':add('wounded','acquire',effect.location?'Inflicts a guaranteed '+effect.location+' wound.':'Inflicts a guaranteed random body-part wound.');break
+      case'restore_ap_to':if(effect.target>0)add('exhausted','clear','Restores AP toward '+effect.target+', clearing Exhausted when AP rises above 0.');break
+      case'set_daily':
+        if(effect.value&&effect.flag==='ate')add('satisfied_food','acquire','Marks the daily food refresh as used.')
+        if(effect.value&&effect.flag==='drank')add('satisfied_water','acquire','Marks the daily water refresh as used.')
+        break
+      case'drink_water':
+        add('dehydrated','clear','Improves Dehydrated to Thirsty without an AP refresh.')
+        add('thirsty','clear','Clears Thirsty to normal hydration.')
+        add('satisfied_water','acquire','Applies Refreshed when this water qualifies for the daily AP refresh.')
+        break
+      case'chance':for(const outcome of effect.outcomes)for(const nested of outcome.effects)inspect(nested);break
+    }
+  }
+  for(const effect of effects)inspect(effect)
+  return relations
+}
