@@ -1,6 +1,7 @@
 import { NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
 import { SPECIAL_SITES, SPECIAL_SITE_ORDER } from './specialSites'
+import { citizenControlPoints } from './status'
 import type {
   Citizen,
   Direction,
@@ -115,9 +116,10 @@ export function moveCoordinates(x: number, y: number, direction: Direction): { x
 export function citizensInZone(state:GameState,x:number,y:number):Citizen[]{return state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world'&&citizen.location.x===x&&citizen.location.y===y)}
 
 export function zoneControl(state: GameState, x: number, y: number): { humans: number; humanPoints: number; zombies: number; zombiePoints: number; trapped: boolean } {
-  const humans = citizensInZone(state,x,y).length
+  const residents = citizensInZone(state,x,y)
+  const humans = residents.length
   const zombies = getZone(state.world, x, y)?.zombies ?? 0
-  const humanPoints = humans * 2
+  const humanPoints = residents.reduce((sum,citizen)=>sum+citizenControlPoints(citizen),0)
   const zombiePoints = zombies
   return { humans, humanPoints, zombies, zombiePoints, trapped: zombiePoints > humanPoints }
 }
@@ -135,14 +137,15 @@ export function departureWouldLoseControl(state:GameState,citizenId:string):bool
   if(!citizen?.alive||citizen.location.type!=='world')return false
   const control=zoneControl(state,citizen.location.x,citizen.location.y)
   if(control.trapped)return false
-  const remaining=Math.max(0,control.humans-1)
-  return remaining>0&&control.zombiePoints>remaining*2
+  const remaining=citizensInZone(state,citizen.location.x,citizen.location.y).filter((candidate)=>candidate.id!==citizenId)
+  const remainingPoints=remaining.reduce((sum,candidate)=>sum+citizenControlPoints(candidate),0)
+  return remaining.length>0&&control.zombiePoints>remainingPoints
 }
 
 export function zoneControlState(state:GameState,x:number,y:number,citizenId?:string):ZoneControlState{
   const control=zoneControl(state,x,y)
   if(!control.trapped){
-    const fragile=control.humans>1&&control.zombiePoints>(control.humans-1)*2
+    const residents=citizensInZone(state,x,y);const weakestDeparturePoints=Math.max(0,control.humanPoints-Math.max(...residents.map(citizenControlPoints),0));const fragile=control.humans>1&&control.zombiePoints>weakestDeparturePoints
     return fragile?'fragile':'secure'
   }
   if(citizenId&&temporaryControlActive(state,citizenId))return'temporary'

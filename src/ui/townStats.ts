@@ -133,6 +133,8 @@ export function computeTownStats(game: GameState): TownStats {
     camping_failure: 0,
     home_breach: 0,
     dehydration: 0,
+    infection: 0,
+    drug_withdrawal: 0,
   }
 
   for (const event of game.events) {

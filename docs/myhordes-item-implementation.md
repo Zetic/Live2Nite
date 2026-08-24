@@ -109,6 +109,12 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `deco_box_#00` | `decoration_box` |
 | `mecanism_#00` | `mechanism` |
 | `safe_#00` | `safe` |
+| `bandage_#00` | `bandage` |
+| `disinfect_#00` | `paracetoid` |
+| `drug_#00` | `anabolic_steroids` |
+| `xanax_#00` | `valium_shot` |
+| `vodka_#00` | `vodka_marinostov` |
+| `rhum_#00` | `wake_the_dead` |
 
 ## Ordinary normal-loot backlog
 
@@ -120,13 +126,7 @@ These source IDs remain unresolved in the current ordinary normal-loot dependenc
 - [ ] `iphone_#00`
 - [ ] `drug_hero_#00`
 - [ ] `drug_random_#00`
-- [ ] `disinfect_#00`
-- [ ] `drug_#00`
-- [ ] `vodka_#00`
 - [ ] `pet_rat_#00`
-- [ ] `rhum_#00`
-- [ ] `bandage_#00`
-- [ ] `xanax_#00`
 - [ ] `pet_pig_#00`
 - [ ] `pet_snake_#00`
 - [ ] `pet_cat_#00`

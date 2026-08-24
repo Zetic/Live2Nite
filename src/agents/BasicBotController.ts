@@ -6,7 +6,7 @@ import type { AgentController } from './AgentController'
 import { AI_TUNING } from './AiTuning'
 import { bestWeaponAction, controlAwareMove, controlAwareStepTowardTown } from './actions/FieldActions'
 import { packageSharingAction, prepareLoadout, refillAction, unloadAction } from './actions/InventoryActions'
-import { campingAction, hydrationAction } from './actions/SurvivalActions'
+import { campingAction, conditionTreatmentAction, hydrationAction } from './actions/SurvivalActions'
 import { carried, pick } from './actions/actionSelectors'
 import { commitmentForCitizen, committedConstructionProject, reservedApForCitizen } from './coordination/TownCoordination'
 import { publicDefenseAssessment } from './planning/TownDefenseStrategy'
@@ -22,6 +22,7 @@ export class BasicBotController implements AgentController {
     const{state:game}=asAgentDecisionContext(input);const citizen=game.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen||!citizen.alive||game.clock.phase!=='day')return null
     const actions=getLegalActions(game,citizenId);if(!actions.length)return null;const mission=game.botMissions[citizenId]??null;if(citizen.camping.hidden)return null
     const hydration=hydrationAction(game,citizen,actions);if(hydration)return hydration
+    const treatment=conditionTreatmentAction(game,citizen,actions);if(treatment)return treatment
     if(citizen.location.type==='town'){
       const plan=planExpedition(game,citizenId);const unload=unloadAction(citizen,actions,plan,mission?.phase==='unload');if(unload)return unload;if(mission?.phase==='unload')return null
       const commitment=commitmentForCitizen(game,citizenId);const reservedAp=reservedApForCitizen(game,citizenId)

@@ -3,7 +3,7 @@ import { BasicBotController } from '../src/agents/BasicBotController'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame, resolveNight } from '../src/core/game'
-import { DESERT_STEPS_PER_HYDRATION_STAGE, travelHydrationTransition, waterConsumptionOutcome } from '../src/core/status'
+import { DESERT_STEPS_PER_HYDRATION_STAGE, createCitizenStatusState, travelHydrationTransition, waterConsumptionOutcome } from '../src/core/status'
 import type { GameState } from '../src/core/types'
 
 const bots = new BasicBotController()
@@ -21,10 +21,10 @@ describe('citizen hydration status',()=>{
 
   it('becomes Thirsty on the eleventh desert movement and Dehydrated after another eleven',()=>{
     const game=createInitialGame(123,1)
-    const citizen={...game.citizens[0],status:{hydration:'normal' as const,desertStepsToday:DESERT_STEPS_PER_HYDRATION_STAGE-1}}
-    expect(travelHydrationTransition(citizen)).toEqual({hydration:'thirsty',desertStepsToday:0})
-    const thirsty={...citizen,status:{hydration:'thirsty' as const,desertStepsToday:DESERT_STEPS_PER_HYDRATION_STAGE-1}}
-    expect(travelHydrationTransition(thirsty)).toEqual({hydration:'dehydrated',desertStepsToday:0})
+    const citizen={...game.citizens[0],status:{...createCitizenStatusState(),hydration:'normal' as const,desertStepsToday:DESERT_STEPS_PER_HYDRATION_STAGE-1}}
+    expect(travelHydrationTransition(citizen)).toMatchObject({hydration:'thirsty',desertStepsToday:0})
+    const thirsty={...citizen,status:{...citizen.status,hydration:'thirsty' as const,desertStepsToday:DESERT_STEPS_PER_HYDRATION_STAGE-1}}
+    expect(travelHydrationTransition(thirsty)).toMatchObject({hydration:'dehydrated',desertStepsToday:0})
   })
 
   it('makes a citizen Thirsty after a day without water',()=>{
@@ -36,15 +36,16 @@ describe('citizen hydration status',()=>{
 
   it('worsens a Thirsty citizen to Dehydrated at midnight even if water was used earlier that day',()=>{
     let game=createInitialGame(501,1)
-    game=withCitizen(game,'c01',{daily:{ate:false,drank:true,waterTaken:true},status:{hydration:'thirsty',desertStepsToday:3}})
+    game=withCitizen(game,'c01',{daily:{ate:false,drank:true,waterTaken:true},status:{...game.citizens[0].status,hydration:'thirsty',desertStepsToday:3}})
     game=resolveNight(game)
     expect(game.citizens[0].alive).toBe(true)
-    expect(game.citizens[0].status).toEqual({hydration:'dehydrated',desertStepsToday:0})
+    expect(game.citizens[0].status.hydration).toBe('dehydrated')
+    expect(game.citizens[0].status.desertStepsToday).toBe(0)
   })
 
   it('kills an untreated Dehydrated citizen at midnight',()=>{
     let game=createInitialGame(502,1)
-    game=withCitizen(game,'c01',{status:{hydration:'dehydrated',desertStepsToday:0}})
+    game=withCitizen(game,'c01',{status:{...game.citizens[0].status,hydration:'dehydrated',desertStepsToday:0}})
     game=resolveNight(game)
     expect(game.citizens[0].alive).toBe(false)
     expect(game.lastNight?.dehydrationDeaths).toBe(1)
@@ -53,18 +54,20 @@ describe('citizen hydration status',()=>{
 
   it('uses water to reduce Dehydrated to Thirsty without restoring AP',()=>{
     let game=createInitialGame(503,1)
-    game=withCitizen(game,'c01',{ap:0,status:{hydration:'dehydrated',desertStepsToday:4},inventory:[{id:'water',type:'water_ration'}]})
+    game=withCitizen(game,'c01',{ap:0,status:{...game.citizens[0].status,hydration:'dehydrated',desertStepsToday:4},inventory:[{id:'water',type:'water_ration'}]})
     const outcome=waterConsumptionOutcome(game.citizens[0])
     expect(outcome.restoresAp).toBe(false)
     const drink=getLegalActions(game,'c01').find((action)=>action.type==='DRINK_ITEM')!
     game=executeCommand(game,drink).state
     expect(game.citizens[0].ap).toBe(0)
-    expect(game.citizens[0].status).toEqual({hydration:'thirsty',desertStepsToday:0})
+    expect(game.citizens[0].status.hydration).toBe('thirsty')
+    expect(game.citizens[0].status.desertStepsToday).toBe(0)
+    expect(game.citizens[0].daily.drank).toBe(false)
   })
 
   it('allows another water ration to treat later thirst after the daily AP refresh has already been used',()=>{
     let game=createInitialGame(504,1)
-    game=withCitizen(game,'c01',{ap:2,daily:{ate:false,drank:true,waterTaken:true},status:{hydration:'thirsty',desertStepsToday:0},inventory:[{id:'water',type:'water_ration'}]})
+    game=withCitizen(game,'c01',{ap:2,daily:{ate:false,drank:true,waterTaken:true},status:{...game.citizens[0].status,hydration:'thirsty',desertStepsToday:0},inventory:[{id:'water',type:'water_ration'}]})
     const drink=getLegalActions(game,'c01').find((action)=>action.type==='DRINK_ITEM')
     expect(drink).toBeTruthy()
     game=executeCommand(game,drink!).state
@@ -74,12 +77,12 @@ describe('citizen hydration status',()=>{
 
   it('does not burn a water ration at full AP merely because a bot is Thirsty',()=>{
     let game=createInitialGame(505,2)
-    game=withCitizen(game,'c02',{status:{hydration:'thirsty',desertStepsToday:0}})
+    game=withCitizen(game,'c02',{status:{...game.citizens[0].status,hydration:'thirsty',desertStepsToday:0}})
     const fullApDecision=bots.decide(game,'c02')
     expect(fullApDecision?.type).not.toBe('TAKE_WATER')
     expect(fullApDecision?.type).not.toBe('DRINK_ITEM')
 
-    game=withCitizen(game,'c02',{ap:1,status:{hydration:'thirsty',desertStepsToday:0}})
+    game=withCitizen(game,'c02',{ap:1,status:{...game.citizens[0].status,hydration:'thirsty',desertStepsToday:0}})
     const first=bots.decide(game,'c02')
     expect(first?.type).toBe('TAKE_WATER')
     game=executeCommand(game,first!).state

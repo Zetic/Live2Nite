@@ -1,4 +1,5 @@
 import { COMBINATION_RECIPES, type CombinationCategory } from '../../core/combinations'
+import { itemUseActionDefinition, itemUseActionSummary } from '../../core/itemEffects'
 import { ITEMS, itemName, itemPurpose, itemStateLabel } from '../../core/items'
 import type { GameCommand, ItemInstance, ItemType } from '../../core/types'
 import '../inventory.css'
@@ -18,7 +19,22 @@ export function ItemButton({type,count,state,disabled,onClick,extraTooltip,class
 export function ItemStrip({items,capacity,onItemClick,disabledForItem,emptyLabel='Empty',extraTooltip}:{items:readonly ItemInstance[];capacity?:number;onItemClick?:(item:ItemInstance)=>void;disabledForItem?:(item:ItemInstance)=>boolean;emptyLabel?:string;extraTooltip?:(item:ItemInstance)=>string|undefined}){const slots=capacity===undefined?0:Math.max(0,capacity-items.length);return <div className="item-strip">{items.map((item)=><ItemButton key={item.id} type={item.type} state={item.state} disabled={disabledForItem?.(item)} onClick={onItemClick?()=>onItemClick(item):undefined} extraTooltip={extraTooltip?.(item)}/>)}{items.length===0&&capacity===undefined&&<span className="compact-empty">{emptyLabel}</span>}{Array.from({length:slots},(_,index)=><span className="empty-item-slot" aria-hidden="true" key={`slot-${index}`}/>)}</div>}
 function commandFor(actions:readonly GameCommand[],type:GameCommand['type'],itemId:string):GameCommand|undefined{return actions.find((action)=>action.type===type&&'itemId'in action&&action.itemId===itemId)}
 type ActionEntry={key:string;label:string;detail:string;command:GameCommand}
-export function ItemActionMenu({items,actions,act,sourceForItem}:{items:readonly ItemInstance[];actions:readonly GameCommand[];act:(command:GameCommand|undefined)=>void;sourceForItem?:(item:ItemInstance)=>string}){const entries:Array<ActionEntry>=[];for(const item of items){const source=sourceForItem?.(item);const suffix=source?` · ${source}`:'Use item';const open=commandFor(actions,'OPEN_CONTAINER',item.id);const eat=commandFor(actions,'EAT_ITEM',item.id);const drink=commandFor(actions,'DRINK_ITEM',item.id);const weapon=commandFor(actions,'USE_WEAPON',item.id);if(open)entries.push({key:`open-${item.id}`,label:`Open ${itemName(item.type)}`,detail:suffix,command:open});if(eat)entries.push({key:`eat-${item.id}`,label:`Eat ${itemName(item.type)}`,detail:suffix,command:eat});if(drink)entries.push({key:`drink-${item.id}`,label:`Drink ${itemName(item.type)}`,detail:suffix,command:drink});if(weapon)entries.push({key:`weapon-${item.id}`,label:`Use ${itemName(item.type)}`,detail:`Weapon${source?` · ${source}`:''}`,command:weapon})}return <div className="item-action-menu">{entries.length===0?<span className="compact-empty">No direct item actions available.</span>:entries.map((entry)=><button key={entry.key} onClick={()=>act(entry.command)}><span>{entry.label}</span><small>{entry.detail}</small></button>)}</div>}
+export function ItemActionMenu({items,actions,act,sourceForItem}:{items:readonly ItemInstance[];actions:readonly GameCommand[];act:(command:GameCommand|undefined)=>void;sourceForItem?:(item:ItemInstance)=>string}){
+  const entries:Array<ActionEntry>=[]
+  for(const item of items){
+    const source=sourceForItem?.(item);const suffix=source?` · ${source}`:'Use item'
+    const open=commandFor(actions,'OPEN_CONTAINER',item.id);const eat=commandFor(actions,'EAT_ITEM',item.id);const drink=commandFor(actions,'DRINK_ITEM',item.id);const weapon=commandFor(actions,'USE_WEAPON',item.id)
+    if(open)entries.push({key:`open-${item.id}`,label:`Open ${itemName(item.type)}`,detail:suffix,command:open})
+    if(eat)entries.push({key:`eat-${item.id}`,label:`Eat ${itemName(item.type)}`,detail:suffix,command:eat})
+    if(drink)entries.push({key:`drink-${item.id}`,label:`Drink ${itemName(item.type)}`,detail:suffix,command:drink})
+    for(const command of actions.filter((candidate):candidate is Extract<GameCommand,{type:'USE_ITEM_ACTION'}>=>candidate.type==='USE_ITEM_ACTION'&&candidate.itemId===item.id)){
+      const definition=itemUseActionDefinition(item.type,command.actionId)
+      if(definition)entries.push({key:`effect-${item.id}-${command.actionId}`,label:definition.label,detail:`${itemUseActionSummary(definition)}${source?` · ${source}`:''}`,command})
+    }
+    if(weapon)entries.push({key:`weapon-${item.id}`,label:`Use ${itemName(item.type)}`,detail:`Weapon${source?` · ${source}`:''}`,command:weapon})
+  }
+  return <div className="item-action-menu">{entries.length===0?<span className="compact-empty">No direct item actions available.</span>:entries.map((entry)=><button key={entry.key} onClick={()=>act(entry.command)}><span>{entry.label}</span><small>{entry.detail}</small></button>)}</div>
+}
 
 const COMBINATION_GROUPS:Array<{id:CombinationCategory;label:string}>=[{id:'assemble',label:'Combine / Assemble'},{id:'reload',label:'Reload / Refill'},{id:'repair',label:'Repair'}]
 export function CombinationActionMenu({actions,act}:{actions:readonly GameCommand[];act:(command:GameCommand|undefined)=>void}){
