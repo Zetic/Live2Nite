@@ -38,6 +38,8 @@ Upstream numeric/prototype IDs and upstream implementation code are deliberately
 
 Every catalogue entry has one of three statuses.
 
+Current catalogue status: **55 Implemented / 24 Partial / 87 WIP**.
+
 ### Implemented
 
 The source-backed construction behavior represented by the current Live2Nite model is active.
