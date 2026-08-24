@@ -14,7 +14,7 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'AP_SPENT':return`${citizenName(game,event.citizenId)} spent ${event.amount} AP.`
     case 'GATE_SET':return event.citizenId==='system'?`The Automatic Piston Lock ${event.open?'opened':'closed'} the gate.`:`${citizenName(game,event.citizenId)} ${event.open?'opened':'closed'} the gate.`
     case 'CITIZEN_LOCATION_CHANGED':return event.location.type==='town'?`${citizenName(game,event.citizenId)} returned to town.`:`${citizenName(game,event.citizenId)} moved to [${event.location.x},${event.location.y}].`
-    case 'CITIZEN_STATUS_CHANGED':{const name=citizenName(game,event.citizenId);if(event.reason==='drank_water')return event.status.hydration==='normal'?`${name} drank water and is no longer thirsty.`:`${name} drank water; dehydration eased to Thirsty, but the water did not restore AP.`;if(event.status.infected&&event.status.wound)return`${name}'s untreated wound progressed to Infection.`;if(event.status.hangover)return`${name} woke up with a Hangover.`;if(event.status.hydration==='dehydrated')return`${name} became ${CITIZEN_STATUS_DEFINITIONS.dehydrated.label}.`;if(event.status.hydration==='thirsty')return`${name} became ${CITIZEN_STATUS_DEFINITIONS.thirsty.label}.`;return`${name}'s conditions changed.`}
+    case 'CITIZEN_STATUS_CHANGED':{const name=citizenName(game,event.citizenId);if(event.reason==='drank_water')return event.status.hydration==='normal'?`${name} drank water and is no longer thirsty.`:`${name} drank water; dehydration eased to Thirsty, but the water did not restore AP.`;if(event.status.infected&&event.status.wound)return`${name} is Wounded and Infected.`;if(event.status.infected)return`${name} is Infected.`;if(event.status.hangover)return`${name} has a Hangover.`;if(event.status.hydration==='dehydrated')return`${name} became ${CITIZEN_STATUS_DEFINITIONS.dehydrated.label}.`;if(event.status.hydration==='thirsty')return`${name} became ${CITIZEN_STATUS_DEFINITIONS.thirsty.label}.`;return`${name}'s conditions changed.`}
     case 'CAMP_IMPROVED':return`${citizenName(game,event.citizenId)} spent ${event.amount} AP improving a campsite at [${event.zoneKey}].`
     case 'CAMP_IMPROVEMENTS_DECAYED':return`The campsite at [${event.zoneKey}] deteriorated overnight.`
     case 'CITIZEN_HIDING_SET':return event.hidden?`${citizenName(game,event.citizenId)} hid for the night and locked in their camping outlook.`:`${citizenName(game,event.citizenId)} left their hiding place.`
@@ -68,7 +68,7 @@ export function isHighlightEvent(event:GameEvent):boolean{return !['AP_SPENT','C
 export function eventTone(event:GameEvent):'town'|'world'|'night'|'danger'|'system'|'home'{
   switch(event.type){
     case 'CITIZEN_DIED':case 'ZONE_CONTROL_LOST':return'danger'
-    case 'CITIZEN_STATUS_CHANGED':return event.status.hydration==='dehydrated'?'danger':event.status.hydration==='thirsty'?'home':'system'
+    case 'CITIZEN_STATUS_CHANGED':return event.status.hydration==='dehydrated'||event.status.infected||event.status.terrorized||event.status.addicted?'danger':event.status.hydration==='thirsty'||Boolean(event.status.wound)||event.status.drunk||event.status.hangover?'home':'system'
     case 'CAMPING_RESOLVED':return event.survived?'world':'danger'
     case 'NIGHT_RESOLVED':return event.report.breached?'danger':'night'
     case 'DAY_STARTED':case 'WORLD_ZOMBIES_EVOLVED':return'night'
