@@ -14,6 +14,11 @@ export function mapZombieBand(zombies:number|null|undefined):MapZombieBand{
   return'high'
 }
 
+/** Never-seen zones deliberately suppress all horde information. */
+export function mapZombieBandForIntel(discovered:boolean,zombies:number|null|undefined):MapZombieBand{
+  return discovered?mapZombieBand(zombies):'unknown'
+}
+
 function stackedGroundLabel(items:readonly {type:ItemType}[]):string{
   const counts=new Map<ItemType,number>()
   for(const item of items)counts.set(item.type,(counts.get(item.type)??0)+1)
@@ -42,7 +47,7 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
       const controlState=humanCount>0?zoneControlState(game,x,y,isPlayer?player.id:undefined):null
       const known=knowledge.zone(x,y)
       const siteLabel=site?specialSiteCode(site.type):null
-      const zombieBand=mapZombieBand(known?.zombies)
+      const zombieBand=mapZombieBandForIntel(zone.discovered,known?.zombies)
       const intelClass=!zone.discovered?'intel-unknown':known?.freshness==='fresh'?'intel-current':known?.freshness==='stale'?'intel-stale':'intel-visited-unknown'
       const depleted=zone.discovered&&zone.searchesRemaining===0
       const titleParts=[`[${x},${y}]`]
@@ -82,7 +87,7 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
       <span><i className="map-key-swatch zombies-medium"/>3–4</span>
       <span><i className="map-key-swatch zombies-high"/>5+</span>
       <span><i className="map-key-swatch intel-unknown"/>unknown</span>
-      <span><i className="map-key-swatch intel-stale"/>old intel</span>
+      <span><i className="map-key-swatch intel-stale"/>intel lost</span>
       <span><i className="map-person-dot"/>citizen</span>
       <span><b>D</b> depleted</span>
     </div>
