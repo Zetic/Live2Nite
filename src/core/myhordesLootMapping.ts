@@ -23,7 +23,7 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'pile_#00':mapped('battery'),
   'pharma_#00':mapped('pharmaceutical_products'),
   'meca_parts_#00':mapped('nuts_and_bolts'),
-  'rustine_#00':mapped('kwik_fix'),
+  'rustine_#00':mapped('duct_tape'),
   'explo_#00':mapped('semtex'),
   'tube_#00':mapped('copper_pipe'),
   'electro_#00':mapped('electronic_component'),
@@ -53,7 +53,6 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'hmeat_#00':mapped('human_flesh'),
   'pet_chick_#00':mapped('chicken'),
   'poison_part_#00':mapped('poison_gland'),
-  'chama_#00':mapped('bag_of_damp_grass'),
   'water_can_empty_#00':mapped('water_cooler_bottle',{charges:0}),
   'water_can_1_#00':mapped('water_cooler_bottle',{charges:1}),
   'water_can_2_#00':mapped('water_cooler_bottle',{charges:2}),
@@ -86,7 +85,7 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'oilcan_#00':mapped('empty_oil_can'),
   'lens_#00':mapped('convex_lens'),
   'diode_#00':mapped('laser_diode'),
-  'ryebag_#00':mapped('grain_sack'),
+  'ryebag_#00':mapped('bag_of_damp_grass'),
   'bquies_#00':mapped('earplugs'),
 }
 

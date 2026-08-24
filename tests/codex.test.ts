@@ -1,24 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, codexCategoryCount, codexItemEntry, filterCodexItems } from '../src/core/codex'
+import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, CODEX_SOURCE_ITEM_COUNT, CODEX_SUPPLEMENTAL_ITEM_COUNT, codexCategoryCount, codexItemEntry, filterCodexItems } from '../src/core/codex'
 import { ITEM_TYPE_IDS } from '../src/core/itemCatalog'
 import { ITEMS } from '../src/core/items'
+import { ITEM_SOURCE_CATALOG } from '../src/core/itemSourceCatalog'
 import { CITIZEN_STATUS_DEFINITIONS } from '../src/core/status'
 import { STATUS_CODEX_ENTRIES, codexStatusEntry, filterCodexStatuses } from '../src/core/statusCodex'
 
 
 describe('item codex',()=>{
-  it('is generated from the complete Live2Nite item catalogue',()=>{
-    expect(CODEX_ITEM_ENTRIES).toHaveLength(ITEM_TYPE_IDS.length)
-    expect(new Set(CODEX_ITEM_ENTRIES.map((entry)=>entry.type))).toEqual(new Set(ITEM_TYPE_IDS))
-    for(const entry of CODEX_ITEM_ENTRIES){
-      expect(entry.name).toBe(ITEMS[entry.type].name)
-      expect(entry.purpose).toBe(ITEMS[entry.type].purpose)
-      expect(entry.category).toBe(ITEMS[entry.type].displayCategory)
+  it('combines the complete 383-entry MyHordes source catalogue with supplemental Live2Nite runtime variants',()=>{
+    expect(CODEX_SOURCE_ITEM_COUNT).toBe(383)
+    expect(ITEM_SOURCE_CATALOG).toHaveLength(383)
+    const sourceEntries=CODEX_ITEM_ENTRIES.filter((entry)=>entry.sourceCatalog)
+    expect(sourceEntries).toHaveLength(383)
+    expect(CODEX_ITEM_ENTRIES).toHaveLength(CODEX_SOURCE_ITEM_COUNT+CODEX_SUPPLEMENTAL_ITEM_COUNT)
+    expect(new Set(sourceEntries.map((entry)=>entry.id)).size).toBe(383)
+    for(const type of ITEM_TYPE_IDS)expect(CODEX_ITEM_ENTRIES.some((entry)=>entry.type===type),type).toBe(true)
+    for(const entry of CODEX_ITEM_ENTRIES.filter((candidate)=>!candidate.sourceCatalog&&candidate.type)){
+      expect(entry.name).toBe(ITEMS[entry.type!].name)
+      expect(entry.purpose).toBe(ITEMS[entry.type!].purpose)
     }
   })
 
   it('keeps category counts derived instead of hard-coded',()=>{
-    expect(codexCategoryCount('all')).toBe(ITEM_TYPE_IDS.length)
+    expect(codexCategoryCount('all')).toBe(CODEX_ITEM_ENTRIES.length)
     for(const category of CODEX_ITEM_CATEGORIES.filter((entry)=>entry.id!=='all')){
       expect(codexCategoryCount(category.id)).toBe(CODEX_ITEM_ENTRIES.filter((entry)=>entry.category===category.id).length)
     }
@@ -31,6 +36,9 @@ describe('item codex',()=>{
     expect(filterCodexItems('all','water bomb').map((entry)=>entry.type)).toContain('water_bomb')
     expect(filterCodexItems('all','myhordes').length).toBeGreaterThan(0)
     expect(filterCodexItems('all','defensive wall').map((entry)=>entry.type)).toContain('twisted_plank')
+    const marshmallows=filterCodexItems('all','dried marshmallows')
+    expect(marshmallows.some((entry)=>entry.name==='Dried Marshmallows'&&entry.implementation==='wip'&&entry.type===null)).toBe(true)
+    expect(filterCodexItems('all','WIP').some((entry)=>entry.implementation==='wip')).toBe(true)
   })
 
   it('derives structured combat and openable facts from gameplay systems',()=>{

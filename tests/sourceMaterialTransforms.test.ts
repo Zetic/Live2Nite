@@ -23,7 +23,7 @@ function runTransform(type:ItemType,recipeId:WorkshopRecipeId,output:ItemType):v
 }
 
 describe('ordinary source material transforms',()=>{
-  it('maps Quality Log and Sheet Metal (bits) from their exact normal-loot source ids',()=>{
+  it('maps Quality Log and Sheet Metal (parts) from their exact normal-loot source ids',()=>{
     expect(MYHORDES_NORMAL_LOOT_MAPPING['wood_log_#00']).toEqual({type:'quality_log'})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['plate_raw_#00']).toEqual({type:'sheet_metal_bits'})
     const pending=new Set(unmappedOrdinarySourceLootIds())
@@ -34,14 +34,14 @@ describe('ordinary source material transforms',()=>{
   it('keeps source identity/categories explicit',()=>{
     expect(ITEMS.quality_log).toMatchObject({name:'Quality Log',source:'MYHORDES_CURRENT',category:'raw',displayCategory:'furniture'})
     expect(ITEMS.quality_log.capabilities).toEqual(expect.arrayContaining(['raw_material','decoration']))
-    expect(ITEMS.sheet_metal_bits).toMatchObject({name:'Sheet Metal (bits)',source:'MYHORDES_CURRENT',category:'raw',displayCategory:'resources'})
+    expect(ITEMS.sheet_metal_bits).toMatchObject({name:'Sheet Metal (parts)',source:'MYHORDES_CURRENT',category:'raw',displayCategory:'resources'})
   })
 
   it('cuts a Quality Log into one Twisted Plank in the Workshop',()=>{
     runTransform('quality_log','quality_log_to_planks','twisted_plank')
   })
 
-  it('processes Sheet Metal (bits) into one Sheet Metal in the Workshop',()=>{
+  it('processes Sheet Metal (parts) into one Sheet Metal in the Workshop',()=>{
     runTransform('sheet_metal_bits','sheet_metal_bits_to_sheet_metal','sheet_metal')
   })
 })
