@@ -63,7 +63,7 @@ describe('source-backed openables',()=>{
     expect(openAction(withInventory([toolbox]),'toolbox')).toBeUndefined()
 
     const implementedSourceOpeners:ItemType[]=[
-      'adjustable_spanner','box_cutter','human_bone','machete','pathetic_penknife','chain',
+      'ektorp_gluten_chair','pc_base_unit','adjustable_spanner','box_cutter','human_bone','machete','pathetic_penknife','chain',
       'serrated_knife','staff','can_opener','screwdriver','swiss_army_knife',
     ]
     expect(OPENABLES.toolbox?.openableBy).toEqual(implementedSourceOpeners)
