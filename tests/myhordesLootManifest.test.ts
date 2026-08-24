@@ -35,7 +35,7 @@ describe('pinned MyHordes loot manifest',()=>{
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('preserves source identity/state when Live2Nite already owns the exact gameplay item',()=>{
+  it('preserves source identity/state when Live2Nite owns the gameplay item',()=>{
     expect(MYHORDES_NORMAL_LOOT_MAPPING['rsc_pack_2_#00']).toEqual({type:'resource_pack',state:{contents:2}})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['rsc_pack_3_#00']).toEqual({type:'resource_pack',state:{contents:3}})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['watergun_empty_#00']).toEqual({type:'water_pistol',state:{charges:0}})
@@ -46,18 +46,21 @@ describe('pinned MyHordes loot manifest',()=>{
     expect(MYHORDES_NORMAL_LOOT_MAPPING['food_noodles_#00']).toEqual({type:'chinese_noodles'})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['spices_#00']).toEqual({type:'strong_spices'})
     expect(MYHORDES_NORMAL_LOOT_MAPPING['chama_#00']).toEqual({type:'bag_of_damp_grass'})
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['chair_basic_#00']).toEqual({type:'ektorp_gluten_chair'})
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['pc_#00']).toEqual({type:'pc_base_unit'})
     const pending=new Set(unmappedOrdinarySourceLootIds())
     expect(pending.has('fence_#00')).toBe(false)
     expect(pending.has('pet_chick_#00')).toBe(false)
     expect(pending.has('food_noodles_#00')).toBe(false)
     expect(pending.has('spices_#00')).toBe(false)
     expect(pending.has('chama_#00')).toBe(false)
+    expect(pending.has('chair_basic_#00')).toBe(false)
+    expect(pending.has('pc_#00')).toBe(false)
   })
 
   it('keeps still-unmapped ordinary ids visible instead of dropping them',()=>{
     const pending=new Set(unmappedOrdinarySourceLootIds())
     expect(pending.has('drug_#00')).toBe(true)
-    expect(pending.has('chair_basic_#00')).toBe(true)
     expect(pending.has('jerrycan_#00')).toBe(true)
     expect(pending.has('grenade_empty_#00')).toBe(true)
   })
