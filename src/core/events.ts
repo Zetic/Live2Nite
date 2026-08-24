@@ -108,6 +108,16 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
       return{...state,rngState:event.rngStateAfter,citizens,world}
     }
     case 'HOME_UPGRADED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,level:event.to,defense:event.defenseAfter,upgradedDay:event.day}}})}
+    case 'CORPSE_DISPOSED':{
+      const waterIds=event.waterItemId?new Set([event.waterItemId]):new Set<string>()
+      const citizens=state.citizens.map((citizen)=>{
+        if(citizen.id===event.citizenId&&waterIds.size)return removePersonalIds(citizen,waterIds)
+        if(citizen.id===event.targetCitizenId)return{...citizen,corpseDisposition:event.method,home:{...citizen.home,holdsBody:false}}
+        return citizen
+      })
+      return{...state,citizens}
+    }
+    case 'CORPSE_REANIMATED':return{...state,town:{...state.town,well:{water:Math.max(0,state.town.well.water-event.waterLost)}},citizens:replaceCitizen(state,event.corpseCitizenId,(citizen)=>({...citizen,home:{...citizen.home,corpseAttacked:true}}))}
     case 'HOME_IMPROVEMENT_BUILT':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,storageCapacity:event.storageCapacityAfter,improvements:{...paid.home.improvements,[event.improvementId]:event.level}}}})}
     case 'CONSTRUCTION_AP_CONTRIBUTED':{const project=state.town.construction[event.projectId];if(!project)return state;return{...state,town:{...state.town,construction:{...state.town.construction,[event.projectId]:{...project,apContributed:project.apContributed+event.amount}}}}}
     case 'CONSTRUCTION_COMPLETED':{let bank=state.town.bank;for(const[type,amount]of Object.entries(event.consumed))bank=removeBankItems(bank,type as ItemType,amount??0);const waterBonus=completionWaterBonus(event.projectId);const zones=revealsAllTerrain(event.projectId)?Object.fromEntries(Object.entries(state.world.zones).map(([key,zone])=>[key,{...zone,discovered:true}])):state.world.zones;return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.projectId!==event.projectId)},town:{...state.town,well:{water:state.town.well.water+waterBonus},bank,construction:{...state.town.construction,[event.projectId]:{...state.town.construction[event.projectId],completed:true}}},world:zones===state.world.zones?state.world:{...state.world,zones}}}
@@ -130,7 +140,7 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'BOT_MISSION_ASSIGNED':return{...state,botMissions:{...state.botMissions,[event.citizenId]:event.mission}}
     case 'BOT_MISSION_PHASE_SET':{const mission=state.botMissions[event.citizenId];if(!mission||mission.missionId!==event.missionId)return state;return{...state,botMissions:{...state.botMissions,[event.citizenId]:{...mission,phase:event.phase}}}}
     case 'BOT_MISSION_CLEARED':return{...state,botMissions:withoutMission(state,event.citizenId)}
-    case 'CITIZEN_DIED':return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.citizenId!==event.citizenId)},botMissions:withoutMission(state,event.citizenId),citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,alive:false,ap:0,temporaryControl:null,relativeControl:null,camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
+    case 'CITIZEN_DIED':return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.citizenId!==event.citizenId)},botMissions:withoutMission(state,event.citizenId),citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const diedInTown=citizen.location.type==='town';return{...citizen,alive:false,ap:0,inventory:diedInTown?[]:citizen.inventory,corpseDisposition:null,home:{...citizen.home,storage:diedInTown?[...citizen.home.storage,...citizen.inventory]:citizen.home.storage,holdsBody:diedInTown,corpseAttacked:false},temporaryControl:null,relativeControl:null,camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}})}
     case 'NIGHT_RESOLVED':return{...state,lastNight:event.report}
     case 'TIME_ADVANCED':return{...state,clock:{hour:event.toHour,phase:event.phase}}
     case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:missionsForNewDay(state),coordination:{commitments:[]},citizens:state.citizens.map((citizen)=>({...citizen,ap:citizen.alive?effectiveMaxAp(citizen):0,temporaryControl:null,daily:{ate:false,drank:false,waterTaken:false},camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
