@@ -78,7 +78,7 @@ export function CodexView(){
   const itemEntry=(selectedItem?visibleItems.find((entry)=>entry.type===selectedItem):undefined)??visibleItems[0]??null
   const statusEntry=(selectedStatus?visibleStatuses.find((entry)=>entry.id===selectedStatus):undefined)??visibleStatuses[0]??null
   const shown=section==='items'?visibleItems.length:section==='statuses'?visibleStatuses.length:CONSTRUCTION_CODEX_ENTRIES.length
-  const countLabel=section==='items'?\`${CODEX_ITEM_ENTRIES.length} items\`:section==='statuses'?\`${STATUS_CODEX_ENTRIES.length} statuses\`:\`${CONSTRUCTION_CODEX_ENTRIES.length} constructions\`
+  const countLabel=section==='items'?`${CODEX_ITEM_ENTRIES.length} items`:section==='statuses'?`${STATUS_CODEX_ENTRIES.length} statuses`:`${CONSTRUCTION_CODEX_ENTRIES.length} constructions`
 
   return <section className="panel screen-panel codex-screen">
     <div className="panel-heading codex-heading"><div><p className="section-kicker">Reference</p><h2>Codex</h2><p className="section-note">A live reference generated from the same item, condition, construction, blueprint and acquisition definitions used by gameplay.</p></div><span className="panel-count">{countLabel}</span></div>
@@ -96,7 +96,7 @@ export function CodexView(){
       <div className="codex-layout">
         <section className="codex-list-panel" aria-label={section==='items'?'Codex items':'Codex status effects'}>
           <div className="codex-item-list">
-            {section==='items'?visibleItems.map((entry)=><button type="button" key={entry.type} className={\`codex-item-row ${itemEntry?.type===entry.type?'active':''}\`} onClick={()=>setSelectedItem(entry.type)}><span><strong>{entry.name}</strong><small>{entry.categoryLabel} · {entry.sourceLabel}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>):visibleStatuses.map((entry)=><button type="button" key={entry.id} className={\`codex-item-row status-${entry.severity} ${statusEntry?.id===entry.id?'active':''}\`} onClick={()=>setSelectedStatus(entry.id)}><span><strong>{entry.label}</strong><small>{entry.family} · {entry.severity}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>)}
+            {section==='items'?visibleItems.map((entry)=><button type="button" key={entry.type} className={`codex-item-row ${itemEntry?.type===entry.type?'active':''}`} onClick={()=>setSelectedItem(entry.type)}><span><strong>{entry.name}</strong><small>{entry.categoryLabel} · {entry.sourceLabel}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>):visibleStatuses.map((entry)=><button type="button" key={entry.id} className={`codex-item-row status-${entry.severity} ${statusEntry?.id===entry.id?'active':''}`} onClick={()=>setSelectedStatus(entry.id)}><span><strong>{entry.label}</strong><small>{entry.family} · {entry.severity}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>)}
             {shown===0&&<p className="empty-state">No {section==='items'?'items':'status effects'} match this search.</p>}
           </div>
         </section>
