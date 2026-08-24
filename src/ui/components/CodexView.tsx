@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, codexCategoryCount, filterCodexItems, type CodexItemCategory, type CodexItemEntry, type CodexRelationshipGroup } from '../../core/codex'
+import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, CODEX_SOURCE_ITEM_COUNT, CODEX_SUPPLEMENTAL_ITEM_COUNT, codexCategoryCount, filterCodexItems, itemImplementationStatusLabel, type CodexItemCategory, type CodexItemEntry, type CodexRelationshipGroup } from '../../core/codex'
 import { STATUS_CODEX_ENTRIES, filterCodexStatuses, type CodexStatusEntry } from '../../core/statusCodex'
 import { CONSTRUCTION_CODEX_ENTRIES } from '../../core/constructionCodex'
-import type { CitizenStatusId, ItemType } from '../../core/types'
+import type { CitizenStatusId } from '../../core/types'
 import '../codex.css'
 import { ConstructionCodexView } from './ConstructionCodexView'
 
@@ -25,9 +25,11 @@ function ItemDetail({entry}:{entry:CodexItemEntry}){
   return <article className="codex-detail" aria-live="polite">
     <div className="codex-detail-heading">
       <div><p className="section-kicker">{entry.categoryLabel}</p><h2>{entry.name}</h2></div>
-      <span className="codex-source-chip">{entry.sourceLabel}</span>
+      <div className="codex-item-heading-chips"><span className="codex-source-chip">{entry.sourceLabel}</span><span className={`codex-item-status ${entry.implementation}`}>{itemImplementationStatusLabel(entry.implementation)}</span></div>
     </div>
     <p className="codex-purpose">{entry.purpose}</p>
+    {entry.implementation==='wip'&&<div className="codex-item-wip-banner"><strong>Work in progress</strong><span>This source item/state is catalogued for completeness but has no active Live2Nite runtime identity.</span><small>Codex visibility does not make it spawnable, usable, openable, craftable, or obtainable.</small></div>}
+    {entry.implementation==='partial'&&<div className="codex-item-partial-banner"><strong>Partial implementation</strong><span>A Live2Nite runtime identity exists, but at least one source behavior or dependency remains incomplete.</span></div>}
     <section className="codex-detail-section">
       <h3>Capabilities</h3>
       {entry.capabilities.length?<div className="codex-chip-list">{entry.capabilities.map((capability)=><span key={capability}>{capability}</span>)}</div>:<p className="empty-state">No structured capabilities are registered for this item.</p>}
@@ -70,20 +72,20 @@ export function CodexView(){
   const [section,setSection]=useState<CodexSection>('items')
   const [category,setCategory]=useState<CodexItemCategory>('all')
   const [query,setQuery]=useState('')
-  const [selectedItem,setSelectedItem]=useState<ItemType|null>(CODEX_ITEM_ENTRIES[0]?.type??null)
+  const [selectedItem,setSelectedItem]=useState<string|null>(CODEX_ITEM_ENTRIES[0]?.id??null)
   const [selectedStatus,setSelectedStatus]=useState<CitizenStatusId|null>(STATUS_CODEX_ENTRIES[0]?.id??null)
 
   const visibleItems=useMemo(()=>filterCodexItems(category,query),[category,query])
   const visibleStatuses=useMemo(()=>filterCodexStatuses(query),[query])
-  const itemEntry=(selectedItem?visibleItems.find((entry)=>entry.type===selectedItem):undefined)??visibleItems[0]??null
+  const itemEntry=(selectedItem?visibleItems.find((entry)=>entry.id===selectedItem):undefined)??visibleItems[0]??null
   const statusEntry=(selectedStatus?visibleStatuses.find((entry)=>entry.id===selectedStatus):undefined)??visibleStatuses[0]??null
   const shown=section==='items'?visibleItems.length:section==='statuses'?visibleStatuses.length:CONSTRUCTION_CODEX_ENTRIES.length
-  const countLabel=section==='items'?`${CODEX_ITEM_ENTRIES.length} items`:section==='statuses'?`${STATUS_CODEX_ENTRIES.length} statuses`:`${CONSTRUCTION_CODEX_ENTRIES.length} constructions`
+  const countLabel=section==='items'?`${CODEX_SOURCE_ITEM_COUNT} source items · ${CODEX_SUPPLEMENTAL_ITEM_COUNT} runtime variants`:section==='statuses'?`${STATUS_CODEX_ENTRIES.length} statuses`:`${CONSTRUCTION_CODEX_ENTRIES.length} constructions`
 
   return <section className="panel screen-panel codex-screen">
     <div className="panel-heading codex-heading"><div><p className="section-kicker">Reference</p><h2>Codex</h2><p className="section-note">A live reference generated from the same item, condition, construction, blueprint and acquisition definitions used by gameplay.</p></div><span className="panel-count">{countLabel}</span></div>
     <div className="codex-section-tabs" role="tablist" aria-label="Codex sections">
-      <button type="button" className={section==='items'?'active':''} aria-selected={section==='items'} onClick={()=>setSection('items')}><strong>Items</strong><small>Current Live2Nite catalogue</small></button>
+      <button type="button" className={section==='items'?'active':''} aria-selected={section==='items'} onClick={()=>setSection('items')}><strong>Items</strong><small>Complete MyHordes catalogue</small></button>
       <button type="button" className={section==='statuses'?'active':''} aria-selected={section==='statuses'} onClick={()=>setSection('statuses')}><strong>Status Effects</strong><small>Runtime citizen conditions</small></button>
       <button type="button" className={section==='constructions'?'active':''} aria-selected={section==='constructions'} onClick={()=>setSection('constructions')}><strong>Constructions</strong><small>Branches & blueprint unlocks</small></button>
     </div>
@@ -96,7 +98,7 @@ export function CodexView(){
       <div className="codex-layout">
         <section className="codex-list-panel" aria-label={section==='items'?'Codex items':'Codex status effects'}>
           <div className="codex-item-list">
-            {section==='items'?visibleItems.map((entry)=><button type="button" key={entry.type} className={`codex-item-row ${itemEntry?.type===entry.type?'active':''}`} onClick={()=>setSelectedItem(entry.type)}><span><strong>{entry.name}</strong><small>{entry.categoryLabel} · {entry.sourceLabel}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>):visibleStatuses.map((entry)=><button type="button" key={entry.id} className={`codex-item-row status-${entry.severity} ${statusEntry?.id===entry.id?'active':''}`} onClick={()=>setSelectedStatus(entry.id)}><span><strong>{entry.label}</strong><small>{entry.family} · {entry.severity}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>)}
+            {section==='items'?visibleItems.map((entry)=><button type="button" key={entry.id} className={`codex-item-row item-${entry.implementation} ${entry.sourceCatalog?'source-catalog':'runtime-only'} ${itemEntry?.id===entry.id?'active':''}`} onClick={()=>setSelectedItem(entry.id)}><span><strong>{entry.name}</strong><small>{entry.categoryLabel} · {itemImplementationStatusLabel(entry.implementation)}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>):visibleStatuses.map((entry)=><button type="button" key={entry.id} className={`codex-item-row status-${entry.severity} ${statusEntry?.id===entry.id?'active':''}`} onClick={()=>setSelectedStatus(entry.id)}><span><strong>{entry.label}</strong><small>{entry.family} · {entry.severity}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>)}
             {shown===0&&<p className="empty-state">No {section==='items'?'items':'status effects'} match this search.</p>}
           </div>
         </section>

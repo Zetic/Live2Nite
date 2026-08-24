@@ -4,6 +4,7 @@ import { CONSTRUCTIONS } from './construction'
 import { ITEM_TYPE_IDS, type ItemDisplayCategory, type ItemType } from './itemCatalog'
 import { itemUseActionSummary, itemUseActionsForType } from './itemEffects'
 import { ITEMS, NORMAL_SCAVENGE_LOOT_POOL } from './items'
+import { ITEM_SOURCE_CATALOG, type ItemImplementationStatus, type ItemSourceCatalogEntry } from './itemSourceCatalog'
 import { totalLootWeight, type WeightedLootTable } from './loot'
 import { OPENABLES, openableDefinition } from './openables'
 import { MYHORDES_DEPLETED_ZONE_LOOT } from './scavengeLoot'
@@ -35,16 +36,21 @@ export interface CodexFact { label: string; value: string }
 export interface CodexRelationship { label: string; detail: string; badge?: string }
 export interface CodexRelationshipGroup { id: string; label: string; entries: CodexRelationship[] }
 export interface CodexItemEntry {
-  type: ItemType
-  name: string
-  purpose: string
-  category: ItemDisplayCategory
-  categoryLabel: string
-  sourceLabel: string
-  capabilities: string[]
-  facts: CodexFact[]
-  usedIn: CodexRelationshipGroup[]
-  obtainedFrom: CodexRelationshipGroup[]
+  /** Stable Codex row identity. Source catalogue IDs and runtime-only variants use separate namespaces. */
+  id:string
+  type:ItemType|null
+  sourceCatalog:boolean
+  sourceRef:string|null
+  implementation:ItemImplementationStatus
+  name:string
+  purpose:string
+  category:ItemDisplayCategory
+  categoryLabel:string
+  sourceLabel:string
+  capabilities:string[]
+  facts:CodexFact[]
+  usedIn:CodexRelationshipGroup[]
+  obtainedFrom:CodexRelationshipGroup[]
 }
 
 function titleCase(value: string): string {
@@ -215,20 +221,68 @@ export function codexItemEntry(type: ItemType): CodexItemEntry {
   }
 
   return {
+    id:`runtime:${type}`,
     type,
-    name: definition.name,
-    purpose: definition.purpose,
-    category: definition.displayCategory,
-    categoryLabel: categoryLabel(definition.displayCategory),
-    sourceLabel: sourceLabels[definition.source],
-    capabilities: definition.capabilities.map(titleCase),
+    sourceCatalog:false,
+    sourceRef:null,
+    implementation:'implemented',
+    name:definition.name,
+    purpose:definition.purpose,
+    category:definition.displayCategory,
+    categoryLabel:categoryLabel(definition.displayCategory),
+    sourceLabel:sourceLabels[definition.source],
+    capabilities:definition.capabilities.map(titleCase),
     facts,
     usedIn:usedInGroups(type),
     obtainedFrom:obtainedFromGroups(type),
   }
 }
 
-export const CODEX_ITEM_ENTRIES: readonly CodexItemEntry[] = ITEM_TYPE_IDS.map(codexItemEntry).sort((a, b) => a.name.localeCompare(b.name))
+function sourceCatalogFacts(entry:ItemSourceCatalogEntry):CodexFact[]{
+  const facts:CodexFact[]=[{label:'Heavy',value:entry.heavy?'Yes':'No'}]
+  if(entry.decoration!==0)facts.push({label:'Decoration',value:String(entry.decoration)})
+  if(entry.watchPoints!==0)facts.push({label:'Watch points',value:entry.watchPoints>0?`+${entry.watchPoints}`:String(entry.watchPoints)})
+  return facts
+}
+
+function sourceCatalogCodexEntry(source:ItemSourceCatalogEntry):CodexItemEntry{
+  const runtime=source.runtimeType?codexItemEntry(source.runtimeType):null
+  return{
+    id:`source:${source.id}`,
+    type:source.runtimeType,
+    sourceCatalog:true,
+    sourceRef:source.sourceRef,
+    implementation:source.implementation,
+    name:source.name,
+    purpose:runtime?.purpose??`MyHordes ${categoryLabel(source.category).toLowerCase()} item catalogued for parity. Its gameplay behavior is not implemented in Live2Nite yet.`,
+    category:source.category,
+    categoryLabel:categoryLabel(source.category),
+    sourceLabel:'MyHordes source catalogue',
+    capabilities:runtime?.capabilities??[],
+    facts:[...sourceCatalogFacts(source),...(runtime?.facts??[])],
+    usedIn:runtime?.usedIn??[],
+    obtainedFrom:runtime?.obtainedFrom??[],
+  }
+}
+
+const SOURCE_MAPPED_RUNTIME_TYPES=new Set<ItemType>(ITEM_SOURCE_CATALOG.flatMap((entry)=>entry.runtimeType?[entry.runtimeType]:[]))
+export const CODEX_SUPPLEMENTAL_RUNTIME_TYPES:readonly ItemType[]=ITEM_TYPE_IDS.filter((type)=>!SOURCE_MAPPED_RUNTIME_TYPES.has(type))
+export const CODEX_SOURCE_ITEM_COUNT=ITEM_SOURCE_CATALOG.length
+export const CODEX_SUPPLEMENTAL_ITEM_COUNT=CODEX_SUPPLEMENTAL_RUNTIME_TYPES.length
+
+const SOURCE_CODEX_ITEMS=ITEM_SOURCE_CATALOG.map(sourceCatalogCodexEntry)
+const SUPPLEMENTAL_CODEX_ITEMS=CODEX_SUPPLEMENTAL_RUNTIME_TYPES.map((type):CodexItemEntry=>({
+  ...codexItemEntry(type),
+  id:`runtime:${type}`,
+  sourceCatalog:false,
+  sourceRef:null,
+  implementation:'partial',
+  sourceLabel:`${sourceLabels[ITEMS[type].source]} · runtime-only variant`,
+}))
+
+export const CODEX_ITEM_ENTRIES:readonly CodexItemEntry[]=[...SOURCE_CODEX_ITEMS,...SUPPLEMENTAL_CODEX_ITEMS].sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id))
+
+export function itemImplementationStatusLabel(status:ItemImplementationStatus):string{return status==='implemented'?'Implemented':status==='partial'?'Partial':'WIP'}
 
 export function filterCodexItems(category: CodexItemCategory, query: string, entries: readonly CodexItemEntry[] = CODEX_ITEM_ENTRIES): CodexItemEntry[] {
   const needle = query.trim().toLocaleLowerCase()
@@ -237,7 +291,7 @@ export function filterCodexItems(category: CodexItemCategory, query: string, ent
     if (!needle) return true
     const relationships=[...entry.usedIn,...entry.obtainedFrom].flatMap((group)=>[group.label,...group.entries.flatMap((relation)=>[relation.label,relation.detail,relation.badge??''])])
     const facts=entry.facts.flatMap((fact)=>[fact.label,fact.value])
-    return [entry.name, entry.purpose, entry.categoryLabel, entry.sourceLabel, ...entry.capabilities, ...facts, ...relationships].some((value) => value.toLocaleLowerCase().includes(needle))
+    return [entry.name,entry.purpose,entry.categoryLabel,entry.sourceLabel,entry.implementation,itemImplementationStatusLabel(entry.implementation),...entry.capabilities,...facts,...relationships].some((value)=>value.toLocaleLowerCase().includes(needle))
   })
 }
 
