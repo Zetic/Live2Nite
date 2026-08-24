@@ -167,6 +167,21 @@ Construction and other simple type/count consumers use aggregate Bank helpers. E
 
 See `docs/item-economy.md`.
 
+## Citizen home visits and corpse lifecycle
+
+Schema v17 adds source-backed dead-citizen body state without treating a citizen corpse as an `ItemInstance`.
+
+When a citizen dies while located in town, their home is marked `holdsBody = true`; carried items are transferred into the home chest and the dead citizen remains the identity attached to the body. Deaths outside town do not create a home corpse. This is intentionally separate from MyHordes item `cadaver_#00` (Traveller's Corpse), which belongs to the item/loot/food system.
+
+A living in-town citizen can visit another citizen's home. If the owner is dead and the body is present, two current source-backed disposal actions are legal:
+
+- drag the body outside town for **2 AP**;
+- destroy the body with **1 Water Ration** from the visitor's rucksack or home chest.
+
+Undisposed bodies enter the internal corpse-attack stage before the ordinary horde breach. Current MyHordes behavior is reconstructed as a roughly 66% citizen-attack branch while Well water remains and an otherwise water-loss branch that removes up to 20 rations; with an empty Well the corpse attacks a citizen. A successful internal citizen attack kills the target directly rather than testing personal home defense. Each corpse that completes an internal attack is marked so it does not repeatedly attack on later nights.
+
+Cooking via Kremato-Cue, torch burning/fertilizer, Ghoul corpse devouring, and the broader foreign-home social/action surface are intentionally deferred until their dependencies are represented.
+
 ## Coordinated field missions
 
 Active field roles are:
@@ -216,14 +231,15 @@ The attack conclusion remains isolated in `night.ts`:
 1. bots finish the 23:00 window;
 2. time enters attack phase;
 3. unhidden outside citizens and prepared campers resolve;
-4. horde strength and effective shared defense resolve;
-5. breaches are distributed to in-town citizens;
-6. personal home defense resolves home survival;
-7. hydration progression/deaths resolve;
-8. the Night Report is recorded;
-9. construction/search/campsite overnight effects resolve;
-10. authoritative World Beyond zombies evolve;
-11. `DAY_STARTED` refreshes AP/daily-use state and clears day-scoped coordination commitments.
+4. unresolved in-town corpses resolve their one-time internal reanimation attack;
+5. horde strength and effective shared defense resolve;
+6. breaches are distributed to in-town citizens;
+7. personal home defense resolves home survival;
+8. hydration/status progression and deaths resolve;
+9. the Night Report is recorded;
+10. construction/search/campsite overnight effects resolve;
+11. authoritative World Beyond zombies evolve;
+12. `DAY_STARTED` refreshes AP/daily-use state and clears day-scoped coordination commitments.
 
 ## UI boundary
 
@@ -231,7 +247,7 @@ The World Beyond map displays shared town knowledge, not hidden zombie truth. Th
 
 Town Records is the first permanent navigation destination and the default screen. Its default **Town Bulletin** tab exposes public coordination and defense planning in one place: defense outlook/source, strategic construction need, gate volunteers, construction intentions, and active field claims. Chronicle and Statistics remain sibling Town Records tabs. There is no separate Communications screen in this slice.
 
-The Home screen is citizen-specific and separates **Inventory & Actions**, **Building Upgrades**, and **Home Improvements**. It presents personal-defense composition and the full structural progression without exposing hidden simulation information.
+The controlled citizen's Home screen separates **Inventory & Actions**, **Building Upgrades**, and **Home Improvements**. From Citizens, an in-town controlled citizen may also visit another citizen's home. Foreign-home visits are deliberately narrow in schema v17: basic home state is visible and a present corpse can be disposed of, while theft, complaints, descriptions, recycling, and other social-home actions remain separate future mechanics.
 
 The Bank screen derives visual stacks from authoritative objects. State-bearing objects with different normalized state remain separate stacks and withdrawals resolve to one exact legal item ID.
 
@@ -241,11 +257,11 @@ The Citizens screen remains the deeper diagnostic surface for status, mission ph
 
 Core rules do not use scattered `Math.random()`. A seed plus the same ordered commands/time advances should reproduce the same result.
 
-Save schema is **v16**. Current-schema save/load correctness is a hard requirement: v16 item identity/state, citizen state, missions, coordination, and deterministic simulation state must survive persistence.
+Save schema is **v17**. Current-schema save/load correctness is a hard requirement: v17 item identity/state, citizen/home corpse state, missions, coordination, and deterministic simulation state must survive persistence.
 
 Older development saves are **not** guaranteed to migrate forward during this rapid-development phase. Schema-breaking changes may require starting a new town, and backward migration completeness must not delay otherwise-correct gameplay or architecture work. See `instructions.md` for the project policy.
 
-This branch retains already-implemented v15 -> v16 compatibility: legacy Bank count maps are materialized as unique normalized item instances, and generated IDs are protected from collisions. That compatibility is useful but is not a promise that every future development schema will receive a complete migration path.
+This branch retains the existing legacy migrations and adds v16 -> v17 normalization for `holdsBody`, `corpseAttacked`, and corpse disposition. Legacy Bank count maps are still materialized as unique normalized item instances, and generated IDs remain protected from collisions. That compatibility is useful but is not a promise that every future development schema will receive a complete migration path.
 
 Camping survival and World Beyond evolution use isolated deterministic seeds so unrelated random calls do not silently alter their outcomes.
 
@@ -262,7 +278,7 @@ Benchmarks still run deterministically on every test run so large shifts remain 
 
 ## Future forum and social integration
 
-The v14 commitment model remains the public-coordination substrate under schema v16 and is intentionally compatible with a later real forum/chat system. Human or bot posts can eventually produce the same public intentions: "I'll close the gate", "I'll be backup", "I'm working on the wall", "we need planks", or "I'm scouting east".
+The v14 commitment model remains the public-coordination substrate under schema v17 and is intentionally compatible with a later real forum/chat system. Human or bot posts can eventually produce the same public intentions: "I'll close the gate", "I'll be backup", "I'm working on the wall", "we need planks", or "I'm scouting east".
 
 Future personality/social systems may affect whether citizens communicate, volunteer, keep commitments, hoard, or accept risk. They must not bypass legal commands, private-resource ownership, exact item ownership, or the World Knowledge/public-defense boundaries.
 
