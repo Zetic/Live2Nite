@@ -1,1 +1,91 @@
-.special-site-cell{border-color:#7f6540!important;background:#241d13!important;color:#f0ca86!important;font-size:.62rem!important;font-weight:900}.special-site-card{margin:0 0 14px;padding:16px;border:1px solid #67583e;border-left:4px solid #b58b4b;border-radius:9px;background:linear-gradient(100deg,#201a12,#12181b)}.special-site-card.status-accessible{border-left-color:#7eaa82}.special-site-card.status-depleted{border-left-color:#6a7477;opacity:.82}.special-site-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.special-site-heading h3{font-size:1rem;margin:0}.special-site-heading p{margin:5px 0 0;color:var(--muted);font-size:.76rem}.special-site-heading>span{border:1px solid #6c5b3e;border-radius:999px;padding:5px 8px;color:#e0bd7a;font-size:.58rem;font-weight:900;letter-spacing:.08em}.site-progress{height:6px;background:#2a302e;border-radius:999px;overflow:hidden;margin:12px 0 7px}.site-progress span{display:block;height:100%;background:linear-gradient(90deg,#7d5532,#c78a4d)}.special-site-card>p{color:#aeb5b4;font-size:.76rem}.special-site-card>button{margin-top:4px}.ai-plan{margin:10px 0 8px;padding:10px;border:1px solid #33454c;border-left:3px solid #6d8791;border-radius:7px;background:#0d1519}.ai-plan>div:first-child{display:flex;justify-content:space-between;gap:10px}.ai-plan>div:first-child strong{font-size:.67rem;color:#b9d5dd;letter-spacing:.05em}.ai-plan>div:first-child span{font-size:.55rem;color:var(--muted);font-weight:850}.ai-plan>p{margin:6px 0;color:#8f9a9c;font-size:.65rem;line-height:1.35}.ai-plan dl{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin:0}.ai-plan dl div{min-width:0}.ai-plan dt{font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:#758084}.ai-plan dd{margin:2px 0 0;font-size:.61rem;color:#c3cdcc;white-space:normal}.special-site-card+.control{margin-top:0}.world-primary-column{display:flex;flex-direction:column;gap:12px;min-width:0}.camping-panel{padding:15px 16px;border:1px solid #514936;border-left:4px solid #9a7641;border-radius:9px;background:linear-gradient(110deg,#171714,#0d1417);box-shadow:0 8px 24px #0004}.camping-panel.outlook-suicidal,.camping-panel.outlook-very_poor{border-left-color:#a54f42}.camping-panel.outlook-poor{border-left-color:#a86f45}.camping-panel.outlook-limited{border-left-color:#ae8b4f}.camping-panel.outlook-satisfactory,.camping-panel.outlook-decent{border-left-color:#6e9274}.camping-panel.is-hidden{border-color:#66593f;border-left-color:#cfaa63;background:linear-gradient(110deg,#1e1a12,#111719)}.camping-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.camping-heading h3{margin:0;font-size:1rem}.camping-state{border:1px solid #655a42;border-radius:999px;padding:5px 8px;font-size:.56rem;letter-spacing:.08em;font-weight:900;color:#d7bd82}.camping-outlook-copy{display:block;margin-top:9px;color:#d7dedb;font-size:.8rem}.camping-panel>p{margin:6px 0 10px;color:#949e9d;font-size:.72rem;line-height:1.45}.camping-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0}.camping-facts div{padding:7px 8px;border:1px solid #2e393b;border-radius:6px;background:#0d1315}.camping-facts dt{font-size:.48rem;letter-spacing:.06em;text-transform:uppercase;color:#747f81}.camping-facts dd{margin:3px 0 0;font-size:.64rem;color:#c1ccca;font-weight:750}.camping-adaptation-note{display:block;margin-top:9px;color:#717a7b;font-size:.54rem;line-height:1.35}.camping-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.camping-actions button{flex:1;min-width:150px}@media(max-width:760px){.ai-plan dl{grid-template-columns:1fr}.special-site-heading{flex-direction:column}.camping-facts{grid-template-columns:1fr 1fr}.camping-heading{flex-direction:column}.camping-actions button{min-width:100%}}
+.special-site-cell{border-color:#c19a58!important;color:#f0ca86!important;font-size:.62rem!important;font-weight:900}
+.special-site-card{margin:0 0 14px;padding:16px;border:1px solid #67583e;border-left:4px solid #b58b4b;border-radius:9px;background:linear-gradient(100deg,#201a12,#12181b)}
+.special-site-card.status-accessible{border-left-color:#7eaa82}
+.special-site-card.status-depleted{border-left-color:#6a7477;opacity:.82}
+.special-site-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.special-site-heading h3{font-size:1rem;margin:0}
+.special-site-heading p{margin:5px 0 0;color:var(--muted);font-size:.76rem}
+.special-site-heading>span{border:1px solid #6c5b3e;border-radius:999px;padding:5px 8px;color:#e0bd7a;font-size:.58rem;font-weight:900;letter-spacing:.08em}
+.site-progress{height:6px;background:#2a302e;border-radius:999px;overflow:hidden;margin:12px 0 7px}
+.site-progress span{display:block;height:100%;background:linear-gradient(90deg,#7d5532,#c78a4d)}
+.special-site-card>p{color:#aeb5b4;font-size:.76rem}
+.special-site-card>button{margin-top:4px}
+.ai-plan{margin:10px 0 8px;padding:10px;border:1px solid #33454c;border-left:3px solid #6d8791;border-radius:7px;background:#0d1519}
+.ai-plan>div:first-child{display:flex;justify-content:space-between;gap:10px}
+.ai-plan>div:first-child strong{font-size:.67rem;color:#b9d5dd;letter-spacing:.05em}
+.ai-plan>div:first-child span{font-size:.55rem;color:var(--muted);font-weight:850}
+.ai-plan>p{margin:6px 0;color:#8f9a9c;font-size:.65rem;line-height:1.35}
+.ai-plan dl{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin:0}
+.ai-plan dl div{min-width:0}
+.ai-plan dt{font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:#758084}
+.ai-plan dd{margin:2px 0 0;font-size:.61rem;color:#c3cdcc;white-space:normal}
+.world-primary-column{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+/* Town-side expedition controls are visually independent from the rucksack. */
+.world-staging{display:flex;flex-direction:column;min-height:250px}
+.world-staging>.panel-heading{order:1}
+.world-staging>.gate-card{order:2;margin:0 0 16px;border:1px solid #7a583f;border-left:5px solid #ce7142;padding:18px;background:linear-gradient(110deg,#27180f,#11191d);box-shadow:0 10px 26px rgba(0,0,0,.2)}
+.world-staging>.gate-card .feature-icon{width:48px;height:48px;border-color:#8b5a3d;background:#321b0f;font-size:.95rem}
+.world-staging>.gate-card .feature-copy strong{font-size:1.28rem}
+.world-staging>.gate-card .feature-actions{gap:8px}
+.world-staging>.gate-card .feature-actions button{min-width:104px;padding:10px 14px;text-align:center}
+.world-staging>.gate-card .feature-actions button.primary{min-width:148px}
+.world-staging>.inventory-surface{order:3}
+.world-staging>.context-register{order:4}
+
+.world-town-return{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:13px 15px;border:1px solid #7b563d;border-left:4px solid #ce7142;border-radius:9px;background:linear-gradient(100deg,#24170f,#10181b)}
+.world-town-return p{margin:0 0 3px}
+.world-town-return strong{display:block;color:#e7c5a9;font-size:.84rem}
+.world-town-return span{display:block;margin-top:3px;color:#8f9a9c;font-size:.66rem;line-height:1.35}
+.world-town-return button{min-width:150px;text-align:center}
+
+/* Directional travel lives with the map; the legacy in-panel travel card is retired. */
+.world-actions-grid{grid-template-columns:1fr!important}
+.world-actions-grid>.movement-card{display:none}
+.map-travel-controls{margin-top:11px;padding-top:11px;border-top:1px solid #29363b}
+.map-travel-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:7px}
+.map-travel-heading .section-kicker{margin-bottom:2px;font-size:.55rem}
+.map-travel-heading h3{margin:0;font-size:.69rem}
+.map-travel-heading>span{color:#7f8b8e;font-size:.57rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.direction-pad{display:grid;grid-template-columns:42px 52px 42px;grid-template-rows:42px 48px 42px;gap:5px;justify-content:center;align-items:center}
+.direction-button{display:grid;place-items:center;align-content:center;gap:0;width:42px;height:42px;padding:3px;text-align:center;background:#121d22;border-color:#34444b}
+.direction-button strong{font-size:1rem;line-height:1;color:#d8e0dd}
+.direction-button small{font-size:.47rem;line-height:1.1;text-transform:uppercase;letter-spacing:.06em;color:#748186}
+.direction-button.north{grid-column:2;grid-row:1;justify-self:center}
+.direction-button.west{grid-column:1;grid-row:2;justify-self:end}
+.direction-button.east{grid-column:3;grid-row:2;justify-self:start}
+.direction-button.south{grid-column:2;grid-row:3;justify-self:center}
+.direction-pad-center{grid-column:2;grid-row:2;display:grid;place-items:center;align-content:center;width:52px;height:48px;border:1px solid #26343a;border-radius:7px;background:#0c1418;color:#9aa6a7;text-align:center}
+.direction-pad-center strong{font-size:.61rem}
+.direction-pad-center small{font-size:.45rem;text-transform:uppercase;letter-spacing:.06em;color:#657175}
+
+.camping-panel{padding:15px 16px;border:1px solid #514936;border-left:4px solid #9a7641;border-radius:9px;background:linear-gradient(110deg,#171714,#0d1417);box-shadow:0 8px 24px #0004}
+.camping-panel.outlook-suicidal,.camping-panel.outlook-very_poor{border-left-color:#a54f42}
+.camping-panel.outlook-poor{border-left-color:#a86f45}
+.camping-panel.outlook-limited{border-left-color:#ae8b4f}
+.camping-panel.outlook-satisfactory,.camping-panel.outlook-decent{border-left-color:#6e9274}
+.camping-panel.is-hidden{border-color:#66593f;border-left-color:#cfaa63;background:linear-gradient(110deg,#1e1a12,#111719)}
+.camping-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.camping-heading h3{margin:0;font-size:1rem}
+.camping-state{border:1px solid #655a42;border-radius:999px;padding:5px 8px;font-size:.56rem;letter-spacing:.08em;font-weight:900;color:#d7bd82}
+.camping-outlook-copy{display:block;margin-top:9px;color:#d7dedb;font-size:.8rem}
+.camping-panel>p{margin:6px 0 10px;color:#949e9d;font-size:.72rem;line-height:1.45}
+.camping-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0}
+.camping-facts div{padding:7px 8px;border:1px solid #2e393b;border-radius:6px;background:#0d1315}
+.camping-facts dt{font-size:.48rem;letter-spacing:.06em;text-transform:uppercase;color:#747f81}
+.camping-facts dd{margin:3px 0 0;font-size:.64rem;color:#c1ccca;font-weight:750}
+.camping-adaptation-note{display:block;margin-top:9px;color:#717a7b;font-size:.54rem;line-height:1.35}
+.camping-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.camping-actions button{flex:1;min-width:150px}
+@media(max-width:760px){
+  .ai-plan dl{grid-template-columns:1fr}
+  .special-site-heading{flex-direction:column}
+  .camping-facts{grid-template-columns:1fr 1fr}
+  .camping-heading{flex-direction:column}
+  .camping-actions button{min-width:100%}
+  .world-town-return{grid-template-columns:1fr}
+  .world-town-return button{width:100%}
+  .world-staging>.gate-card{grid-template-columns:44px 1fr}
+  .world-staging>.gate-card .feature-actions{grid-column:1/-1;justify-content:stretch}
+  .world-staging>.gate-card .feature-actions button{flex:1}
+}
