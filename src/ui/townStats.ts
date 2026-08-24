@@ -132,6 +132,7 @@ export function computeTownStats(game: GameState): TownStats {
     outside_at_night: 0,
     camping_failure: 0,
     home_breach: 0,
+    corpse_attack: 0,
     dehydration: 0,
     infection: 0,
     drug_withdrawal: 0,
