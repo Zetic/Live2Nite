@@ -41,7 +41,8 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `pile_#00` | `battery` |
 | `pharma_#00` | `pharmaceutical_products` |
 | `meca_parts_#00` | `nuts_and_bolts` |
-| `rustine_#00` / `repair_one_#00` | `kwik_fix` |
+| `rustine_#00` | `duct_tape` |
+| `repair_one_#00` | `kwik_fix` |
 | `explo_#00` | `semtex` |
 | `tube_#00` | `copper_pipe` |
 | `electro_#00` | `electronic_component` |
@@ -84,8 +85,8 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `hmeat_#00` | `human_flesh` |
 | `pet_chick_#00` | `chicken` |
 | `bone_meat_#00` | `meaty_bone` |
-| `poison_part_#00` | `poison_gland` |
-| `chama_#00` | `bag_of_damp_grass` |
+| `poison_part_#00` | `poison_gland` (semantic ID; displays as Corrosive Liquid) |
+| `ryebag_#00` | `bag_of_damp_grass` |
 | `door_#00` | `old_door` |
 | `concrete_#00` | `bag_of_cement` |
 | `table_#00` | `table` |
@@ -94,7 +95,6 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `oilcan_#00` | `empty_oil_can` |
 | `lens_#00` | `convex_lens` |
 | `diode_#00` | `laser_diode` |
-| `ryebag_#00` | `grain_sack` |
 | `bquies_#00` | `earplugs` |
 | `claymo_#00` | `claymore` |
 | `guitar_#00` | `guitar` |
@@ -119,6 +119,9 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 
 ## Ordinary normal-loot backlog
 
+Source-name audit correction: `chama_#00` is **Dried Marshmallows** and remains WIP; it is not Bag of Damp Grass.
+
+
 These source IDs remain unresolved in the current ordinary normal-loot dependency pass. This is a development backlog for future source-item passes; entries leave this list only when their active runtime mechanic and mapping are represented.
 
 - [ ] `jerrycan_#00`
@@ -133,6 +136,7 @@ These source IDs remain unresolved in the current ordinary normal-loot dependenc
 - [ ] `pet_cat_#00`
 - [ ] `water_cleaner_#00`
 - [ ] `beta_drug_bad_#00`
+- [ ] `chama_#00`
 - [ ] `cadaver_#00`
 - [ ] `food_armag_#00`
 - [ ] `wood_plate_part_#00`
