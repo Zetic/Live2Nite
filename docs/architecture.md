@@ -251,7 +251,7 @@ The controlled citizen's Home screen separates **Inventory & Actions**, **Buildi
 
 The Bank screen derives visual stacks from authoritative objects. State-bearing objects with different normalized state remain separate stacks and withdrawals resolve to one exact legal item ID.
 
-The Citizens screen remains the deeper diagnostic surface for status, mission phase, AP/loadout budget, return margin, and reserve state.
+The Citizens screen defaults to a dense fixed-height **Overview** table for scanning the whole town: citizen, primary status, location, AP, rucksack occupancy, home level, assignment, and Home/Control actions. The existing card-heavy diagnostics remain available under **Details** for status, mission phase, AP/loadout budget, return margin, and reserve state.
 
 ## Determinism and persistence
 
