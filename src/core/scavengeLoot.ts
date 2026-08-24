@@ -1,4 +1,5 @@
 import { lootEntry, type WeightedLootTable } from './loot'
+import { mappedOrdinaryNormalSourceLoot, unmappedOrdinarySourceLootIds } from './myhordesLootMapping'
 
 /**
  * Current MyHordes depleted-zone item table.
@@ -16,4 +17,23 @@ export const MYHORDES_DEPLETED_ZONE_LOOT:WeightedLootTable={
     lootEntry('rotten_log',20),
     lootEntry('scrap_metal',12),
   ],
+}
+
+/** Raw ordinary source ids that still prevent activation of the normal-zone table. */
+export function unresolvedMyHordesNormalLootIds():string[]{return unmappedOrdinarySourceLootIds()}
+export function myHordesNormalLootReady():boolean{return unresolvedMyHordesNormalLootIds().length===0}
+
+/**
+ * Build the normal-zone table only when every ordinary source entry has a mechanical identity.
+ * This deliberately fails closed: source entries are never silently dropped merely because a
+ * downstream Live2Nite dependency has not landed yet.
+ */
+export function buildMyHordesNormalZoneLoot():WeightedLootTable{
+  const unresolved=unresolvedMyHordesNormalLootIds()
+  if(unresolved.length)throw new Error(`MyHordes normal-zone loot is not dependency-complete: ${unresolved.join(', ')}`)
+  return{
+    id:'myhordes.zone.normal',
+    source:'MYHORDES_CURRENT',
+    entries:mappedOrdinaryNormalSourceLoot().map(({source,mapping})=>lootEntry(mapping.type,source.weight,mapping.state)),
+  }
 }
