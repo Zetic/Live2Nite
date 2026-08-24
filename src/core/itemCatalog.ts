@@ -19,6 +19,8 @@ export const ITEM_TYPE_IDS = [
   'water_pistol','water_cooler_bottle','repair_kit',
   // Part 2 openables. Source variants such as 2- and 3-use resource packs are represented by state, not duplicate item types.
   'resource_pack','toolbox','metal_chest','xl_chest','food_box','decoration_box','safe',
+  // Construction plans use Live2Nite-owned IDs while following current MyHordes read behavior.
+  'common_blueprint','uncommon_blueprint','rare_blueprint','very_rare_blueprint',
 ] as const
 
 export type ItemType = typeof ITEM_TYPE_IDS[number]
@@ -61,6 +63,7 @@ export type ItemCapability =
   | 'stateful_container'
   | 'repairable'
   | 'medical'
+  | 'blueprint'
 
 export interface ItemStateSchema {
   charges?: { min: number; max: number; initial: number }
