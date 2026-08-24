@@ -12,16 +12,17 @@
 .controlled-clock-context span{color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.09em}
 .controlled-clock-context strong{font-size:.76rem;color:#d7c7b9}
 .time-controls{
-  position:sticky;
-  top:8px;
-  z-index:20;
+  position:fixed;
+  top:10px;
+  right:12px;
+  z-index:100;
   display:flex;
   align-items:center;
   justify-content:flex-end;
   gap:7px;
   width:max-content;
-  max-width:100%;
-  margin:0 0 12px auto;
+  max-width:calc(100vw - 24px);
+  margin:0;
   padding:5px 6px;
   border:1px solid #334148;
   border-radius:8px;
@@ -45,6 +46,6 @@
 .event-time{min-width:76px!important}
 @media(max-width:620px){
   .controlled-clock-context{align-items:flex-start;flex-direction:column}
-  .time-controls{position:static;width:100%;justify-content:space-between}
+  .time-controls{top:8px;right:8px;max-width:calc(100vw - 16px)}
   .time-buttons{flex:0 0 auto}
 }
