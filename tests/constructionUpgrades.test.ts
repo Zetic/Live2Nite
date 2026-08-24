@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { CONSTRUCTION_CATALOG } from '../src/core/constructionCatalog'
 import { createInitialGame } from '../src/core/game'
 import {
   ACTIVE_CONSTRUCTION_UPGRADE_IDS,
@@ -39,9 +40,12 @@ describe('Upgrade Projects facility and voting',()=>{
 
   it('activates faithful tracks and leaves unsupported source tracks pending',()=>{
     expect(ACTIVE_CONSTRUCTION_UPGRADE_IDS).toEqual(expect.arrayContaining(['great_pit','upgradeable_wall','pump','workshop']))
-    const game=complete(createInitialGame(102,4),'watchtower')
-    expect(pendingCompletedUpgradeProjects(game)).toContain('watchtower')
-    expect(availableConstructionUpgradeProjects(game)).not.toContain('watchtower')
+    const unsupported=Object.values(CONSTRUCTION_CATALOG).find((entry)=>entry.hasUpgrade&&!ACTIVE_CONSTRUCTION_UPGRADE_IDS.includes(entry.id))
+    expect(unsupported).toBeDefined()
+    if(!unsupported)throw new Error('Expected at least one source upgrade track to remain pending')
+    const game=complete(createInitialGame(102,4),unsupported.id)
+    expect(pendingCompletedUpgradeProjects(game)).toContain(unsupported.id)
+    expect(availableConstructionUpgradeProjects(game)).not.toContain(unsupported.id)
   })
 
   it('hides vote counts from a citizen until that citizen chooses',()=>{
