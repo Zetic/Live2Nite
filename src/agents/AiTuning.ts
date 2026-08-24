@@ -28,6 +28,7 @@ export const AI_TUNING = {
   campingEligibilityDistance: 6,
   returnHourBase: 18,
   returnHourSpread: 4,
+  fleeZombieTrapHour: 20,
   lateBarehandedFightHour: 22,
   campingImproveTargetPercent: 65,
   campingViabilityTargetPercent: 50,

@@ -1,6 +1,6 @@
 import { getLegalActions } from '../core/actions'
 import type { GameCommand } from '../core/types'
-import { temporaryControlActive, zoneControl, zoneControlState } from '../core/world'
+import { relativeControlActive, temporaryControlActive, zoneControl, zoneControlState } from '../core/world'
 import { asAgentDecisionContext, type AgentDecisionInput } from './AgentDecisionContext'
 import type { AgentController } from './AgentController'
 import { AI_TUNING } from './AiTuning'
@@ -34,7 +34,7 @@ export class BasicBotController implements AgentController {
       const open=pick(actions,'OPEN_GATE');if(open)return open;return pick(actions,'EXIT_TOWN')
     }
     const control=zoneControl(game,citizen.location.x,citizen.location.y)
-    if(control.trapped){if(temporaryControlActive(game,citizen.id)){const safety=missionSafety(game,citizenId);const refill=refillAction(citizen,actions,safety.returnAp);if(refill)return refill;return controlAwareStepTowardTown(game,citizen,actions)}const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon;if(game.clock.hour>=AI_TUNING.lateBarehandedFightHour){const fists=pick(actions,'ATTACK_BAREHANDED');if(fists)return fists}if(mission?.phase==='camp')return campingAction(game,citizen,actions);return null}
+    if(control.trapped){if(temporaryControlActive(game,citizen.id)||relativeControlActive(game,citizen.id)){const safety=missionSafety(game,citizenId);const refill=refillAction(citizen,actions,safety.returnAp);if(refill)return refill;return controlAwareStepTowardTown(game,citizen,actions)}const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon;const flee=pick(actions,'FLEE_ZOMBIES');if(flee&&(mission?.phase==='return'||game.clock.hour>=AI_TUNING.fleeZombieTrapHour))return flee;if(game.clock.hour>=AI_TUNING.lateBarehandedFightHour){const fists=pick(actions,'ATTACK_BAREHANDED');if(fists)return fists}if(mission?.phase==='camp')return campingAction(game,citizen,actions);return null}
     if(mission?.role==='rescue'&&zoneControlState(game,citizen.location.x,citizen.location.y)==='fragile'){const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon}
     const opportunistic=opportunisticFieldAction(game,citizen,actions,mission);if(opportunistic)return opportunistic
     if(citizen.status.hydration!=='normal'&&!carried(citizen,'water_ration'))return controlAwareStepTowardTown(game,citizen,actions)

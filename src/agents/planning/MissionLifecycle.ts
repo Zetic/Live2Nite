@@ -126,6 +126,7 @@ export function nextMissionLifecycleEvent(state: GameState, citizenId: string): 
     }
   }
   if (mission.phase === 'camp') return null
+  if (citizen.relativeControl && mission.phase !== 'return') return phaseEvent(state,citizenId,mission,'return')
 
   if (mission.phase === 'prepare') {
     if (citizen.location.type === 'world') return phaseEvent(state, citizenId, mission, 'outbound')
