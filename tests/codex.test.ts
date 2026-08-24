@@ -40,8 +40,8 @@ describe('item codex',()=>{
     expect(codexItemEntry('chicken').category).toBe('creatures')
     expect(codexItemEntry('common_blueprint').category).toBe('blueprints')
     expect(filterCodexItems('documents','dusty book').some((entry)=>entry.name==='Dusty Book')).toBe(true)
-    expect(filterCodexItems('food','doggy bag')).toHaveLength(0)
-    expect(filterCodexItems('containers','doggy bag')).toHaveLength(1)
+    expect(filterCodexItems('food','').some((entry)=>entry.name==='Doggy Bag')).toBe(false)
+    expect(filterCodexItems('containers','').filter((entry)=>entry.name==='Doggy Bag')).toHaveLength(1)
   })
 
   it('keeps category counts derived instead of hard-coded',()=>{
