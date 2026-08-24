@@ -13,12 +13,12 @@ export function hydrationAction(state:GameState,citizen:Citizen,actions:GameComm
   const take=pick(actions,'TAKE_WATER');if(take&&state.town.well.water>0)return take
   return null
 }
-export function conditionTreatmentAction(citizen:Citizen,actions:GameCommand[]):GameCommand|null{
+export function conditionTreatmentAction(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
   const uses=actions.filter((action):action is Extract<GameCommand,{type:'USE_ITEM_ACTION'}>=>action.type==='USE_ITEM_ACTION')
   const byId=(actionId:Extract<GameCommand,{type:'USE_ITEM_ACTION'}>['actionId'])=>uses.find((action)=>action.actionId===actionId)??null
-  if(citizen.status.wound){const bandage=byId('bandage');if(bandage)return bandage}
-  if(citizen.status.infected){const paracetoid=byId('paracetoid');if(paracetoid)return paracetoid}
-  if(citizen.status.terrorized){const valium=byId('valium_shot');if(valium)return valium}
+  if(citizen.status.wound){const bandage=byId('bandage');if(bandage)return bandage;if(citizen.location.type==='town'){const bank=bankAction(state,actions,'bandage');if(bank)return bank}}
+  if(citizen.status.infected){const paracetoid=byId('paracetoid');if(paracetoid)return paracetoid;if(citizen.location.type==='town'){const bank=bankAction(state,actions,'paracetoid');if(bank)return bank}}
+  if(citizen.status.terrorized){const valium=byId('valium_shot');if(valium)return valium;if(citizen.location.type==='town'){const bank=bankAction(state,actions,'valium_shot');if(bank)return bank}}
   if(citizen.status.addicted&&!citizen.status.drugged)return byId('anabolic_steroids')??byId('paracetoid')??byId('valium_shot')
   return null
 }
