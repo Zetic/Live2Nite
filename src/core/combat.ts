@@ -38,6 +38,8 @@ export const WEAPONS:Partial<Record<ItemType,WeaponDefinition>>={
   box_cutter:{itemType:'box_cutter',minKills:1,maxKills:1,killChancePercent:60,consumesOnUse:false,breakChancePercent:70,brokenType:'broken_box_cutter',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
   chain:{itemType:'chain',minKills:1,maxKills:1,killChancePercent:50,consumesOnUse:false,breakChancePercent:25,brokenType:'broken_chain',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
   can_opener:{itemType:'can_opener',minKills:1,maxKills:1,killChancePercent:50,consumesOnUse:false,breakChancePercent:100,brokenType:'broken_can_opener',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  ektorp_gluten_chair:{itemType:'ektorp_gluten_chair',minKills:1,maxKills:1,killChancePercent:50,consumesOnUse:false,breakChancePercent:50,brokenType:'broken_ektorp_gluten_chair',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
+  pc_base_unit:{itemType:'pc_base_unit',minKills:1,maxKills:1,killChancePercent:100,consumesOnUse:false,breakChancePercent:50,brokenType:'broken_pc_base_unit',apCost:0,requiresPositiveAp:true,confidence:'confirmed'},
 }
 
 export function weaponDefinition(type:ItemType):WeaponDefinition|null{return WEAPONS[type]??null}
