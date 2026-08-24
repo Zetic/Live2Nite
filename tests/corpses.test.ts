@@ -69,17 +69,12 @@ describe('Citizen corpses and home visits',()=>{
   })
 
   it('can lose up to 20 Well water to an undisposed corpse',()=>{
-    let found:GameState|null=null
-    for(let seed=1;seed<=100&&!found;seed+=1){
-      let candidate=killInTown(createInitialGame(seed,3),'c02')
-      candidate={...candidate,town:{...candidate.town,well:{water:100}}}
-      candidate=resolveNight(candidate)
-      if((candidate.lastNight?.corpseWaterLost??0)>0)found=candidate
-    }
-    expect(found).not.toBeNull()
-    expect(found?.lastNight?.corpseReanimations).toBe(1)
-    expect(found?.lastNight?.corpseWaterLost).toBe(20)
-    expect(found?.town.well.water).toBe(80)
+    let game=killInTown(createInitialGame(8192,3),'c02')
+    game={...game,town:{...game.town,well:{water:100}}}
+    game=resolveNight(game)
+    expect(game.lastNight?.corpseReanimations).toBe(1)
+    expect(game.lastNight?.corpseWaterLost).toBe(20)
+    expect(game.town.well.water).toBe(80)
   })
 
   it('disposal removes the corpse from the next internal attack stage',()=>{
