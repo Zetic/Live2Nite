@@ -18,7 +18,7 @@ export const PRIMARY_SCREENS: readonly ScreenDefinition[] = [
   { id: 'bank', label: 'The Bank', short: 'Shared inventory', townOnly: true },
   { id: 'construction', label: 'Construction Sites', short: 'Town projects', townOnly: true },
   { id: 'world', label: 'World Beyond', short: 'Gate & expeditions' },
-  { id: 'codex', label: 'Codex', short: 'Items & game reference' },
+  { id: 'codex', label: 'Codex', short: 'Items, conditions & constructions' },
 ]
 
 const FACILITY_DEFINITIONS: readonly FacilityScreenDefinition[] = [
