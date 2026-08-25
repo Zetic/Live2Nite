@@ -3,7 +3,7 @@ import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, CODEX_ITEM_FAMILY_COUNT, COD
 import { CONSTRUCTION_CODEX_ENTRIES } from '../../core/constructionCodex'
 import { RUIN_IDS } from '../../core/ruinIds'
 import { STATUS_CODEX_ENTRIES, filterCodexStatuses, type CodexStatusEntry } from '../../core/statusCodex'
-import type { CitizenStatusId } from '../../core/types'
+import type { CitizenStatusId, ConstructionId, ItemType } from '../../core/types'
 import '../codex.css'
 import '../item-codex-families.css'
 import { ConstructionCodexView } from './ConstructionCodexView'
@@ -24,15 +24,16 @@ function RelationshipGroups({title,groups,empty}:{title:string;groups:CodexRelat
   </section>
 }
 
-function ItemDetail({entry}:{entry:CodexItemEntry}){
+function ItemDetail({entry,onSummon}:{entry:CodexItemEntry;onSummon:(type:ItemType)=>void}){
   const [selectedStateId,setSelectedStateId]=useState(entry.states[0]?.id??null)
   const selectedState=(selectedStateId?entry.states.find((state)=>state.id===selectedStateId):undefined)??entry.states[0]??null
   const activeImplementation=selectedState?.implementation??entry.implementation
   const facts=selectedState?.facts.length?selectedState.facts:entry.facts
+  const summonType=selectedState?selectedState.runtimeType:entry.type
   return <article className="codex-detail" aria-live="polite">
     <div className="codex-detail-heading">
       <div><p className="section-kicker">{entry.categoryLabel}</p><h2>{entry.name}</h2></div>
-      <div className="codex-item-heading-chips"><span className="codex-source-chip">{entry.sourceLabel}</span><span className={`codex-item-status ${entry.implementation}`}>{itemImplementationStatusLabel(entry.implementation)}</span></div>
+      <div className="codex-item-heading-chips"><button type="button" className="codex-debug-action" disabled={!summonType} onClick={()=>summonType&&onSummon(summonType)} title={summonType?'Debug: spawn this runtime item in the controlled citizen’s rucksack':'This source state has no runtime item to summon'}>Summon</button><span className="codex-source-chip">{entry.sourceLabel}</span><span className={`codex-item-status ${entry.implementation}`}>{itemImplementationStatusLabel(entry.implementation)}</span></div>
     </div>
     <p className="codex-purpose">{entry.purpose}</p>
     {entry.states.length>1&&<section className="codex-detail-section codex-state-section">
@@ -73,7 +74,7 @@ function StatusDetail({entry}:{entry:CodexStatusEntry}){
   </article>
 }
 
-export function CodexView(){
+export function CodexView({onSummonItem,onInstantBuild}:{onSummonItem:(type:ItemType)=>void;onInstantBuild:(id:ConstructionId)=>void}){
   const [section,setSection]=useState<CodexSection>('items')
   const [category,setCategory]=useState<CodexItemCategory>('all')
   const [query,setQuery]=useState('')
@@ -96,7 +97,7 @@ export function CodexView(){
       <button type="button" className={section==='ruins'?'active':''} aria-selected={section==='ruins'} onClick={()=>setSection('ruins')}><strong>Ruins</strong><small>World & explorable ruins</small></button>
     </div>
 
-    {section==='constructions'?<ConstructionCodexView/>:section==='ruins'?<RuinsCodexView/>:<>
+    {section==='constructions'?<ConstructionCodexView onInstantBuild={onInstantBuild}/>:section==='ruins'?<RuinsCodexView/>:<>
       {section==='items'&&<div className="codex-category-tabs" role="tablist" aria-label="Item categories">{CODEX_ITEM_CATEGORIES.map((entry)=><button type="button" key={entry.id} className={category===entry.id?'active':''} aria-selected={category===entry.id} onClick={()=>setCategory(entry.id)}><span>{entry.label}</span><small>{codexCategoryCount(entry.id)}</small></button>)}</div>}
       <div className="codex-toolbar"><label><span>{section==='items'?'Search items':'Search status effects'}</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder={section==='items'?'Name, state, category, recipe, location…':'Status, source, treatment, progression, effect…'}/></label><strong>{shown} shown</strong></div>
       <div className="codex-layout">
@@ -104,7 +105,7 @@ export function CodexView(){
           {section==='items'?visibleItems.map((entry)=><button type="button" key={entry.id} className={`codex-item-row item-${entry.implementation} ${itemEntry?.id===entry.id?'active':''}`} onClick={()=>setSelectedItem(entry.id)}><span><strong>{entry.name}</strong><small>{entry.categoryLabel} · {entry.states.length} state{entry.states.length===1?'':'s'} · {itemImplementationStatusLabel(entry.implementation)}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>):visibleStatuses.map((entry)=><button type="button" key={entry.id} className={`codex-item-row status-${entry.severity} ${statusEntry?.id===entry.id?'active':''}`} onClick={()=>setSelectedStatus(entry.id)}><span><strong>{entry.label}</strong><small>{entry.family} · {entry.severity}</small></span><span className="codex-row-arrow" aria-hidden="true">›</span></button>)}
           {shown===0&&<p className="empty-state">No {section==='items'?'items':'status effects'} match this search.</p>}
         </div></section>
-        {section==='items'?(itemEntry?<ItemDetail key={itemEntry.id} entry={itemEntry}/>:<article className="codex-detail"><p className="empty-state">No item is available for the current filter.</p></article>):(statusEntry?<StatusDetail entry={statusEntry}/>:<article className="codex-detail"><p className="empty-state">No status effect is available for this search.</p></article>)}
+        {section==='items'?(itemEntry?<ItemDetail key={itemEntry.id} entry={itemEntry} onSummon={onSummonItem}/>:<article className="codex-detail"><p className="empty-state">No item is available for the current filter.</p></article>):(statusEntry?<StatusDetail entry={statusEntry}/>:<article className="codex-detail"><p className="empty-state">No status effect is available for this search.</p></article>)}
       </div>
     </>}
   </section>
