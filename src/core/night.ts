@@ -6,6 +6,7 @@ import { applyEvents } from './events'
 import { personalDefense } from './home'
 import { NORMAL_SCAVENGE_LOOT_POOL, createItemInstance } from './items'
 import { randomInt } from './rng'
+import { advanceExplorableRuinLifecycleForNewDay } from './ruinEvolution'
 import { nightlyStatusEvents } from './status'
 import type { GameEvent, GameState, HomeAttackOutcome, NightReport } from './types'
 import { isTownGateZone, zoneKey } from './world'
@@ -140,6 +141,7 @@ export function resolveNightAttack(state:GameState):GameState{
   const evolution=worldZombieEvolutionEvent(afterStatuses)
   const rollover:GameEvent[]=[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...replenishment,...outputs,...expiries,...decay]
   if(evolution)rollover.push(evolution)
-  rollover.push({type:'DAY_STARTED',day:state.day+1,hour:DAY_START_HOUR})
-  return applyEvents(afterStatuses,rollover)
+  const afterWorldRollover=applyEvents(afterStatuses,rollover)
+  const afterRuinRollover=advanceExplorableRuinLifecycleForNewDay(afterWorldRollover,state.day+1)
+  return applyEvents(afterRuinRollover,[{type:'DAY_STARTED',day:state.day+1,hour:DAY_START_HOUR}])
 }
