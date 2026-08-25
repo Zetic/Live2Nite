@@ -8,7 +8,8 @@ import { debugGodMove, debugInstantBuild, debugRefreshCitizen, debugSummonItem, 
 import { enforceGodMode, isGodCitizen } from '../core/debugGod'
 import { totalTownDefense } from '../core/defense'
 import { createInitialGame } from '../core/game'
-import { getRuinExplorer, type RuinActionResult } from '../core/ruinExploration'
+import { getRuinExplorer, ruinCurrentCell, type RuinActionResult } from '../core/ruinExploration'
+import { specialSiteName } from '../core/specialSites'
 import type { ConstructionId, Direction, GameCommand, GameEvent, GameState, ItemType } from '../core/types'
 import { getZone, moveCoordinates, zoneControl } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
@@ -21,6 +22,7 @@ import { CodexView } from './components/CodexView'
 import { ConstructionView } from './components/ConstructionView'
 import { GameNavigation } from './components/GameNavigation'
 import { HomeView } from './components/HomeView'
+import { RuinInteriorMap, RuinInteriorTravelControls, ruinFloorLabel } from './components/RuinInteriorMap'
 import { TimeControls } from './components/TimeControls'
 import { TownEndScreen } from './components/TownEndScreen'
 import { TownRecords } from './components/TownRecords'
@@ -57,6 +59,7 @@ export function App() {
   const player = game.citizens.find((citizen) => citizen.id === controlledCitizenId) ?? game.citizens[0]
   const godActive=isGodCitizen(player)
   const ruinExploring = Boolean(getRuinExplorer(game,player.id)?.active)
+  const ruinCell = ruinExploring ? ruinCurrentCell(game,player.id) : null
   const alive = useMemo(() => game.citizens.filter((citizen) => citizen.alive).length, [game.citizens])
   const outsideCitizens = useMemo(() => game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world'), [game.citizens])
   const townDefense = useMemo(() => totalTownDefense(game), [game])
@@ -188,9 +191,9 @@ export function App() {
             {currentZone&&!ruinExploring&&<CampingPanel game={game} citizen={player} zone={currentZone} legalActions={legalActions} act={act}/>} 
           </div>
           <section className="panel map-panel">
-            <div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{ruinExploring?'INSIDE RUIN':`${Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known`}</span></div>
-            <WorldMap game={game} citizenId={player.id}/>
-            {player.location.type==='world'&&!ruinExploring&&<WorldTravelControls legalActions={legalActions} move={move}/>} 
+            <div className="panel-heading compact"><div><p className="section-kicker">{ruinExploring?'Ruin map':'Expedition map'}</p><h2>{ruinExploring&&currentZone?.specialSite?specialSiteName(currentZone.specialSite.type):'World Beyond'}</h2></div><span className="panel-count">{ruinExploring&&ruinCell?ruinFloorLabel(ruinCell.floor):`${Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known`}</span></div>
+            {ruinExploring&&currentZone?<RuinInteriorMap game={game} citizenId={player.id} zone={currentZone}/>:<WorldMap game={game} citizenId={player.id}/>} 
+            {player.location.type==='world'&&(ruinExploring?<RuinInteriorTravelControls game={game} citizenId={player.id} onResult={applyRuinResult}/>:<WorldTravelControls legalActions={legalActions} move={move}/>)} 
           </section>
         </div>}
         {screen === 'citizens' && <CitizenRoster game={game} controlledCitizenId={player.id} onControl={controlCitizen} onVisit={visitHome}/>} 
