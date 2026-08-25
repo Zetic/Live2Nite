@@ -8,6 +8,7 @@ import { ITEMS, NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import type { ItemImplementationStatus } from './itemSourceCatalog'
 import { totalLootWeight, type WeightedLootTable } from './loot'
 import { OPENABLES, openableDefinition } from './openables'
+import { playableRuinSourceDrops, ruinSourceDrops } from './ruinLoot'
 import { MYHORDES_DEPLETED_ZONE_LOOT } from './scavengeLoot'
 import { SPECIAL_SITES, SPECIAL_SITE_ORDER } from './specialSites'
 import { WORKSHOP_RECIPES, WORKSHOP_RECIPE_ORDER } from './workshop'
@@ -66,6 +67,7 @@ function rarityLabel(percent:number):string{if(percent>=30)return'Very common';i
 function rarityDetail(percent:number,context:string):string{return`${rarityLabel(percent)} · ${formatPercent(percent)} ${context}`}
 function uniformPercent(pool:readonly ItemType[],type:ItemType):number{return pool.length?pool.filter((candidate)=>candidate===type).length/pool.length*100:0}
 function weightedPercent(table:WeightedLootTable,type:ItemType):number{const total=totalLootWeight(table);if(total<=0)return 0;const matching=table.entries.reduce((sum,entry)=>entry.items.some((item)=>item.type===type)?sum+Math.max(0,Math.trunc(entry.weight)):sum,0);return matching/total*100}
+function ruinPercent(siteType:(typeof SPECIAL_SITE_ORDER)[number],type:ItemType):number{const source=ruinSourceDrops(siteType);const total=source.reduce((sum,drop)=>sum+Math.max(0,Math.trunc(drop.weight)),0);if(total<=0)return 0;const matching=playableRuinSourceDrops(siteType).reduce((sum,drop)=>drop.runtimeType===type?sum+Math.max(0,Math.trunc(drop.weight)):sum,0);return matching/total*100}
 function group(id:string,label:string,entries:CodexRelationship[]):CodexRelationshipGroup|null{return entries.length?{id,label,entries}:null}
 function compactGroups(groups:Array<CodexRelationshipGroup|null>):CodexRelationshipGroup[]{return groups.filter((entry):entry is CodexRelationshipGroup=>Boolean(entry))}
 function dedupeRelationships(entries:CodexRelationship[]):CodexRelationship[]{const seen=new Set<string>();return entries.filter((entry)=>{const key=`${entry.label}|${entry.detail}|${entry.badge??''}`;if(seen.has(key))return false;seen.add(key);return true})}
@@ -102,8 +104,8 @@ function obtainedFromGroups(type:ItemType):CodexRelationshipGroup[]{
   const scavenging:CodexRelationship[]=[]
   const normalChance=uniformPercent(NORMAL_SCAVENGE_LOOT_POOL,type);if(normalChance>0)scavenging.push({label:'Normal zones',detail:rarityDetail(normalChance,'per loot roll')})
   const depletedChance=weightedPercent(MYHORDES_DEPLETED_ZONE_LOOT,type);if(depletedChance>0)scavenging.push({label:'Depleted zones',detail:rarityDetail(depletedChance,'per depleted search')})
-  const specialMatches=SPECIAL_SITE_ORDER.flatMap((siteType)=>{const definition=SPECIAL_SITES[siteType];const chance=uniformPercent(definition.lootPool,type);return chance>0?[{definition,chance}]:[]})
-  const specialLocations:CodexRelationship[]=specialMatches.map(({definition,chance})=>({label:definition.name,detail:rarityDetail(chance,'per site loot draw'),...(specialMatches.length===1?{badge:'Unique location'}:{})}))
+  const specialMatches=SPECIAL_SITE_ORDER.flatMap((siteType)=>{const definition=SPECIAL_SITES[siteType];const chance=ruinPercent(siteType,type);return chance>0?[{definition,chance}]:[]})
+  const specialLocations:CodexRelationship[]=specialMatches.map(({definition,chance})=>({label:definition.name,detail:rarityDetail(chance,'per source ruin loot roll'),...(specialMatches.length===1?{badge:'Unique location'}:{})}))
   const containers:CodexRelationship[]=[]
   for(const definition of Object.values(OPENABLES)){if(!definition)continue;if(definition.morphTo===type){containers.push({label:ITEMS[definition.type].name,detail:'Guaranteed morph on opening'});continue}const chance=weightedPercent(definition.outputTable,type);if(chance>0)containers.push({label:ITEMS[definition.type].name,detail:rarityDetail(chance,'per opening')})}
   for(const definition of Object.values(ITEMS)){if(!definition.containerPool?.length||OPENABLES[definition.type])continue;const chance=uniformPercent(definition.containerPool,type);if(chance>0)containers.push({label:definition.name,detail:rarityDetail(chance,'per opening')})}
