@@ -11,6 +11,7 @@ export type ProfessionCitizen=Citizen&{equipment?:CitizenEquipment}
 export const BASE_CARGO_CAPACITY=5
 export const PROFESSION_IDS:readonly ProfessionId[]=['scavenger','scout','guardian','survivalist','tamer','technician']
 export const GUARDIAN_CONTROL_POINTS=4
+export const ORDINARY_CONTROL_POINTS=2
 export const GUARDIAN_PERSONAL_HOME_DEFENSE=1
 export const GUARDIAN_TOWN_DEFENSE=5
 export const GUARDIAN_TOWER_TOWN_DEFENSE=15
@@ -56,6 +57,9 @@ export function professionName(citizen:Citizen):string{const profession=citizenP
 export function equipmentItemName(item:EquipmentItemInstance):string{if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.name;const profession=PROFESSION_BY_ITEM[item.type];return PROFESSION_DEFINITIONS[profession].itemName}
 export function equipmentItemPurpose(item:EquipmentItemInstance):string{if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.purpose;const profession=PROFESSION_BY_ITEM[item.type];return PROFESSION_DEFINITIONS[profession].itemPurpose}
 
+/** Profession items are capability tokens: every Guardian bonus is derived from the Riot Shield slot. */
+export function professionControlPoints(citizen:Citizen):number{return citizen.status.terrorized?0:hasProfession(citizen,'guardian')?GUARDIAN_CONTROL_POINTS:ORDINARY_CONTROL_POINTS}
+export function guardianPersonalHomeDefenseBonus(citizen:Citizen):number{return hasProfession(citizen,'guardian')?GUARDIAN_PERSONAL_HOME_DEFENSE:0}
 export function guardianTownDefensePerCitizen(state:GameState):number{return state.town.construction.guard_tower?.completed?GUARDIAN_TOWER_TOWN_DEFENSE:GUARDIAN_TOWN_DEFENSE}
 export function guardianTownDefenseBonus(state:GameState):number{
   const guardians=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town'&&hasProfession(citizen,'guardian')).length
