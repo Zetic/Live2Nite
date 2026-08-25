@@ -2,13 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { CONSTRUCTION_CATALOG } from '../src/core/constructionCatalog'
-import { EXPLORABLE_BLUEPRINT_POOLS, EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS, explorableBlueprintEligibleProjects, explorableBlueprintTierFromType } from '../src/core/explorableBlueprints'
+import { EXPLORABLE_BLUEPRINT_POOLS, EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS, explorableBlueprintEligibleProjects } from '../src/core/explorableBlueprints'
 import { createInitialGame } from '../src/core/game'
-import { EXPLORABLE_RUIN_IDS, RUIN_IDS, type RuinId } from '../src/core/ruinIds'
-import { RUIN_CATALOG } from '../src/core/ruinCatalog'
+import { RUIN_IDS } from '../src/core/ruinIds'
 import { RUIN_SOURCE_DROPS, ruinSourceDrops } from '../src/core/ruinLoot'
 import type { ConstructionId, GameState, ItemInstance, WorldZone } from '../src/core/types'
-import { createWorld, zoneKey } from '../src/core/world'
+import { zoneKey } from '../src/core/world'
 import { migrateStoredGame } from '../src/persistence/IndexedDbGameRepository'
 
 function withExplorableHospital(game:GameState):GameState{
@@ -35,19 +34,6 @@ function withOnlySpecializedCandidate(game:GameState,target:ConstructionId):Game
   return{...game,town:{...game.town,construction}}
 }
 
-function generatedExplorableWithFirstPlan():{seed:number;key:string;ruinId:RuinId;blueprint:ItemInstance['type']}|null{
-  for(let seed=1;seed<=250;seed+=1){
-    const {world}=createWorld(seed)
-    for(const [key,zone] of Object.entries(world.zones)){
-      const site=zone.specialSite
-      if(!site||!EXPLORABLE_RUIN_IDS.some((id)=>id===site.type))continue
-      const first=site.hiddenLoot[0]
-      if(first&&explorableBlueprintTierFromType(first))return{seed,key,ruinId:site.type as RuinId,blueprint:first}
-    }
-  }
-  return null
-}
-
 describe('exact ruin loot and explorable ruins',()=>{
   it('has an exact weighted source table for every gameplay ruin',()=>{
     expect(Object.keys(RUIN_SOURCE_DROPS)).toHaveLength(RUIN_IDS.length)
@@ -72,40 +58,10 @@ describe('exact ruin loot and explorable ruins',()=>{
     ]))
   })
 
-  it('recovers a specialized Hospital plan through the explorable-ruin interaction',()=>{
+  it('does not expose the legacy one-click special-site search for an explorable ruin',()=>{
     const game=withExplorableHospital(createInitialGame(4401,1))
-    const search=getLegalActions(game,'c01').find((action)=>action.type==='SEARCH_SPECIAL_SITE')
-    expect(search).toBeTruthy()
-    const result=executeCommand(game,search!)
-    const key=zoneKey(1,0)
-    const item=result.state.world.zones[key].groundItems[0]
-    expect(item).toMatchObject({type:'uncommon_blueprint',state:{blueprintFamily:'hospital',blueprintTier:'uncommon'}})
-    expect(result.state.world.zones[key].specialSite?.status).toBe('depleted')
-  })
-
-  it('carries a naturally generated explorable plan through search with the correct family and tier state',()=>{
-    const generated=generatedExplorableWithFirstPlan()
-    expect(generated).not.toBeNull()
-    const {seed,key,ruinId,blueprint}=generated!
-    const sourceZone=createInitialGame(seed,1).world.zones[key]
-    const x=sourceZone.x,y=sourceZone.y
-    let game=createInitialGame(seed,1)
-    game={
-      ...game,
-      world:{...game.world,zones:{...game.world.zones,[key]:{...game.world.zones[key],discovered:true,zombies:0}}},
-      citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x,y},inventory:[]}:citizen),
-    }
-    const expectedTier=explorableBlueprintTierFromType(blueprint)
-    const expectedFamily=RUIN_CATALOG[ruinId].family
-    expect(expectedTier).not.toBeNull()
-    expect(expectedFamily).not.toBeNull()
-    const search=getLegalActions(game,'c01').find((action)=>action.type==='SEARCH_SPECIAL_SITE')
-    expect(search).toBeTruthy()
-    const result=executeCommand(game,search!)
-    expect(result.state.world.zones[key].groundItems[0]).toMatchObject({
-      type:blueprint,
-      state:{blueprintFamily:expectedFamily,blueprintTier:expectedTier},
-    })
+    expect(getLegalActions(game,'c01').some((action)=>action.type==='SEARCH_SPECIAL_SITE')).toBe(false)
+    expect(game.world.zones[zoneKey(1,0)].specialSite?.hiddenLoot).toEqual(['uncommon_blueprint'])
   })
 
   it('reads a specialized plan only against its explicit prospective construction pool',()=>{
