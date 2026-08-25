@@ -8,16 +8,16 @@ export const TAMER_DOG_HEAVY_LIMIT=1
 export function hasTamerDog(citizen:Citizen):boolean{return hasProfession(citizen,'tamer')}
 export function tamerDogUsedToday(state:GameState,citizenId:string):boolean{return state.events.some((event)=>event.type==='TAMER_DOG_SENT'&&event.day===state.day&&event.citizenId===citizenId)}
 export function tamerDogDruggedToday(state:GameState,citizenId:string):boolean{return state.events.some((event)=>event.type==='TAMER_DOG_DRUGGED'&&event.day===state.day&&event.citizenId===citizenId)}
+export function tamerDogBlockedByCumbersome(state:GameState,citizen:Citizen):boolean{return !tamerDogDruggedToday(state,citizen.id)&&citizen.inventory.some(isCumbersomeItem)}
 
+/**
+ * The Maltese returns the rucksack as one shipment. A cumbersome cargo item blocks
+ * the whole trip unless the dog has been steroid-boosted; the generic inventory
+ * rule already limits a citizen to one cumbersome item at a time.
+ */
 export function tamerDogTransportableItems(state:GameState,citizen:Citizen):ItemInstance[]{
-  const allowHeavy=tamerDogDruggedToday(state,citizen.id)
-  let heavyRemaining=allowHeavy?TAMER_DOG_HEAVY_LIMIT:0
-  return citizen.inventory.filter((item)=>{
-    if(!isCumbersomeItem(item))return true
-    if(heavyRemaining<=0)return false
-    heavyRemaining-=1
-    return true
-  })
+  if(tamerDogBlockedByCumbersome(state,citizen))return[]
+  return [...citizen.inventory]
 }
 
 export function tamerDogSteroid(citizen:Citizen):ItemInstance|null{return citizen.inventory.find((item)=>item.type==='anabolic_steroids')??null}
