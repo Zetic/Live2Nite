@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createInitialGame } from '../src/core/game'
+import { equipCitizenProfession } from '../src/core/professions'
 import {
   RUIN_INITIAL_ZOMBIES,
   RUIN_OXYGEN_SECONDS,
@@ -29,7 +30,7 @@ function withExplorable(game:GameState,type:SpecialSiteType='abandoned_hospital'
   return{
     ...game,
     world:{...game.world,zones:{...game.world.zones,[key]:zone}},
-    citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,ap:6,location:{type:'world' as const,x,y},status:{...citizen.status,wound:null,terrorized:false},camping:{...citizen.camping,hidden:false}}:citizen),
+    citizens:game.citizens.map((citizen)=>citizen.id==='c01'?equipCitizenProfession({...citizen,ap:6,location:{type:'world' as const,x,y},status:{...citizen.status,wound:null,terrorized:false},camping:{...citizen.camping,hidden:false}},'scout'):citizen),
   }
 }
 
