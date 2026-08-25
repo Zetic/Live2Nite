@@ -7,7 +7,7 @@ import { RUIN_CATALOG } from '../src/core/ruinCatalog'
 import { normalizeRuinId } from '../src/core/specialSites'
 import type { GameState, SpecialSiteState, WorldZone } from '../src/core/types'
 import { distanceToTown, zoneKey } from '../src/core/world'
-import { initialWorldZombieCount, SOURCE_MASSIVE_RESPAWN_FACTOR, SOURCE_MASSIVE_RESPAWN_THRESHOLD_PERCENT, worldZombieEvolutionChanges } from '../src/core/worldEvolution'
+import { initialWorldZombieCount, SOURCE_MASSIVE_RESPAWN_FACTOR, SOURCE_MASSIVE_RESPAWN_THRESHOLD, worldZombieEvolutionChanges } from '../src/core/worldEvolution'
 
 function explorableZone(game:GameState):WorldZone{
   return Object.values(game.world.zones).find((zone)=>{
@@ -31,7 +31,7 @@ describe('source-calibrated zombie population',()=>{
   })
 
   it('uses the current source massive-respawn tuning without repopulating the starter approaches',()=>{
-    expect(SOURCE_MASSIVE_RESPAWN_THRESHOLD_PERCENT).toBe(50)
+    expect(SOURCE_MASSIVE_RESPAWN_THRESHOLD).toBe(50)
     expect(SOURCE_MASSIVE_RESPAWN_FACTOR).toBe(0.5)
     const base=createInitialGame(7002,1)
     const emptied:GameState={...base,world:{...base.world,zones:Object.fromEntries(Object.entries(base.world.zones).map(([key,zone])=>[key,{...zone,zombies:0}]))}}
@@ -54,6 +54,18 @@ describe('source-calibrated zombie population',()=>{
     expect(ruinInteriorZombieTotal(day2)).toBe(SOURCE_RUIN_INITIAL_ZOMBIES+SOURCE_RUIN_DAILY_ZOMBIES)
     const repeated=advanceRuinInteriorToDay(7004,1,0,day2,2)
     expect(ruinInteriorZombieTotal(repeated)).toBe(ruinInteriorZombieTotal(day2))
+  })
+
+  it('applies elapsed daily growth when an explorable ruin is first entered on a later day',()=>{
+    let game=createInitialGame(7006,1)
+    const zone=explorableZone(game)
+    const key=zoneKey(zone.x,zone.y)
+    expect(getRuinInterior(zone)).toBeNull()
+    game={...game,day:4,world:{...game.world,zones:{...game.world.zones,[key]:{...zone,zombies:0}}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x:zone.x,y:zone.y},ap:6}:citizen)}
+    game=enterRuin(game,'c01',100_000).state
+    const interior=getRuinInterior(game.world.zones[key])!
+    expect(ruinInteriorZombieTotal(interior)).toBe(SOURCE_RUIN_INITIAL_ZOMBIES+(game.day-1)*SOURCE_RUIN_DAILY_ZOMBIES)
+    expect(interior.lastZombieGrowthDay).toBe(game.day)
   })
 
   it('preserves ruin room state and floor caches while clearing stale explorer locks at rollover',()=>{
