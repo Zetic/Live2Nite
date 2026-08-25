@@ -31,6 +31,7 @@ function depthOf(id:ConstructionId):number{
   while(current&&!seen.has(current)){seen.add(current);depth+=1;current=CONSTRUCTION_CATALOG[current].parentId}
   return depth
 }
+function live2niteConstructionDescription(description:string):string{return description.replaceAll('Guardian heroes','Guardians')}
 
 export function constructionCodexEntry(id:ConstructionId):ConstructionCodexEntry{
   const source=CONSTRUCTION_CATALOG[id]
@@ -38,7 +39,7 @@ export function constructionCodexEntry(id:ConstructionId):ConstructionCodexEntry
   return{
     id,
     name:source.name,
-    description:source.description,
+    description:live2niteConstructionDescription(source.description),
     branchId:source.branchId,
     branchLabel:source.branchLabel,
     parentId:source.parentId,
