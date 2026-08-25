@@ -62,7 +62,7 @@ function rawNormalSearch(state:GameState):Extract<GameEvent,{type:'ZONE_SEARCHED
 }
 function stateForNormalSearchOutcome(success:boolean):GameState{
   const base=searchable({...createInitialGame(1201,1),clock:{hour:13,phase:'day'}},'c01','scout',2)
-  for(let rngState=1;rngState<=1000;rngState+=1){const candidate={...base,rngState};if(Boolean(resolveSearchAttempt(candidate,rawNormalSearch(candidate)).item)===success)return candidate}
+  for(let index=1;index<=1000;index+=1){const rngState=Math.imul(index,0x9e3779b1)>>>0;const candidate={...base,rngState};if(Boolean(resolveSearchAttempt(candidate,rawNormalSearch(candidate)).item)===success)return candidate}
   throw new Error(`Could not find deterministic ${success?'success':'failure'} search RNG`)
 }
 function withExplorable(game:GameState,profession:'scavenger'|'scout'):GameState{
