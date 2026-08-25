@@ -168,7 +168,7 @@ export function enterRuin(game:GameState,citizenId:string,nowMs=Date.now()):Ruin
   if(!citizen?.alive||citizen.location.type!=='world')return fail(game,'The citizen must be alive and standing at the ruin.')
   const zone=getZone(game.world,citizen.location.x,citizen.location.y);const site=zone?.specialSite as SiteWithInterior|undefined
   const ruinId=site?normalizeRuinId(site.type):null;const definition=ruinId?RUIN_CATALOG[ruinId]:null
-  if(!zone||!site||!definition?.explorable||!definition.family||site.status==='buried')return fail(game,'This location is not an accessible explorable ruin.')
+  if(!zone||!site||!ruinId||!definition?.explorable||!definition.family||site.status==='buried')return fail(game,'This location is not an accessible explorable ruin.')
   if(citizen.status.wound||citizen.status.terrorized)return fail(game,'Wounded or terrorized citizens cannot enter an explorable ruin.')
   if(citizen.camping.hidden)return fail(game,'Leave the hiding place before entering the ruin.')
   if(citizen.ap<1)return fail(game,'Entering an explorable ruin costs 1 AP.')
