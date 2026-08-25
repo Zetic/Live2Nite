@@ -26,7 +26,7 @@ export interface ProfessionDefinition {
 }
 
 export const PROFESSION_DEFINITIONS:Record<ProfessionId,ProfessionDefinition>={
-  scavenger:{id:'scavenger',name:'Scavenger',summary:'Resource gathering specialist.',itemType:'profession_small_shovel',itemName:'Small Shovel',itemPurpose:'Locked profession equipment. Enables Scavenger mechanics as they are implemented.'},
+  scavenger:{id:'scavenger',name:'Scavenger',summary:'Resource gathering specialist.',itemType:'profession_small_shovel',itemName:'Small Shovel',itemPurpose:'Scavenger equipment. Improves search success, shortens repeat automatic searches to 75% of the base interval, reveals qualitative resource depletion, adds 50% ruin oxygen, and can replenish each depleted zone with the spade once.'},
   scout:{id:'scout',name:'Scout',summary:'Reconnaissance and dangerous-zone exploration specialist.',itemType:'profession_camouflage_suit',itemName:'Camouflage Suit',itemPurpose:'Locked profession equipment. Enables Scout mechanics as they are implemented.'},
   guardian:{id:'guardian',name:'Guardian',summary:'Defense and zombie-control specialist.',itemType:'profession_riot_shield',itemName:'Riot Shield',itemPurpose:'Guardian equipment. Provides 4 World Beyond control points, +1 personal Home defense, and +5 town defense while its citizen is alive in town. A completed Guard Tower raises that town contribution to +15.'},
   survivalist:{id:'survivalist',name:'Survivalist',summary:'Long-range survival and camping specialist.',itemType:'profession_survival_manual',itemName:'Survival Manual',itemPurpose:'Locked profession equipment. Enables Survivalist mechanics as they are implemented.'},
