@@ -1,8 +1,9 @@
 import { bankCount } from '../core/bank'
 import { COMBINATION_RECIPES, combinationRecipeForOutput } from '../core/combinations'
 import { CONSTRUCTIONS, missingMaterials } from '../core/construction'
-import { nextHomeDefinition, personalMaterialCount } from '../core/home'
+import { HOME_IMPROVEMENTS, improvementNextLevel, nextHomeDefinition, personalMaterialCount } from '../core/home'
 import type { Citizen, CombinationRecipeId, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemType, WorkshopRecipeId } from '../core/types'
+import { workshopRecipeApCost } from '../core/workshop'
 import { publicDefenseAssessment, rankStrategicConstruction, strategicConstructionNeed } from './planning/TownDefenseStrategy'
 
 function constructionActions(actions:GameCommand[]):Array<Extract<GameCommand,{type:'CONTRIBUTE_CONSTRUCTION'}>>{return actions.filter((action):action is Extract<GameCommand,{type:'CONTRIBUTE_CONSTRUCTION'}>=>action.type==='CONTRIBUTE_CONSTRUCTION')}
@@ -31,6 +32,22 @@ function materialRecipe(state:GameState,citizen:Citizen,actions:GameCommand[],mi
   if(['wrought_iron','nuts_and_bolts','copper_pipe'].some((type)=>(missing[type as ItemType]??0)>0)){const mechanism=recipeAction(actions,'dismantle_mechanism');if(mechanism)return mechanism}
   return null
 }
+
+/** AP that a command selected by chooseTownWork will actually spend. Zero-AP inventory
+ * preparation remains legal for a gate volunteer even at the reserve floor, while any
+ * multi-AP home/corpse/workshop action must leave the promised reserve untouched. */
+export function townWorkApCost(state:GameState,citizen:Citizen,action:GameCommand):number{
+  switch(action.type){
+    case 'DISPOSE_CORPSE_OUTSIDE':return 2
+    case 'CONTRIBUTE_CONSTRUCTION':return 1
+    case 'WORKSHOP_CONVERT':return workshopRecipeApCost(state,action.recipeId,citizen.id)
+    case 'COMBINE_ITEMS':return COMBINATION_RECIPES[action.recipeId].apCost
+    case 'UPGRADE_HOME':return nextHomeDefinition(citizen.home.level)?.apCost??0
+    case 'BUILD_HOME_IMPROVEMENT':{const next=improvementNextLevel(citizen,action.improvementId);return next===null?0:HOME_IMPROVEMENTS[action.improvementId].apCost(next)}
+    default:return 0
+  }
+}
+
 export function chooseTownWork(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
   if(citizen.location.type!=='town')return null
   const corpse=corpseDisposalAction(actions);if(corpse)return corpse
