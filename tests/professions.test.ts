@@ -26,8 +26,10 @@ describe('profession foundation',()=>{
   })
 
   it('assigns every bot a seeded approximately even profession distribution',()=>{
-    const game=createInitialGame(6103,40,'hermit')
+    const game=createInitialGame(6103,40,'survivalist')
     const bots=game.citizens.slice(1)
+    expect(citizenProfession(game.citizens[0])).toBe('survivalist')
+    expect(citizenEquipment(game.citizens[0])?.professionItem.type).toBe('profession_survival_manual')
     expect(townHasProfessionEquipment(game.citizens)).toBe(true)
     const counts=new Map(PROFESSION_IDS.map((id)=>[id,0]))
     for(const bot of bots){const profession=citizenProfession(bot);expect(profession).not.toBeNull();if(profession)counts.set(profession,(counts.get(profession)??0)+1)}
