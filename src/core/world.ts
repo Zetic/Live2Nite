@@ -2,7 +2,7 @@ import { NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
 import { EXPLORABLE_RUIN_IDS, type RuinId } from './ruinIds'
 import { ORDINARY_RUIN_IDS, RUIN_CATALOG } from './ruinCatalog'
-import { specialSiteLootPool } from './specialSites'
+import { normalizeRuinId, specialSiteLootPool } from './specialSites'
 import { citizenControlPoints } from './status'
 import type {
   Citizen,
@@ -20,7 +20,7 @@ export const WORLD_MIN_X = -7
 export const WORLD_MAX_X = 6
 export const WORLD_MIN_Y = -6
 export const WORLD_MAX_Y = 6
-/** Existing Live2Nite map-density choice. Ruin identity/placement within those slots is source-driven. */
+/** Existing Live2Nite total ruin density. One of these slots is reserved for an explorable ruin. */
 export const SPECIAL_SITE_COUNT = 12
 export const EXPLORABLE_RUIN_COUNT = 1
 export const NORMAL_ZONE_SEARCH_MIN = 5
@@ -38,16 +38,15 @@ const MAX_WORLD_RADIUS=Math.hypot(Math.max(Math.abs(WORLD_MIN_X),Math.abs(WORLD_
  */
 export function sourceEquivalentRuinKm(x:number,y:number):number{return Math.max(1,Math.min(28,Math.round((Math.hypot(x,y)/MAX_WORLD_RADIUS)*28)))}
 
-function chooseWeightedRuin(rngState:number,x:number,y:number,excluded:Set<RuinId>):{id:RuinId;rngState:number}{
+function chooseWeightedRuin(rngState:number,x:number,y:number):{id:RuinId;rngState:number}{
   const km=sourceEquivalentRuinKm(x,y)
-  let candidates=ORDINARY_RUIN_IDS.filter((id)=>{
+  const candidates=ORDINARY_RUIN_IDS.filter((id)=>{
     const ruin=RUIN_CATALOG[id]
-    return !excluded.has(id)&&ruin.spawnChance>0&&km>=ruin.sourceKm.min&&km<=ruin.sourceKm.max
+    return ruin.spawnChance>0&&km>=ruin.sourceKm.min&&km<=ruin.sourceKm.max
   })
-  if(!candidates.length)candidates=ORDINARY_RUIN_IDS.filter((id)=>!excluded.has(id)&&RUIN_CATALOG[id].spawnChance>0)
-  if(!candidates.length)candidates=ORDINARY_RUIN_IDS.filter((id)=>RUIN_CATALOG[id].spawnChance>0)
+  if(!candidates.length)throw new Error(`No source-valid ruin is available at projected ${km} km`)
   const total=candidates.reduce((sum,id)=>sum+RUIN_CATALOG[id].spawnChance,0)
-  const roll=randomInt(rngState,1,Math.max(1,total));let remaining=roll.value
+  const roll=randomInt(rngState,1,total);let remaining=roll.value
   for(const id of candidates){remaining-=RUIN_CATALOG[id].spawnChance;if(remaining<=0)return{id,rngState:roll.state}}
   return{id:candidates[candidates.length-1]!,rngState:roll.state}
 }
@@ -78,19 +77,31 @@ function takeUnusedCandidate(candidates:WorldZone[],used:Set<number>,rngState:nu
   return{index:eligible[roll.value]!.index,rngState:roll.state}
 }
 
+function normalizeExistingSpecialSites(world:WorldState):WorldState{
+  let changed=false
+  const zones=Object.fromEntries(Object.entries(world.zones).map(([key,zone])=>{
+    if(!zone.specialSite)return[key,zone]
+    const normalized=normalizeRuinId(zone.specialSite.type)
+    if(!normalized||normalized===zone.specialSite.type)return[key,zone]
+    changed=true
+    return[key,{...zone,specialSite:{...zone.specialSite,type:normalized as unknown as SpecialSiteState['type']}}]
+  })) as Record<string,WorldZone>
+  return changed?{...world,zones}:world
+}
+
 export function addSpecialSites(world:WorldState,seed:number):WorldState{
-  if(Object.values(world.zones).some((zone)=>zone.specialSite))return world
+  if(Object.values(world.zones).some((zone)=>zone.specialSite))return normalizeExistingSpecialSites(world)
   const zones={...world.zones}
   const candidates=Object.values(zones).filter((zone)=>!isTownGateZone(zone.x,zone.y))
-  const used=new Set<number>();const usedRuinIds=new Set<RuinId>()
+  const used=new Set<number>()
   let specialRng=((seed>>>0)^0x51f15e7d)>>>0||1
-  const ordinaryCount=Math.min(SPECIAL_SITE_COUNT,candidates.length)
+  const ordinaryCount=Math.min(Math.max(0,SPECIAL_SITE_COUNT-EXPLORABLE_RUIN_COUNT),candidates.length)
   for(let index=0;index<ordinaryCount;index+=1){
     const candidateRoll=takeUnusedCandidate(candidates,used,specialRng);specialRng=candidateRoll.rngState
     if(candidateRoll.index<0)break
     used.add(candidateRoll.index)
     const candidate=candidates[candidateRoll.index]!
-    const ruinRoll=chooseWeightedRuin(specialRng,candidate.x,candidate.y,usedRuinIds);specialRng=ruinRoll.rngState;usedRuinIds.add(ruinRoll.id)
+    const ruinRoll=chooseWeightedRuin(specialRng,candidate.x,candidate.y);specialRng=ruinRoll.rngState
     const generated=generateSpecialSite(ruinRoll.id,specialRng);specialRng=generated.rngState
     zones[zoneKey(candidate.x,candidate.y)]={...candidate,specialSite:generated.site}
   }
