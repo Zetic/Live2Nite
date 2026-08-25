@@ -1,5 +1,5 @@
 import { randomInt } from './rng'
-import type { Citizen } from './types'
+import type { Citizen, GameState } from './types'
 
 export type ProfessionId='scavenger'|'scout'|'guardian'|'survivalist'|'tamer'|'technician'
 export type ProfessionItemType='profession_small_shovel'|'profession_camouflage_suit'|'profession_riot_shield'|'profession_survival_manual'|'profession_three_legged_maltese'|'profession_technician_wrench'
@@ -10,6 +10,10 @@ export type ProfessionCitizen=Citizen&{equipment?:CitizenEquipment}
 
 export const BASE_CARGO_CAPACITY=5
 export const PROFESSION_IDS:readonly ProfessionId[]=['scavenger','scout','guardian','survivalist','tamer','technician']
+export const GUARDIAN_CONTROL_POINTS=4
+export const GUARDIAN_PERSONAL_HOME_DEFENSE=1
+export const GUARDIAN_TOWN_DEFENSE=5
+export const GUARDIAN_TOWER_TOWN_DEFENSE=15
 
 export interface ProfessionDefinition {
   id:ProfessionId
@@ -23,7 +27,7 @@ export interface ProfessionDefinition {
 export const PROFESSION_DEFINITIONS:Record<ProfessionId,ProfessionDefinition>={
   scavenger:{id:'scavenger',name:'Scavenger',summary:'Resource gathering specialist.',itemType:'profession_small_shovel',itemName:'Small Shovel',itemPurpose:'Locked profession equipment. Enables Scavenger mechanics as they are implemented.'},
   scout:{id:'scout',name:'Scout',summary:'Reconnaissance and dangerous-zone exploration specialist.',itemType:'profession_camouflage_suit',itemName:'Camouflage Suit',itemPurpose:'Locked profession equipment. Enables Scout mechanics as they are implemented.'},
-  guardian:{id:'guardian',name:'Guardian',summary:'Defense and zombie-control specialist.',itemType:'profession_riot_shield',itemName:'Riot Shield',itemPurpose:'Locked profession equipment. Enables Guardian mechanics as they are implemented.'},
+  guardian:{id:'guardian',name:'Guardian',summary:'Defense and zombie-control specialist.',itemType:'profession_riot_shield',itemName:'Riot Shield',itemPurpose:'Guardian equipment. Provides 4 World Beyond control points, +1 personal Home defense, and +5 town defense while its citizen is alive in town. A completed Guard Tower raises that town contribution to +15.'},
   survivalist:{id:'survivalist',name:'Survivalist',summary:'Long-range survival and camping specialist.',itemType:'profession_survival_manual',itemName:'Survival Manual',itemPurpose:'Locked profession equipment. Enables Survivalist mechanics as they are implemented.'},
   tamer:{id:'tamer',name:'Tamer',summary:'Expedition logistics specialist.',itemType:'profession_three_legged_maltese',itemName:'Three-Legged Maltese',itemPurpose:'Locked profession equipment. Enables Tamer mechanics as they are implemented.'},
   technician:{id:'technician',name:'Technician',summary:'Construction and technical-work specialist.',itemType:'profession_technician_wrench',itemName:"Technician's Wrench",itemPurpose:'Locked profession equipment. Enables Technician mechanics as they are implemented.'},
@@ -47,9 +51,16 @@ const PROFESSION_BY_ITEM:Record<ProfessionItemType,ProfessionId>={
 export function professionFromItem(type:EquipmentItemType):ProfessionId|null{return type==='town_uniform'?null:PROFESSION_BY_ITEM[type]??null}
 export function citizenEquipment(citizen:Citizen):CitizenEquipment|null{const equipment=(citizen as ProfessionCitizen).equipment;return validCitizenEquipment(equipment)?equipment:null}
 export function citizenProfession(citizen:Citizen):ProfessionId|null{const equipment=citizenEquipment(citizen);return equipment?professionFromItem(equipment.professionItem.type):null}
+export function hasProfession(citizen:Citizen,profession:ProfessionId):boolean{return citizenProfession(citizen)===profession}
 export function professionName(citizen:Citizen):string{const profession=citizenProfession(citizen);return profession?PROFESSION_DEFINITIONS[profession].name:'Unassigned'}
 export function equipmentItemName(item:EquipmentItemInstance):string{if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.name;const profession=PROFESSION_BY_ITEM[item.type];return PROFESSION_DEFINITIONS[profession].itemName}
 export function equipmentItemPurpose(item:EquipmentItemInstance):string{if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.purpose;const profession=PROFESSION_BY_ITEM[item.type];return PROFESSION_DEFINITIONS[profession].itemPurpose}
+
+export function guardianTownDefensePerCitizen(state:GameState):number{return state.town.construction.guard_tower?.completed?GUARDIAN_TOWER_TOWN_DEFENSE:GUARDIAN_TOWN_DEFENSE}
+export function guardianTownDefenseBonus(state:GameState):number{
+  const guardians=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town'&&hasProfession(citizen,'guardian')).length
+  return guardians*guardianTownDefensePerCitizen(state)
+}
 
 export function createCitizenEquipment(citizenId:string,profession:ProfessionId):CitizenEquipment{
   return{
