@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { RUIN_CATALOG, type RuinAvailability } from '../../core/ruinCatalog'
 import type { RuinId } from '../../core/ruinIds'
+import '../ruins-codex.css'
 
 type RuinFilter='all'|RuinAvailability
 const ENTRIES=Object.values(RUIN_CATALOG).sort((a,b)=>a.name.localeCompare(b.name))
