@@ -39,6 +39,11 @@ export function chronicleCategory(event:GameEvent):ChronicleCategory{
   }
 }
 
-export function eventCitizenId(event:GameEvent):string|null{if(event.type==='COORDINATION_COMMITMENT_POSTED')return event.commitment.citizenId;return'citizenId'in event&&typeof event.citizenId==='string'&&event.citizenId!=='system'?event.citizenId:null}
+export function eventCitizenId(event:GameEvent):string|null{
+  if(event.type==='COORDINATION_COMMITMENT_POSTED')return event.commitment.citizenId
+  if((event.type==='HOME_ITEM_DEPOSITED'||event.type==='HOME_ITEM_STOLEN')&&!event.spotted)return null
+  if(event.type==='HOME_INTRUSION_ATTEMPTED'&&!event.alarmed)return null
+  return'citizenId'in event&&typeof event.citizenId==='string'&&event.citizenId!=='system'?event.citizenId:null
+}
 export function filterChronicleEvents(events:readonly GameEvent[],filters:ChronicleFilters):GameEvent[]{const selectedCategories=new Set(filters.categories);return events.filter((event)=>{if(filters.mode==='highlights'&&!isHighlightEvent(event))return false;if(filters.day!==null&&event.day!==filters.day)return false;if(filters.citizenId!==null&&eventCitizenId(event)!==filters.citizenId)return false;if(selectedCategories.size>0&&!selectedCategories.has(chronicleCategory(event)))return false;return true})}
 export function availableChronicleDays(events:readonly GameEvent[]):number[]{return[...new Set(events.map((event)=>event.day))].sort((a,b)=>b-a)}
