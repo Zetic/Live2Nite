@@ -23,7 +23,7 @@ export function GameNavigation({ game, screen, outside, onChange }: {
     <div className="game-nav-row game-nav-facilities" aria-label="Constructed facilities">
       {facilities.map((entry,index)=>entry
         ? <NavButton key={entry.id} entry={entry} screen={screen} outside={outside} onChange={onChange}/>
-        : <span key={`facility-slot-${index}`} className="game-nav-placeholder" aria-label="Empty facility slot">·</span>)}
+        : <span key={`facility-slot-${index}`} className="game-nav-placeholder" aria-label="Empty facility slot"/>)}
     </div>
   </nav>
 }
