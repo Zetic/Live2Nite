@@ -1,5 +1,6 @@
 import { isWeapon } from '../../core/combat'
 import { ITEMS } from '../../core/items'
+import { isSpadeReplenishCommand } from '../../core/scavenging'
 import type { BotMissionAssignment, Citizen, GameCommand, GameState, ItemInstance, ItemType } from '../../core/types'
 import { distanceToTown, zoneKey } from '../../core/world'
 import { evaluateTownNeeds, type TownNeeds } from './TownNeeds'
@@ -54,7 +55,9 @@ function dropAction(actions:GameCommand[],itemId:string):GameCommand|null{return
 export function opportunisticFieldAction(state:GameState,citizen:Citizen,actions:GameCommand[],mission:BotMissionAssignment|null):GameCommand|null{
   if(citizen.location.type!=='world')return null;let needs:TownNeeds|null=null;const score=(type:ItemType)=>scoreWithNeeds(needs??(needs=evaluateTownNeeds(state)),citizen,type,mission);const zone=state.world.zones[zoneKey(citizen.location.x,citizen.location.y)];const ground=zone?.groundItems.length?[...zone.groundItems].sort((a,b)=>score(b.type)-score(a.type))[0]??null:null
   if(ground){const groundValue=score(ground.type);if(citizen.inventory.length<citizen.inventoryCapacity){const preserveTargetSlots=mission?.phase==='outbound'&&citizen.inventory.length>=citizen.inventoryCapacity-2;if(!preserveTargetSlots||groundValue>=88||mission?.phase==='return'){const pickup=pickupAction(actions,ground.id);if(pickup)return pickup}}else{const candidates=citizen.inventory.filter((item)=>!isProtectedCarry(state,citizen,item,mission));const lowest=[...candidates].sort((a,b)=>score(a.type)-score(b.type))[0]??null;if(lowest&&groundValue>=score(lowest.type)+15){const drop=dropAction(actions,lowest.id);if(drop)return drop}}}
-  const specialSearch=actions.find((action)=>action.type==='SEARCH_SPECIAL_SITE')??null;if(specialSearch)return specialSearch;const search=actions.find((action)=>action.type==='SEARCH_ZONE')??null;if(search)return search
+  const specialSearch=actions.find((action)=>action.type==='SEARCH_SPECIAL_SITE')??null;if(specialSearch)return specialSearch
+  const replenish=actions.find(isSpadeReplenishCommand)??null;if(replenish)return replenish
+  const search=actions.find((action)=>action.type==='SEARCH_ZONE'&&!isSpadeReplenishCommand(action))??null;if(search)return search
   if(mission&&!mission.emergency&&mission.phase==='outbound'){const distance=distanceToTown(citizen.location.x,citizen.location.y);const targetDistance=distanceToTown(mission.target.x,mission.target.y);if(distance>=1&&distance<=3&&targetDistance>distance+1&&citizen.inventory.length>=citizen.inventoryCapacity-1){const cacheable=citizen.inventory.filter((item)=>{if(isProtectedCarry(state,citizen,item,mission))return false;const category=ITEMS[item.type].category;const value=score(item.type);return['raw','construction','defense','misc','broken_weapon','container'].includes(category)&&value>=18&&value<90});const cache=[...cacheable].sort((a,b)=>score(a.type)-score(b.type))[0]??null;if(cache)return dropAction(actions,cache.id)}}
   return null
 }
