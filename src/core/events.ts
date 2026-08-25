@@ -1,6 +1,7 @@
 import { removeBankItemById, removeBankItems } from './bank'
 import { completionWaterBonus, constructionDiscoveryCascade, revealsAllTerrain } from './construction'
 import { foodApTarget } from './food'
+import { resolveSearchAttempt } from './scavenging'
 import { effectiveMaxAp } from './status'
 import { createItemInstance, normalizeItemState } from './items'
 import { zoneKey } from './world'
@@ -35,6 +36,10 @@ function transferHomeItem(state:GameState,event:Extract<GameEvent,{type:'HOME_IT
     return citizen
   })}
 }
+function resetDailyZoneSearchMarkers(state:GameState):GameState['world']{
+  const zones=Object.fromEntries(Object.entries(state.world.zones).map(([key,zone])=>[key,{...zone,searchedBy:[],depletedSearchedBy:[]}]))
+  return{...state.world,zones}
+}
 
 function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
   switch(event.type){
@@ -56,8 +61,19 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'TEMPORARY_CONTROL_GRANTED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,temporaryControl:{zoneKey:event.zoneKey,grantedDay:event.day,grantedHour:event.hour??state.clock.hour}}))}
     case 'TEMPORARY_CONTROL_EXPIRED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>citizen.temporaryControl?.zoneKey===event.zoneKey?{...citizen,temporaryControl:null}:citizen)}
     case 'ZONE_CONTROL_RESTORED':return{...state,citizens:state.citizens.map((citizen)=>citizen.temporaryControl?.zoneKey===event.zoneKey||citizen.relativeControl?.zoneKey===event.zoneKey?{...citizen,temporaryControl:citizen.temporaryControl?.zoneKey===event.zoneKey?null:citizen.temporaryControl,relativeControl:citizen.relativeControl?.zoneKey===event.zoneKey?null:citizen.relativeControl}:citizen)}
-    case 'ZONE_SEARCHED':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;const depleted=event.mode==='depleted';const searchedBy=zone.searchedBy.includes(event.citizenId)?zone.searchedBy:[...zone.searchedBy,event.citizenId];const depletedBy=(zone.depletedSearchedBy??[]).includes(event.citizenId)?(zone.depletedSearchedBy??[]):[...(zone.depletedSearchedBy??[]),event.citizenId];const updatedZone=depleted?{...zone,depletedSearchedBy:depletedBy,groundItems:event.item?[...zone.groundItems,event.item]:zone.groundItems}:{...zone,searchesRemaining:Math.max(0,zone.searchesRemaining-1),searchedBy,hiddenLoot:zone.hiddenLoot.slice(1),groundItems:event.item?[...zone.groundItems,event.item]:zone.groundItems};return{...state,rngState:event.rngStateAfter??state.rngState,nextItemId:event.item?state.nextItemId+1:state.nextItemId,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:updatedZone}}}}
-    case 'ZONE_REPLENISHED':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;return{...state,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:{...zone,searchesRemaining:1,searchedBy:[],hiddenLoot:[event.loot]}}}}}
+    case 'ZONE_SEARCHED':{
+      const zone=state.world.zones[event.zoneKey];if(!zone)return state
+      const searchedBy=zone.searchedBy.includes(event.citizenId)?zone.searchedBy:[...zone.searchedBy,event.citizenId]
+      const depletedSearchedBy=(zone.depletedSearchedBy??[]).includes(event.citizenId)?(zone.depletedSearchedBy??[]):[...(zone.depletedSearchedBy??[]),event.citizenId]
+      const successfulNormal=event.mode==='normal'&&Boolean(event.item)
+      const updatedZone={...zone,searchedBy,depletedSearchedBy,searchesRemaining:successfulNormal?Math.max(0,zone.searchesRemaining-1):zone.searchesRemaining,hiddenLoot:successfulNormal?zone.hiddenLoot.slice(1):zone.hiddenLoot,groundItems:event.item?[...zone.groundItems,event.item]:zone.groundItems}
+      return{...state,rngState:event.rngStateAfter??state.rngState,nextItemId:event.item?state.nextItemId+1:state.nextItemId,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:updatedZone}}}
+    }
+    case 'ZONE_REPLENISHED':{
+      const zone=state.world.zones[event.zoneKey];if(!zone)return state
+      const rngStateAfter=(event as GameEvent&{rngStateAfter?:number}).rngStateAfter
+      return{...state,rngState:rngStateAfter??state.rngState,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:{...zone,searchesRemaining:zone.searchesRemaining+1,hiddenLoot:[...zone.hiddenLoot,event.loot]}}}}
+    }
     case 'SPECIAL_SITE_EXCAVATED':{const zone=state.world.zones[event.zoneKey];const site=zone?.specialSite;if(!zone||!site)return state;const progress=Math.min(site.excavationRequired,site.excavationProgress+event.amount);return{...state,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:{...zone,specialSite:{...site,excavationProgress:progress,status:progress>=site.excavationRequired?'accessible':'buried'}}}}}}
     case 'SPECIAL_SITE_SEARCHED':{const zone=state.world.zones[event.zoneKey];const site=zone?.specialSite;if(!zone||!site)return state;const hiddenLoot=site.hiddenLoot.slice(1);const searchedBy=site.searchedBy.includes(event.citizenId)?site.searchedBy:[...site.searchedBy,event.citizenId];return{...state,nextItemId:event.item?state.nextItemId+1:state.nextItemId,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:{...zone,groundItems:event.item?[...zone.groundItems,event.item]:zone.groundItems,specialSite:{...site,hiddenLoot,searchedBy,status:hiddenLoot.length===0?'depleted':'accessible'}}}}}}
     case 'ITEM_PICKED_UP':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item]})),world:replaceGround(state,event.zoneKey,(items)=>items.filter((item)=>item.id!==event.item.id))}}
@@ -158,8 +174,13 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CITIZEN_DIED':return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.citizenId!==event.citizenId)},botMissions:withoutMission(state,event.citizenId),citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const diedInTown=citizen.location.type==='town';return{...citizen,alive:false,ap:0,inventory:diedInTown?[]:citizen.inventory,corpseDisposition:null,home:{...citizen.home,storage:diedInTown?[...citizen.home.storage,...citizen.inventory]:citizen.home.storage,holdsBody:diedInTown,corpseAttacked:false},temporaryControl:null,relativeControl:null,camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}})}
     case 'NIGHT_RESOLVED':return{...state,lastNight:event.report}
     case 'TIME_ADVANCED':return{...state,clock:{hour:event.toHour,phase:event.phase}}
-    case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:missionsForNewDay(state),coordination:{commitments:[]},citizens:state.citizens.map((citizen)=>({...citizen,ap:citizen.alive?effectiveMaxAp(citizen):0,temporaryControl:null,daily:{ate:false,drank:false,waterTaken:false},camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
+    case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:missionsForNewDay(state),coordination:{commitments:[]},world:resetDailyZoneSearchMarkers(state),citizens:state.citizens.map((citizen)=>({...citizen,ap:citizen.alive?effectiveMaxAp(citizen):0,temporaryControl:null,daily:{ate:false,drank:false,waterTaken:false},camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
   }
 }
-export function applyEvents(state:GameState,events:GameEvent[]):GameState{const nextState=events.reduce(reduceSingleEvent,state);return{...nextState,events:[...state.events,...events]}}
+export function applyEvents(state:GameState,events:GameEvent[]):GameState{
+  let nextState=state
+  const resolved:GameEvent[]=[]
+  for(const rawEvent of events){const event=rawEvent.type==='ZONE_SEARCHED'?resolveSearchAttempt(nextState,rawEvent):rawEvent;nextState=reduceSingleEvent(nextState,event);resolved.push(event)}
+  return{...nextState,events:[...state.events,...resolved]}
+}
 export function currentZoneKey(state:GameState,citizenId:string):string|null{const citizen=state.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen||citizen.location.type!=='world')return null;return zoneKey(citizen.location.x,citizen.location.y)}

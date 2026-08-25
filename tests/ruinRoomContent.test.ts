@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createInitialGame } from '../src/core/game'
 import { createItemInstance } from '../src/core/items'
+import { equipCitizenProfession } from '../src/core/professions'
 import {
   enterRuin,
   expireRuinExploration,
@@ -20,7 +21,7 @@ function withExplorable(game:GameState,type:SpecialSiteType='abandoned_hospital'
   const x=1,y=0,key=zoneKey(x,y),base=game.world.zones[key]
   const site:SpecialSiteState&{interior?:RuinInteriorState}={type,status:'accessible',excavationRequired:0,excavationProgress:0,hiddenLoot:[],searchedBy:[],blueprintFound:false,...(interior?{interior}:{})}
   const zone:WorldZone={...base,x,y,discovered:true,zombies:0,groundItems:[],specialSite:site}
-  return{...game,world:{...game.world,zones:{...game.world.zones,[key]:zone}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,ap:6,location:{type:'world' as const,x,y},status:{...citizen.status,wound:null,terrorized:false},camping:{...citizen.camping,hidden:false}}:citizen)}
+  return{...game,world:{...game.world,zones:{...game.world.zones,[key]:zone}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?equipCitizenProfession({...citizen,ap:6,location:{type:'world' as const,x,y},status:{...citizen.status,wound:null,terrorized:false},camping:{...citizen.camping,hidden:false}},'scout'):citizen)}
 }
 function roomState(game:GameState){const interior=getRuinInterior(getZone(game.world,1,0))!;return interior}
 function placeExplorerInRoom(game:GameState,roomId:string):GameState{

@@ -3,6 +3,7 @@ import { CONSTRUCTIONS } from '../core/construction'
 import { HOME_IMPROVEMENTS, homeName } from '../core/home'
 import { itemUseActionDefinition } from '../core/itemEffects'
 import { itemName } from '../core/items'
+import type { ReplenishmentEvent } from '../core/scavenging'
 import { CITIZEN_STATUS_DEFINITIONS } from '../core/status'
 import { specialSiteName } from '../core/specialSites'
 import type { GameEvent, GameState } from '../core/types'
@@ -28,7 +29,7 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'TEMPORARY_CONTROL_EXPIRED':return`${citizenName(game,event.citizenId)}'s temporary control at [${event.zoneKey}] expired.`
     case 'ZONE_CONTROL_RESTORED':return`Human control at [${event.zoneKey}] was restored by ${event.reason==='combat'?'reducing the zombie threat':'additional citizen control'}.`
     case 'ZONE_SEARCHED':{const label=event.automatic?'automatically searched':event.mode==='depleted'?'combed depleted ground':'searched';return event.item?`${citizenName(game,event.citizenId)} ${label} at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.`:`${citizenName(game,event.citizenId)} ${label} at [${event.zoneKey}] and found nothing.`}
-    case 'ZONE_REPLENISHED':return`The Search Tower identified renewed scavenging potential at [${event.zoneKey}].`
+    case 'ZONE_REPLENISHED':{const replenishment=event as ReplenishmentEvent;if(replenishment.source==='scavenger_spade'&&replenishment.citizenId)return`${citizenName(game,replenishment.citizenId)} used the Small Shovel to replenish scavenging potential at [${event.zoneKey}].`;if(replenishment.source==='other')return`Scavenging potential was replenished at [${event.zoneKey}].`;return`The Search Tower identified renewed scavenging potential at [${event.zoneKey}].`}
     case 'SPECIAL_SITE_EXCAVATED':return`${citizenName(game,event.citizenId)} cleared ${event.amount} AP of debris at the ruin in [${event.zoneKey}].`
     case 'SPECIAL_SITE_SEARCHED':return event.item?`${citizenName(game,event.citizenId)} searched the ruin at [${event.zoneKey}] and uncovered ${itemName(event.item.type)}.`:`${citizenName(game,event.citizenId)} searched the ruin at [${event.zoneKey}] but found nothing.`
     case 'ITEM_PICKED_UP':return`${citizenName(game,event.citizenId)} picked up ${itemName(event.item.type)}.`

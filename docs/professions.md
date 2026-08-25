@@ -4,12 +4,16 @@ Live2Nite treats professions as ordinary citizen roles, not as a paid or Hero-st
 
 | Profession | Profession item | Current state |
 | --- | --- | --- |
-| Scavenger | Small Shovel | equipment present; gameplay perks deferred |
+| Scavenger | Small Shovel | search, depletion-intel, replenishment, and ruin-oxygen perks implemented |
 | Scout | Camouflage Suit | equipment present; gameplay perks deferred |
 | Guardian | Riot Shield | control and defense perks implemented |
 | Survivalist | Survival Manual | equipment present; gameplay perks deferred |
 | Tamer | Three-Legged Maltese | equipment present; gameplay perks deferred |
 | Technician | Technician's Wrench | equipment present; gameplay perks deferred |
+
+## Source policy
+
+Profession mechanics are sourced from the current EternalTwin/MyHordes GitLab implementation and release line. Live2Nite reproduces gameplay semantics while retaining its own runtime ids, architecture, and implementation. Wiki/Twinpedia summaries are not authoritative for profession mechanics.
 
 ## Equipment-backed profession identity
 
@@ -44,11 +48,34 @@ Implemented source behavior:
 - Multiple in-town Guardians stack normally, including bot-controlled Guardians.
 - If the existing **Guard Tower** construction is completed, each in-town Guardian contributes **+15** town defense instead of +5.
 
-Current source reference: Eternal Twinpedia `hordes/gardien`, last modified 2025-12-13, cross-checked against the active MyHordes repository/release line in August 2026. The reference states 4 control points, +1 personal defense, +5 town defense in town, and +15 per Guardian with the Guard Tower.
+The Guardian values and interactions are maintained against the current MyHordes GitLab implementation/release line rather than wiki-derived runtime behavior.
 
-The Guard Tower's separate once-per-day **Organize Defenses** action is not implemented in this PR. That source action spends 1 AP to add 10 temporary town defense, but Live2Nite does not yet have a general temporary-town-defense action subsystem. The construction remains WIP for ordinary construction access; its passive Guardian multiplier is already honored if the project is completed through a compatible future implementation or debug state.
+The Guard Tower's separate once-per-day **Organize Defenses** action is not implemented in this PR. Live2Nite does not yet have a general temporary-town-defense action subsystem. The construction remains WIP for ordinary construction access; its passive Guardian multiplier is already honored if the project is completed through a compatible future implementation or debug state.
 
 Guardian Watch/Veilleur bonuses are also deferred until Live2Nite has the corresponding watch system.
+
+## Scavenger
+
+The **Small Shovel** is the sole capability token for Scavenger mechanics. There is no independent `isScavenger` state. Replacing the Profession Item immediately returns the citizen to ordinary search timing, probability, depletion information, and ruin oxygen.
+
+The wasteland search system is shared by every citizen. A manual search starts that citizen's search session for the zone. Staying in the zone allows automatic attempts; moving away ends the session. Search attempts are probabilistic, so a failed attempt produces no item and does not consume one of the zone's buried normal finds.
+
+Implemented search behavior:
+
+- ordinary undepleted search success uses the current MyHordes base probability;
+- depleted zones remain searchable through the same attempt system and successful depleted attempts use the low-grade Rotting Log / Scrap Metal table;
+- successful normal searches consume one buried find; failures do not;
+- a zone becoming depleted does not terminate an already-active search session;
+- ordinary automatic searches use the **2-hour base interval**;
+- Scavenger repeat searches use **75% of that base interval (90 minutes)**, with the fractional schedule retained internally even though Live2Nite currently advances the visible simulation in whole hours;
+- the Small Shovel applies the current Scavenger search-success modifier to the shared probability calculation;
+- ordinary citizens only learn whether searchable resources remain or the zone is depleted;
+- Scavengers receive qualitative depletion tiers instead of an exact hidden remaining-find count;
+- explorable-ruin oxygen is increased by **50%** for a Scavenger.
+
+A depleted zone also exposes **Replenish with Spade** to a Scavenger. Spade replenishment uses the generic zone-replenishment event rather than defining a separate kind of zone. The Small Shovel can replenish a given zone only once, encouraging Scavengers to spread their replenishment work across the wasteland. That one-Spade-per-zone history does not prevent Search Tower or future independent replenishment sources from replenishing the same zone later.
+
+Bot-controlled Scavengers receive the same probability, timing, depletion-information and Spade-action rules as the controlled citizen; there are no bot-only Scavenger bonuses.
 
 ## New Town flow
 
@@ -60,4 +87,4 @@ A valid profession-era local save resumes normally. Debug **New Town** and the r
 
 ## Deferred professions
 
-Scavenging bonuses, Scout camouflage/intelligence, Survivalist survival mechanics, Tamer logistics, and Technician construction points/actions remain for individual follow-up PRs. Those implementations should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.
+Scout camouflage/intelligence, Survivalist survival mechanics, Tamer logistics, and Technician construction points/actions remain for individual follow-up PRs. Those implementations should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.
