@@ -1,5 +1,8 @@
+import { CONSTRUCTION_CATALOG } from './constructionCatalog'
 import type { ConstructionId } from './constructionIds'
+import type { ItemState, ItemType } from './itemCatalog'
 import type { ExplorableRuinFamily } from './ruinIds'
+import type { GameState } from './types'
 
 export type ExplorableBlueprintTier='uncommon'|'rare'|'exceptional'
 export type ExplorableBlueprintKey=`${ExplorableRuinFamily}_${ExplorableBlueprintTier}`
@@ -29,8 +32,29 @@ export const EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS:Readonly<Record<ExplorableBluep
   exceptional:200,
 }
 
+const SOURCE_PLAN:Readonly<Record<string,{family:ExplorableRuinFamily;tier:ExplorableBlueprintTier}>>={
+  'hbplan_u_#00':{family:'hotel',tier:'uncommon'},'hbplan_r_#00':{family:'hotel',tier:'rare'},'hbplan_e_#00':{family:'hotel',tier:'exceptional'},
+  'bbplan_u_#00':{family:'bunker',tier:'uncommon'},'bbplan_r_#00':{family:'bunker',tier:'rare'},'bbplan_e_#00':{family:'bunker',tier:'exceptional'},
+  'mbplan_u_#00':{family:'hospital',tier:'uncommon'},'mbplan_r_#00':{family:'hospital',tier:'rare'},'mbplan_e_#00':{family:'hospital',tier:'exceptional'},
+}
+
 export function explorableBlueprintKey(family:ExplorableRuinFamily,tier:ExplorableBlueprintTier):ExplorableBlueprintKey{return`${family}_${tier}`}
 export function explorableBlueprintPool(family:ExplorableRuinFamily,tier:ExplorableBlueprintTier):readonly ConstructionId[]{return EXPLORABLE_BLUEPRINT_POOLS[explorableBlueprintKey(family,tier)]}
+export function explorableBlueprintEligibleProjects(state:GameState,family:ExplorableRuinFamily,tier:ExplorableBlueprintTier):ConstructionId[]{
+  return explorableBlueprintPool(family,tier).filter((id)=>{
+    if(state.town.construction[id]?.discovered)return false
+    const parentId=CONSTRUCTION_CATALOG[id].parentId
+    return !parentId||state.town.construction[parentId]?.discovered===true
+  })
+}
+export function explorableBlueprintSpecFromSourceRef(sourceRef:string):{type:ItemType;state:ItemState}|null{
+  const plan=SOURCE_PLAN[sourceRef];if(!plan)return null
+  const type:ItemType=plan.tier==='uncommon'?'uncommon_blueprint':plan.tier==='rare'?'rare_blueprint':'very_rare_blueprint'
+  return{type,state:{blueprintFamily:plan.family,blueprintTier:plan.tier}}
+}
+export function explorableBlueprintTierFromType(type:ItemType):ExplorableBlueprintTier|null{
+  return type==='uncommon_blueprint'?'uncommon':type==='rare_blueprint'?'rare':type==='very_rare_blueprint'?'exceptional':null
+}
 export function explorableBlueprintDisplayName(family:ExplorableRuinFamily,tier:ExplorableBlueprintTier):string{
   const familyName=family[0]!.toUpperCase()+family.slice(1)
   const tierName=tier==='exceptional'?'Exceptional':tier[0]!.toUpperCase()+tier.slice(1)
