@@ -1,6 +1,8 @@
 import { campingConstructionBonus } from './construction'
 import { randomInt } from './rng'
-import type { Citizen, CitizenCampingState, CampingOutlook, GameState, SpecialSiteType, WorldZone } from './types'
+import { RUIN_CATALOG } from './ruinCatalog'
+import { normalizeRuinId } from './specialSites'
+import type { Citizen, CitizenCampingState, CampingOutlook, GameState, WorldZone } from './types'
 import { distanceToTown, isTownGateZone, zoneKey } from './world'
 
 export const CAMP_IMPROVEMENT_AP_COST = 1
@@ -9,16 +11,9 @@ export const ORDINARY_CAMPING_CAP_PERCENT = 90
 
 export function createCitizenCampingState():CitizenCampingState{return{hidden:false,survivalChance:null,hiddenDay:null,nightsSurvived:0,lastSurvivedDay:null}}
 
-const SITE_TOPOLOGY_BONUS: Record<SpecialSiteType, number> = {
-  construction_site: 15,
-  wrecked_cars: 8,
-  pharmacy: 6,
-  supermarket: 6,
-  dark_woods: 12,
-  police_station: 10,
-}
+function ruinCampingBase(type:string):number{const id=normalizeRuinId(type);return id?RUIN_CATALOG[id].campingBase:0}
 
-/** LIVE2NITE_ADAPTATION using historically documented camping factors. */
+/** LIVE2NITE_ADAPTATION using historically documented camping factors plus the source ruin camping base. */
 export function campingChancePercent(state: GameState, citizenId: string): number {
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || !citizen.alive || citizen.location.type !== 'world' || isTownGateZone(citizen.location.x,citizen.location.y)) return 0
@@ -26,7 +21,7 @@ export function campingChancePercent(state: GameState, citizenId: string): numbe
   const zone = state.world.zones[key]
   if (!zone) return 0
   const distanceBonus = Math.min(30, distanceToTown(zone.x,zone.y) * 3)
-  const topologyBonus = zone.specialSite ? (zone.specialSite.status === 'buried' ? 10 : SITE_TOPOLOGY_BONUS[zone.specialSite.type]) : 0
+  const topologyBonus = zone.specialSite ? ruinCampingBase(zone.specialSite.type) : 0
   const improvementBonus = Math.min(CAMP_IMPROVEMENT_CAP, zone.campImprovements ?? 0) * 5
   const constructionBonus=campingConstructionBonus(state)
   const zombiePenalty = Math.min(45, zone.zombies * 7)

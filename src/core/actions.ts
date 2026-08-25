@@ -7,6 +7,8 @@ import { HOME_IMPROVEMENTS, hasPersonalMaterials, improvementNextLevel, nextHome
 import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
 import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
 import { canToolOpen, openableDefinition } from './openables'
+import { RUIN_CATALOG } from './ruinCatalog'
+import { normalizeRuinId } from './specialSites'
 import { canContributeConstructionByStatus, canFightBarehandedByStatus, canOperateGateByStatus, canUseWeaponByStatus, hasHandWound } from './status'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, relativeControlActive, temporaryControlActive, zoneControl } from './world'
@@ -80,7 +82,11 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   const control=zoneControl(state,x,y)
   if(!isTownGateZone(x,y)){if(!control.trapped){if(zone.searchesRemaining>0&&!zone.searchedBy.includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId});else if(zone.searchesRemaining===0&&!(zone.depletedSearchedBy??[]).includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId})}if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone))actions.push({type:'IMPROVE_CAMP',citizenId});actions.push({type:'HIDE_FOR_NIGHT',citizenId})}
   const site=zone.specialSite
-  if(site&&!control.trapped){if(site.status==='buried'&&citizen.ap>=SPECIAL_EXCAVATION_AP_COST)actions.push({type:'EXCAVATE_SPECIAL_SITE',citizenId});if(site.status==='accessible'&&site.hiddenLoot.length>0&&!site.searchedBy.includes(citizenId))actions.push({type:'SEARCH_SPECIAL_SITE',citizenId})}
+  if(site&&!control.trapped){
+    if(site.status==='buried'&&citizen.ap>=SPECIAL_EXCAVATION_AP_COST)actions.push({type:'EXCAVATE_SPECIAL_SITE',citizenId})
+    const ruinId=normalizeRuinId(site.type);const explorable=Boolean(ruinId&&RUIN_CATALOG[ruinId].explorable)
+    if(site.status==='accessible'&&(site.hiddenLoot.length>0||explorable)&&!site.searchedBy.includes(citizenId))actions.push({type:'SEARCH_SPECIAL_SITE',citizenId})
+  }
   if(citizen.inventory.length<citizen.inventoryCapacity)for(const item of zone.groundItems)actions.push({type:'PICK_UP_ITEM',citizenId,itemId:item.id})
   for(const item of citizen.inventory)actions.push({type:'DROP_ITEM',citizenId,itemId:item.id})
   if(zone.zombies>0&&citizen.ap>0){const terrorBlocked=terrorBlocksOrdinaryItems(state,citizen);for(const item of [...citizen.inventory,...zone.groundItems]){const weapon=weaponDefinition(item.type);if(!terrorBlocked&&weapon&&isWeapon(item.type)&&canUseWeaponByStatus(citizen,item.type)&&hasUsableCharges(item)&&(!weapon.requiresPositiveAp||citizen.ap>0))actions.push({type:'USE_WEAPON',citizenId,itemId:item.id})}if(citizen.ap>=BAREHANDED_AP_COST&&canFightBarehandedByStatus(citizen))actions.push({type:'ATTACK_BAREHANDED',citizenId})}

@@ -38,6 +38,8 @@ export type ItemDisplayCategory =
 export type ItemCondition = 'intact' | 'damaged' | 'broken'
 export type ItemContamination = 'clean' | 'poisoned' | 'infected'
 export type ItemAssemblyState = 'complete' | 'incomplete'
+export type SpecializedBlueprintFamily = 'hotel' | 'bunker' | 'hospital'
+export type SpecializedBlueprintTier = 'uncommon' | 'rare' | 'exceptional'
 
 export interface ItemState {
   /** Remaining uses/shots/rations for charge-bearing items. */
@@ -48,6 +50,10 @@ export interface ItemState {
   contamination?: ItemContamination
   powered?: boolean
   assembly?: ItemAssemblyState
+  /** Family selector carried by Hotel/Bunker/Hospital ruin plans. */
+  blueprintFamily?: SpecializedBlueprintFamily
+  /** Source tier selector carried by specialized ruin plans. */
+  blueprintTier?: SpecializedBlueprintTier
 }
 
 export type ItemCapability =

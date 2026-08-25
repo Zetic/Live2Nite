@@ -113,8 +113,8 @@ describe('item codex',()=>{
     expect(log.obtainedFrom.find((group)=>group.id==='scavenging')?.entries.some((entry)=>entry.label==='Depleted zones'&&entry.detail.includes('62.5%'))).toBe(true)
     const pharma=codexItemEntry('pharmaceutical_products')
     expect(pharma.obtainedFrom.find((group)=>group.id==='containers')?.entries.some((entry)=>entry.label==='Toolbox'&&entry.detail.includes('25.3%'))).toBe(true)
-    const staff=codexItemEntry('staff')
-    expect(staff.obtainedFrom.find((group)=>group.id==='special-locations')?.entries.some((entry)=>entry.label==='Dark Woods'&&entry.badge==='Unique location')).toBe(true)
+    const water=codexItemEntry('water_ration')
+    expect(water.obtainedFrom.find((group)=>group.id==='special-locations')?.entries.some((entry)=>entry.label==='Abandoned Well')).toBe(true)
   })
 
   it('keeps the family index deterministic and complete',()=>{

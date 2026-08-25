@@ -2,7 +2,7 @@ import { createCitizenCampingState } from '../core/camping'
 import { createGameClock } from '../core/clock'
 import { CONSTRUCTION_ORDER, CONSTRUCTIONS, constructionBlueprintTier, constructionPlayable, createConstructionState } from '../core/construction'
 import { HOME_LEVELS, createDailyState, createStarterHome } from '../core/home'
-import { ITEM_TYPE_IDS } from '../core/itemCatalog'
+import { ITEM_TYPE_IDS, type SpecializedBlueprintFamily, type SpecializedBlueprintTier } from '../core/itemCatalog'
 import { createItemInstance } from '../core/items'
 import { normalizeCitizenStatusState } from '../core/status'
 import type { Citizen, CitizenHome, ConstructionId, GameClock, GameEvent, GameState, HomeLevel, ItemInstance, ItemType, TownCoordinationState, WorldState, WorldZone, ZoneIntelState } from '../core/types'
@@ -13,9 +13,17 @@ import type { GameRepository } from './GameRepository'
 
 const DB_NAME='live2nite';const STORE_NAME='game';const SAVE_KEY='active'
 type LegacyBank=Partial<Record<ItemType,number>>
+const BLUEPRINT_FAMILIES:readonly SpecializedBlueprintFamily[]=['hotel','bunker','hospital']
+const BLUEPRINT_TIERS:readonly SpecializedBlueprintTier[]=['uncommon','rare','exceptional']
 function openDatabase():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const request=indexedDB.open(DB_NAME,1);request.onupgradeneeded=()=>{const database=request.result;if(!database.objectStoreNames.contains(STORE_NAME))database.createObjectStore(STORE_NAME)};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
 function validHomeLevel(value:unknown):value is HomeLevel{return typeof value==='string'&&value in HOME_LEVELS}
-function normalizeItems(items:unknown):ItemInstance[]{if(!Array.isArray(items))return[];return items.flatMap((candidate)=>{const item=candidate as Partial<ItemInstance>;if(typeof item.id!=='string'||typeof item.type!=='string'||!ITEM_TYPE_IDS.includes(item.type as ItemType))return[];return[createItemInstance(item.id,item.type as ItemType,item.state)]})}
+function normalizeStoredItem(id:string,type:ItemType,state:ItemInstance['state']):ItemInstance{
+  const normalized=createItemInstance(id,type,state)
+  const family=state?.blueprintFamily;const tier=state?.blueprintTier
+  if(!family||!tier||!BLUEPRINT_FAMILIES.includes(family)||!BLUEPRINT_TIERS.includes(tier))return normalized
+  return{...normalized,state:{...normalized.state,blueprintFamily:family,blueprintTier:tier}}
+}
+function normalizeItems(items:unknown):ItemInstance[]{if(!Array.isArray(items))return[];return items.flatMap((candidate)=>{const item=candidate as Partial<ItemInstance>;if(typeof item.id!=='string'||typeof item.type!=='string'||!ITEM_TYPE_IDS.includes(item.type as ItemType))return[];return[normalizeStoredItem(item.id,item.type as ItemType,item.state)]})}
 function normalizeHome(existing:Partial<CitizenHome>|undefined,citizenId:string):CitizenHome{
   if(!existing)return createStarterHome(citizenId)
   const level=validHomeLevel(existing.level)?existing.level:'camp_bed'
@@ -36,7 +44,7 @@ function migrateWorld(world:WorldState,seed:number,day:number):WorldState{
   }
   return addSpecialSites({...world,zones,intel},seed)
 }
-function normalizeEventItem(value:unknown):unknown{if(!value||typeof value!=='object')return value;const item=value as Partial<ItemInstance>;return typeof item.id==='string'&&typeof item.type==='string'&&ITEM_TYPE_IDS.includes(item.type as ItemType)?createItemInstance(item.id,item.type as ItemType,item.state):value}
+function normalizeEventItem(value:unknown):unknown{if(!value||typeof value!=='object')return value;const item=value as Partial<ItemInstance>;return typeof item.id==='string'&&typeof item.type==='string'&&ITEM_TYPE_IDS.includes(item.type as ItemType)?normalizeStoredItem(item.id,item.type as ItemType,item.state):value}
 function migrateEvents(events:unknown):GameEvent[]{if(!Array.isArray(events))return[];return events.map((candidate)=>{let event={...(candidate as Record<string,unknown>)};if(event.type==='ZONE_SEARCHED'&&!event.mode)event={...event,mode:'normal'};if(event.type==='ITEM_CONSUMED'&&event.restoresAp===undefined)event={...event,restoresAp:true};if(event.type==='HOME_UPGRADED'&&event.consumed===undefined)event={...event,consumed:{}};if('item'in event)event={...event,item:normalizeEventItem(event.item)};if('output'in event)event={...event,output:normalizeEventItem(event.output)};if(Array.isArray(event.outputs))event={...event,outputs:event.outputs.map(normalizeEventItem)};return event as unknown as GameEvent})}
 function normalizeConstruction(existing:Partial<GameState['town']['construction']>|undefined,legacyDiscoveryModel=false):GameState['town']['construction']{
   const base=createConstructionState()
@@ -74,4 +82,4 @@ export function migrateStoredGame(result:Record<string,unknown>):GameState|null{
   const bankMigration=materializeLegacyBank(legacy.town.bank,nextSafeGeneratedId(result,legacy.nextItemId??1))
   return{...(legacy as unknown as GameState),schemaVersion:19,nextItemId:bankMigration.nextItemId,clock:legacy.clock??createGameClock(),citizens:legacy.citizens.map(migrateCitizen),botMissions:normalizeMissions(legacy.botMissions),coordination:normalizeCoordination(legacy.coordination),town:{...legacy.town,bank:bankMigration.bank,defense:40,construction:normalizeConstruction(legacy.town.construction,true),well:legacy.town.well??{water:startingWellWater(legacy.seed)},upgradeProjects:normalizeUpgradeProjectsState(legacy.town.upgradeProjects)},world:migrateWorld(legacy.world,legacy.seed,legacy.day),events:migrateEvents(legacy.events)}
 }
-export class IndexedDbGameRepository implements GameRepository{async load():Promise<GameState|null>{const database=await openDatabase();return new Promise((resolve,reject)=>{const transaction=database.transaction(STORE_NAME,'readonly');const request=transaction.objectStore(STORE_NAME).get(SAVE_KEY);request.onsuccess=()=>{const result=request.result as Record<string,unknown>|undefined;resolve(result?migrateStoredGame(result):null)};request.onerror=()=>reject(request.error);transaction.oncomplete=()=>database.close()})}async save(state:GameState):Promise<void>{const database=await openDatabase();return new Promise((resolve,reject)=>{const transaction=database.transaction(STORE_NAME,'readwrite');transaction.objectStore(STORE_NAME).put(state,SAVE_KEY);transaction.oncomplete=()=>{database.close();resolve()};transaction.onerror=()=>reject(transaction.error)})}async clear():Promise<void>{const database=await openDatabase();return new Promise((resolve,reject)=>{const transaction=database.transaction(STORE_NAME,'readwrite');transaction.objectStore(STORE_NAME).delete(SAVE_KEY);transaction.oncomplete=()=>{database.close();resolve()};transaction.onerror=()=>reject(transaction.error)})}}
+export class IndexedDbGameRepository implements GameRepository{async load():Promise<GameState|null>{const database=await openDatabase();return new Promise((resolve,reject)=>{const transaction=database.transaction(STORE_NAME,'readonly');const request=transaction.objectStore(STORE_NAME).get(SAVE_KEY);request.onsuccess=()=>{const result=request.result as Record<string,unknown>|undefined;resolve(result?migrateStoredGame(result):null)};request.onerror=()=>reject(request.error);transaction.oncomplete=()=>database.close()})}async save(state:GameState):Promise<void>{const database=await openDatabase();return new Promise((resolve,reject)=>{const transaction=database.transaction(STORE_NAME,'readwrite');transaction.objectStore(STORE_NAME).put(state,SAVE_KEY);transaction.oncomplete=()=>{database.close();resolve()};transaction.onerror=()=>reject(transaction.error)})}async clear():Promise<void>{const database=await openDatabase();return new Promise((resolve,reject)=>{const transaction=database.transaction(STORE_NAME,'readwrite');transaction.objectStore(STORE_NAME).delete(SAVE_KEY);transaction.oncomplete=()=>{database.close();resolve()};transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)})}}

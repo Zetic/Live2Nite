@@ -1,5 +1,6 @@
 import type { ConstructionId } from './constructionIds'
 import type { ItemState, ItemType } from './itemCatalog'
+import type { RuinId } from './ruinIds'
 export type { ConstructionId } from './constructionIds'
 export type { ItemAssemblyState, ItemCondition, ItemContamination, ItemDisplayCategory, ItemState, ItemType } from './itemCatalog'
 
@@ -67,7 +68,9 @@ export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
 export type CombatMethod = 'fists' | ItemType
 export type ClockPhase = 'day' | 'attack'
-export type SpecialSiteType = 'construction_site' | 'wrecked_cars' | 'pharmacy' | 'supermarket' | 'dark_woods' | 'police_station'
+/** Historical six-site values remain accepted only for save migration and old fixtures. */
+export type LegacySpecialSiteType = 'construction_site' | 'wrecked_cars' | 'pharmacy' | 'supermarket' | 'dark_woods' | 'police_station'
+export type SpecialSiteType = RuinId | LegacySpecialSiteType
 export type SpecialSiteStatus = 'buried' | 'accessible' | 'depleted'
 export type BotMissionPurpose = 'explore' | 'gather_construction' | 'gather_food' | 'gather_medical' | 'gather_weapons' | 'rescue'
 export type BotMissionRole = 'scout' | 'gatherer' | 'excavator' | 'rescue' | 'combat'
