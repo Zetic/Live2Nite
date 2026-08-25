@@ -175,7 +175,7 @@ describe('Tamer profession',()=>{
     expect(getRuinExplorer(resolved.state,'c01')?.active).toBe(true)
   })
 
-  it('lets bot Tamers offload a near-full safe haul but refuses to send expedition-critical water',()=>{
+  it('lets bot Tamers offload a near-full safe haul but refuses to send or prepare a trip that would lose expedition-critical water',()=>{
     let safe=outsideWith(createInitialGame(7109,1,'tamer'),[item('a','twisted_plank'),item('b','wrought_iron'),item('c','battery'),item('d','duct_tape')],2,0)
     safe=replaceCitizen(safe,{...safe.citizens[0],controller:'basic-bot'})
     const safeDecision=opportunisticFieldAction(safe,safe.citizens[0],getLegalActions(safe,'c01'),mission())
@@ -187,6 +187,13 @@ describe('Tamer profession',()=>{
     const criticalDecision=opportunisticFieldAction(critical,critical.citizens[0],getLegalActions(critical,'c01'),mission())
     expect(criticalDecision?.type).not.toBe('SEND_TAMER_DOG')
     expect(criticalDecision?.type).not.toBe('DRUG_TAMER_DOG')
+
+    let criticalHeavy=outsideWith(createInitialGame(7114,1,'tamer'),[item('water','water_ration'),item('heavy','sheet_metal'),item('steroid','anabolic_steroids'),item('a','twisted_plank')],4,0)
+    criticalHeavy=replaceCitizen(criticalHeavy,{...criticalHeavy.citizens[0],controller:'basic-bot',daily:{...criticalHeavy.citizens[0].daily,drank:false}})
+    expect(getLegalActions(criticalHeavy,'c01').some((action)=>action.type==='DRUG_TAMER_DOG')).toBe(true)
+    const preparationDecision=opportunisticFieldAction(criticalHeavy,criticalHeavy.citizens[0],getLegalActions(criticalHeavy,'c01'),mission())
+    expect(preparationDecision?.type).not.toBe('DRUG_TAMER_DOG')
+    expect(preparationDecision?.type).not.toBe('SEND_TAMER_DOG')
   })
 
   it('lets a bot steroid a cumbersome near-full haul and then completes the Bank trip on its next decision',()=>{
