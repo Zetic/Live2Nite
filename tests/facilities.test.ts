@@ -75,10 +75,10 @@ describe('undepleted and depleted scavenging', () => {
     expect(result.state.world.zones[key].searchesRemaining).toBe(0)
   })
 
-  it('lets a citizen comb a depleted zone once using the source-weighted table', () => {
+  it('treats depleted scavenging as a probabilistic attempt without consuming a finite pool', () => {
     let game = outsideAt(createInitialGame(456, 2), 1, 0)
     const key = zoneKey(1, 0)
-    game = { ...game, world: { ...game.world, zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 0, searchesRemaining: 0, hiddenLoot: [], searchedBy: ['c01'], depletedSearchedBy: [] } } } }
+    game = { ...game, world: { ...game.world, zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 0, searchesRemaining: 0, hiddenLoot: [], searchedBy: [], depletedSearchedBy: [] } } } }
     expect(getLegalActions(game, 'c01').some((action) => action.type === 'SEARCH_ZONE')).toBe(true)
     const originalRng=game.rngState
     const result = executeCommand(game, command(game, 'c01', 'SEARCH_ZONE'))
@@ -86,9 +86,11 @@ describe('undepleted and depleted scavenging', () => {
     expect(searched?.type).toBe('ZONE_SEARCHED')
     if (searched?.type === 'ZONE_SEARCHED') {
       expect(searched.mode).toBe('depleted')
-      expect(['rotten_log', 'scrap_metal']).toContain(searched.item?.type)
+      if(searched.item)expect(['rotten_log', 'scrap_metal']).toContain(searched.item.type)
       expect(searched.rngStateAfter).not.toBe(originalRng)
     }
+    expect(result.state.world.zones[key].searchesRemaining).toBe(0)
+    expect(result.state.world.zones[key].hiddenLoot).toEqual([])
     expect(result.state.world.zones[key].depletedSearchedBy).toContain('c01')
     expect(getLegalActions(result.state, 'c01').some((action) => action.type === 'SEARCH_ZONE')).toBe(false)
   })
