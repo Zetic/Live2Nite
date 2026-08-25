@@ -7,7 +7,7 @@ Live2Nite treats professions as ordinary citizen roles, not as a paid or Hero-st
 | Scavenger | Small Shovel | equipment present; gameplay perks deferred |
 | Scout | Camouflage Suit | equipment present; gameplay perks deferred |
 | Guardian | Riot Shield | equipment present; gameplay perks deferred |
-| Hermit | Survival Manual | equipment present; gameplay perks deferred |
+| Survivalist | Survival Manual | equipment present; gameplay perks deferred |
 | Tamer | Three-Legged Maltese | equipment present; gameplay perks deferred |
 | Technician | Technician's Wrench | equipment present; gameplay perks deferred |
 
@@ -42,4 +42,4 @@ A valid profession-era local save resumes normally. Debug **New Town** and the r
 
 ## Deferred
 
-No profession-specific ability is enabled by this foundation PR. Scavenging bonuses, Scout camouflage/intelligence, Guardian control/defense bonuses, Hermit survival mechanics, Tamer logistics, and Technician construction points/actions belong in individual follow-up PRs. Those implementations should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.
+No profession-specific ability is enabled by this foundation PR. Scavenging bonuses, Scout camouflage/intelligence, Guardian control/defense bonuses, Survivalist survival mechanics, Tamer logistics, and Technician construction points/actions belong in individual follow-up PRs. Those implementations should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.
