@@ -10,6 +10,7 @@ import { consumableKind, containerPool, isContainer, itemHasCapability, normaliz
 import { canToolOpen, openableDefinition } from './openables'
 import { RUIN_CATALOG } from './ruinCatalog'
 import { canReplenishWithSpade, type ScavengerSearchCommand } from './scavenging'
+import { canMapWasteland, canPayMovementPoint, canRecamouflage, scoutCamouflageActive } from './scout'
 import { normalizeRuinId } from './specialSites'
 import { canContributeConstructionByStatus, canFightBarehandedByStatus, canOperateGateByStatus, canUseWeaponByStatus, hasHandWound } from './status'
 import { canDrugTamerDog, canSendTamerDog, tamerDogSteroid } from './tamer'
@@ -77,6 +78,8 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   if(!terrorBlocksOrdinaryItems(state,citizen)){const combinations=combinationCommandsForCitizen(state,citizen);actions.push(...combinations.filter((action)=>!hasHandWound(citizen)||action.recipeId==='load_ems_battery'))}
 
   if(citizen.location.type==='town'){
+    if(canRecamouflage(state,citizen))actions.push({type:'RECAMOUFLAGE',citizenId})
+    if(canMapWasteland(state,citizen))actions.push({type:'MAP_WASTELAND',citizenId})
     addConsumableActions(state,actions,citizen,citizen.home.storage,'home')
     for(const item of [...citizen.inventory,...citizen.home.storage])if(itemHasCapability(item.type,'blueprint'))actions.push({type:'READ_BLUEPRINT',citizenId,itemId:item.id})
     for(const item of citizen.inventory){actions.push({type:'DEPOSIT_ITEM',citizenId,itemId:item.id});if(citizen.home.storage.length<citizen.home.storageCapacity)actions.push({type:'MOVE_ITEM_TO_HOME',citizenId,itemId:item.id})}
@@ -112,10 +115,11 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
 
   const{x,y}=citizen.location;const zone=getZone(state.world,x,y);if(!zone)return actions
   addConsumableActions(state,actions,citizen,zone.groundItems,'ground')
+  if(canRecamouflage(state,citizen))actions.push({type:'RECAMOUFLAGE',citizenId})
   if(isTownGateZone(x,y)&&state.town.gateOpen)actions.push({type:'ENTER_TOWN',citizenId})
-  const control=zoneControl(state,x,y)
+  const control=zoneControl(state,x,y);const camouflage=scoutCamouflageActive(citizen);const productiveAccess=!control.trapped||camouflage
   if(!isTownGateZone(x,y)){
-    if(!control.trapped){
+    if(productiveAccess){
       if(zone.searchesRemaining>0&&!zone.searchedBy.includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId})
       else if(zone.searchesRemaining===0&&!(zone.depletedSearchedBy??[]).includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId})
       if(canReplenishWithSpade(state,citizen,zone))actions.push({type:'SEARCH_ZONE',citizenId,replenishWithSpade:true} as unknown as ScavengerSearchCommand)
@@ -124,7 +128,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     actions.push({type:'HIDE_FOR_NIGHT',citizenId})
   }
   const site=zone.specialSite
-  if(site&&!control.trapped){
+  if(site&&productiveAccess){
     if(site.status==='buried'&&citizen.ap>=SPECIAL_EXCAVATION_AP_COST)actions.push({type:'EXCAVATE_SPECIAL_SITE',citizenId})
     const ruinId=normalizeRuinId(site.type);const explorable=RUIN_CATALOG[ruinId].explorable
     if(!explorable&&site.status==='accessible'&&site.hiddenLoot.length>0&&!site.searchedBy.includes(citizenId))actions.push({type:'SEARCH_SPECIAL_SITE',citizenId})
@@ -132,7 +136,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   for(const item of zone.groundItems)if(canCarryItem(citizen,item))actions.push({type:'PICK_UP_ITEM',citizenId,itemId:item.id})
   for(const item of citizen.inventory)actions.push({type:'DROP_ITEM',citizenId,itemId:item.id})
   if(zone.zombies>0&&citizen.ap>0){const terrorBlocked=terrorBlocksOrdinaryItems(state,citizen);for(const item of [...citizen.inventory,...zone.groundItems]){const weapon=weaponDefinition(item.type);if(!terrorBlocked&&weapon&&isWeapon(item.type)&&canUseWeaponByStatus(citizen,item.type)&&hasUsableCharges(item)&&(!weapon.requiresPositiveAp||citizen.ap>0))actions.push({type:'USE_WEAPON',citizenId,itemId:item.id})}if(citizen.ap>=BAREHANDED_AP_COST&&canFightBarehandedByStatus(citizen))actions.push({type:'ATTACK_BAREHANDED',citizenId})}
-  if(control.trapped&&!temporaryControlActive(state,citizenId)&&!relativeControlActive(state,citizenId)&&!citizen.status.wound&&!citizen.status.terrorized)actions.push({type:'FLEE_ZOMBIES',citizenId})
-  if(canCitizenMoveFromZone(state,citizenId)&&citizen.ap>=MOVE_AP_COST&&!(citizen.status.terrorized&&control.trapped)){for(const direction of ['NORTH','SOUTH','EAST','WEST'] as const){const target=moveCoordinates(x,y,direction);if(getZone(state.world,target.x,target.y))actions.push({type:'MOVE',citizenId,direction})}}
+  if(control.trapped&&!camouflage&&!temporaryControlActive(state,citizenId)&&!relativeControlActive(state,citizenId)&&!citizen.status.wound&&!citizen.status.terrorized)actions.push({type:'FLEE_ZOMBIES',citizenId})
+  if((canCitizenMoveFromZone(state,citizenId)||camouflage)&&canPayMovementPoint(citizen)&&!(citizen.status.terrorized&&control.trapped)){for(const direction of ['NORTH','SOUTH','EAST','WEST'] as const){const target=moveCoordinates(x,y,direction);if(getZone(state.world,target.x,target.y))actions.push({type:'MOVE',citizenId,direction})}}
   return actions
 }
