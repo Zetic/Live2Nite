@@ -1,10 +1,17 @@
 .town-records { display: grid; gap: 10px; }
-.records-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 7px; width: fit-content; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: #0c1215; }
+.records-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; width: 100%; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: #0c1215; }
 .records-tabs button { display: grid; gap: 2px; min-width: 0; padding: 9px 12px; background: transparent; border-color: transparent; }
 .records-tabs button strong { font-size: .78rem; }
 .records-tabs button small { font-size: .61rem; }
 .records-tabs button.active { border-color: #895137; background: linear-gradient(180deg, #271911, #1c1410); }
 .records-tabs button.active strong { color: #f0c39f; }
+
+.bulletin-overview-grid { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 1px; margin-bottom: 10px; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: var(--line); }
+.bulletin-overview-grid article { min-width: 0; padding: 10px 12px; background: #0d1417; }
+.bulletin-overview-grid article > span { display: block; color: var(--muted); font-size: .58rem; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
+.bulletin-overview-grid strong { display: block; margin-top: 3px; font-size: 1.08rem; }
+.bulletin-overview-grid small { color: var(--muted); font-size: .65rem; font-weight: 500; }
+.town-bulletin .bulletin-threat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 
 .chronicle-heading { margin-bottom: 12px; }
 .chronicle-filters { display: grid; grid-template-columns: minmax(150px, .65fr) minmax(190px, 1fr) auto; gap: 8px; align-items: end; padding: 11px; border: 1px solid #29363b; border-radius: 8px; background: #0d1417; }
@@ -84,8 +91,15 @@
   .end-summary-row { grid-template-columns: repeat(3, minmax(0,1fr)); }
 }
 
+@media (max-width: 900px) {
+  .town-bulletin .bulletin-threat-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 760px) {
-  .records-tabs { width: 100%; grid-template-columns: 1fr 1fr; }
+  .records-tabs { width: 100%; grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .records-tabs button { padding: 8px 6px; }
+  .records-tabs button small { font-size: .55rem; }
+  .bulletin-overview-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .chronicle-filters { grid-template-columns: 1fr; }
   .chronicle-filter-summary { grid-template-columns: auto 1fr auto; }
   .chronicle-filter-summary > span { grid-column: auto; }
