@@ -58,6 +58,20 @@ describe('exact ruin loot and explorable ruins',()=>{
     ]))
   })
 
+  it('matches the current MyHordes default 6/10/5 specialized construction lists',()=>{
+    expect(EXPLORABLE_BLUEPRINT_POOLS).toEqual({
+      hotel_uncommon:['ravaged_pumpkins','urban_plan','defensive_supports','perforator','concrete_wall','eden_project'],
+      hotel_rare:['faucet','outer_world_apple_tree','scarecrow_fields','swedish_workshop','grand_relocation','labyrinth','tamer_s_trap_system','third_layer','scavenger_s_gallery','spring_coffins'],
+      hotel_exceptional:['water_detector','blue_gold_thermal_baths','buzzard_s_wonder_wheel','cinema','pool'],
+      bunker_uncommon:['divining_rocket','mist_spray','grapeboom','small_trebuchet','cremato_cue','fortified_homes'],
+      bunker_rare:['water_turrets','grenade_launcher','pigsty','guard_tower','manual_grinder','underground_city','air_strike','technicians_workbench','upgradeable_wall','spring_coffins'],
+      bunker_exceptional:['pool','giant_sandcastle','reactor','ministry_of_slavery','giant_brd'],
+      hospital_uncommon:['second_layer','eden_project','henhouse','defensive_supports','hammam','screaming_saws'],
+      hospital_rare:['fertilizer','vita_mines','scouts_lair','gutters','false_town','organized_dump','infirmary','nature_area_of_the_survivalists','automatic_sprinklers','spring_coffins'],
+      hospital_exceptional:['no_holes_barred','crow_statue','giant_brd','dump_upgrade','hot_air_balloon'],
+    })
+  })
+
   it('does not expose the legacy one-click special-site search for an explorable ruin',()=>{
     const game=withExplorableHospital(createInitialGame(4401,1))
     expect(getLegalActions(game,'c01').some((action)=>action.type==='SEARCH_SPECIAL_SITE')).toBe(false)
@@ -65,7 +79,7 @@ describe('exact ruin loot and explorable ruins',()=>{
   })
 
   it('reads a specialized plan only against its explicit prospective construction pool',()=>{
-    const target:ConstructionId='swedish_workshop'
+    const target:ConstructionId='hammam'
     let game=withOnlySpecializedCandidate(createInitialGame(4402,1),target)
     expect(explorableBlueprintEligibleProjects(game,'hospital','uncommon')).toEqual([target])
     const item:ItemInstance={id:'special-plan',type:'uncommon_blueprint',state:{blueprintFamily:'hospital',blueprintTier:'uncommon'}}
