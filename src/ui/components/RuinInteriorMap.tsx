@@ -28,7 +28,7 @@ export function RuinInteriorMap({game,citizenId,zone}:{game:GameState;citizenId:
       const roomState=room?room.locked?'locked':room.searched?'searched':'room':null
       const label=!known?'Unknown interior space':room?`Room ${room.id.replace('room-','')} · ${roomState}`:corridor?.kind==='entrance'?'Entrance':corridor?.kind==='stairs'?'Stairs':'Corridor'
       const marker=current?'●':known?(room?room.locked?'L':'R':corridor?.kind==='stairs'?'↕':corridor?.kind==='entrance'?'E':'·'):''
-      cells.push(<span key={`${x}:${y}`} className={`map-cell ruin-map-cell ${known?'ruin-known':'intel-unknown'} ${room?'ruin-room':''} ${corridor?.kind==='stairs'?'ruin-stairs':''} ${corridor?.kind==='entrance'?'ruin-entrance':''} ${current?'player':''}`} title={label}>{marker}</span>)
+      cells.push(<span key={`${x}:${y}`} className={`map-cell ruin-map-cell ${known?'ruin-known':'intel-unknown'} ${room?'ruin-room':''} ${corridor?.kind==='stairs'?'ruin-stairs':''} ${corridor?.kind==='entrance'?'ruin-entrance':''} ${current?'player':''}`} title={label}><span className="ruin-map-marker">{marker}</span></span>)
     }
     rows.push(<div className="map-row" key={y}>{cells}</div>)
   }
