@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ITEM_TYPE_IDS } from '../src/core/itemCatalog'
 import { EXPLORABLE_RUIN_IDS, RUIN_IDS } from '../src/core/ruinIds'
 import { ORDINARY_RUIN_IDS, RUIN_CATALOG, isExplorableRuin, playableRuinLootPool } from '../src/core/ruinCatalog'
-import { createWorld, EXPLORABLE_RUIN_COUNT, sourceEquivalentRuinKm, SPECIAL_SITE_COUNT } from '../src/core/world'
+import { createWorld, sourceEquivalentRuinKm, SPECIAL_SITE_COUNT } from '../src/core/world'
 
 describe('complete MyHordes ruin catalogue',()=>{
   it('accounts for 65 gameplay ruins: 62 non-explorable and 3 explorable',()=>{
@@ -30,11 +30,11 @@ describe('complete MyHordes ruin catalogue',()=>{
 })
 
 describe('ruin map generation',()=>{
-  it('places ordinary ruins plus one dedicated explorable ruin without ordinary-spawning Strange Barn',()=>{
+  it('keeps twelve ruin slots with one dedicated explorable ruin and source-valid ordinary distance bands',()=>{
     for(const seed of [1,2,3,44,91,551]){
       const {world}=createWorld(seed)
       const sites=Object.values(world.zones).filter((zone)=>zone.specialSite)
-      expect(sites).toHaveLength(SPECIAL_SITE_COUNT+EXPLORABLE_RUIN_COUNT)
+      expect(sites).toHaveLength(SPECIAL_SITE_COUNT)
       const explorable=sites.filter((zone)=>EXPLORABLE_RUIN_IDS.includes(zone.specialSite!.type as never))
       expect(explorable).toHaveLength(1)
       expect(explorable[0]!.specialSite).toMatchObject({status:'accessible',excavationRequired:0})
