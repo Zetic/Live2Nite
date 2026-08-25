@@ -17,6 +17,8 @@ export const ITEM_TYPE_IDS = [
   'tool_bag','kwik_fix','plastic_bag','engine_incomplete','engine','claymore','torch','battery_launcher',
   // Stateful foundation representatives retained from v16.
   'water_pistol','water_cooler_bottle','repair_kit',
+  // Explorable-ruin door keys. Live2Nite keeps semantic identities rather than source item ids.
+  'magnetic_key','bump_key','bottle_opener',
   // Part 2 openables. Source variants such as 2- and 3-use resource packs are represented by state, not duplicate item types.
   'resource_pack','toolbox','metal_chest','xl_chest','food_box','decoration_box','safe','worn_leather_bag',
   // Construction plans use Live2Nite-owned IDs while following current MyHordes read behavior.
