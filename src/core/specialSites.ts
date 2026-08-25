@@ -1,7 +1,7 @@
 import { LEGACY_SPECIAL_SITE_TO_RUIN, RUIN_IDS, type RuinId } from './ruinIds'
 import { ORDINARY_RUIN_IDS, RUIN_CATALOG, ruinCode } from './ruinCatalog'
 import { playableRuinSourceDrops } from './ruinLoot'
-import type { ItemType } from './types'
+import type { ItemType, SpecialSiteType } from './types'
 
 export interface SpecialSiteDefinition { type:RuinId; name:string; code:string; purpose:string; lootPool:ItemType[] }
 
@@ -25,6 +25,8 @@ export const SPECIAL_SITES:Readonly<Record<RuinId,SpecialSiteDefinition>>=Object
   }),
 ) as unknown as Record<RuinId,SpecialSiteDefinition>
 
+export function normalizeRuinId(type:SpecialSiteType):RuinId
+export function normalizeRuinId(type:string):RuinId|null
 export function normalizeRuinId(type:string):RuinId|null{
   if((RUIN_IDS as readonly string[]).includes(type))return type as RuinId
   return LEGACY_SPECIAL_SITE_TO_RUIN[type]??null
