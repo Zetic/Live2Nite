@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveWeaponAttack } from '../src/core/combat'
 import { createInitialGame } from '../src/core/game'
-import { createItemInstance } from '../src/core/items'
+import { createItemInstance, normalizeItemState } from '../src/core/items'
 import { enterRuin, generateRuinInterior, getRuinExplorer, getRuinInterior, moveInsideRuin, type RuinExplorerState, type RuinInteriorState } from '../src/core/ruinExploration'
 import { executeRuinSharedAction, getRuinSharedActions } from '../src/core/ruinSharedActions'
 import type { GameState, SpecialSiteState, SpecialSiteType, WorldZone } from '../src/core/types'
@@ -70,6 +70,19 @@ describe('explorable ruin shared action adapter',()=>{
     expect(resolved.events.map((event)=>event.type)).toEqual(['COMBAT_RESOLVED'])
     expect(getRuinSharedActions(resolved.state,'c01').some((action)=>action.type==='USE_WEAPON')).toBe(false)
     expect(moveInsideRuin(resolved.state,'c01','NORTH',100_000).ok).toBe(true)
+  })
+
+  it('preserves normal weapon consumption and charge mutation inside the ruin',()=>{
+    let game=enterWithThreat(1006,6)
+    game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:[createItemInstance('bomb','water_bomb'),createItemInstance('pistol','water_pistol')]}:citizen)}
+    const bomb=getRuinSharedActions(game,'c01').find((action)=>action.type==='USE_WEAPON'&&action.itemId==='bomb')!
+    game=executeRuinSharedAction(game,bomb).state
+    expect(game.citizens.find((citizen)=>citizen.id==='c01')!.inventory.some((item)=>item.id==='bomb')).toBe(false)
+    expect(currentCell(game).zombies).toBeGreaterThan(0)
+    const pistol=getRuinSharedActions(game,'c01').find((action)=>action.type==='USE_WEAPON'&&action.itemId==='pistol')!
+    game=executeRuinSharedAction(game,pistol).state
+    const pistolAfter=game.citizens.find((citizen)=>citizen.id==='c01')!.inventory.find((item)=>item.id==='pistol')!
+    expect(normalizeItemState(pistolAfter.type,pistolAfter.state).charges).toBe(2)
   })
 
   it('keeps movement blocked when a shared weapon action leaves zombies in the current cell',()=>{
