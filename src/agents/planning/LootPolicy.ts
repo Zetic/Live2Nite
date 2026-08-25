@@ -58,12 +58,14 @@ function dropAction(actions:GameCommand[],itemId:string):GameCommand|null{return
 function tamerDogLogisticsAction(state:GameState,citizen:Citizen,actions:GameCommand[],mission:BotMissionAssignment|null):GameCommand|null{
   if(!hasTamerDog(citizen))return null
   const alreadyDrugged=tamerDogDruggedToday(state,citizen.id)
+  const hasCumbersome=citizen.inventory.some(isCumbersomeItem)
   const nearFull=citizen.inventory.length>=Math.max(1,citizen.inventoryCapacity-1)
   const valuableHaul=Boolean(mission&&shouldReturnWithHaul(state,citizen,mission))
   if(!alreadyDrugged&&!nearFull&&!valuableHaul)return null
-  if(tamerDogTransportableItems(state,citizen).some((item)=>isDogCriticalCarry(state,citizen,item,mission)))return null
+  const plannedShipment=alreadyDrugged||hasCumbersome?citizen.inventory:tamerDogTransportableItems(state,citizen)
+  if(plannedShipment.some((item)=>isDogCriticalCarry(state,citizen,item,mission)))return null
   const drug=actions.find((action)=>action.type==='DRUG_TAMER_DOG')??null
-  if(!alreadyDrugged&&drug&&citizen.inventory.some(isCumbersomeItem))return drug
+  if(!alreadyDrugged&&hasCumbersome&&drug)return drug
   return actions.find((action)=>action.type==='SEND_TAMER_DOG'&&action.destination==='bank')??null
 }
 export function opportunisticFieldAction(state:GameState,citizen:Citizen,actions:GameCommand[],mission:BotMissionAssignment|null):GameCommand|null{
