@@ -3,8 +3,11 @@ import type { GameEvent, GameState, WorldState, WorldZombieChange } from './type
 import { distanceToTown, isTownGateZone, zoneKey } from './world'
 
 /** Current default MyHordes rules expose these global respawn tuning values. */
-export const SOURCE_MASSIVE_RESPAWN_THRESHOLD_PERCENT=50
+export const SOURCE_MASSIVE_RESPAWN_THRESHOLD=50
 export const SOURCE_MASSIVE_RESPAWN_FACTOR=0.5
+/** The upstream setting's consuming implementation is not copied here. Live2Nite uses
+ * the exposed threshold value as a percentage of its own deterministic Day-1 baseline. */
+const LIVE2NITE_MASSIVE_RESPAWN_THRESHOLD_PERCENT=SOURCE_MASSIVE_RESPAWN_THRESHOLD
 
 export interface DayOneZombieRange{min:number;max:number}
 
@@ -76,7 +79,7 @@ function baselinePopulation(state:GameState):number{
 function applyMassiveRespawn(state:GameState,counts:Map<string,number>):void{
   const baseline=baselinePopulation(state)
   const current=[...counts.values()].reduce((sum,value)=>sum+value,0)
-  if(baseline<=0||current*100>=baseline*SOURCE_MASSIVE_RESPAWN_THRESHOLD_PERCENT)return
+  if(baseline<=0||current*100>=baseline*LIVE2NITE_MASSIVE_RESPAWN_THRESHOLD_PERCENT)return
   let remaining=Math.max(1,Math.ceil((baseline-current)*SOURCE_MASSIVE_RESPAWN_FACTOR))
   const candidates=Object.values(state.world.zones)
     .filter((zone)=>!isTownGateZone(zone.x,zone.y)&&distanceToTown(zone.x,zone.y)>=3)
