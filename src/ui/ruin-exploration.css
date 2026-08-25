@@ -7,6 +7,9 @@
 .ruin-summary-strip span{padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:#111a1e;color:var(--muted);font-size:.66rem}
 .ruin-summary-strip strong{color:#ddd0c4}
 .ruin-inline-state{margin:8px 0 0;padding:8px 10px;border:1px solid #65533a;border-radius:7px;background:#211a10;color:#c5ad86;font-size:.68rem}
+.tamer-exit-guidance{border-color:#41614d;background:#101b15;color:#b8d2bf}
+.direction-button.tamer-exit-direction:not(:disabled){border-color:#5d8d68;background:#14251a;box-shadow:inset 0 0 0 1px #2e5539}
+.direction-button.tamer-exit-direction:not(:disabled) strong,.direction-button.tamer-exit-direction:not(:disabled) small{color:#c8e8cf}
 .ruin-context-button{margin-left:7px}
 .ruin-exit-strip{margin-top:0}
 
