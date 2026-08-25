@@ -1,7 +1,8 @@
 import { CONSTRUCTIONS, completionWaterBonus, revealsAllTerrain } from './construction'
 import { DEBUG_GOD_AP, clearGodProtectedStatus, enforceGodCitizen, enforceGodMode, isGodCitizen, type DebugGodCitizen } from './debugGod'
 import { createItemInstance } from './items'
-import type { ConstructionId, GameState, ItemType } from './types'
+import type { ConstructionId, Direction, GameState, ItemType } from './types'
+import { getZone, moveCoordinates, zoneKey } from './world'
 
 /** Development-only state repair used by the compact debug controls. */
 export function debugRefreshCitizen(game:GameState,citizenId:string):GameState{
@@ -55,6 +56,31 @@ export function debugSummonItem(game:GameState,citizenId:string,type:ItemType):G
     ...game,
     nextItemId:game.nextItemId+1,
     citizens:game.citizens.map((candidate)=>candidate.id===citizenId?{...candidate,inventory:[...candidate.inventory,item]}:candidate),
+  })
+}
+
+/** Debug-only movement escape hatch for God citizens in zombie-controlled zones. */
+export function debugGodMove(game:GameState,citizenId:string,direction:Direction):GameState{
+  const citizen=game.citizens.find((candidate)=>candidate.id===citizenId)
+  if(!citizen?.alive||!isGodCitizen(citizen)||citizen.location.type!=='world'||game.clock.phase!=='day')return game
+  const target=moveCoordinates(citizen.location.x,citizen.location.y,direction)
+  const targetZone=getZone(game.world,target.x,target.y)
+  if(!targetZone)return game
+  const key=zoneKey(target.x,target.y)
+  return enforceGodMode({
+    ...game,
+    citizens:game.citizens.map((candidate)=>candidate.id===citizenId?{
+      ...candidate,
+      location:{type:'world' as const,x:target.x,y:target.y},
+      temporaryControl:null,
+      relativeControl:null,
+      camping:{...candidate.camping,hidden:false,survivalChance:null,hiddenDay:null},
+    }:candidate),
+    world:{
+      ...game.world,
+      zones:{...game.world.zones,[key]:{...targetZone,discovered:true}},
+      intel:{...game.world.intel,[key]:{observedZombies:targetZone.zombies,lastObservedDay:game.day,lastObservedHour:game.clock.hour}},
+    },
   })
 }
 
