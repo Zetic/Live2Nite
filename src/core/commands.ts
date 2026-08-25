@@ -4,13 +4,16 @@ import { BAREHANDED_AP_COST, resolveBarehandedAttack, resolveWeaponAttack } from
 import { COMBINATION_RECIPES, resolveCombination } from './combinations'
 import { CONSTRUCTIONS, blueprintEligibleProjects } from './construction'
 import { applyEvents } from './events'
+import { explorableBlueprintEligibleProjects, explorableBlueprintTierFromType } from './explorableBlueprints'
 import { HOME_IMPROVEMENTS, homeImprovementDefense, improvementNextLevel, nextHomeDefinition } from './home'
 import { itemUseActionDefinition, resolveCitizenEffects, resolveFoodItemAction, resolveItemUseAction, resolveWaterItemAction } from './itemEffects'
 import { containerPool, createItemInstance, normalizeItemState } from './items'
 import { rollWeightedLoot } from './loot'
 import { openableDefinition, resolveOpenable } from './openables'
 import { randomInt } from './rng'
+import { RUIN_CATALOG } from './ruinCatalog'
 import { MYHORDES_DEPLETED_ZONE_LOOT } from './scavengeLoot'
+import { normalizeRuinId } from './specialSites'
 import { LEG_WOUND_MOVE_FAILURE_PERCENT, citizenControlPoints, travelHydrationTransition } from './status'
 import { WORLD_STATUS_ACTIONS } from './statusSources'
 import type { Citizen, GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, SearchMode } from './types'
@@ -74,7 +77,14 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     }
     case 'SEARCH_ZONE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const zone=state.world.zones[key];const mode:SearchMode=zone.searchesRemaining>0?'normal':'depleted';if(mode==='normal')events.push({type:'ZONE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,mode,item:normalSearchItem(state,citizen.location.x,citizen.location.y)});else{const outcome=depletedSearchOutcome(state);events.push({type:'ZONE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,mode,item:outcome.item,rngStateAfter:outcome.rngStateAfter})}break}
     case 'EXCAVATE_SPECIAL_SITE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:SPECIAL_EXCAVATION_AP_COST},{type:'SPECIAL_SITE_EXCAVATED',day:state.day,zoneKey:key,citizenId:command.citizenId,amount:SPECIAL_EXCAVATION_AP_COST});break}
-    case 'SEARCH_SPECIAL_SITE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const type=state.world.zones[key].specialSite?.hiddenLoot[0];events.push({type:'SPECIAL_SITE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,item:type?itemAt(state,type):null});break}
+    case 'SEARCH_SPECIAL_SITE':{
+      if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
+      const key=zoneKey(citizen.location.x,citizen.location.y);const site=state.world.zones[key].specialSite;const type=site?.hiddenLoot[0]
+      let item=type?itemAt(state,type):null
+      const ruinId=site?normalizeRuinId(site.type):null;const family=ruinId?RUIN_CATALOG[ruinId].family:null;const tier=type?explorableBlueprintTierFromType(type):null
+      if(item&&family&&tier)item={...item,state:{...item.state,blueprintFamily:family,blueprintTier:tier}}
+      events.push({type:'SPECIAL_SITE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,item});break
+    }
     case 'PICK_UP_ITEM':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const item=state.world.zones[key].groundItems.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_PICKED_UP',day:state.day,citizenId:command.citizenId,zoneKey:key,item});break}
     case 'DROP_ITEM':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId);if(!item)throw new InvalidCommandError(`Missing carried item ${command.itemId}`);events.push({type:'ITEM_DROPPED',day:state.day,citizenId:command.citizenId,zoneKey:key,item});break}
     case 'ATTACK_BAREHANDED':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveBarehandedAttack(state);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:BAREHANDED_AP_COST},{type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:'fists',kills:outcome.kills,item:null,consumed:false,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills));break}
@@ -103,7 +113,8 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
       if(located.source==='ground')throw new InvalidCommandError('Blueprints must be carried into town before they can be read')
       const tier=located.item.type==='common_blueprint'?1:located.item.type==='uncommon_blueprint'?2:located.item.type==='rare_blueprint'?3:located.item.type==='very_rare_blueprint'?4:null
       if(tier===null)throw new InvalidCommandError(`${located.item.type} is not a construction blueprint`)
-      const candidates=blueprintEligibleProjects(state,tier)
+      const family=located.item.state?.blueprintFamily;const specializedTier=located.item.state?.blueprintTier
+      const candidates=family&&specializedTier?explorableBlueprintEligibleProjects(state,family,specializedTier):blueprintEligibleProjects(state,tier)
       const roll=candidates.length>0?randomInt(state.rngState,0,candidates.length-1):null
       const projectId=roll?candidates[roll.value]:null
       const rngStateAfter=roll?.state??state.rngState
