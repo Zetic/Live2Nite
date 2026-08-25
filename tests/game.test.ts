@@ -38,8 +38,8 @@ describe('Citizen homes, starter supplies, and well', () => {
     expect(game.clock).toEqual({ hour: 1, phase: 'day' })
     expect(game.botMissions).toEqual({})
     expect(game.coordination.commitments).toEqual([])
-    expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 4)).toBe(true)
-    expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 4)).toBe(true)
+    expect(game.citizens.every((citizen) => citizen.ap === 6 && citizen.inventoryCapacity === 5)).toBe(true)
+    expect(game.citizens.every((citizen) => citizen.home.level === 'camp_bed' && citizen.home.defense === 0 && citizen.home.storageCapacity === 5)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.home.storage.map((item) => item.type).sort().join(',') === 'citizen_welcome_pack,doggy_bag')).toBe(true)
     expect(game.citizens.every((citizen) => citizen.status.hydration === 'normal' && citizen.status.desertStepsToday === 0)).toBe(true)
     expect(game.citizens.every((citizen) => citizen.camping.hidden === false && citizen.camping.nightsSurvived === 0)).toBe(true)
@@ -98,9 +98,9 @@ describe('Citizen homes, starter supplies, and well', () => {
   })
 
   it('blocks well withdrawal when the rucksack is full', () => {
-    let game = withInventory(createInitialGame(123, 1), ['food','food','food','food'])
+    let game = withInventory(createInitialGame(123, 1), ['food','food','food','food','food'])
     expect(getLegalActions(game,'c01').some((action) => action.type === 'TAKE_WATER')).toBe(false)
-    game = { ...game, citizens: game.citizens.map((citizen) => ({ ...citizen, inventory: citizen.inventory.slice(0,3) })) }
+    game = { ...game, citizens: game.citizens.map((citizen) => ({ ...citizen, inventory: citizen.inventory.slice(0,4) })) }
     expect(getLegalActions(game,'c01').some((action) => action.type === 'TAKE_WATER')).toBe(true)
   })
 
@@ -183,12 +183,12 @@ describe('World Beyond gameplay', () => {
     const key = zoneKey(1, 0)
     game = { ...game, world: { ...game.world, zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 0, searchesRemaining: 1, hiddenLoot: ['scrap_metal'] } } } }
     const before = game.citizens[0].ap
-    game = executeCommand(game, command(game, 'c01', 'SEARCH_ZONE')).state
+    game = executeCommand(game, command(game,'c01','SEARCH_ZONE')).state
     expect(game.citizens[0].ap).toBe(before)
-    game = executeCommand(game, command(game, 'c01', 'PICK_UP_ITEM')).state
-    game = executeCommand(game, getLegalActions(game, 'c01').find((a) => a.type === 'MOVE' && a.direction === 'WEST')!).state
-    game = executeCommand(game, command(game, 'c01', 'ENTER_TOWN')).state
-    game = executeCommand(game, command(game, 'c01', 'DEPOSIT_ITEM')).state
+    game = executeCommand(game, command(game,'c01','PICK_UP_ITEM')).state
+    game = executeCommand(game, getLegalActions(game,'c01').find((a)=>a.type==='MOVE'&&a.direction==='WEST')!).state
+    game = executeCommand(game, command(game,'c01','ENTER_TOWN')).state
+    game = executeCommand(game, command(game,'c01','DEPOSIT_ITEM')).state
     expect(bankCount(game.town.bank,'scrap_metal')).toBe(1)
   })
 
@@ -200,7 +200,7 @@ describe('World Beyond gameplay', () => {
     game = executeCommand(game, command(game,'c01','WITHDRAW_BANK_ITEM')).state
     expect(bankCount(game.town.bank,'old_door')).toBe(0)
     expect(totalTownDefense(game)).toBe(40)
-    expect(game.citizens[0].inventory.some((item) => item.type === 'old_door')).toBe(true)
+    expect(game.citizens[0].inventory.some((item)=>item.type==='old_door')).toBe(true)
   })
 })
 
