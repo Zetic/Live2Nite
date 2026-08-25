@@ -60,7 +60,7 @@ export type CombinationRecipeId =
   | 'kwik_fix_ektorp_gluten_chair'
   | 'kwik_fix_pc_base_unit'
 export type HomeLevel = 'camp_bed' | 'tent' | 'hovel' | 'shack' | 'house' | 'fenced_house' | 'fortified_shelter' | 'bunker' | 'castle'
-export type HomeImprovementId = 'reinforcements' | 'fence' | 'storage'
+export type HomeImprovementId = 'reinforcements' | 'fence' | 'storage' | 'alarm' | 'curtain' | 'lock' | 'siesta' | 'kitchen' | 'laboratory'
 export type CorpseDisposition = 'dragged_out' | 'watered'
 export type ItemStorage = 'inventory' | 'home' | 'ground'
 export type PersonalItemStorage = 'inventory' | 'home'
@@ -91,7 +91,7 @@ export type CoordinationCommitmentKind = 'gate_primary' | 'gate_backup' | 'const
 export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType; state?: ItemState }
 export type CitizenLocation = { type: 'town' } | { type: 'world'; x: number; y: number }
-export interface CitizenHome { level:HomeLevel; defense:number; storage:ItemInstance[]; storageCapacity:number; upgradedDay:number|null; improvements:Record<HomeImprovementId,number>; holdsBody:boolean; corpseAttacked:boolean }
+export interface CitizenHome { level:HomeLevel; defense:number; storage:ItemInstance[]; storageCapacity:number; upgradedDay:number|null; improvements:Partial<Record<HomeImprovementId,number>>; holdsBody:boolean; corpseAttacked:boolean }
 export interface CitizenDailyState { ate:boolean; drank:boolean; waterTaken:boolean; bonusWaterTaken?:boolean; woundTreated?:boolean }
 export interface CitizenStatusState {
   hydration:HydrationStatus
@@ -146,6 +146,10 @@ export type GameCommand =
   | {type:'WITHDRAW_BANK_ITEM';citizenId:string;itemId:string}
   | {type:'MOVE_ITEM_TO_HOME';citizenId:string;itemId:string}
   | {type:'MOVE_ITEM_TO_RUCKSACK';citizenId:string;itemId:string}
+  | {type:'DEPOSIT_HOME_ITEM';citizenId:string;targetCitizenId:string;itemId:string}
+  | {type:'INTRUDE_HOME';citizenId:string;targetCitizenId:string}
+  | {type:'STEAL_HOME_ITEM';citizenId:string;targetCitizenId:string;itemId:string}
+  | {type:'PILLAGE_HOME_ITEM';citizenId:string;targetCitizenId:string;itemId:string}
   | {type:'OPEN_CONTAINER';citizenId:string;itemId:string}
   | {type:'READ_BLUEPRINT';citizenId:string;itemId:string}
   | {type:'TAKE_WATER';citizenId:string}
@@ -154,6 +158,7 @@ export type GameCommand =
   | {type:'USE_ITEM_ACTION';citizenId:string;itemId:string;actionId:ItemUseActionId}
   | {type:'UPGRADE_HOME';citizenId:string}
   | {type:'BUILD_HOME_IMPROVEMENT';citizenId:string;improvementId:HomeImprovementId}
+  | {type:'USE_HOME_SIESTA';citizenId:string}
   | {type:'DISPOSE_CORPSE_OUTSIDE';citizenId:string;targetCitizenId:string}
   | {type:'DISPOSE_CORPSE_WATER';citizenId:string;targetCitizenId:string}
   | {type:'CONTRIBUTE_CONSTRUCTION';citizenId:string;projectId:ConstructionId}
@@ -190,6 +195,10 @@ export type GameEvent = (
   | {type:'ITEM_WITHDRAWN';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_MOVED_TO_HOME';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_MOVED_TO_RUCKSACK';day:number;citizenId:string;item:ItemInstance}
+  | {type:'HOME_ITEM_DEPOSITED';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance}
+  | {type:'HOME_INTRUSION_ATTEMPTED';day:number;citizenId:string;targetCitizenId:string;success:boolean;alarmed:boolean}
+  | {type:'HOME_ITEM_STOLEN';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance}
+  | {type:'HOME_ITEM_PILLAGED';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance}
   | {type:'OPENABLE_RESOLVED';day:number;citizenId:string;container:ItemInstance;source:ItemStorage;zoneKey?:string;success:boolean;outputs:ItemInstance[];containerAfter?:ItemInstance;rngStateAfter:number}
   | {type:'CONTAINER_OPENED';day:number;citizenId:string;containerId:string;containerType:ItemType;source:ItemStorage;zoneKey?:string;output:ItemInstance;rngStateAfter:number}
   | {type:'WATER_TAKEN';day:number;citizenId:string;item:ItemInstance}
@@ -199,6 +208,7 @@ export type GameEvent = (
   | {type:'FLEE_ZOMBIES_RESOLVED';day:number;citizenId:string;zoneKey:string;statusAfter:CitizenStatusState;rngStateAfter:number}
   | {type:'HOME_UPGRADED';day:number;citizenId:string;from:HomeLevel;to:HomeLevel;defenseAfter:number;consumed:Partial<Record<ItemType,number>>}
   | {type:'HOME_IMPROVEMENT_BUILT';day:number;citizenId:string;improvementId:HomeImprovementId;level:number;consumed:Partial<Record<ItemType,number>>;defenseAfter:number;storageCapacityAfter:number}
+  | {type:'HOME_SIESTA_USED';day:number;citizenId:string;chance:number;roll:number;success:boolean;apAfter:number;rngStateAfter:number}
   | {type:'CORPSE_DISPOSED';day:number;citizenId:string;targetCitizenId:string;method:CorpseDisposition;waterItemId?:string}
   | {type:'CORPSE_REANIMATED';day:number;corpseCitizenId:string;outcome:'well'|'citizen'|'nothing';victimCitizenId?:string;waterLost:number}
   | {type:'BLUEPRINT_READ';day:number;citizenId:string;item:ItemInstance;source:PersonalItemStorage;projectId:ConstructionId|null;rngStateAfter:number}
