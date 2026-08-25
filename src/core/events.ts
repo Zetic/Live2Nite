@@ -76,9 +76,10 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'ITEM_WITHDRAWN':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item]})),town:{...state.town,bank:removeBankItemById(state.town.bank,event.item.id)}}
     case 'ITEM_MOVED_TO_HOME':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id),home:{...citizen.home,storage:[...citizen.home.storage,event.item]}}))}
     case 'ITEM_MOVED_TO_RUCKSACK':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item],home:{...citizen.home,storage:citizen.home.storage.filter((item)=>item.id!==event.item.id)}}))}
-    case 'HOME_ITEM_DEPOSITED':return{...state,citizens:state.citizens.map((citizen)=>citizen.id===event.citizenId?{...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id)}:citizen.id===event.targetCitizenId?{...citizen,home:{...citizen.home,storage:[...citizen.home.storage,event.item]}}:citizen)}
+    case 'HOME_ITEM_DEPOSITED':return{...state,rngState:event.rngStateAfter,citizens:state.citizens.map((citizen)=>citizen.id===event.citizenId?{...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id)}:citizen.id===event.targetCitizenId?{...citizen,home:{...citizen.home,storage:[...citizen.home.storage,event.item]}}:citizen)}
     case 'HOME_INTRUSION_ATTEMPTED':return state
-    case 'HOME_ITEM_STOLEN':case 'HOME_ITEM_PILLAGED':return transferHomeItem(state,event)
+    case 'HOME_ITEM_STOLEN':return{...transferHomeItem(state,event),rngState:event.rngStateAfter}
+    case 'HOME_ITEM_PILLAGED':return transferHomeItem(state,event)
     case 'OPENABLE_RESOLVED':{
       if(event.source==='ground'&&event.zoneKey)return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,world:replaceGround(state,event.zoneKey,(items)=>resolveOpenedItems(items,event))}
       return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,citizens:replaceCitizen(state,event.citizenId,(citizen)=>event.source==='inventory'?{...citizen,inventory:resolveOpenedItems(citizen.inventory,event)}:{...citizen,home:{...citizen.home,storage:resolveOpenedItems(citizen.home.storage,event)}})}
