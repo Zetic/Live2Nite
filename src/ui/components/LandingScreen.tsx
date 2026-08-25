@@ -1,5 +1,4 @@
-import { PROFESSION_DEFINITIONS, PROFESSION_IDS } from '../../core/professions'
-import type { ProfessionId } from '../../core/types'
+import { PROFESSION_DEFINITIONS, PROFESSION_IDS, type ProfessionId } from '../../core/professions'
 import '../profession.css'
 
 export function LandingScreen({selected,onSelect,onStart}:{selected:ProfessionId|null;onSelect:(profession:ProfessionId)=>void;onStart:()=>void}){
