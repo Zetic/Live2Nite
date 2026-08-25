@@ -9,7 +9,9 @@ export interface ScreenDefinition {
   short: string
   townOnly?: boolean
 }
-export interface FacilityScreenDefinition extends ScreenDefinition { projectId?:ConstructionId; available?:(game:GameState)=>boolean }
+
+export type FacilitySlotId='upgrade_projects'|'watchtower'|'workshop'|'battlements'|'garbage_dump'|'catapult'|'tamer_s_trap_system'
+export interface FacilityScreenDefinition extends ScreenDefinition { slot:FacilitySlotId; projectId?:ConstructionId; available?:(game:GameState)=>boolean }
 
 export const PRIMARY_SCREENS: readonly ScreenDefinition[] = [
   { id: 'chronicle', label: 'Town Records', short: 'Bulletin, history & statistics' },
@@ -22,22 +24,37 @@ export const PRIMARY_SCREENS: readonly ScreenDefinition[] = [
   { id: 'codex', label: 'Codex', short: 'Items, conditions & constructions' },
 ]
 
+/**
+ * Permanent second-row priority. Facilities without dedicated screens yet reserve their
+ * future position here; unavailable entries are compacted left and blank slots trail them.
+ */
+export const FACILITY_SLOT_ORDER:readonly FacilitySlotId[]=[
+  'upgrade_projects',
+  'watchtower',
+  'workshop',
+  'battlements',
+  'garbage_dump',
+  'catapult',
+  'tamer_s_trap_system',
+]
+
 const FACILITY_DEFINITIONS: readonly FacilityScreenDefinition[] = [
-  { id: 'workshop', projectId: 'workshop', label: 'Workshop', short: 'Material processing', townOnly: true },
-  { id: 'watchtower', projectId: 'watchtower', label: 'Watchtower', short: 'Horde estimates', townOnly: true },
-  { id: 'upgrade_projects', label: 'Upgrade Projects', short: 'Daily project vote', townOnly: true, available:hasUpgradeProjectsFacility },
+  { id: 'upgrade_projects', slot:'upgrade_projects', label: 'Upgrade Projects', short: 'Daily project vote', townOnly: true, available:hasUpgradeProjectsFacility },
+  { id: 'watchtower', slot:'watchtower', projectId: 'watchtower', label: 'Watchtower', short: 'Horde estimates', townOnly: true },
+  { id: 'workshop', slot:'workshop', projectId: 'workshop', label: 'Workshop', short: 'Material processing', townOnly: true },
 ]
 function facilityAvailable(game:GameState,entry:FacilityScreenDefinition):boolean{return entry.available?.(game)??Boolean(entry.projectId&&game.town.construction[entry.projectId]?.completed)}
+function facilityOrder(entry:FacilityScreenDefinition):number{return FACILITY_SLOT_ORDER.indexOf(entry.slot)}
 
-export const FACILITY_SLOT_COUNT=6
+export const FACILITY_SLOT_COUNT=FACILITY_SLOT_ORDER.length
 
 export function facilitySlots(game:GameState):Array<FacilityScreenDefinition|null>{
-  const available=FACILITY_DEFINITIONS.map((entry)=>facilityAvailable(game,entry)?entry:null)
-  return Array.from({length:FACILITY_SLOT_COUNT},(_,index)=>available[index]??null)
+  const available=FACILITY_DEFINITIONS.filter((entry)=>facilityAvailable(game,entry)).sort((a,b)=>facilityOrder(a)-facilityOrder(b))
+  return [...available,...Array.from({length:Math.max(0,FACILITY_SLOT_COUNT-available.length)},()=>null)]
 }
 
 export function availableScreens(game: GameState): ScreenDefinition[] {
-  return [...PRIMARY_SCREENS,...FACILITY_DEFINITIONS.filter((entry)=>facilityAvailable(game,entry))]
+  return [...PRIMARY_SCREENS,...FACILITY_DEFINITIONS.filter((entry)=>facilityAvailable(game,entry)).sort((a,b)=>facilityOrder(a)-facilityOrder(b))]
 }
 
 export function isTownOnlyScreen(screen: GameScreen): boolean {

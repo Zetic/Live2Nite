@@ -14,7 +14,7 @@ import { createInitialGame, resolveNight } from '../src/core/game'
 import { watchtowerEstimate } from '../src/core/night'
 import type { ConstructionId, GameState } from '../src/core/types'
 import { workshopRecipeApCost } from '../src/core/workshop'
-import { FACILITY_SLOT_COUNT, PRIMARY_SCREENS, facilitySlots } from '../src/ui/navigation'
+import { FACILITY_SLOT_COUNT, FACILITY_SLOT_ORDER, PRIMARY_SCREENS, facilitySlots } from '../src/ui/navigation'
 import { bankCount } from './bankFixtures'
 
 function complete(game: GameState, ...projectIds: ConstructionId[]): GameState {
@@ -128,7 +128,7 @@ describe('construction effects', () => {
 })
 
 describe('stable facility navigation', () => {
-  it('keeps the requested primary order while reserving six facility slots', () => {
+  it('keeps the requested primary order while reserving seven compact facility slots', () => {
     const initial = createInitialGame(1907, 2)
     expect(PRIMARY_SCREENS.map((screen) => screen.id)).toEqual([
       'chronicle',
@@ -140,14 +140,14 @@ describe('stable facility navigation', () => {
       'world',
       'codex',
     ])
+    expect(FACILITY_SLOT_ORDER).toEqual(['upgrade_projects','watchtower','workshop','battlements','garbage_dump','catapult','tamer_s_trap_system'])
+    expect(FACILITY_SLOT_COUNT).toBe(7)
     expect(facilitySlots(initial)).toEqual(Array(FACILITY_SLOT_COUNT).fill(null))
 
     const built = complete(initial, 'workshop', 'watchtower')
     const slots = facilitySlots(built)
     expect(slots).toHaveLength(FACILITY_SLOT_COUNT)
-    expect(slots[0]?.id).toBe('workshop')
-    expect(slots[1]?.id).toBe('watchtower')
-    expect(slots[2]?.id).toBe('upgrade_projects')
+    expect(slots.slice(0,3).map((entry)=>entry?.id)).toEqual(['upgrade_projects','watchtower','workshop'])
     expect(slots.slice(3)).toEqual(Array(FACILITY_SLOT_COUNT - 3).fill(null))
   })
 })

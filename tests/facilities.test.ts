@@ -6,7 +6,7 @@ import { DEPLETED_SCAVENGE_LOOT_POOL, NORMAL_SCAVENGE_LOOT_POOL } from '../src/c
 import { MYHORDES_DEPLETED_ZONE_LOOT } from '../src/core/scavengeLoot'
 import type { GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
-import { availableScreens, FACILITY_SLOT_COUNT, facilitySlots, PRIMARY_SCREENS } from '../src/ui/navigation'
+import { availableScreens, FACILITY_SLOT_COUNT, FACILITY_SLOT_ORDER, facilitySlots, PRIMARY_SCREENS } from '../src/ui/navigation'
 import { bankFromCounts } from './bankFixtures'
 
 function command(game: GameState, citizenId: string, type: ReturnType<typeof getLegalActions>[number]['type']) {
@@ -25,15 +25,21 @@ describe('facility navigation', () => {
     expect(primary).not.toContain('town')
   })
 
-  it('keeps six stable facility slots and fills them without shifting primary screens', () => {
+  it('keeps seven fixed facility priorities while compacting built buttons left without gaps', () => {
     const before=createInitialGame(123,2)
+    expect(FACILITY_SLOT_ORDER).toEqual(['upgrade_projects','watchtower','workshop','battlements','garbage_dump','catapult','tamer_s_trap_system'])
+    expect(FACILITY_SLOT_COUNT).toBe(7)
     expect(facilitySlots(before)).toHaveLength(FACILITY_SLOT_COUNT)
     expect(facilitySlots(before).every((entry)=>entry===null)).toBe(true)
-    const after:GameState={...before,town:{...before.town,construction:{...before.town.construction,workshop:{...before.town.construction.workshop,completed:true,apContributed:25}}}}
+    const after:GameState={...before,town:{...before.town,construction:{
+      ...before.town.construction,
+      workshop:{...before.town.construction.workshop,completed:true,apContributed:25},
+      watchtower:{...before.town.construction.watchtower,completed:true,apContributed:15},
+    }}}
     const slots=facilitySlots(after)
     expect(slots).toHaveLength(FACILITY_SLOT_COUNT)
-    expect(slots[0]?.id).toBe('workshop')
-    expect(slots[1]).toBeNull()
+    expect(slots.slice(0,3).map((entry)=>entry?.id)).toEqual(['upgrade_projects','watchtower','workshop'])
+    expect(slots.slice(3).every((entry)=>entry===null)).toBe(true)
     expect(availableScreens(after).slice(0,PRIMARY_SCREENS.length).map((entry)=>entry.id)).toEqual(PRIMARY_SCREENS.map((entry)=>entry.id))
   })
 })
