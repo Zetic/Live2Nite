@@ -1,4 +1,5 @@
 import { RUIN_CATALOG } from './ruinCatalog'
+import { advanceRuinInteriorToDay, SOURCE_RUIN_INITIAL_ZOMBIES } from './ruinEvolution'
 import { prepareRuinInteriorContent } from './ruinRoomContent'
 import type { RuinKeyType } from './ruinRoomContent'
 import { normalizeRuinId } from './specialSites'
@@ -13,7 +14,7 @@ export const RUIN_OXYGEN_SECONDS=300
 export const RUIN_ENTRY_GRACE_SECONDS=30
 export const RUIN_TIME_PENALTY_MIN_SECONDS=15
 export const RUIN_TIME_PENALTY_MAX_SECONDS=24
-export const RUIN_INITIAL_ZOMBIES=10
+export const RUIN_INITIAL_ZOMBIES=SOURCE_RUIN_INITIAL_ZOMBIES
 
 export type RuinInteriorCellKind='entrance'|'corridor'|'stairs'
 export type RuinInteriorDirection='NORTH'|'SOUTH'|'EAST'|'WEST'
@@ -25,6 +26,8 @@ export interface RuinInteriorState{
   cells:RuinInteriorCell[]
   rooms:RuinInteriorRoom[]
   activeExplorerCitizenId:string|null
+  zombieProfileVersion?:number
+  lastZombieGrowthDay?:number
 }
 export interface RuinExplorerState{
   active:boolean
@@ -106,7 +109,8 @@ export function generateRuinInterior(seed:number,x:number,y:number,ruinType:Spec
   }
   const zombieCells=cells.filter((cell)=>cell.kind!=='entrance')
   for(let i=0;i<RUIN_INITIAL_ZOMBIES;i+=1){const draw=int(rng,0,zombieCells.length-1);rng=draw.state;zombieCells[draw.value].zombies+=1}
-  return prepareRuinInteriorContent(seed,x,y,{version:1,family:definition.family,cells,rooms,activeExplorerCitizenId:null})
+  const prepared=prepareRuinInteriorContent(seed,x,y,{version:1,family:definition.family,cells,rooms,activeExplorerCitizenId:null})
+  return{...prepared,lastZombieGrowthDay:1}
 }
 
 export function getRuinExplorer(game:GameState,citizenId:string):RuinExplorerState|null{
@@ -178,8 +182,14 @@ export function enterRuin(game:GameState,citizenId:string,nowMs=Date.now()):Ruin
   if(zoneControlState(game,zone.x,zone.y,citizenId)==='trapped')return fail(game,'Zombie control prevents entry into the ruin.')
   if(citizen.ruinExplorer?.active)return fail(game,'This citizen is already exploring a ruin.')
   if(citizen.ruinExplorer?.zoneKey===zoneKey(zone.x,zone.y)&&citizen.ruinExplorer.exploredDay===game.day)return fail(game,'This citizen cannot re-enter this ruin again today.')
-  const interior=prepareRuinInteriorContent(game.seed,zone.x,zone.y,site.interior??generateRuinInterior(game.seed,zone.x,zone.y,site.type))
-  if(interior.activeExplorerCitizenId&&interior.activeExplorerCitizenId!==citizenId)return fail(game,'Another citizen is already exploring this ruin.')
+  const persisted=site.interior
+  let interior=persisted??generateRuinInterior(game.seed,zone.x,zone.y,site.type)
+  // Newly materialized interiors represent ruins that have existed since Day 1, so apply
+  // the elapsed source +5/day growth before first entry. Legacy persisted interiors that
+  // lack lifecycle metadata are deliberately migrated gently at the next rollover instead.
+  if(!persisted||persisted.lastZombieGrowthDay!==undefined)interior=advanceRuinInteriorToDay(game.seed,zone.x,zone.y,interior,game.day)
+  interior=prepareRuinInteriorContent(game.seed,zone.x,zone.y,interior)
+  if(interior.activeExplorerCitizenId&&interior.activeExplorerCitizenId!==citizenId)return fail(game,'Another citizen is already exploring a ruin.')
   const entrance=interior.cells.find((cell)=>cell.kind==='entrance'&&cell.floor===0)!
   const explorer:RuinExplorerState={
     active:true,zoneKey:zoneKey(zone.x,zone.y),ruinId,exploredDay:game.day,cellId:entrance.id,inRoomId:null,
