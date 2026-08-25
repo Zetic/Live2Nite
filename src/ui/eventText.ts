@@ -38,6 +38,10 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'ITEM_WITHDRAWN':return`${citizenName(game,event.citizenId)} took ${itemName(event.item.type)} from the town bank.`
     case 'ITEM_MOVED_TO_HOME':return`${citizenName(game,event.citizenId)} stored ${itemName(event.item.type)} at home.`
     case 'ITEM_MOVED_TO_RUCKSACK':return`${citizenName(game,event.citizenId)} packed ${itemName(event.item.type)} into their rucksack.`
+    case 'HOME_ITEM_DEPOSITED':return`${itemName(event.item.type)} was discreetly deposited in ${citizenName(game,event.targetCitizenId)}'s home.`
+    case 'HOME_INTRUSION_ATTEMPTED':return event.alarmed?`${citizenName(game,event.citizenId)} triggered ${citizenName(game,event.targetCitizenId)}'s Rudimentary Alarm during ${event.success?'an intrusion':'a blocked intrusion attempt'}.`:`${citizenName(game,event.targetCitizenId)}'s home was ${event.success?'intruded into':'protected from an intrusion attempt'}.`
+    case 'HOME_ITEM_STOLEN':return`${itemName(event.item.type)} was stolen from ${citizenName(game,event.targetCitizenId)}'s home.`
+    case 'HOME_ITEM_PILLAGED':return`${citizenName(game,event.citizenId)} pillaged ${itemName(event.item.type)} from ${citizenName(game,event.targetCitizenId)}'s abandoned home.`
     case 'OPENABLE_RESOLVED':{const name=citizenName(game,event.citizenId);if(!event.success)return`${name} tried to open ${itemName(event.container.type)} but failed.`;const found=event.outputs.length?event.outputs.map((item)=>itemName(item.type)).join(' + '):'nothing';return`${name} opened ${itemName(event.container.type)} and found ${found}.`}
     case 'CONTAINER_OPENED':return`${citizenName(game,event.citizenId)} opened ${itemName(event.containerType)} and found ${itemName(event.output.type)}.`
     case 'WATER_TAKEN':return`${citizenName(game,event.citizenId)} took a Water Ration from the well.`
@@ -47,6 +51,7 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'WOUNDED_MOVEMENT_RESOLVED':return event.failed?`${citizenName(game,event.citizenId)} spent 1 AP trying to move, but their leg wound stopped them.`:`${citizenName(game,event.citizenId)} pushed through their leg wound and moved.`
     case 'HOME_UPGRADED':return`${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
     case 'HOME_IMPROVEMENT_BUILT':return`${citizenName(game,event.citizenId)} improved their home: ${HOME_IMPROVEMENTS[event.improvementId].name} level ${event.level}.`
+    case 'HOME_SIESTA_USED':return`${citizenName(game,event.citizenId)} tried Siesta (${event.chance}%): ${event.success?'recovered 2 AP':'no AP recovered'}.`
     case 'CORPSE_DISPOSED':return event.method==='watered'?`${citizenName(game,event.citizenId)} destroyed ${citizenName(game,event.targetCitizenId)}'s corpse with a Water Ration.`:`${citizenName(game,event.citizenId)} dragged ${citizenName(game,event.targetCitizenId)}'s corpse outside town for 2 AP.`
     case 'CORPSE_REANIMATED':return event.outcome==='well'?`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated and spoiled ${event.waterLost} Well water.`:event.outcome==='citizen'&&event.victimCitizenId?`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated and killed ${citizenName(game,event.victimCitizenId)} inside town.`:`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated but found no target.`
     case 'BLUEPRINT_READ':return event.projectId?`${citizenName(game,event.citizenId)} studied ${itemName(event.item.type)} and identified ${CONSTRUCTIONS[event.projectId].name}.`:`${citizenName(game,event.citizenId)} studied ${itemName(event.item.type)}, but no eligible new construction could be identified.`
@@ -69,18 +74,18 @@ export function describeEvent(event:GameEvent,game:GameState):string{
   }
 }
 
-export function isHighlightEvent(event:GameEvent):boolean{return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','ITEM_DROPPED','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED','COORDINATION_COMMITMENT_POSTED','COORDINATION_COMMITMENT_CLEARED','WOUNDED_MOVEMENT_RESOLVED'].includes(event.type)}
+export function isHighlightEvent(event:GameEvent):boolean{return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','HOME_ITEM_DEPOSITED','ITEM_DROPPED','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED','COORDINATION_COMMITMENT_POSTED','COORDINATION_COMMITMENT_CLEARED','WOUNDED_MOVEMENT_RESOLVED'].includes(event.type)}
 
 export function eventTone(event:GameEvent):'town'|'world'|'night'|'danger'|'system'|'home'{
   switch(event.type){
-    case 'CITIZEN_DIED':case 'CORPSE_REANIMATED':case 'ZONE_CONTROL_LOST':case 'FLEE_ZOMBIES_RESOLVED':return'danger'
+    case 'CITIZEN_DIED':case 'CORPSE_REANIMATED':case 'ZONE_CONTROL_LOST':case 'FLEE_ZOMBIES_RESOLVED':case 'HOME_ITEM_STOLEN':case 'HOME_ITEM_PILLAGED':return'danger'
     case 'CITIZEN_STATUS_CHANGED':return event.status.hydration==='dehydrated'||event.status.infected||event.status.terrorized||event.status.addicted?'danger':event.status.hydration==='thirsty'||Boolean(event.status.wound)||event.status.drunk||event.status.hangover?'home':'system'
     case 'CAMPING_RESOLVED':return event.survived?'world':'danger'
     case 'CAMPING_BLUEPRINT_DROPPED':return'world'
     case 'NIGHT_RESOLVED':return event.report.breached||(event.report.corpseReanimations??0)>0?'danger':'night'
     case 'DAY_STARTED':case 'WORLD_ZOMBIES_EVOLVED':return'night'
     case 'WOUNDED_MOVEMENT_RESOLVED':case 'ZONE_DISCOVERED':case 'ZONE_OBSERVED':case 'ZONE_CONTROL_RESTORED':case 'TEMPORARY_CONTROL_GRANTED':case 'TEMPORARY_CONTROL_EXPIRED':case 'ZONE_SEARCHED':case 'ZONE_REPLENISHED':case 'SPECIAL_SITE_EXCAVATED':case 'SPECIAL_SITE_SEARCHED':case 'ITEM_PICKED_UP':case 'ITEM_DROPPED':case 'COMBAT_RESOLVED':case 'CITIZEN_LOCATION_CHANGED':case 'BOT_MISSION_ASSIGNED':case 'BOT_MISSION_PHASE_SET':case 'BOT_MISSION_CLEARED':case 'CAMP_IMPROVED':case 'CAMP_IMPROVEMENTS_DECAYED':case 'CITIZEN_HIDING_SET':return'world'
-    case 'ITEM_MOVED_TO_HOME':case 'ITEM_MOVED_TO_RUCKSACK':case 'OPENABLE_RESOLVED':case 'CONTAINER_OPENED':case 'ITEM_CONSUMED':case 'ITEM_ACTION_RESOLVED':case 'ITEMS_COMBINED':case 'HOME_UPGRADED':case 'HOME_IMPROVEMENT_BUILT':case 'CORPSE_DISPOSED':return'home'
+    case 'ITEM_MOVED_TO_HOME':case 'ITEM_MOVED_TO_RUCKSACK':case 'HOME_ITEM_DEPOSITED':case 'HOME_INTRUSION_ATTEMPTED':case 'OPENABLE_RESOLVED':case 'CONTAINER_OPENED':case 'ITEM_CONSUMED':case 'ITEM_ACTION_RESOLVED':case 'ITEMS_COMBINED':case 'HOME_UPGRADED':case 'HOME_IMPROVEMENT_BUILT':case 'HOME_SIESTA_USED':case 'CORPSE_DISPOSED':return'home'
     case 'WATER_TAKEN':case 'ITEM_DEPOSITED':case 'ITEM_WITHDRAWN':case 'BLUEPRINT_READ':case 'CONSTRUCTION_DISCOVERED':case 'CONSTRUCTION_AP_CONTRIBUTED':case 'CONSTRUCTION_COMPLETED':case 'CONSTRUCTION_EXPIRED':case 'CONSTRUCTION_GENERATED_ITEM':case 'WORKSHOP_CONVERTED':case 'GATE_SET':case 'COORDINATION_COMMITMENT_POSTED':return'town'
     default:return'system'
   }
