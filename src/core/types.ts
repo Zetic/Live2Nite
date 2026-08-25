@@ -1,5 +1,6 @@
 import type { ConstructionId } from './constructionIds'
 import type { ItemState, ItemType } from './itemCatalog'
+import type { RuinId } from './ruinIds'
 export type { ConstructionId } from './constructionIds'
 export type { ItemAssemblyState, ItemCondition, ItemContamination, ItemDisplayCategory, ItemState, ItemType } from './itemCatalog'
 
@@ -67,7 +68,9 @@ export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
 export type CombatMethod = 'fists' | ItemType
 export type ClockPhase = 'day' | 'attack'
-export type SpecialSiteType = 'construction_site' | 'wrecked_cars' | 'pharmacy' | 'supermarket' | 'dark_woods' | 'police_station'
+/** Historical six-site values remain accepted only for save migration and old fixtures. */
+export type LegacySpecialSiteType = 'construction_site' | 'wrecked_cars' | 'pharmacy' | 'supermarket' | 'dark_woods' | 'police_station'
+export type SpecialSiteType = RuinId | LegacySpecialSiteType
 export type SpecialSiteStatus = 'buried' | 'accessible' | 'depleted'
 export type BotMissionPurpose = 'explore' | 'gather_construction' | 'gather_food' | 'gather_medical' | 'gather_weapons' | 'rescue'
 export type BotMissionRole = 'scout' | 'gatherer' | 'excavator' | 'rescue' | 'combat'
@@ -191,28 +194,20 @@ export type GameEvent = (
   | {type:'CONTAINER_OPENED';day:number;citizenId:string;containerId:string;containerType:ItemType;source:ItemStorage;zoneKey?:string;output:ItemInstance;rngStateAfter:number}
   | {type:'WATER_TAKEN';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_CONSUMED';day:number;citizenId:string;item:ItemInstance;source:ItemStorage;zoneKey?:string;kind:ConsumableKind;restoresAp:boolean;chargesAfter?:number;apAfter?:number;statusAfter?:CitizenStatusState;dailyAfter?:CitizenDailyState;rngStateAfter?:number}
-  | {type:'ITEM_ACTION_RESOLVED';day:number;citizenId:string;actionId:ItemUseActionId;item:ItemInstance;source:ItemStorage;zoneKey?:string;consumed:boolean;morphTo?:ItemType;apAfter:number;statusAfter:CitizenStatusState;dailyAfter:CitizenDailyState;rngStateAfter:number}
+  | {type:'ITEM_ACTION_RESOLVED';day:number;citizenId:string;actionId:ItemUseActionId;item:ItemInstance;source:ItemStorage;zoneKey?:string;consume:boolean;output?:ItemInstance;apAfter:number;statusAfter:CitizenStatusState;dailyAfter:CitizenDailyState;rngStateAfter:number}
+  | {type:'HOME_UPGRADED';day:number;citizenId:string;level:HomeLevel;defense:number;storageCapacity:number;resources:Partial<Record<ItemType,number>>}
+  | {type:'HOME_IMPROVEMENT_BUILT';day:number;citizenId:string;improvementId:HomeImprovementId;level:number;defenseAdded:number;storageAdded:number;resources:Partial<Record<ItemType,number>>}
+  | {type:'CORPSE_DISPOSED';day:number;citizenId:string;targetCitizenId:string;method:CorpseDisposition;apCost:number;waterConsumed:boolean}
+  | {type:'CONSTRUCTION_CONTRIBUTED';day:number;citizenId:string;projectId:ConstructionId;amount:number;consumedResources?:Partial<Record<ItemType,number>>}
+  | {type:'CONSTRUCTION_COMPLETED';day:number;projectId:ConstructionId;defenseAdded:number}
+  | {type:'CONSTRUCTION_DISCOVERED';day:number;projectId:ConstructionId;reason:'blueprint'|'prerequisite'}
+  | {type:'BLUEPRINT_READ';day:number;citizenId:string;item:ItemInstance;source:PersonalItemStorage;projectId:ConstructionId|null;rngStateAfter:number}
+  | {type:'WORKSHOP_CONVERTED';day:number;citizenId:string;recipeId:WorkshopRecipeId;inputCount:number;outputs:ItemInstance[];apCost:number;rngStateAfter:number}
+  | {type:'ITEMS_COMBINED';day:number;citizenId:string;recipeId:CombinationRecipeId;inputs:ItemInstance[];outputs:CombinationEventOutput[];apCost:number;rngStateAfter:number}
   | {type:'WOUNDED_MOVEMENT_RESOLVED';day:number;citizenId:string;failed:boolean;rngStateAfter:number}
   | {type:'FLEE_ZOMBIES_RESOLVED';day:number;citizenId:string;zoneKey:string;statusAfter:CitizenStatusState;rngStateAfter:number}
-  | {type:'HOME_UPGRADED';day:number;citizenId:string;from:HomeLevel;to:HomeLevel;defenseAfter:number;consumed:Partial<Record<ItemType,number>>}
-  | {type:'HOME_IMPROVEMENT_BUILT';day:number;citizenId:string;improvementId:HomeImprovementId;level:number;consumed:Partial<Record<ItemType,number>>;defenseAfter:number;storageCapacityAfter:number}
-  | {type:'CORPSE_DISPOSED';day:number;citizenId:string;targetCitizenId:string;method:CorpseDisposition;waterItemId?:string}
-  | {type:'CORPSE_REANIMATED';day:number;corpseCitizenId:string;outcome:'well'|'citizen'|'nothing';victimCitizenId?:string;waterLost:number}
-  | {type:'BLUEPRINT_READ';day:number;citizenId:string;item:ItemInstance;source:PersonalItemStorage;projectId:ConstructionId|null;rngStateAfter:number}
-  | {type:'CONSTRUCTION_DISCOVERED';day:number;projectId:ConstructionId;reason:'parent'|'blueprint'}
-  | {type:'CONSTRUCTION_AP_CONTRIBUTED';day:number;citizenId:string;projectId:ConstructionId;amount:number}
-  | {type:'CONSTRUCTION_COMPLETED';day:number;citizenId:string;projectId:ConstructionId;consumed:Partial<Record<ItemType,number>>;defenseBonus:number}
-  | {type:'CONSTRUCTION_EXPIRED';day:number;projectId:ConstructionId}
-  | {type:'CONSTRUCTION_GENERATED_ITEM';day:number;projectId:ConstructionId;itemType:ItemType;amount:number}
-  | {type:'WORKSHOP_CONVERTED';day:number;citizenId:string;recipeId:WorkshopRecipeId;input:ItemType;inputCount:number;inputItemIds:string[];output:ItemType;outputCount:number;outputState?:ItemState;preserveInputId?:boolean;rngStateAfter?:number}
-  | {type:'ITEMS_COMBINED';day:number;citizenId:string;recipeId:CombinationRecipeId;consumedItemIds:string[];outputs:CombinationEventOutput[];createdCount:number}
-  | {type:'COORDINATION_COMMITMENT_POSTED';day:number;commitment:CoordinationCommitment}
-  | {type:'COORDINATION_COMMITMENT_CLEARED';day:number;commitmentId:string;reason:'expired'|'fulfilled'|'invalid'|'day_reset'}
-  | {type:'BOT_MISSION_ASSIGNED';day:number;citizenId:string;mission:BotMissionAssignment}
-  | {type:'BOT_MISSION_PHASE_SET';day:number;citizenId:string;missionId:string;phase:BotMissionPhase}
-  | {type:'BOT_MISSION_CLEARED';day:number;citizenId:string;missionId:string;outcome:'completed'|'aborted'}
-  | {type:'CITIZEN_DIED';day:number;citizenId:string;reason:DeathReason}
-  | {type:'NIGHT_RESOLVED';day:number;report:NightReport}
   | {type:'DAY_STARTED';day:number}
-  | {type:'TIME_ADVANCED';day:number;fromHour:number;toHour:number;phase:ClockPhase}
-) & {hour?:number}
+  | {type:'DAY_RESET';day:number}
+  | {type:'TOWN_DEFENSE_RECALCULATED';day:number;defense:number}
+  | {type:'ATTACK_RESOLVED';day:number;report:NightReport}
+)
