@@ -21,7 +21,7 @@ export function RuinsCodexView(){
   const visible=useMemo(()=>ENTRIES.filter((entry)=>(filter==='all'||entry.availability===filter)&&`${entry.name} ${entry.id} ${entry.lootProfile} ${entry.family??''}`.toLowerCase().includes(query.trim().toLowerCase())),[filter,query])
   const entry=visible.find((candidate)=>candidate.id===selected)??visible[0]??null
   return <>
-    <div className="codex-category-tabs" role="tablist" aria-label="Ruin categories">
+    <div className="codex-category-tabs ruin-codex-tabs" role="tablist" aria-label="Ruin categories">
       {FILTERS.map((item)=><button type="button" key={item.id} className={filter===item.id?'active':''} aria-selected={filter===item.id} onClick={()=>setFilter(item.id)}><span>{item.label}</span><small>{item.id==='all'?ENTRIES.length:ENTRIES.filter((ruin)=>ruin.availability===item.id).length}</small></button>)}
     </div>
     <div className="codex-toolbar"><label><span>Search ruins</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Name, family, loot profile…"/></label><strong>{visible.length} shown</strong></div>
