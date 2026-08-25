@@ -11,7 +11,7 @@ import {
 } from './ruinExploration'
 import { ruinKeyName, ruinRoomLootSpecFromSourceRef } from './ruinRoomContent'
 import { normalizeRuinId } from './specialSites'
-import type { Citizen, GameState, SpecialSiteState } from './types'
+import type { Citizen, GameState, SpecialSiteState, WorldZone } from './types'
 import { getZone, zoneKey } from './world'
 
 type SiteWithInterior=SpecialSiteState&{interior?:RuinInteriorState}
@@ -23,7 +23,9 @@ function updateCitizen(game:GameState,citizenId:string,updater:(citizen:Citizen)
 function updateInterior(game:GameState,x:number,y:number,updater:(interior:RuinInteriorState)=>RuinInteriorState):GameState{
   const key=zoneKey(x,y),zone=game.world.zones[key],site=zone?.specialSite as SiteWithInterior|undefined
   if(!zone||!site?.interior)return game
-  return{...game,world:{...game.world,zones:{...game.world.zones,[key]:{...zone,specialSite:{...site,interior:updater(site.interior)}}}}}
+  const updatedSite={...site,interior:updater(site.interior)} as SiteWithInterior
+  const updatedZone={...zone,specialSite:updatedSite} as WorldZone
+  return{...game,world:{...game.world,zones:{...game.world.zones,[key]:updatedZone}}}
 }
 function context(game:GameState,citizenId:string){
   const citizen=game.citizens.find((candidate)=>candidate.id===citizenId)
@@ -63,6 +65,7 @@ export function searchRuinRoom(game:GameState,citizenId:string,nowMs=Date.now())
   let next=updateInterior(game,current.zone.x,current.zone.y,(interior)=>({...interior,rooms:interior.rooms.map((room)=>room.id===current.room!.id?{...room,searched:true}:room)}))
   if(!current.room.stocked)return{state:next,ok:true,message:'You search the room thoroughly but find nothing useful.'}
   const ruinId=normalizeRuinId(current.zone.specialSite?.type??'')
+  if(!ruinId)return{state:next,ok:false,message:'The current ruin identity could not be resolved.'}
   const outcome=rollRuinSourceLoot(game.rngState,ruinId)
   next={...next,rngState:outcome.rngStateAfter}
   const spec=ruinRoomLootSpecFromSourceRef(outcome.sourceRef,outcome.item)
