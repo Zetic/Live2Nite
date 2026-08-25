@@ -1,3 +1,4 @@
+import { canCarryItem } from './inventory'
 import { createItemInstance, itemName } from './items'
 import { rollRuinSourceLoot } from './ruinLoot'
 import {
@@ -74,20 +75,20 @@ export function searchRuinRoom(game:GameState,citizenId:string,nowMs=Date.now())
   const item=spec.state?{...baseItem,state:{...baseItem.state,...spec.state}}:baseItem
   next={...next,nextItemId:next.nextItemId+1}
   const citizenAfter=next.citizens.find((candidate)=>candidate.id===citizenId)!
-  if(citizenAfter.inventory.length<citizenAfter.inventoryCapacity){
+  if(canCarryItem(citizenAfter,item)){
     next=updateCitizen(next,citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,item]}))
     return{state:next,ok:true,message:`Found ${itemName(item.type)} and placed it in the rucksack.`}
   }
   next=updateInterior(next,current.zone.x,current.zone.y,(interior)=>({...interior,cells:interior.cells.map((cell)=>cell.id===current.cell.id?{...cell,floorItems:[...(cell.floorItems??[]),item]}:cell)}))
-  return{state:next,ok:true,message:`Found ${itemName(item.type)}, but the rucksack is full. It remains on the interior floor.`}
+  return{state:next,ok:true,message:`Found ${itemName(item.type)}, but the rucksack cannot carry it. It remains on the interior floor.`}
 }
 
 export function takeRuinFloorItem(game:GameState,citizenId:string,itemId:string,nowMs=Date.now()):RuinActionResult{
   const oxygen=requireOxygen(game,citizenId,nowMs);if(oxygen)return oxygen
   const current=context(game,citizenId);if(!current)return fail(game,'No active ruin exploration.')
-  if(current.citizen.inventory.length>=current.citizen.inventoryCapacity)return fail(game,'The rucksack is full.')
   const item=(current.cell.floorItems??[]).find((candidate)=>candidate.id===itemId)
   if(!item)return fail(game,'That item is not on this interior floor.')
+  if(!canCarryItem(current.citizen,item))return fail(game,'The rucksack cannot carry that item right now.')
   let next=updateInterior(game,current.zone.x,current.zone.y,(interior)=>({...interior,cells:interior.cells.map((cell)=>cell.id===current.cell.id?{...cell,floorItems:(cell.floorItems??[]).filter((candidate)=>candidate.id!==itemId)}:cell)}))
   next=updateCitizen(next,citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,item]}))
   return{state:next,ok:true,message:`Picked up ${itemName(item.type)}.`}
