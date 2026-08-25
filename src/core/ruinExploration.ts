@@ -2,6 +2,7 @@ import { RUIN_CATALOG } from './ruinCatalog'
 import { advanceRuinInteriorToDay, SOURCE_RUIN_INITIAL_ZOMBIES } from './ruinEvolution'
 import { prepareRuinInteriorContent } from './ruinRoomContent'
 import type { RuinKeyType } from './ruinRoomContent'
+import { ruinOxygenSecondsForCitizen } from './scavenging'
 import { normalizeRuinId } from './specialSites'
 import type { Citizen, GameState, ItemInstance, SpecialSiteState, WorldZone, WoundLocation } from './types'
 import { getZone, zoneControlState, zoneKey } from './world'
@@ -191,9 +192,10 @@ export function enterRuin(game:GameState,citizenId:string,nowMs=Date.now()):Ruin
   interior=prepareRuinInteriorContent(game.seed,zone.x,zone.y,interior)
   if(interior.activeExplorerCitizenId&&interior.activeExplorerCitizenId!==citizenId)return fail(game,'Another citizen is already exploring a ruin.')
   const entrance=interior.cells.find((cell)=>cell.kind==='entrance'&&cell.floor===0)!
+  const oxygenSeconds=ruinOxygenSecondsForCitizen(citizen,RUIN_OXYGEN_SECONDS)
   const explorer:RuinExplorerState={
     active:true,zoneKey:zoneKey(zone.x,zone.y),ruinId,exploredDay:game.day,cellId:entrance.id,inRoomId:null,
-    oxygenDeadlineMs:nowMs+(RUIN_OXYGEN_SECONDS+RUIN_ENTRY_GRACE_SECONDS)*1000,graceUntilMs:nowMs+RUIN_ENTRY_GRACE_SECONDS*1000,
+    oxygenDeadlineMs:nowMs+(oxygenSeconds+RUIN_ENTRY_GRACE_SECONDS)*1000,graceUntilMs:nowMs+RUIN_ENTRY_GRACE_SECONDS*1000,
     escaping:false,steps:0,visitedCellIds:[entrance.id],visitedRoomIds:[],
   }
   let next=updateCitizen(game,citizenId,(current)=>({...current,ap:current.ap-1,ruinExplorer:explorer}))
