@@ -1,14 +1,34 @@
-import type { ItemType, SpecialSiteType } from './types'
-export interface SpecialSiteDefinition { type:SpecialSiteType; name:string; code:string; purpose:string; lootPool:ItemType[] }
-export const SPECIAL_SITE_ORDER:SpecialSiteType[]=['construction_site','wrecked_cars','pharmacy','supermarket','dark_woods','police_station']
-export const SPECIAL_SITES:Record<SpecialSiteType,SpecialSiteDefinition>={
-  construction_site:{type:'construction_site',name:'Construction Site Shelter',code:'C',purpose:'MyHordes construction-site ruin role; runtime loot remains transitional until raw source-drop dependencies are fully closed.',lootPool:['twisted_plank','twisted_plank','wrought_iron','patchwork_beam','metal_support','sheet_metal','nuts_and_bolts','wire_reel','duct_tape','tool_bag','resource_pack','unshaped_concrete_block','old_door']},
-  wrecked_cars:{type:'wrecked_cars',name:'Wrecked Cars',code:'W',purpose:'MyHordes wrecked-car ruin role; runtime loot remains transitional until raw source-drop dependencies are fully closed.',lootPool:['scrap_metal','scrap_metal','wrought_iron','sheet_metal','battery','belt','copper_pipe','empty_oil_can','electronic_component','broken_electronic_device','mechanism','nuts_and_bolts','engine_incomplete','tool_bag','pathetic_penknife','old_door']},
-  pharmacy:{type:'pharmacy',name:'Old Field Hospital',code:'Rx',purpose:'MyHordes field-hospital ruin role; medical and drug dependencies are still being closed before weighted source drops activate.',lootPool:['pharmaceutical_products','pharmaceutical_products','poison_gland','duct_tape','kwik_fix','repair_kit','water_ration','box_of_matches']},
-  supermarket:{type:'supermarket',name:"Scottish Smith's Superstore",code:'S',purpose:'MyHordes superstore ruin role; runtime loot remains transitional until all source food and household dependencies are complete.',lootPool:['food','food','food','water_ration','grain_sack','table','bag_of_damp_grass','plastic_bag','water_cooler_bottle','box_of_matches']},
-  dark_woods:{type:'dark_woods',name:'Dark Woods',code:'F',purpose:'MyHordes Dark Woods ruin role; runtime loot remains transitional until the source weighted table can activate without dropping unresolved items.',lootPool:['rotten_log','rotten_log','twisted_plank','twisted_plank','patchwork_beam','staff','broken_staff','human_bone','meaty_bone','chicken']},
-  police_station:{type:'police_station',name:'Old Police Station',code:'P',purpose:'MyHordes police-station ruin role; weapon and equipment dependencies are still being closed before source drops activate.',lootPool:['water_bomb','water_pistol','machete','serrated_knife','old_door','battery','working_radio','compact_detonator','semtex','laser_diode','convex_lens','earplugs','wire_mesh','guitar','pathetic_penknife']},
+import { LEGACY_SPECIAL_SITE_TO_RUIN, RUIN_IDS, type RuinId } from './ruinIds'
+import { ORDINARY_RUIN_IDS, RUIN_CATALOG, playableRuinLootPool, ruinCode } from './ruinCatalog'
+import type { ItemType } from './types'
+
+export interface SpecialSiteDefinition { type:RuinId; name:string; code:string; purpose:string; lootPool:ItemType[] }
+
+/** Ordinary source-spawnable ruins. Explorable ruins are placed through their dedicated map slot. */
+export const SPECIAL_SITE_ORDER:readonly RuinId[]=ORDINARY_RUIN_IDS
+
+export const SPECIAL_SITES:Readonly<Record<RuinId,SpecialSiteDefinition>>=Object.fromEntries(
+  RUIN_IDS.map((type)=>{
+    const ruin=RUIN_CATALOG[type]
+    return[type,{
+      type,
+      name:ruin.name,
+      code:ruinCode(type),
+      purpose:ruin.explorable
+        ? `Explorable ${ruin.family} ruin. Interior exploration uses the dedicated explorable-ruin path.`
+        : ruin.availability==='conditional'
+          ? 'Source ruin is catalogued but requires a dedicated reveal mechanic before ordinary map placement.'
+          : 'MyHordes ruin represented with source placement/camping metadata and fail-closed playable loot.',
+      lootPool:playableRuinLootPool(type),
+    }]
+  }),
+) as unknown as Record<RuinId,SpecialSiteDefinition>
+
+export function normalizeRuinId(type:string):RuinId|null{
+  if((RUIN_IDS as readonly string[]).includes(type))return type as RuinId
+  return LEGACY_SPECIAL_SITE_TO_RUIN[type]??null
 }
-export function specialSiteName(type:SpecialSiteType):string{return SPECIAL_SITES[type].name}
-export function specialSiteCode(type:SpecialSiteType):string{return SPECIAL_SITES[type].code}
-export function specialSitePurpose(type:SpecialSiteType):string{return SPECIAL_SITES[type].purpose}
+export function specialSiteName(type:string):string{const id=normalizeRuinId(type);return id?SPECIAL_SITES[id].name:type}
+export function specialSiteCode(type:string):string{const id=normalizeRuinId(type);return id?SPECIAL_SITES[id].code:'?'}
+export function specialSitePurpose(type:string):string{const id=normalizeRuinId(type);return id?SPECIAL_SITES[id].purpose:'Unknown legacy ruin'}
+export function specialSiteLootPool(type:string):ItemType[]{const id=normalizeRuinId(type);return id?[...SPECIAL_SITES[id].lootPool]:[]}
