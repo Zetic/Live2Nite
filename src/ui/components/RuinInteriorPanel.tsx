@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { canCarryItem } from '../../core/inventory'
 import { RUIN_CATALOG } from '../../core/ruinCatalog'
 import {
   expireRuinExploration,
@@ -61,7 +62,7 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
     <div className="world-inventory-grid">
       <section className="inventory-surface">
         <div className="inventory-heading"><h3>On the Ground</h3><span className="micro-stat">{floorItems.length}</span></div>
-        <ItemStrip items={floorItems} disabledForItem={()=>citizen.inventory.length>=citizen.inventoryCapacity} onItemClick={(item)=>action(takeRuinFloorItem(game,citizenId,item.id,Date.now()))} emptyLabel="Nothing visible." extraTooltip={()=>citizen.inventory.length<citizen.inventoryCapacity?'Click to pick up.':'Your rucksack is full.'}/>
+        <ItemStrip items={floorItems} disabledForItem={(item)=>!canCarryItem(citizen,item)} onItemClick={(item)=>action(takeRuinFloorItem(game,citizenId,item.id,Date.now()))} emptyLabel="Nothing visible." extraTooltip={(item)=>canCarryItem(citizen,item)?'Click to pick up.':'Your rucksack is full or already contains a cumbersome item.'}/>
       </section>
       <section className="inventory-surface">
         <div className="inventory-heading"><h3>Rucksack</h3><span className="micro-stat">{citizen.inventory.length}/{citizen.inventoryCapacity} cargo · +2 equipment</span></div>
@@ -86,7 +87,7 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
 
     {currentRoom?<section className={`special-site-card ${currentRoom.searched?'status-depleted':'status-accessible'}`}>
       <div className="special-site-heading"><div><p className="section-kicker">Interior room</p><h3>Room {currentRoom.id.replace('room-','')}</h3></div><span>{currentRoom.searched?'SEARCHED':'UNSEARCHED'}</span></div>
-      {currentRoom.searched?<p>This room has already been searched.</p>:<p>Search once for a source-weighted ruin find. If the rucksack has space, the find goes directly into it; otherwise it remains on this floor position.</p>}
+      {currentRoom.searched?<p>This room has already been searched.</p>:<p>Search once for a source-weighted ruin find. If the rucksack can carry it, the find goes directly into it; otherwise it remains on this floor position.</p>}
       {!currentRoom.searched&&<button className="primary" onClick={()=>action(searchRuinRoom(game,citizenId,Date.now()))}>Search room <small>0 AP</small></button>}
       <button className="secondary ruin-context-button" onClick={()=>action(shiftRuinRoom(game,citizenId,Date.now()))}>Return to corridor</button>
     </section>:<>
