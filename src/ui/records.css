@@ -82,7 +82,7 @@
 .end-summary-row span { display: block; color: #9f8e8b; font-size: .56rem; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
 .end-summary-row strong { display: block; margin-top: 3px; color: #e7d6cc; font-size: 1.3rem; }
 .end-actions { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-top: 16px; }
-.end-tabs { border-color: #49302e; background: rgba(10,14,16,.62); }
+.end-tabs { grid-template-columns: repeat(2, minmax(0,220px)); width: fit-content; border-color: #49302e; background: rgba(10,14,16,.62); }
 .end-restart { min-width: 160px; text-align: center; }
 .terminal-statistics { border-color: #433437; }
 
@@ -97,6 +97,7 @@
 
 @media (max-width: 760px) {
   .records-tabs { width: 100%; grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .end-tabs { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .records-tabs button { padding: 8px 6px; }
   .records-tabs button small { font-size: .55rem; }
   .bulletin-overview-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
