@@ -3,7 +3,7 @@ import { CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
-import { HOME_IMPROVEMENTS, canBuildImprovementSource, foreignHomeStorageVisible, hasPersonalMaterials, homeLevelSourceReady, homePreventsTheft, improvementNextLevel, nextHomeDefinition, pillageUsedToday, siestaUsedToday, theftUsedToday, homeImprovementLevel } from './home'
+import { HOME_IMPROVEMENTS, canBuildImprovementSource, foreignHomeStorageVisible, hasPersonalMaterials, homeImprovementLevel, homeLevelSourceReady, homePreventsTheft, homeTransferUsedToday, improvementNextLevel, nextHomeDefinition, siestaUsedToday } from './home'
 import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
 import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
 import { canToolOpen, openableDefinition } from './openables'
@@ -51,19 +51,18 @@ function addConsumableActions(state:GameState,actions:GameCommand[],citizen:Citi
 
 function addForeignHomeActions(state:GameState,actions:GameCommand[],citizen:Citizen):void{
   const hasRucksackSpace=citizen.inventory.length<citizen.inventoryCapacity
-  const theftAvailable=hasRucksackSpace&&!theftUsedToday(state,citizen.id)
-  const pillageAvailable=hasRucksackSpace&&!pillageUsedToday(state,citizen.id)
+  const transferAvailable=!homeTransferUsedToday(state,citizen.id)
   for(const target of state.citizens){
     if(target.id===citizen.id)continue
     if(target.alive){
-      if(target.home.storage.length<target.home.storageCapacity){for(const item of citizen.inventory)actions.push({type:'DEPOSIT_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})}
       if(target.location.type!=='world'||homePreventsTheft(target))continue
+      if(transferAvailable&&target.home.storage.length<target.home.storageCapacity){for(const item of citizen.inventory)actions.push({type:'DEPOSIT_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})}
       const visible=foreignHomeStorageVisible(state,citizen.id,target)
       if(!visible){actions.push({type:'INTRUDE_HOME',citizenId:citizen.id,targetCitizenId:target.id});continue}
-      if(theftAvailable)for(const item of target.home.storage)actions.push({type:'STEAL_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
+      if(transferAvailable&&hasRucksackSpace)for(const item of target.home.storage)actions.push({type:'STEAL_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
       continue
     }
-    if(pillageAvailable)for(const item of target.home.storage)actions.push({type:'PILLAGE_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
+    if(transferAvailable&&hasRucksackSpace)for(const item of target.home.storage)actions.push({type:'PILLAGE_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
   }
 }
 
@@ -94,7 +93,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
         const definition=HOME_IMPROVEMENTS[improvementId]
         if(canBuildImprovementSource(definition,nextLevel)&&citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})
       }
-      if(homeImprovementLevel(citizen,'siesta')>0&&!siestaUsedToday(state,citizen.id))actions.push({type:'USE_HOME_SIESTA',citizenId})
+      if(homeImprovementLevel(citizen,'siesta')>0&&citizen.ap<citizen.maxAp&&!siestaUsedToday(state,citizen.id))actions.push({type:'USE_HOME_SIESTA',citizenId})
     }
     if(citizen.ap>=CONSTRUCTION_AP_COST&&canContributeConstructionByStatus(citizen)){for(const projectId of constructionFrontier(state))if(hasProjectMaterials(state,projectId))actions.push({type:'CONTRIBUTE_CONSTRUCTION',citizenId,projectId})}
     if(state.town.construction.workshop.completed){for(const recipeId of WORKSHOP_RECIPE_ORDER)if((!hasHandWound(citizen)||WORKSHOP_RECIPES[recipeId].category!=='repair')&&citizen.ap>=workshopRecipeApCost(state,recipeId,citizen.id)&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})}
