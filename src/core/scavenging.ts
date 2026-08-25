@@ -3,6 +3,7 @@ import { rollWeightedLoot } from './loot'
 import { hasProfession } from './professions'
 import { randomInt } from './rng'
 import { MYHORDES_DEPLETED_ZONE_LOOT } from './scavengeLoot'
+import { scoutSearchBonusPercent } from './scout'
 import type { Citizen, GameCommand, GameEvent, GameState, ItemInstance, SearchMode, WorldZone } from './types'
 
 /** MyHordes uses a 2-hour base dig timer; Scavenger repeats at 75% of that interval. */
@@ -22,9 +23,9 @@ export type ReplenishmentSource='search_tower'|'scavenger_spade'|'other'
 export type ReplenishmentEvent=Extract<GameEvent,{type:'ZONE_REPLENISHED'}>&{source?:ReplenishmentSource;citizenId?:string;rngStateAfter?:number}
 
 export function isScavenger(citizen:Citizen):boolean{return hasProfession(citizen,'scavenger')}
-export function searchSuccessChancePercent(citizen:Citizen,mode:SearchMode):number{
+export function searchSuccessChancePercent(citizen:Citizen,mode:SearchMode,zone?:WorldZone|null):number{
   const base=mode==='depleted'?DEPLETED_SEARCH_SUCCESS_PERCENT:NORMAL_SEARCH_SUCCESS_PERCENT
-  return Math.min(100,base+(isScavenger(citizen)?SCAVENGER_SEARCH_BONUS_PERCENTAGE_POINTS:0))
+  return Math.min(100,base+(isScavenger(citizen)?SCAVENGER_SEARCH_BONUS_PERCENTAGE_POINTS:0)+scoutSearchBonusPercent(zone))
 }
 export function repeatSearchIntervalMinutes(citizen:Citizen):number{return isScavenger(citizen)?SCAVENGER_REPEAT_SEARCH_INTERVAL_MINUTES:BASE_AUTO_SEARCH_INTERVAL_MINUTES}
 export function ruinOxygenSecondsForCitizen(citizen:Citizen,baseSeconds:number):number{return Math.round(baseSeconds*(isScavenger(citizen)?SCAVENGER_RUIN_OXYGEN_MULTIPLIER:1))}
@@ -46,8 +47,9 @@ export function spadeReplenishmentEvent(state:GameState,citizenId:string,zoneKey
 export function resolveSearchAttempt(state:GameState,event:Extract<GameEvent,{type:'ZONE_SEARCHED'}>):Extract<GameEvent,{type:'ZONE_SEARCHED'}>{
   const citizen=state.citizens.find((candidate)=>candidate.id===event.citizenId)
   if(!citizen)return event
+  const zone=state.world.zones[event.zoneKey]
   const chance=randomInt(state.rngState,1,100)
-  const success=chance.value<=searchSuccessChancePercent(citizen,event.mode)
+  const success=chance.value<=searchSuccessChancePercent(citizen,event.mode,zone)
   let item:ItemInstance|null=null
   let rngStateAfter=chance.state
   if(success&&event.mode==='normal')item=event.item
