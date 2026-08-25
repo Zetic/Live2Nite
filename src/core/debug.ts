@@ -1,5 +1,4 @@
 import { CONSTRUCTIONS, completionWaterBonus, revealsAllTerrain } from './construction'
-import { CONSTRUCTION_CATALOG } from './constructionCatalog'
 import { DEBUG_GOD_AP, clearGodProtectedStatus, enforceGodCitizen, enforceGodMode, isGodCitizen, type DebugGodCitizen } from './debugGod'
 import { createItemInstance } from './items'
 import type { ConstructionId, Direction, GameState, ItemType } from './types'
@@ -91,17 +90,14 @@ function constructionBuildOrder(projectId:ConstructionId):ConstructionId[]{
   const visit=(id:ConstructionId):void=>{
     if(seen.has(id))return
     seen.add(id)
-    const dependencies=new Set<ConstructionId>(CONSTRUCTIONS[id].prerequisites)
-    const parentId=CONSTRUCTION_CATALOG[id].parentId
-    if(parentId)dependencies.add(parentId)
-    for(const prerequisite of dependencies)visit(prerequisite)
+    for(const prerequisite of CONSTRUCTIONS[id].prerequisites)visit(prerequisite)
     ordered.push(id)
   }
   visit(projectId)
   return ordered
 }
 
-/** Instantly completes a construction and its full prerequisite/parent chain without spending AP or materials. */
+/** Instantly completes a construction and its current full prerequisite chain without spending AP or materials. */
 export function debugInstantBuild(game:GameState,projectId:ConstructionId):GameState{
   const ordered=constructionBuildOrder(projectId)
   const newlyBuilt=ordered.filter((id)=>!game.town.construction[id].completed)
