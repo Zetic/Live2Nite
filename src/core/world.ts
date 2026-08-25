@@ -2,7 +2,8 @@ import { NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
 import { EXPLORABLE_RUIN_IDS, type RuinId } from './ruinIds'
 import { ORDINARY_RUIN_IDS, RUIN_CATALOG } from './ruinCatalog'
-import { normalizeRuinId, specialSiteLootPool } from './specialSites'
+import { rollRuinSourceLoot } from './ruinLoot'
+import { normalizeRuinId } from './specialSites'
 import { citizenControlPoints } from './status'
 import type {
   Citizen,
@@ -59,10 +60,12 @@ function generateSpecialSite(type:RuinId,rngState:number):{site:SpecialSiteState
   const emptyRoll=randomInt(next,1,10000);next=emptyRoll.state
   const empty=emptyRoll.value<=Math.round(ruin.emptyChance*10000)
   const hiddenLoot:ItemType[]=[]
-  const pool=specialSiteLootPool(type)
-  if(!empty&&pool.length){
+  if(!empty&&!ruin.explorable){
     const lootCount=randomInt(next,2,4);next=lootCount.state
-    for(let index=0;index<lootCount.value;index+=1){const loot=randomInt(next,0,pool.length-1);next=loot.state;hiddenLoot.push(pool[loot.value]!)}
+    for(let index=0;index<lootCount.value;index+=1){
+      const loot=rollRuinSourceLoot(next,type);next=loot.rngStateAfter
+      if(loot.item)hiddenLoot.push(loot.item)
+    }
   }
   return{
     site:{type:type as unknown as SpecialSiteState['type'],status:ruin.explorable?'accessible':'buried',excavationRequired,excavationProgress:0,hiddenLoot,searchedBy:[],blueprintFound:false},
