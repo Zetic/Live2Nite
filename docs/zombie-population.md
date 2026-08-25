@@ -13,7 +13,7 @@ This pass uses the public `eternaltwin/myhordes/myhordes` default rules as the c
 - `massive_respawn_threshold`: **50**;
 - `massive_respawn_factor`: **0.5**.
 
-The exact current server-side formula that turns distance/map-generation state into each Day-1 exterior zone's zombie count was not recoverable from a stable public source path during this audit. Live2Nite therefore does **not** claim exact generator parity and does not copy upstream generator code or IDs.
+The exact current server-side formula that turns distance/map-generation state into each Day-1 exterior zone's zombie count was not recovered from a stable public source path during this audit. Likewise, this pass verifies the respawn setting values but does not copy the upstream code that consumes them. Live2Nite therefore does **not** claim exact exterior generator/respawn parity and does not copy upstream generator code or IDs.
 
 ## Live2Nite World Beyond projection
 
@@ -33,7 +33,7 @@ The profile is deterministic by town seed. The immediate approaches are delibera
 
 Nightly natural growth is also distance-biased. It no longer uses neighbor-pressure diffusion, so one dense pocket cannot cascade through the starter area. Cleared zones at distance 1–2 do not immediately refill; farther empty zones can slowly repopulate and existing populations can grow gradually.
 
-If the total exterior population drops below the source-calibrated 50% threshold, Live2Nite restores 50% of the deficit toward the deterministic Day-1 baseline. This emergency repopulation excludes the first two travel rings and fills farther zones first. This is a Live2Nite adaptation of the exposed 50 / 0.5 source settings, not a claim about an unrecovered upstream implementation detail.
+For Live2Nite's adaptation, the exposed source threshold value **50** is interpreted as 50% of Live2Nite's deterministic Day-1 exterior baseline; when population falls below that point, the exposed **0.5** factor restores half of the deficit. Emergency repopulation excludes the first two travel rings and fills farther zones first. This interpretation is deliberately documented as Live2Nite behavior rather than an assertion that the unrecovered upstream consumer uses the setting in the same units.
 
 ## Explorable ruins
 
@@ -46,9 +46,11 @@ Live2Nite's cross-corridor topology has roughly forty navigable non-entrance cor
 
 Once an interior exists, every day rollover adds exactly five zombies. Growth is stored on the persistent interior; it does not regenerate the maze. Killed zombies therefore remain dead except for the explicit +5 daily additions. Searched rooms, unlocked doors, room stock state, and floor item caches are retained.
 
+Explorable sites conceptually exist from Day 1 even though Live2Nite materializes their interior lazily. If a never-entered ruin is first entered on a later day, the newly generated interior immediately applies the elapsed +5/day growth so a Day-4 ruin is not temporarily presented with a Day-1 population. This catch-up applies only to newly materialized interiors with known lifecycle provenance.
+
 The daily rollover also clears stale active-explorer reservations and deactivates an interrupted exploration session. This prevents a death or abandoned session from permanently locking the ruin to one citizen.
 
-Legacy interiors without lifecycle metadata receive one normal +5 increment on their next rollover rather than receiving a large retroactive catch-up in a single night.
+Legacy interiors without lifecycle metadata are migrated conservatively: they receive one normal +5 increment when their lifecycle next advances rather than receiving a large retroactive catch-up whose prior growth history cannot be known safely.
 
 ## Deferred source-fidelity work
 
