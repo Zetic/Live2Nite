@@ -55,6 +55,17 @@ describe('forum-like coordination primitives',()=>{
     expect(game.citizens.find((citizen)=>citizen.id===backup)?.ap).toBeGreaterThanOrEqual(1)
   })
 
+  it('does not spend the promised gate AP on a multi-AP home action',()=>{
+    let game=createInitialGame(7006,20)
+    game={...game,clock:{hour:20,phase:'day'}}
+    game=applyEvents(game,planTownCoordination(game,'c01'))
+    const primary=gatePrimaryCitizenId(game)
+    expect(primary).toBeTruthy()
+    game={...game,citizens:game.citizens.map((citizen)=>citizen.id===primary?{...citizen,ap:3,home:{...citizen.home,level:'tent',defense:1}}:citizen)}
+    game=advanceOneHour(game,bots,'c01')
+    expect(game.citizens.find((citizen)=>citizen.id===primary)?.ap).toBeGreaterThanOrEqual(1)
+  })
+
   it('treats a nearby depleted safe zone as useful construction salvage',()=>{
     let game=createInitialGame(7004,20)
     const key=zoneKey(1,0)
