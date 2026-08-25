@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { CODEX_ITEM_CATEGORIES, CODEX_ITEM_ENTRIES, CODEX_ITEM_FAMILY_COUNT, CODEX_SOURCE_ITEM_COUNT, codexCategoryCount, filterCodexItems, itemImplementationStatusLabel, type CodexItemCategory, type CodexItemEntry, type CodexRelationshipGroup } from '../../core/codex'
-import { STATUS_CODEX_ENTRIES, filterCodexStatuses, type CodexStatusEntry } from '../../core/statusCodex'
 import { CONSTRUCTION_CODEX_ENTRIES } from '../../core/constructionCodex'
+import { RUIN_IDS } from '../../core/ruinIds'
+import { STATUS_CODEX_ENTRIES, filterCodexStatuses, type CodexStatusEntry } from '../../core/statusCodex'
 import type { CitizenStatusId } from '../../core/types'
 import '../codex.css'
 import '../item-codex-families.css'
 import { ConstructionCodexView } from './ConstructionCodexView'
+import { RuinsCodexView } from './RuinsCodexView'
 
-type CodexSection='items'|'statuses'|'constructions'
+type CodexSection='items'|'statuses'|'constructions'|'ruins'
 
 function RelationshipGroups({title,groups,empty}:{title:string;groups:CodexRelationshipGroup[];empty:string}){
   return <section className="codex-detail-section">
@@ -82,18 +84,19 @@ export function CodexView(){
   const visibleStatuses=useMemo(()=>filterCodexStatuses(query),[query])
   const itemEntry=(selectedItem?visibleItems.find((entry)=>entry.id===selectedItem):undefined)??visibleItems[0]??null
   const statusEntry=(selectedStatus?visibleStatuses.find((entry)=>entry.id===selectedStatus):undefined)??visibleStatuses[0]??null
-  const shown=section==='items'?visibleItems.length:section==='statuses'?visibleStatuses.length:CONSTRUCTION_CODEX_ENTRIES.length
-  const countLabel=section==='items'?`${CODEX_ITEM_FAMILY_COUNT} items · ${CODEX_SOURCE_ITEM_COUNT} source states`:section==='statuses'?`${STATUS_CODEX_ENTRIES.length} statuses`:`${CONSTRUCTION_CODEX_ENTRIES.length} construction entries`
+  const shown=section==='items'?visibleItems.length:section==='statuses'?visibleStatuses.length:section==='constructions'?CONSTRUCTION_CODEX_ENTRIES.length:RUIN_IDS.length
+  const countLabel=section==='items'?`${CODEX_ITEM_FAMILY_COUNT} items · ${CODEX_SOURCE_ITEM_COUNT} source states`:section==='statuses'?`${STATUS_CODEX_ENTRIES.length} statuses`:section==='constructions'?`${CONSTRUCTION_CODEX_ENTRIES.length} construction entries`:`${RUIN_IDS.length} ruins`
 
   return <section className="panel screen-panel codex-screen">
-    <div className="panel-heading codex-heading"><div><p className="section-kicker">Reference</p><h2>Codex</h2><p className="section-note">A live reference generated from the same item, condition, construction, blueprint and acquisition definitions used by gameplay.</p></div><span className="panel-count">{countLabel}</span></div>
+    <div className="panel-heading codex-heading"><div><p className="section-kicker">Reference</p><h2>Codex</h2><p className="section-note">A live reference generated from the same item, condition, construction, blueprint, ruin and acquisition definitions used by gameplay.</p></div><span className="panel-count">{countLabel}</span></div>
     <div className="codex-section-tabs" role="tablist" aria-label="Codex sections">
       <button type="button" className={section==='items'?'active':''} aria-selected={section==='items'} onClick={()=>setSection('items')}><strong>Items</strong><small>Item families & states</small></button>
       <button type="button" className={section==='statuses'?'active':''} aria-selected={section==='statuses'} onClick={()=>setSection('statuses')}><strong>Status Effects</strong><small>Runtime citizen conditions</small></button>
       <button type="button" className={section==='constructions'?'active':''} aria-selected={section==='constructions'} onClick={()=>setSection('constructions')}><strong>Construction</strong><small>Branches & blueprint unlocks</small></button>
+      <button type="button" className={section==='ruins'?'active':''} aria-selected={section==='ruins'} onClick={()=>setSection('ruins')}><strong>Ruins</strong><small>World & explorable ruins</small></button>
     </div>
 
-    {section==='constructions'?<ConstructionCodexView/>:<>
+    {section==='constructions'?<ConstructionCodexView/>:section==='ruins'?<RuinsCodexView/>:<>
       {section==='items'&&<div className="codex-category-tabs" role="tablist" aria-label="Item categories">{CODEX_ITEM_CATEGORIES.map((entry)=><button type="button" key={entry.id} className={category===entry.id?'active':''} aria-selected={category===entry.id} onClick={()=>setCategory(entry.id)}><span>{entry.label}</span><small>{codexCategoryCount(entry.id)}</small></button>)}</div>}
       <div className="codex-toolbar"><label><span>{section==='items'?'Search items':'Search status effects'}</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder={section==='items'?'Name, state, category, recipe, location…':'Status, source, treatment, progression, effect…'}/></label><strong>{shown} shown</strong></div>
       <div className="codex-layout">

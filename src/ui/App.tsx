@@ -4,8 +4,10 @@ import { getLegalActions } from '../core/actions'
 import { formatGameHour } from '../core/clock'
 import { executeCommand, InvalidCommandError } from '../core/commands'
 import { hasUpgradeProjectsFacility } from '../core/constructionUpgrades'
+import { debugRefreshCitizen } from '../core/debug'
 import { totalTownDefense } from '../core/defense'
 import { createInitialGame } from '../core/game'
+import { getRuinExplorer, type RuinActionResult } from '../core/ruinExploration'
 import type { Direction, GameCommand, GameEvent, GameState } from '../core/types'
 import { getZone, zoneControl } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
@@ -52,6 +54,7 @@ export function App() {
   useEffect(() => { if (loaded) void repository.save(game) }, [game, loaded])
 
   const player = game.citizens.find((citizen) => citizen.id === controlledCitizenId) ?? game.citizens[0]
+  const ruinExploring = Boolean(getRuinExplorer(game,player.id)?.active)
   const alive = useMemo(() => game.citizens.filter((citizen) => citizen.alive).length, [game.citizens])
   const outsideCitizens = useMemo(() => game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world'), [game.citizens])
   const townDefense = useMemo(() => totalTownDefense(game), [game])
@@ -95,6 +98,8 @@ export function App() {
     catch (caught) { setError(caught instanceof InvalidTimeAdvanceError ? caught.message : 'Time advance failed.') }
   }
   const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setVisitedCitizenId(null); setScreen('chronicle'); setError(null) }
+  const refresh = () => { setGame((current)=>debugRefreshCitizen(current,controlledCitizenId)); setError(null) }
+  const applyRuinResult = (result:RuinActionResult) => { setGame(result.state); setError(result.ok?null:result.message) }
   const controlCitizen = (citizenId: string) => { setControlledCitizenId(citizenId); setVisitedCitizenId(null); setError(null) }
   const changeScreen = (next: GameScreen) => { if(next==='home')setVisitedCitizenId(null);setScreen(next) }
   const visitHome = (citizenId:string) => { if(!player.alive||player.location.type!=='town')return;setVisitedCitizenId(citizenId);setScreen('home');setError(null) }
@@ -109,7 +114,7 @@ export function App() {
   return <main className="shell">
     <header className="hero">
       <div className="brand-block"><p className="eyebrow">Distant town survival</p><h1>Live<span>2</span>Nite</h1><div className="dayline"><strong>DAY {game.day}</strong><span className="clock-value">{formatGameHour(game.clock.hour)}</span><span>Town seed {game.seed}</span>{!townEnded && <span className="test-control-chip">TEST CONTROL · {player.name}</span>}</div></div>
-      <div className="header-actions"><span className="save-state">● Local save active</span><button className="secondary" onClick={() => void reset()}>Start a new town</button></div>
+      <div className="header-actions"><span className="save-state">● Local save active</span></div>
     </header>
 
     {townEnded ? <TownEndScreen game={game} onRestart={() => void reset()}/> : <>
@@ -123,7 +128,7 @@ export function App() {
         <article><span>Gate</span><strong className={game.town.gateOpen ? 'danger-value' : 'safe-value'}>{game.town.gateOpen ? 'OPEN' : 'SEALED'}</strong></article>
       </section>
 
-      <TimeControls game={game} onAdvanceOne={advanceHour} onAdvanceTarget={advanceTarget}/>
+      <TimeControls game={game} onAdvanceOne={advanceHour} onAdvanceTarget={advanceTarget} onRefresh={refresh} onNewTown={()=>void reset()} refreshDisabled={!player.alive}/>
 
       {attackPhase && <section className="night-report danger attack-hour-banner">
         <div className="night-icon" aria-hidden="true">☾</div>
@@ -159,14 +164,14 @@ export function App() {
         {screen === 'upgrade_projects' && <UpgradeProjectsView game={game} citizenId={player.id} onVote={(next)=>{setGame(next);setError(null)}}/>}
         {screen === 'world' && <div className="world-screen-layout">
           <div className="world-primary-column">
-            {player.location.type==='world'&&<WorldTownReturn action={enterTownAction} act={act}/>} 
-            <WorldView game={game} citizenId={player.id} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move}/>
-            {currentZone&&<CampingPanel game={game} citizen={player} zone={currentZone} legalActions={legalActions} act={act}/>} 
+            {player.location.type==='world'&&!ruinExploring&&<WorldTownReturn action={enterTownAction} act={act}/>} 
+            <WorldView game={game} citizenId={player.id} legalActions={legalActions} currentZone={currentZone} control={control} act={act} move={move} onRuinResult={applyRuinResult}/>
+            {currentZone&&!ruinExploring&&<CampingPanel game={game} citizen={player} zone={currentZone} legalActions={legalActions} act={act}/>} 
           </div>
           <section className="panel map-panel">
-            <div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known</span></div>
+            <div className="panel-heading compact"><div><p className="section-kicker">Expedition map</p><h2>World Beyond</h2></div><span className="panel-count">{ruinExploring?'INSIDE RUIN':`${Object.values(game.world.zones).filter((zone)=>zone.discovered).length} known`}</span></div>
             <WorldMap game={game} citizenId={player.id}/>
-            {player.location.type==='world'&&<WorldTravelControls legalActions={legalActions} move={move}/>} 
+            {player.location.type==='world'&&!ruinExploring&&<WorldTravelControls legalActions={legalActions} move={move}/>} 
           </section>
         </div>}
         {screen === 'citizens' && <CitizenRoster game={game} controlledCitizenId={player.id} onControl={controlCitizen} onVisit={visitHome}/>} 
@@ -174,9 +179,9 @@ export function App() {
       </div>
 
       {error && <p className="error-banner global-error">{error}</p>}
-      {control?.trapped && !attackPhase && <div className="rescue-hint global-rescue"><strong>Zone control lost.</strong><span>Search, fight, use a carried weapon, prepare to hide, or advance time so autonomous citizens can react during the current hour.</span></div>}
+      {control?.trapped && !attackPhase && !ruinExploring && <div className="rescue-hint global-rescue"><strong>Zone control lost.</strong><span>Search, fight, use a carried weapon, prepare to hide, or advance time so autonomous citizens can react during the current hour.</span></div>}
 
-      <div className="controlled-clock-context"><span>Controlling {player.name}</span><strong>{player.alive ? (player.location.type === 'town' ? 'Inside town' : player.camping.hidden ? `Hidden outside [${player.location.x},${player.location.y}]` : `Outside [${player.location.x},${player.location.y}]`) : 'DEAD · switch citizens to continue testing'}</strong></div>
+      <div className="controlled-clock-context"><span>Controlling {player.name}</span><strong>{player.alive ? (player.location.type === 'town' ? 'Inside town' : ruinExploring ? `Inside explorable ruin [${player.location.x},${player.location.y}]` : player.camping.hidden ? `Hidden outside [${player.location.x},${player.location.y}]` : `Outside [${player.location.x},${player.location.y}]`) : 'DEAD · switch citizens to continue testing'}</strong></div>
     </>}
   </main>
 }
