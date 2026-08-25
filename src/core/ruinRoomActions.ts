@@ -67,7 +67,8 @@ export function searchRuinRoom(game:GameState,citizenId:string,nowMs=Date.now())
   next={...next,rngState:outcome.rngStateAfter}
   const spec=ruinRoomLootSpecFromSourceRef(outcome.sourceRef,outcome.item)
   if(!spec)return{state:next,ok:true,message:'You search the room, but the source-table find is not yet a usable Live2Nite item.'}
-  const item=createItemInstance(`i${String(next.nextItemId).padStart(6,'0')}`,spec.type,spec.state)
+  const baseItem=createItemInstance(`i${String(next.nextItemId).padStart(6,'0')}`,spec.type)
+  const item=spec.state?{...baseItem,state:{...baseItem.state,...spec.state}}:baseItem
   next={...next,nextItemId:next.nextItemId+1}
   const citizenAfter=next.citizens.find((candidate)=>candidate.id===citizenId)!
   if(citizenAfter.inventory.length<citizenAfter.inventoryCapacity){
