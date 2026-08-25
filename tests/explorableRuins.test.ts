@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { CONSTRUCTION_CATALOG } from '../src/core/constructionCatalog'
-import { EXPLORABLE_BLUEPRINT_POOLS, EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS, explorableBlueprintEligibleProjects, explorableBlueprintTierFromItemType } from '../src/core/explorableBlueprints'
+import { EXPLORABLE_BLUEPRINT_POOLS, EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS, explorableBlueprintEligibleProjects, explorableBlueprintTierFromType } from '../src/core/explorableBlueprints'
 import { createInitialGame } from '../src/core/game'
 import { EXPLORABLE_RUIN_IDS, RUIN_IDS, type RuinId } from '../src/core/ruinIds'
 import { RUIN_CATALOG } from '../src/core/ruinCatalog'
@@ -42,7 +42,7 @@ function generatedExplorableWithFirstPlan():{seed:number;key:string;ruinId:RuinI
       const site=zone.specialSite
       if(!site||!EXPLORABLE_RUIN_IDS.some((id)=>id===site.type))continue
       const first=site.hiddenLoot[0]
-      if(first&&explorableBlueprintTierFromItemType(first))return{seed,key,ruinId:site.type as RuinId,blueprint:first}
+      if(first&&explorableBlueprintTierFromType(first))return{seed,key,ruinId:site.type as RuinId,blueprint:first}
     }
   }
   return null
@@ -95,7 +95,7 @@ describe('exact ruin loot and explorable ruins',()=>{
       world:{...game.world,zones:{...game.world.zones,[key]:{...game.world.zones[key],discovered:true,zombies:0}}},
       citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x,y},inventory:[]}:citizen),
     }
-    const expectedTier=explorableBlueprintTierFromItemType(blueprint)
+    const expectedTier=explorableBlueprintTierFromType(blueprint)
     const expectedFamily=RUIN_CATALOG[ruinId].family
     expect(expectedTier).not.toBeNull()
     expect(expectedFamily).not.toBeNull()
