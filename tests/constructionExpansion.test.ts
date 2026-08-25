@@ -68,7 +68,8 @@ describe('expanded construction catalog', () => {
 
 describe('construction effects', () => {
   it('derives shared defense from completed projects and multipliers without mutating the bootstrap base', () => {
-    let game = createInitialGame(1902, 2)
+    // Use one non-Guardian citizen so this regression measures construction defense only.
+    let game = createInitialGame(1902, 1, 'scout')
     expect(game.town.defense).toBe(40)
     expect(totalTownDefense(game)).toBe(40)
 
