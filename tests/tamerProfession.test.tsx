@@ -12,6 +12,7 @@ import { enterRuin, getRuinExplorer, type RuinInteriorState } from '../src/core/
 import { executeRuinSharedAction, getRuinSharedActions } from '../src/core/ruinSharedActions'
 import {
   hasTamerDog,
+  tamerDogBlockedByCumbersome,
   tamerDogDruggedToday,
   tamerDogTransportableItems,
   tamerDogUsedToday,
@@ -69,22 +70,27 @@ describe('Tamer profession',()=>{
     expect(hasTamerDog(equipCitizenProfession(tamer,'scout'))).toBe(false)
   })
 
-  it('sends eligible light cargo to the Bank, leaves cumbersome cargo behind, and tires the dog for the day',()=>{
-    let game=outsideWith(createInitialGame(7102,1,'tamer'),[item('light','twisted_plank'),item('heavy','sheet_metal')])
-    expect(isCumbersomeItem(game.citizens[0].inventory[0])).toBe(false)
-    expect(isCumbersomeItem(game.citizens[0].inventory[1])).toBe(true)
-    expect(tamerDogTransportableItems(game,game.citizens[0]).map((entry)=>entry.id)).toEqual(['light'])
+  it('requires a whole-rucksack shipment: cumbersome cargo blocks the trip, while a light-only trip sends everything and tires the dog',()=>{
+    const blocked=outsideWith(createInitialGame(7102,1,'tamer'),[item('light','twisted_plank'),item('heavy','sheet_metal')])
+    expect(isCumbersomeItem(blocked.citizens[0].inventory[0])).toBe(false)
+    expect(isCumbersomeItem(blocked.citizens[0].inventory[1])).toBe(true)
+    expect(tamerDogBlockedByCumbersome(blocked,blocked.citizens[0])).toBe(true)
+    expect(tamerDogTransportableItems(blocked,blocked.citizens[0])).toEqual([])
+    expect(getLegalActions(blocked,'c01').some((action)=>action.type==='SEND_TAMER_DOG')).toBe(false)
+    expect(tamerDogUsedToday(blocked,'c01')).toBe(false)
 
+    let game=outsideWith(createInitialGame(7113,1,'tamer'),[item('light-a','twisted_plank'),item('light-b','wrought_iron')])
     const resolved=executeCommand(game,sendAction(game,'bank'))
     game=resolved.state
-    expect(resolved.events).toContainEqual(expect.objectContaining({type:'TAMER_DOG_SENT',destination:'bank',items:[expect.objectContaining({id:'light'})]}))
-    expect(game.citizens[0].inventory.map((entry)=>entry.id)).toEqual(['heavy'])
-    expect(game.town.bank.some((entry)=>entry.id==='light')).toBe(true)
+    expect(resolved.events).toContainEqual(expect.objectContaining({type:'TAMER_DOG_SENT',destination:'bank',items:[expect.objectContaining({id:'light-a'}),expect.objectContaining({id:'light-b'})]}))
+    expect(game.citizens[0].inventory).toHaveLength(0)
+    expect(game.town.bank.some((entry)=>entry.id==='light-a')).toBe(true)
+    expect(game.town.bank.some((entry)=>entry.id==='light-b')).toBe(true)
     expect(tamerDogUsedToday(game,'c01')).toBe(true)
     expect(getLegalActions(game,'c01').some((action)=>action.type==='SEND_TAMER_DOG')).toBe(false)
   })
 
-  it('offers Home Chest delivery only when the complete eligible trip fits and blocks every trip under Terror',()=>{
+  it('offers Home Chest delivery only when the complete shipment fits and blocks every trip under Terror',()=>{
     let game=outsideWith(createInitialGame(7103,1,'tamer'),[item('a','twisted_plank'),item('b','wrought_iron')])
     game=replaceCitizen(game,{...game.citizens[0],home:{...game.citizens[0].home,storage:[],storageCapacity:1}})
     expect(getLegalActions(game,'c01').some((action)=>action.type==='SEND_TAMER_DOG'&&action.destination==='bank')).toBe(true)
@@ -97,8 +103,9 @@ describe('Tamer profession',()=>{
     expect(getLegalActions(game,'c01').some((action)=>action.type==='SEND_TAMER_DOG')).toBe(false)
   })
 
-  it('consumes Anabolic Steroids on the dog without drugging the citizen and enables one cumbersome shipment',()=>{
-    let game=outsideWith(createInitialGame(7104,1,'tamer'),[item('heavy','sheet_metal'),item('steroid','anabolic_steroids')])
+  it('consumes Anabolic Steroids on the dog without drugging the citizen and enables the entire rucksack including one cumbersome item',()=>{
+    let game=outsideWith(createInitialGame(7104,1,'tamer'),[item('heavy','sheet_metal'),item('light','twisted_plank'),item('steroid','anabolic_steroids')])
+    expect(getLegalActions(game,'c01').some((action)=>action.type==='SEND_TAMER_DOG')).toBe(false)
     const drug=getLegalActions(game,'c01').find((action):action is Extract<GameCommand,{type:'DRUG_TAMER_DOG'}>=>action.type==='DRUG_TAMER_DOG')
     expect(drug).toBeDefined()
     if(!drug)return
@@ -106,11 +113,13 @@ describe('Tamer profession',()=>{
     expect(game.citizens[0].inventory.some((entry)=>entry.id==='steroid')).toBe(false)
     expect(game.citizens[0].status.drugged).toBe(false)
     expect(tamerDogDruggedToday(game,'c01')).toBe(true)
-    expect(tamerDogTransportableItems(game,game.citizens[0]).map((entry)=>entry.id)).toEqual(['heavy'])
+    expect(tamerDogBlockedByCumbersome(game,game.citizens[0])).toBe(false)
+    expect(tamerDogTransportableItems(game,game.citizens[0]).map((entry)=>entry.id)).toEqual(['heavy','light'])
 
     game=executeCommand(game,sendAction(game,'bank')).state
     expect(game.citizens[0].inventory).toHaveLength(0)
     expect(game.town.bank.some((entry)=>entry.id==='heavy')).toBe(true)
+    expect(game.town.bank.some((entry)=>entry.id==='light')).toBe(true)
   })
 
   it('resets tired and steroid-boosted dog state naturally when the next day begins',()=>{
@@ -196,6 +205,7 @@ describe('Tamer profession',()=>{
     const markup=renderToStaticMarkup(<TamerDogPanel game={game} citizenId="c01" legalActions={getLegalActions(game,'c01')} act={()=>{}}/>)
     expect(markup).toContain('Three-Legged Maltese')
     expect(markup).toContain('READY')
+    expect(markup).toContain('entire rucksack shipment')
     expect(markup).toContain('Send to Home Chest')
     expect(markup).toContain('Send to Bank')
   })
