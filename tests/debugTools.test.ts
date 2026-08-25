@@ -68,15 +68,16 @@ describe('Codex and God debug tools',()=>{
     expect(summoned.nextItemId).toBe(game.nextItemId+1)
   })
 
-  it('instant-builds a construction and its prerequisite chain without consuming Bank materials',()=>{
+  it('instant-builds a construction and its current prerequisite chain without consuming Bank materials',()=>{
     const game=createInitialGame(9104,1)
     const bankBefore=game.town.bank.map((item)=>item.id)
     const waterBefore=game.town.well.water
+    const chain=['pump','eden_project'] as const
+    const expectedWaterBonus=chain.filter((id)=>!game.town.construction[id].completed).reduce((sum,id)=>sum+completionWaterBonus(id),0)
     const built=debugInstantBuild(game,'eden_project')
-    for(const id of ['pump','drilling_rig','eden_project'] as const){
-      expect(built.town.construction[id]).toMatchObject({discovered:true,completed:true})
-    }
+    for(const id of chain)expect(built.town.construction[id]).toMatchObject({discovered:true,completed:true})
+    expect(built.town.construction.drilling_rig.completed).toBe(game.town.construction.drilling_rig.completed)
     expect(built.town.bank.map((item)=>item.id)).toEqual(bankBefore)
-    expect(built.town.well.water).toBe(waterBefore+completionWaterBonus('pump')+completionWaterBonus('drilling_rig')+completionWaterBonus('eden_project'))
+    expect(built.town.well.water).toBe(waterBefore+expectedWaterBonus)
   })
 })
