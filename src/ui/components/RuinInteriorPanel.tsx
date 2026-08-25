@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { itemName } from '../../core/items'
 import { RUIN_CATALOG } from '../../core/ruinCatalog'
-import { normalizeRuinId } from '../../core/specialSites'
 import {
   expireRuinExploration,
   fleeRuinZombies,
@@ -15,6 +15,9 @@ import {
   type RuinActionResult,
   type RuinInteriorDirection,
 } from '../../core/ruinExploration'
+import { dropRuinInventoryItem, searchRuinRoom, takeRuinFloorItem, unlockRuinRoom } from '../../core/ruinRoomActions'
+import { ruinKeyName } from '../../core/ruinRoomContent'
+import { normalizeRuinId } from '../../core/specialSites'
 import type { GameState, WorldZone } from '../../core/types'
 import '../ruin-exploration.css'
 
@@ -30,6 +33,7 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
   const explorer=getRuinExplorer(game,citizenId)
   const interior=getRuinInterior(zone)
   const cell=ruinCurrentCell(game,citizenId)
+  const citizen=game.citizens.find((candidate)=>candidate.id===citizenId)??null
   const [now,setNow]=useState(()=>Date.now())
   useEffect(()=>{const timer=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(timer)},[])
   const oxygen=explorer?.active?oxygenSecondsRemaining(explorer,now):0
@@ -38,7 +42,7 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
   const ruin=ruinId?RUIN_CATALOG[ruinId]:null
   const floorCells=useMemo(()=>interior&&cell?interior.cells.filter((candidate)=>candidate.floor===cell.floor):[],[interior,cell])
   const floorRooms=useMemo(()=>interior&&cell?interior.rooms.filter((room)=>room.floor===cell.floor):[],[interior,cell])
-  if(!explorer?.active||!interior||!cell||!ruin)return null
+  if(!explorer?.active||!interior||!cell||!ruin||!citizen)return null
   const currentRoom=explorer.inRoomId?interior.rooms.find((room)=>room.id===explorer.inRoomId)??null:null
   const visibleCellIds=new Set(explorer.visitedCellIds)
   const visibleRoomIds=new Set(explorer.visitedRoomIds)
@@ -47,13 +51,15 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
   const roomAtCell=cell.roomId?interior.rooms.find((room)=>room.id===cell.roomId)??null:null
   const floorLabel=cell.floor===0?'Entrance floor':cell.floor<0?`Basement ${Math.abs(cell.floor)}`:`Upper floor ${cell.floor}`
   const visitedRooms=explorer.visitedRoomIds.length
+  const floorItems=cell.floorItems??[]
   const action=(result:RuinActionResult)=>onResult(result)
+  const matchingKey=roomAtCell?.lockType?citizen.inventory.some((item)=>item.type===roomAtCell.lockType):false
   return <section className="ruin-interior-shell">
     <div className="ruin-interior-heading">
-      <div><p className="section-kicker">Explorable ruin · {interior.family}</p><h2>{ruin.name}</h2><p className="section-note">Navigate corridors, enter rooms, locate the stairs and return to the entrance before oxygen expires.</p></div>
+      <div><p className="section-kicker">Explorable ruin · {interior.family}</p><h2>{ruin.name}</h2><p className="section-note">Navigate corridors, search rooms, recover loot and return to the entrance before oxygen expires.</p></div>
       <div className="ruin-oxygen"><span>Oxygen</span><strong className={oxygen<=60?'danger-value':''}>{clock(oxygen)}</strong><small>{explorer.graceUntilMs!==null&&now<explorer.graceUntilMs?'ENTRY GRACE':'ACTIVE'}</small></div>
     </div>
-    <div className="ruin-summary-strip"><span><strong>{floorLabel}</strong></span><span>{visitedRooms}/{interior.rooms.length} rooms visited</span><span>{cell.zombies} zombie{cell.zombies===1?'':'s'} here</span><span>{explorer.steps} interior moves</span></div>
+    <div className="ruin-summary-strip"><span><strong>{floorLabel}</strong></span><span>{visitedRooms}/{interior.rooms.length} rooms visited</span><span>{interior.rooms.filter((room)=>room.searched).length}/{interior.rooms.length} searched</span><span>{cell.zombies} zombie{cell.zombies===1?'':'s'} here</span><span>{explorer.steps} interior moves</span></div>
     <div className="ruin-interior-layout">
       <section className="ruin-map-card">
         <div className="inventory-heading"><h3>{floorLabel}</h3><span className="micro-stat">13 × 13</span></div>
@@ -64,22 +70,32 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
             const isCurrent=currentRoom?currentRoom.x===x&&currentRoom.y===y:cell.x===x&&cell.y===y
             const known=Boolean((corridor&&visibleCellIds.has(corridor.id))||(room&&visibleRoomIds.has(room.id)))
             const kind=room?'room':corridor?.kind??'void'
-            const label=!known?'Unknown':room?`Room ${room.id.replace('room-','')}`:corridor?.kind==='entrance'?'Entrance':corridor?.kind==='stairs'?'Stairs':'Corridor'
-            return <span key={`${x}:${y}`} className={`ruin-grid-cell ${known?`known ${kind}`:'fog'} ${isCurrent?'current':''}`} title={label}>{isCurrent?'●':known?(room?'□':corridor?.kind==='stairs'?'↕':corridor?.kind==='entrance'?'E':'·'):''}</span>
+            const roomState=room?room.locked?' · locked':room.searched?' · searched':'' : ''
+            const label=!known?'Unknown':room?`Room ${room.id.replace('room-','')}${roomState}`:corridor?.kind==='entrance'?'Entrance':corridor?.kind==='stairs'?'Stairs':'Corridor'
+            return <span key={`${x}:${y}`} className={`ruin-grid-cell ${known?`known ${kind}`:'fog'} ${isCurrent?'current':''}`} title={label}>{isCurrent?'●':known?(room?room.locked?'▣':'□':corridor?.kind==='stairs'?'↕':corridor?.kind==='entrance'?'E':'·'):''}</span>
           }))}
         </div>
-        <div className="ruin-map-legend"><span><b>●</b> Explorer</span><span><b>E</b> Entrance</span><span><b>↕</b> Stairs</span><span><b>□</b> Room</span></div>
+        <div className="ruin-map-legend"><span><b>●</b> Explorer</span><span><b>E</b> Entrance</span><span><b>↕</b> Stairs</span><span><b>□</b> Room</span><span><b>▣</b> Locked</span></div>
       </section>
       <section className="ruin-action-card">
         <div className="inventory-heading"><h3>{currentRoom?`Room ${currentRoom.id.replace('room-','')}`:'Corridor controls'}</h3><span className="micro-stat">{cell.x}, {cell.y}, z {cell.floor}</span></div>
-        {currentRoom?<><p>You are inside a room behind the door at this corridor position. Room loot is intentionally left light in this pass.</p><button className="primary" onClick={()=>action(shiftRuinRoom(game,citizenId,Date.now()))}>Return to corridor</button></>:<>
+        {currentRoom?<>
+          <p>{currentRoom.searched?'This room has already been searched.':'Search this room once for a source-weighted ruin find. Searching costs no AP; the real-time oxygen clock continues running.'}</p>
+          {!currentRoom.searched&&<button className="primary" onClick={()=>action(searchRuinRoom(game,citizenId,Date.now()))}>Search room</button>}
+          <button className="secondary" onClick={()=>action(shiftRuinRoom(game,citizenId,Date.now()))}>Return to corridor</button>
+        </>:<>
           {movementBlocked?<div className="ruin-danger-box"><strong>Zombies block the corridor.</strong><p>Current MyHordes exploration requires an escape attempt before movement can resume.</p><button className="flee-action" onClick={()=>action(fleeRuinZombies(game,citizenId,Date.now()))}>Flee through zombies <small>−15–24 sec O₂</small></button></div>:cell.zombies>0&&explorer.escaping?<div className="ruin-warning-box"><strong>Escape route prepared.</strong><p>The next corridor movement or room shift clears the escape state.</p></div>:null}
           <div className="ruin-movement" aria-label="Ruin movement controls">{DIRECTIONS.map((direction)=><button type="button" key={direction.id} disabled={!canMove(direction)} onClick={()=>action(moveInsideRuin(game,citizenId,direction.id,Date.now()))} title={direction.label}>{direction.symbol}<small>{direction.label}</small></button>)}</div>
-          {roomAtCell&&<button className="primary ruin-room-button" disabled={movementBlocked||roomAtCell.locked} onClick={()=>action(shiftRuinRoom(game,citizenId,Date.now()))}>Enter room {roomAtCell.id.replace('room-','')} <small>{roomAtCell.locked?'Locked door':'Door'}</small></button>}
+          {roomAtCell&&<>
+            {roomAtCell.locked&&roomAtCell.lockType?<div className="ruin-warning-box"><strong>Locked room</strong><p>Requires {ruinKeyName(roomAtCell.lockType)}. Unlocking consumes the matching key.</p><button className="secondary" disabled={movementBlocked||!matchingKey} onClick={()=>action(unlockRuinRoom(game,citizenId,Date.now()))}>Unlock with {ruinKeyName(roomAtCell.lockType)}</button></div>:null}
+            <button className="primary ruin-room-button" disabled={movementBlocked||roomAtCell.locked} onClick={()=>action(shiftRuinRoom(game,citizenId,Date.now()))}>Enter room {roomAtCell.id.replace('room-','')} <small>{roomAtCell.locked?'Locked':roomAtCell.searched?'Searched':'Door'}</small></button>
+          </>}
           {cell.stairTo&&<button className="ruin-stair-button" disabled={movementBlocked} onClick={()=>action(useRuinStairs(game,citizenId,Date.now()))}>Use stairs <small>−15–24 sec O₂</small></button>}
           {cell.kind==='entrance'&&cell.floor===0&&<button className="secondary ruin-exit-button" onClick={()=>action(leaveRuin(game,citizenId,Date.now()))}>Leave ruin</button>}
         </>}
-        <div className="ruin-rule-note"><strong>Source rules active</strong><span>1 AP entry · one active explorer · five-minute oxygen budget · 30-second entry grace · two floors · 15 rooms.</span></div>
+        {floorItems.length>0&&<div className="ruin-warning-box"><strong>Items on this floor position</strong>{floorItems.map((item)=><p key={item.id}>{itemName(item.type)} <button type="button" disabled={citizen.inventory.length>=citizen.inventoryCapacity} onClick={()=>action(takeRuinFloorItem(game,citizenId,item.id,Date.now()))}>Take</button></p>)}</div>}
+        {citizen.inventory.length>0&&<details><summary>Drop a carried item here</summary>{citizen.inventory.map((item)=><p key={item.id}>{itemName(item.type)} <button type="button" onClick={()=>action(dropRuinInventoryItem(game,citizenId,item.id,Date.now()))}>Drop</button></p>)}</details>}
+        <div className="ruin-rule-note"><strong>Source rules active</strong><span>1 AP entry · one active explorer · five-minute oxygen budget · 30-second entry grace · two floors · 15 rooms · keyed deep rooms · seven stocked room searches.</span></div>
       </section>
     </div>
   </section>
