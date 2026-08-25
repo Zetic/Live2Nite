@@ -1,5 +1,6 @@
 import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER, blueprintClassLabel, constructionCatalogChildren, constructionCatalogRoots, type ConstructionBlueprintClass, type ConstructionBranchId, type ConstructionImplementationStatus } from './constructionCatalog'
 import type { ConstructionId } from './constructionIds'
+import { EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS, explorableBlueprintPool, type ExplorableBlueprintTier } from './explorableBlueprints'
 
 export interface ConstructionCodexEntry{
   id:ConstructionId
@@ -79,39 +80,48 @@ export interface SpecializedRuinBlueprintMetadata{
   family:SpecializedRuinBlueprintFamily
   familyLabel:string
   rarity:SpecializedRuinBlueprintRarity
-  rarityLabel:'Uncommon'|'Rare'|'Very Rare'
+  rarityLabel:'Uncommon'|'Rare'|'Exceptional'
+  tier:ExplorableBlueprintTier
+  sourceWeight:number
+  poolSize:number
   acquisitionNote:string
-  implementation:'wip'
+  implementation:'implemented'
 }
 
-const specializedRuinBlueprint=(family:SpecializedRuinBlueprintFamily,familyLabel:string,rarity:SpecializedRuinBlueprintRarity,rarityLabel:SpecializedRuinBlueprintMetadata['rarityLabel']):SpecializedRuinBlueprintMetadata=>({
-  id:`ruin_${family}_${rarityLabel.toLocaleLowerCase().replaceAll(' ','_')}`,
-  name:`${familyLabel} Blueprint (${rarityLabel.toLocaleLowerCase()})`,
-  family,
-  familyLabel,
-  rarity,
-  rarityLabel,
-  acquisitionNote:`Specialized ${familyLabel} ruin blueprint. The source family and rarity are catalogued; explorable-ruin acquisition and its dedicated unlock pool are not implemented yet.`,
-  implementation:'wip',
-})
+const specializedRuinBlueprint=(family:SpecializedRuinBlueprintFamily,familyLabel:string,rarity:SpecializedRuinBlueprintRarity,tier:ExplorableBlueprintTier,rarityLabel:SpecializedRuinBlueprintMetadata['rarityLabel']):SpecializedRuinBlueprintMetadata=>{
+  const pool=explorableBlueprintPool(family,tier)
+  return{
+    id:`ruin_${family}_${tier}`,
+    name:`${familyLabel} Blueprint (${rarityLabel.toLocaleLowerCase()})`,
+    family,
+    familyLabel,
+    rarity,
+    rarityLabel,
+    tier,
+    sourceWeight:EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS[tier],
+    poolSize:pool.length,
+    acquisitionNote:`Found through ${familyLabel} explorable-ruin loot. Source drop weight ${EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS[tier]}; reading it selects one prospective undiscovered construction from its dedicated ${pool.length}-construction source pool.`,
+    implementation:'implemented',
+  }
+}
 
 export const SPECIALIZED_RUIN_BLUEPRINTS:readonly SpecializedRuinBlueprintMetadata[]=[
-  specializedRuinBlueprint('hotel','Hotel',2,'Uncommon'),
-  specializedRuinBlueprint('bunker','Bunker',2,'Uncommon'),
-  specializedRuinBlueprint('hospital','Hospital',2,'Uncommon'),
-  specializedRuinBlueprint('hotel','Hotel',3,'Rare'),
-  specializedRuinBlueprint('bunker','Bunker',3,'Rare'),
-  specializedRuinBlueprint('hospital','Hospital',3,'Rare'),
-  specializedRuinBlueprint('hotel','Hotel',4,'Very Rare'),
-  specializedRuinBlueprint('bunker','Bunker',4,'Very Rare'),
-  specializedRuinBlueprint('hospital','Hospital',4,'Very Rare'),
+  specializedRuinBlueprint('hotel','Hotel',2,'uncommon','Uncommon'),
+  specializedRuinBlueprint('bunker','Bunker',2,'uncommon','Uncommon'),
+  specializedRuinBlueprint('hospital','Hospital',2,'uncommon','Uncommon'),
+  specializedRuinBlueprint('hotel','Hotel',3,'rare','Rare'),
+  specializedRuinBlueprint('bunker','Bunker',3,'rare','Rare'),
+  specializedRuinBlueprint('hospital','Hospital',3,'rare','Rare'),
+  specializedRuinBlueprint('hotel','Hotel',4,'exceptional','Exceptional'),
+  specializedRuinBlueprint('bunker','Bunker',4,'exceptional','Exceptional'),
+  specializedRuinBlueprint('hospital','Hospital',4,'exceptional','Exceptional'),
 ]
 
 export function filterSpecializedRuinBlueprints(query:string):SpecializedRuinBlueprintMetadata[]{
   const needle=query.trim().toLocaleLowerCase()
   if(!needle)return[...SPECIALIZED_RUIN_BLUEPRINTS]
   return SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>[
-    entry.name,entry.family,entry.familyLabel,entry.rarityLabel,entry.acquisitionNote,entry.implementation,'explorable ruin','specialized blueprint',
+    entry.name,entry.family,entry.familyLabel,entry.rarityLabel,entry.tier,entry.acquisitionNote,entry.implementation,'explorable ruin','specialized blueprint',String(entry.sourceWeight),String(entry.poolSize),
   ].some((value)=>value.toLocaleLowerCase().includes(needle)))
 }
 
