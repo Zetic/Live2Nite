@@ -4,12 +4,13 @@ import { getLegalActions } from '../core/actions'
 import { formatGameHour } from '../core/clock'
 import { executeCommand, InvalidCommandError } from '../core/commands'
 import { hasUpgradeProjectsFacility } from '../core/constructionUpgrades'
-import { debugRefreshCitizen } from '../core/debug'
+import { debugGodMove, debugInstantBuild, debugRefreshCitizen, debugSummonItem, debugToggleGod } from '../core/debug'
+import { enforceGodMode, isGodCitizen } from '../core/debugGod'
 import { totalTownDefense } from '../core/defense'
 import { createInitialGame } from '../core/game'
 import { getRuinExplorer, type RuinActionResult } from '../core/ruinExploration'
-import type { Direction, GameCommand, GameEvent, GameState } from '../core/types'
-import { getZone, zoneControl } from '../core/world'
+import type { ConstructionId, Direction, GameCommand, GameEvent, GameState, ItemType } from '../core/types'
+import { getZone, moveCoordinates, zoneControl } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
 import { advanceOneHour, advanceToHour, InvalidTimeAdvanceError } from '../simulation/advanceTime'
 import { BankView } from './components/BankView'
@@ -50,15 +51,24 @@ export function App() {
   const [screen, setScreen] = useState<GameScreen>('chronicle')
   const [controlledCitizenId, setControlledCitizenId] = useState('c01')
   const [visitedCitizenId, setVisitedCitizenId] = useState<string | null>(null)
-  useEffect(() => { repository.load().then((saved) => setGame(saved ?? createInitialGame(newSeed()))).catch(() => setGame(createInitialGame(newSeed()))).finally(() => setLoaded(true)) }, [])
+  useEffect(() => { repository.load().then((saved) => setGame(enforceGodMode(saved ?? createInitialGame(newSeed())))).catch(() => setGame(createInitialGame(newSeed()))).finally(() => setLoaded(true)) }, [])
   useEffect(() => { if (loaded) void repository.save(game) }, [game, loaded])
 
   const player = game.citizens.find((citizen) => citizen.id === controlledCitizenId) ?? game.citizens[0]
+  const godActive=isGodCitizen(player)
   const ruinExploring = Boolean(getRuinExplorer(game,player.id)?.active)
   const alive = useMemo(() => game.citizens.filter((citizen) => citizen.alive).length, [game.citizens])
   const outsideCitizens = useMemo(() => game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world'), [game.citizens])
   const townDefense = useMemo(() => totalTownDefense(game), [game])
-  const legalActions = useMemo(() => getLegalActions(game, player.id), [game, player.id])
+  const legalActions = useMemo(() => {
+    const actions=getLegalActions(game,player.id)
+    if(!isGodCitizen(player)||player.location.type!=='world'||player.camping.hidden||game.clock.phase!=='day')return actions
+    for(const direction of ['NORTH','SOUTH','EAST','WEST'] as const){
+      const target=moveCoordinates(player.location.x,player.location.y,direction)
+      if(getZone(game.world,target.x,target.y)&&!actions.some((action)=>action.type==='MOVE'&&action.direction===direction))actions.push({type:'MOVE',citizenId:player.id,direction})
+    }
+    return actions
+  }, [game, player])
   const enterTownAction=legalActions.find((action):action is Extract<GameCommand,{type:'ENTER_TOWN'}>=>action.type==='ENTER_TOWN')
   const currentZone = player.location.type === 'world' ? getZone(game.world, player.location.x, player.location.y) : null
   const control = player.location.type === 'world' ? zoneControl(game, player.location.x, player.location.y) : null
@@ -85,21 +95,30 @@ export function App() {
 
   const act = (command: GameCommand | undefined) => {
     if (!command) return
-    try { setGame((current) => executeCommand(current, command).state); setError(null) }
+    try { setGame((current) => enforceGodMode(executeCommand(current, command).state)); setError(null) }
     catch (caught) { setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.') }
   }
-  const move = (direction: Direction) => act(legalActions.find((action): action is Extract<GameCommand,{type:'MOVE'}> => action.type === 'MOVE' && action.direction === direction))
+  const move = (direction: Direction) => {
+    const command=legalActions.find((action): action is Extract<GameCommand,{type:'MOVE'}> => action.type === 'MOVE' && action.direction === direction)
+    if(!command)return
+    const ordinary=getLegalActions(game,player.id).some((action)=>action.type==='MOVE'&&action.direction===direction)
+    if(godActive&&!ordinary){setGame((current)=>debugGodMove(current,controlledCitizenId,direction));setError(null);return}
+    act(command)
+  }
   const advanceHour = () => {
-    try { setGame(advanceOneHour(game,botController,controlledCitizenId)); setError(null) }
+    try { setGame(enforceGodMode(advanceOneHour(game,botController,controlledCitizenId))); setError(null) }
     catch (caught) { setError(caught instanceof InvalidTimeAdvanceError ? caught.message : 'Time advance failed.') }
   }
   const advanceTarget = (hour: number) => {
-    try { setGame(advanceToHour(game,hour,botController,controlledCitizenId)); setError(null) }
+    try { setGame(enforceGodMode(advanceToHour(game,hour,botController,controlledCitizenId))); setError(null) }
     catch (caught) { setError(caught instanceof InvalidTimeAdvanceError ? caught.message : 'Time advance failed.') }
   }
   const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setVisitedCitizenId(null); setScreen('chronicle'); setError(null) }
   const refresh = () => { setGame((current)=>debugRefreshCitizen(current,controlledCitizenId)); setError(null) }
-  const applyRuinResult = (result:RuinActionResult) => { setGame(result.state); setError(result.ok?null:result.message) }
+  const toggleGod = () => { setGame((current)=>debugToggleGod(current,controlledCitizenId)); setError(null) }
+  const summonItem = (type:ItemType) => { setGame((current)=>debugSummonItem(current,controlledCitizenId,type)); setError(null) }
+  const instantBuild = (projectId:ConstructionId) => { setGame((current)=>debugInstantBuild(current,projectId)); setError(null) }
+  const applyRuinResult = (result:RuinActionResult) => { setGame(enforceGodMode(result.state)); setError(result.ok?null:result.message) }
   const controlCitizen = (citizenId: string) => { setControlledCitizenId(citizenId); setVisitedCitizenId(null); setError(null) }
   const changeScreen = (next: GameScreen) => { if(next==='home')setVisitedCitizenId(null);setScreen(next) }
   const visitHome = (citizenId:string) => { if(!player.alive||player.location.type!=='town')return;setVisitedCitizenId(citizenId);setScreen('home');setError(null) }
@@ -128,7 +147,7 @@ export function App() {
         <article><span>Gate</span><strong className={game.town.gateOpen ? 'danger-value' : 'safe-value'}>{game.town.gateOpen ? 'OPEN' : 'SEALED'}</strong></article>
       </section>
 
-      <TimeControls game={game} onAdvanceOne={advanceHour} onAdvanceTarget={advanceTarget} onRefresh={refresh} onNewTown={()=>void reset()} refreshDisabled={!player.alive}/>
+      <TimeControls game={game} onAdvanceOne={advanceHour} onAdvanceTarget={advanceTarget} onRefresh={refresh} onToggleGod={toggleGod} godActive={godActive} onNewTown={()=>void reset()} refreshDisabled={!player.alive}/>
 
       {attackPhase && <section className="night-report danger attack-hour-banner">
         <div className="night-icon" aria-hidden="true">☾</div>
@@ -154,14 +173,14 @@ export function App() {
       <GameNavigation game={game} screen={screen} outside={player.location.type === 'world'} onChange={changeScreen}/>
 
       <div className="screen-stage">
-        {screen === 'codex' && <CodexView/>}
+        {screen === 'codex' && <CodexView onSummonItem={summonItem} onInstantBuild={instantBuild}/>} 
         {screen === 'home' && <HomeView game={game} citizenId={player.id} ownerCitizenId={visitedCitizenId??player.id} legalActions={legalActions} act={act} onReturnHome={()=>setVisitedCitizenId(null)}/>} 
         {screen === 'well' && <WellView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
         {screen === 'bank' && <BankView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
         {screen === 'construction' && <ConstructionView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'watchtower' && <WatchtowerView game={game}/>} 
-        {screen === 'upgrade_projects' && <UpgradeProjectsView game={game} citizenId={player.id} onVote={(next)=>{setGame(next);setError(null)}}/>}
+        {screen === 'upgrade_projects' && <UpgradeProjectsView game={game} citizenId={player.id} onVote={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
         {screen === 'world' && <div className="world-screen-layout">
           <div className="world-primary-column">
             {player.location.type==='world'&&!ruinExploring&&<WorldTownReturn action={enterTownAction} act={act}/>} 
