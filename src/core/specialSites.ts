@@ -1,5 +1,6 @@
 import { LEGACY_SPECIAL_SITE_TO_RUIN, RUIN_IDS, type RuinId } from './ruinIds'
-import { ORDINARY_RUIN_IDS, RUIN_CATALOG, playableRuinLootPool, ruinCode } from './ruinCatalog'
+import { ORDINARY_RUIN_IDS, RUIN_CATALOG, ruinCode } from './ruinCatalog'
+import { playableRuinSourceDrops } from './ruinLoot'
 import type { ItemType } from './types'
 
 export interface SpecialSiteDefinition { type:RuinId; name:string; code:string; purpose:string; lootPool:ItemType[] }
@@ -18,8 +19,8 @@ export const SPECIAL_SITES:Readonly<Record<RuinId,SpecialSiteDefinition>>=Object
         ? `Explorable ${ruin.family} ruin. Interior exploration uses the dedicated explorable-ruin path.`
         : ruin.availability==='conditional'
           ? 'Source ruin is catalogued but requires a dedicated reveal mechanic before ordinary map placement.'
-          : 'MyHordes ruin represented with source placement/camping metadata and fail-closed playable loot.',
-      lootPool:playableRuinLootPool(type),
+          : 'MyHordes ruin represented with source placement/camping metadata and exact source-weighted fail-closed loot.',
+      lootPool:[...new Set(playableRuinSourceDrops(type).map((drop)=>drop.runtimeType))],
     }]
   }),
 ) as unknown as Record<RuinId,SpecialSiteDefinition>
