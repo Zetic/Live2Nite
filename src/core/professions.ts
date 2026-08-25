@@ -1,5 +1,12 @@
 import { randomInt } from './rng'
-import type { Citizen, CitizenEquipment, EquipmentItemInstance, EquipmentItemType, ProfessionId, ProfessionItemType } from './types'
+import type { Citizen } from './types'
+
+export type ProfessionId='scavenger'|'scout'|'guardian'|'hermit'|'tamer'|'technician'
+export type ProfessionItemType='profession_small_shovel'|'profession_camouflage_suit'|'profession_riot_shield'|'profession_survival_manual'|'profession_three_legged_maltese'|'profession_technician_wrench'
+export type EquipmentItemType='town_uniform'|ProfessionItemType
+export interface EquipmentItemInstance{id:string;type:EquipmentItemType}
+export interface CitizenEquipment{townUniform:EquipmentItemInstance;professionItem:EquipmentItemInstance}
+export type ProfessionCitizen=Citizen&{equipment?:CitizenEquipment}
 
 export const PROFESSION_IDS:readonly ProfessionId[]=['scavenger','scout','guardian','hermit','tamer','technician']
 
@@ -37,8 +44,9 @@ const PROFESSION_BY_ITEM:Record<ProfessionItemType,ProfessionId>={
 }
 
 export function professionFromItem(type:EquipmentItemType):ProfessionId|null{return type==='town_uniform'?null:PROFESSION_BY_ITEM[type]??null}
-export function citizenProfession(citizen:Pick<Citizen,'equipment'>):ProfessionId|null{return citizen.equipment?professionFromItem(citizen.equipment.professionItem.type):null}
-export function professionName(citizen:Pick<Citizen,'equipment'>):string{return citizen.equipment?PROFESSION_DEFINITIONS[citizenProfession(citizen)??'scavenger']?.name??'Unassigned':'Unassigned'}
+export function citizenEquipment(citizen:Citizen):CitizenEquipment|null{const equipment=(citizen as ProfessionCitizen).equipment;return validCitizenEquipment(equipment)?equipment:null}
+export function citizenProfession(citizen:Citizen):ProfessionId|null{const equipment=citizenEquipment(citizen);return equipment?professionFromItem(equipment.professionItem.type):null}
+export function professionName(citizen:Citizen):string{const profession=citizenProfession(citizen);return profession?PROFESSION_DEFINITIONS[profession].name:'Unassigned'}
 export function equipmentItemName(item:EquipmentItemInstance):string{if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.name;const profession=PROFESSION_BY_ITEM[item.type];return PROFESSION_DEFINITIONS[profession].itemName}
 export function equipmentItemPurpose(item:EquipmentItemInstance):string{if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.purpose;const profession=PROFESSION_BY_ITEM[item.type];return PROFESSION_DEFINITIONS[profession].itemPurpose}
 
@@ -48,6 +56,7 @@ export function createCitizenEquipment(citizenId:string,profession:ProfessionId)
     professionItem:{id:`equipment-${citizenId}-profession`,type:PROFESSION_DEFINITIONS[profession].itemType},
   }
 }
+export function equipCitizenProfession(citizen:Citizen,profession:ProfessionId):Citizen{return{...citizen,equipment:createCitizenEquipment(citizen.id,profession)} as ProfessionCitizen}
 
 export function validCitizenEquipment(value:unknown):value is CitizenEquipment{
   if(!value||typeof value!=='object')return false
@@ -56,6 +65,7 @@ export function validCitizenEquipment(value:unknown):value is CitizenEquipment{
   if(!equipment.professionItem||typeof equipment.professionItem.id!=='string'||typeof equipment.professionItem.type!=='string')return false
   return equipment.professionItem.type in PROFESSION_BY_ITEM
 }
+export function townHasProfessionEquipment(citizens:readonly Citizen[]):boolean{return citizens.length>0&&citizens.every((citizen)=>Boolean(citizenEquipment(citizen)))}
 
 function shuffledProfessionOrder(seed:number):ProfessionId[]{
   const order=[...PROFESSION_IDS]
