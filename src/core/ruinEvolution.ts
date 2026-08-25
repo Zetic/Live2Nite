@@ -5,6 +5,7 @@ export const SOURCE_RUIN_INITIAL_ZOMBIES=10
 export const SOURCE_RUIN_DAILY_ZOMBIES=5
 const ZOMBIE_PROFILE_VERSION=1
 const MAX_RUIN_CELL_ZOMBIES=6
+const INITIAL_THREAT_POCKETS=5
 
 type RuinInteriorLifecycle=RuinInteriorState&{
   zombieProfileVersion?:number
@@ -22,11 +23,11 @@ function next(state:number):{state:number;value:number}{let x=state|0;x^=x<<13;x
 function cellDepth(cell:RuinInteriorCell):number{return Math.abs(cell.x)+Math.abs(cell.y)+(cell.floor===0?0:4)}
 function candidateCells(interior:RuinInteriorState):RuinInteriorCell[]{return interior.cells.filter((cell)=>cell.kind!=='entrance')}
 
-function addZombies(interior:RuinInteriorState,count:number,seed:number,label:string):RuinInteriorState{
+function addZombies(interior:RuinInteriorState,count:number,seed:number,label:string,allowedIds?:ReadonlySet<string>):RuinInteriorState{
   let cells=interior.cells.map((cell)=>({...cell}))
   let rng=stableSeed(seed,0,0,`${interior.family}:${label}`)
   for(let placed=0;placed<count;placed+=1){
-    const candidates=cells.filter((cell)=>cell.kind!=='entrance'&&cell.zombies<MAX_RUIN_CELL_ZOMBIES)
+    const candidates=cells.filter((cell)=>cell.kind!=='entrance'&&cell.zombies<MAX_RUIN_CELL_ZOMBIES&&(!allowedIds||allowedIds.has(cell.id)))
     if(!candidates.length)break
     const weights=candidates.map((cell)=>1+cellDepth(cell)*2+Math.min(3,cell.zombies)*5)
     const total=weights.reduce((sum,value)=>sum+value,0)
@@ -37,10 +38,18 @@ function addZombies(interior:RuinInteriorState,count:number,seed:number,label:st
   return{...interior,cells}
 }
 
+function initialPocketIds(seed:number,x:number,y:number,interior:RuinInteriorState):Set<string>{
+  return new Set(candidateCells(interior)
+    .map((cell)=>({cell,depth:cellDepth(cell),rank:stableSeed(seed,x,y,`${interior.family}:pocket:${cell.id}`)}))
+    .sort((left,right)=>right.depth-left.depth||left.rank-right.rank)
+    .slice(0,INITIAL_THREAT_POCKETS)
+    .map((entry)=>entry.cell.id))
+}
+
 function totalZombies(interior:RuinInteriorState):number{return interior.cells.reduce((sum,cell)=>sum+cell.zombies,0)}
 
 /**
- * The source count remains exactly ten. Live2Nite clusters that count into deeper
+ * The source count remains exactly ten. Live2Nite clusters that count into five deeper
  * corridor pockets instead of scattering mostly single zombies across ~40 cells,
  * which makes the same source-sized threat visible and meaningful on our topology.
  */
@@ -51,7 +60,8 @@ export function normalizeInitialRuinZombieProfile(seed:number,x:number,y:number,
   let normalized:RuinInteriorState=interior
   if(currentTotal===SOURCE_RUIN_INITIAL_ZOMBIES){
     normalized={...interior,cells:interior.cells.map((cell)=>({...cell,zombies:0}))}
-    normalized=addZombies(normalized,SOURCE_RUIN_INITIAL_ZOMBIES,stableSeed(seed,x,y,'initial'),'initial')
+    const pockets=initialPocketIds(seed,x,y,normalized)
+    normalized=addZombies(normalized,SOURCE_RUIN_INITIAL_ZOMBIES,stableSeed(seed,x,y,'initial'),'initial',pockets)
   }
   return{...normalized,zombieProfileVersion:ZOMBIE_PROFILE_VERSION,lastZombieGrowthDay:lifecycle.lastZombieGrowthDay??1} as RuinInteriorLifecycle
 }
@@ -79,7 +89,7 @@ export function advanceExplorableRuinLifecycleForNewDay(state:GameState,targetDa
     if(!site?.interior)continue
     const nextInterior=advanceRuinInteriorToDay(state.seed,zone.x,zone.y,site.interior,targetDay) as RuinInteriorLifecycle
     const normalized={...nextInterior,activeExplorerCitizenId:null} as RuinInteriorLifecycle
-    if(normalized!==site.interior||site.interior.activeExplorerCitizenId!==null){zones[key]={...zone,specialSite:{...site,interior:normalized} as SiteWithInterior};changed=true}
+    zones[key]={...zone,specialSite:{...site,interior:normalized} as SiteWithInterior};changed=true
   }
   const citizens=state.citizens.map((citizen)=>{
     const current=citizen as CitizenWithRuin
