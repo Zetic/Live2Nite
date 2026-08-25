@@ -1,6 +1,8 @@
 import { RUIN_CATALOG } from './ruinCatalog'
+import { prepareRuinInteriorContent } from './ruinRoomContent'
+import type { RuinKeyType } from './ruinRoomContent'
 import { normalizeRuinId } from './specialSites'
-import type { Citizen, GameState, SpecialSiteState, WorldZone, WoundLocation } from './types'
+import type { Citizen, GameState, ItemInstance, SpecialSiteState, WorldZone, WoundLocation } from './types'
 import { getZone, zoneControlState, zoneKey } from './world'
 
 export const RUIN_ROOM_COUNT=15
@@ -15,8 +17,8 @@ export const RUIN_INITIAL_ZOMBIES=10
 
 export type RuinInteriorCellKind='entrance'|'corridor'|'stairs'
 export type RuinInteriorDirection='NORTH'|'SOUTH'|'EAST'|'WEST'
-export interface RuinInteriorCell{id:string;floor:number;x:number;y:number;kind:RuinInteriorCellKind;roomId:string|null;stairTo:string|null;zombies:number}
-export interface RuinInteriorRoom{id:string;floor:number;x:number;y:number;corridorCellId:string;locked:boolean;searched:boolean}
+export interface RuinInteriorCell{id:string;floor:number;x:number;y:number;kind:RuinInteriorCellKind;roomId:string|null;stairTo:string|null;zombies:number;floorItems?:ItemInstance[]}
+export interface RuinInteriorRoom{id:string;floor:number;x:number;y:number;corridorCellId:string;locked:boolean;searched:boolean;lockType?:RuinKeyType|null;stocked?:boolean}
 export interface RuinInteriorState{
   version:1
   family:'hotel'|'hospital'|'bunker'
@@ -60,7 +62,6 @@ function next(state:number):{state:number;value:number}{
 }
 function int(state:number,min:number,max:number):{state:number;value:number}{const n=next(state);return{state:n.state,value:Math.floor(n.value*(max-min+1))+min}}
 function cellId(floor:number,x:number,y:number):string{return`${floor}:${x}:${y}`}
-function samePosition(a:RuinInteriorCell,b:{floor:number;x:number;y:number}):boolean{return a.floor===b.floor&&a.x===b.x&&a.y===b.y}
 
 function corridorCells(floor:number):RuinInteriorCell[]{
   const cells:RuinInteriorCell[]=[]
@@ -105,7 +106,7 @@ export function generateRuinInterior(seed:number,x:number,y:number,ruinType:Spec
   }
   const zombieCells=cells.filter((cell)=>cell.kind!=='entrance')
   for(let i=0;i<RUIN_INITIAL_ZOMBIES;i+=1){const draw=int(rng,0,zombieCells.length-1);rng=draw.state;zombieCells[draw.value].zombies+=1}
-  return{version:1,family:definition.family,cells,rooms,activeExplorerCitizenId:null}
+  return prepareRuinInteriorContent(seed,x,y,{version:1,family:definition.family,cells,rooms,activeExplorerCitizenId:null})
 }
 
 export function getRuinExplorer(game:GameState,citizenId:string):RuinExplorerState|null{
@@ -153,10 +154,12 @@ export function expireRuinExploration(game:GameState,citizenId:string,nowMs=Date
   const context=currentContext(game,citizenId);if(!context)return fail(game,'No active ruin exploration.')
   if(oxygenSecondsRemaining(context.explorer,nowMs)>0)return{state:game,ok:true,message:'Oxygen remains.'}
   const wound=WOUNDS[mixSeed(game.seed,context.explorer.steps,game.day,context.explorer.cellId)%WOUNDS.length]
+  const dropped=[...context.citizen.inventory]
   let next=setExplorer(game,citizenId,{...context.explorer,active:false,escaping:false,graceUntilMs:null})
-  next=updateCitizen(next,citizenId,(citizen)=>({...citizen,status:{...citizen.status,wound:citizen.status.wound??wound}}))
-  next=updateSite(next,context.zone.x,context.zone.y,(site)=>({...site,interior:{...context.interior,activeExplorerCitizenId:null}}))
-  return{state:next,ok:false,message:'Oxygen depleted. The explorer was forced out of the ruin and wounded during the escape.'}
+  next=updateCitizen(next,citizenId,(citizen)=>({...citizen,inventory:[],status:{...citizen.status,wound:citizen.status.wound??wound}}))
+  next=updateSite(next,context.zone.x,context.zone.y,(site)=>({...site,interior:{...context.interior,cells:context.interior.cells.map((cell)=>cell.id===context.cell.id?{...cell,floorItems:[...(cell.floorItems??[]),...dropped]}:cell),activeExplorerCitizenId:null}}))
+  const dropMessage=dropped.length>0?` ${dropped.length} carried item${dropped.length===1?' was':'s were'} left on the interior floor.`:''
+  return{state:next,ok:false,message:`Oxygen depleted. The explorer was forced out of the ruin and wounded during the escape.${dropMessage}`}
 }
 function requireOxygen(game:GameState,citizenId:string,nowMs:number):RuinActionResult|null{
   const explorer=getRuinExplorer(game,citizenId);if(!explorer?.active)return fail(game,'No active ruin exploration.')
@@ -175,7 +178,7 @@ export function enterRuin(game:GameState,citizenId:string,nowMs=Date.now()):Ruin
   if(zoneControlState(game,zone.x,zone.y,citizenId)==='trapped')return fail(game,'Zombie control prevents entry into the ruin.')
   if(citizen.ruinExplorer?.active)return fail(game,'This citizen is already exploring a ruin.')
   if(citizen.ruinExplorer?.zoneKey===zoneKey(zone.x,zone.y)&&citizen.ruinExplorer.exploredDay===game.day)return fail(game,'This citizen cannot re-enter this ruin again today.')
-  const interior=site.interior??generateRuinInterior(game.seed,zone.x,zone.y,site.type)
+  const interior=prepareRuinInteriorContent(game.seed,zone.x,zone.y,site.interior??generateRuinInterior(game.seed,zone.x,zone.y,site.type))
   if(interior.activeExplorerCitizenId&&interior.activeExplorerCitizenId!==citizenId)return fail(game,'Another citizen is already exploring this ruin.')
   const entrance=interior.cells.find((cell)=>cell.kind==='entrance'&&cell.floor===0)!
   const explorer:RuinExplorerState={
@@ -209,7 +212,7 @@ export function shiftRuinRoom(game:GameState,citizenId:string,nowMs=Date.now()):
   if(context.cell.zombies>0&&!explorer.escaping)return fail(game,'Zombies block access to the room. Flee first.')
   if(!context.cell.roomId)return fail(game,'There is no room entrance at this corridor position.')
   const room=context.interior.rooms.find((candidate)=>candidate.id===context.cell.roomId);if(!room)return fail(game,'The room is unavailable.')
-  if(room.locked)return fail(game,'This door is locked. Keyed ruin doors are reserved for a later item-mechanics pass.')
+  if(room.locked)return fail(game,'This room is locked. Use its matching ruin key first.')
   explorer={...explorer,inRoomId:room.id,escaping:false,steps:explorer.steps+1,visitedRoomIds:explorer.visitedRoomIds.includes(room.id)?explorer.visitedRoomIds:[...explorer.visitedRoomIds,room.id]}
   return{state:setExplorer(game,citizenId,explorer),ok:true,message:'Entered the room.'}
 }
