@@ -19,7 +19,7 @@ describe('profession foundation',()=>{
   })
 
   it('gives the universal two points of personal home defense without increasing contributable defense',()=>{
-    const game=createInitialGame(6102,1,'guardian')
+    const game=createInitialGame(6102,1,'scout')
     const player={...game.citizens[0],home:{...game.citizens[0].home,storage:[]}}
     expect(personalDefense(player,game)-contributableHomeDefense(player,game)).toBe(BASE_PERSONAL_HOME_DEFENSE)
     expect(BASE_PERSONAL_HOME_DEFENSE).toBe(2)

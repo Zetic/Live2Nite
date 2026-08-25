@@ -5,6 +5,7 @@ import { homeTownDefense, totalTownDefense } from '../src/core/defense'
 import { personalDefense } from '../src/core/home'
 import { createInitialGame, resolveNight } from '../src/core/game'
 import { attackRangeForDay, attackStrengthForDay, watchtowerEstimate } from '../src/core/night'
+import { equipCitizenProfession } from '../src/core/professions'
 import type { GameEvent, GameState } from '../src/core/types'
 
 function withWatchtower(game: GameState): GameState {
@@ -18,6 +19,9 @@ function withWatchtower(game: GameState): GameState {
       },
     },
   }
+}
+function withoutGuardianProfessions(game:GameState):GameState{
+  return{...game,citizens:game.citizens.map((citizen)=>equipCitizenProfession(citizen,'scout'))}
 }
 
 describe('Home defense', () => {
@@ -97,7 +101,7 @@ describe('Watchtower and horde strength', () => {
 
 describe('Night breach resolution', () => {
   it('lets the current 40-point bootstrap defense hold every historically sampled day-1 attack', () => {
-    const game = resolveNight(createInitialGame(9876, 6))
+    const game = resolveNight(withoutGuardianProfessions(createInitialGame(9876, 6)))
     expect(game.lastNight?.attackStrength).toBeLessThanOrEqual(29)
     expect(game.lastNight?.effectiveDefense).toBe(40)
     expect(game.lastNight?.breached).toBe(false)
@@ -105,7 +109,7 @@ describe('Night breach resolution', () => {
   })
 
   it('distributes every zombie that breaches across surviving citizens and applies home defense', () => {
-    let game = createInitialGame(345, 8)
+    let game = withoutGuardianProfessions(createInitialGame(345, 8))
     game = { ...game, town: { ...game.town, defense: 0 } }
     game = resolveNight(game)
     const report = game.lastNight!
