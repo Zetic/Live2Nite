@@ -90,7 +90,9 @@ The full parent/child tree is grouped under the seven branch roots. Each detail 
 
 Shows generic blueprint projects grouped by Common, Uncommon, Rare and Very Rare, plus a separate special/non-generic construction section.
 
-The blueprint view also represents the **nine specialized explorable-ruin blueprint variants** as WIP metadata: Hotel, Bunker, and Hospital families at Uncommon, Rare, and Very Rare. These entries are reference-only until their ruin acquisition and dedicated unlock-pool mechanics exist; they are not injected into the generic construction blueprint pool.
+The blueprint view also represents the **nine active specialized explorable-ruin blueprint variants**: Hotel, Bunker, and Hospital families at Uncommon, Rare, and Exceptional tiers. Their source ruin tables use weights **800 / 400 / 200** respectively. Each specialized plan retains its family+tier state and, when read, selects only from the exact prospective construction pool assigned to that family and tier. These plans are not injected into the generic construction blueprint pool.
+
+The Codex displays the source drop weight and candidate-pool size for each specialized plan. Individual construction entries within those pools still retain their own Implemented/Partial/WIP status; discovering a WIP construction through a specialized plan does not make the WIP construction buildable.
 
 The Codex is intentionally complete even when the current town has not discovered a project. Construction Sites remains the town-state view; the Codex is the reference/implementation view.
 
