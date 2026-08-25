@@ -115,7 +115,7 @@ describe('Scavenger profession',()=>{
   it('keeps an active search session running when its final normal find makes the zone depleted',()=>{
     const base=searchable({...createInitialGame(1104,1),clock:{hour:13,phase:'day'}},'c01','scout',1)
     const manual:Extract<GameEvent,{type:'ZONE_SEARCHED'}>={type:'ZONE_SEARCHED',day:1,hour:13,zoneKey:'1,0',citizenId:'c01',mode:'normal',item:{id:'manual-find',type:'twisted_plank'},rngStateAfter:base.rngState}
-    let game={...base,world:{...base.world,zones:{...base.world.zones,'1,0':{...base.world.zones['1,0'],searchesRemaining:0,hiddenLoot:[]}}},events:[...base.events,manual]}
+    let game:GameState={...base,world:{...base.world,zones:{...base.world.zones,'1,0':{...base.world.zones['1,0'],searchesRemaining:0,hiddenLoot:[]}}},events:[...base.events,manual]}
     game={...game,clock:{hour:15,phase:'day'}}
     game=runAutomaticSearches(game)
     expect(game.events.at(-1)).toMatchObject({type:'ZONE_SEARCHED',citizenId:'c01',automatic:true,mode:'depleted'})
