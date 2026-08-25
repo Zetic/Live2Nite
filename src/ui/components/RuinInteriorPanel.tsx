@@ -17,7 +17,7 @@ import { ruinKeyName } from '../../core/ruinRoomContent'
 import { executeRuinSharedAction, getRuinSharedActions } from '../../core/ruinSharedActions'
 import { normalizeRuinId } from '../../core/specialSites'
 import type { GameCommand, GameState, WorldZone } from '../../core/types'
-import { CombinationActionMenu, ItemActionMenu, ItemStrip } from './InventoryItems'
+import { CombinationActionMenu, ItemActionMenu, ItemStrip, RucksackStrip } from './InventoryItems'
 import { ruinFloorLabel } from './RuinInteriorMap'
 import '../ruin-exploration.css'
 
@@ -52,7 +52,7 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
 
   return <div className="ruin-world-context">
     <div className="panel-heading">
-      <div><p className="section-kicker">World Beyond · inside ruin · {citizen.name}</p><h2>{ruin.name}</h2><p className="section-note">{floorLabel} · position {cell.x}, {cell.y}. The normal rucksack and item-action interface remains active while exploring.</p></div>
+      <div><p className="section-kicker">World Beyond · inside ruin · {citizen.name}</p><h2>{ruin.name}</h2><p className="section-note">{floorLabel} · position {cell.x}, {cell.y}. The first two rucksack slots remain locked Town Uniform and Profession Item equipment while exploring.</p></div>
       <div className="ruin-oxygen"><span>Oxygen</span><strong className={oxygen<=60?'danger-value':''}>{clock(oxygen)}</strong><small>{explorer.graceUntilMs!==null&&now<explorer.graceUntilMs?'ENTRY GRACE':'ACTIVE'}</small></div>
     </div>
 
@@ -64,13 +64,13 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
         <ItemStrip items={floorItems} disabledForItem={()=>citizen.inventory.length>=citizen.inventoryCapacity} onItemClick={(item)=>action(takeRuinFloorItem(game,citizenId,item.id,Date.now()))} emptyLabel="Nothing visible." extraTooltip={()=>citizen.inventory.length<citizen.inventoryCapacity?'Click to pick up.':'Your rucksack is full.'}/>
       </section>
       <section className="inventory-surface">
-        <div className="inventory-heading"><h3>Rucksack</h3><span className="micro-stat">{citizen.inventory.length}/{citizen.inventoryCapacity}</span></div>
-        <ItemStrip items={citizen.inventory} capacity={citizen.inventoryCapacity} onItemClick={(item)=>action(dropRuinInventoryItem(game,citizenId,item.id,Date.now()))} extraTooltip={()=> 'Click to drop on this interior floor.'}/>
+        <div className="inventory-heading"><h3>Rucksack</h3><span className="micro-stat">{citizen.inventory.length}/{citizen.inventoryCapacity} cargo · +2 equipment</span></div>
+        <RucksackStrip citizen={citizen} onItemClick={(item)=>action(dropRuinInventoryItem(game,citizenId,item.id,Date.now()))} extraTooltip={()=> 'Click to drop this cargo item on the interior floor.'}/>
       </section>
     </div>
 
     <section className="inventory-actions-block">
-      <div className="inventory-heading"><h3>Rucksack Actions</h3><span className="micro-stat">use or combine carried items</span></div>
+      <div className="inventory-heading"><h3>Rucksack Actions</h3><span className="micro-stat">use or combine carried cargo</span></div>
       <ItemActionMenu items={citizen.inventory} actions={sharedActions} act={sharedAct} sourceForItem={()=> 'Rucksack'}/>
       <CombinationActionMenu actions={sharedActions} act={sharedAct}/>
     </section>
