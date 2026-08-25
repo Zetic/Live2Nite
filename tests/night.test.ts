@@ -29,7 +29,7 @@ describe('Home defense', () => {
     expect(game.citizens[0].ap).toBe(4)
     expect(game.citizens[0].home.level).toBe('tent')
     expect(game.citizens[0].home.defense).toBe(1)
-    expect(personalDefense(game.citizens[0])).toBe(1)
+    expect(personalDefense(game.citizens[0])).toBe(3)
     expect(getLegalActions(game, 'c01').some((candidate) => candidate.type === 'UPGRADE_HOME')).toBe(false)
   })
 
@@ -45,7 +45,7 @@ describe('Home defense', () => {
         ] } }
         : citizen),
     }
-    expect(personalDefense(game.citizens[0])).toBe(3)
+    expect(personalDefense(game.citizens[0])).toBe(5)
     expect(homeTownDefense(game)).toBe(0)
     expect(totalTownDefense(game)).toBe(40)
   })
@@ -117,24 +117,24 @@ describe('Night breach resolution', () => {
     expect(report.homeDeaths).toBe(homeDeaths.length)
   })
 
-  it('a Tent survives one zombie at the door while a Camp Bed does not', () => {
+  it('a Tent survives three zombies at the door while a Camp Bed does not', () => {
     const seed = 777
     const strength = attackStrengthForDay(seed, 1)
 
     let camp = createInitialGame(seed, 1)
-    camp = { ...camp, town: { ...camp.town, defense: strength - 1 } }
+    camp = { ...camp, town: { ...camp.town, defense: strength - 3 } }
     camp = resolveNight(camp)
-    expect(camp.lastNight?.zombiesInside).toBe(1)
+    expect(camp.lastNight?.zombiesInside).toBe(3)
     expect(camp.citizens[0].alive).toBe(false)
 
     let tent = createInitialGame(seed, 1)
     tent = {
       ...tent,
-      town: { ...tent.town, defense: strength - 1 },
+      town: { ...tent.town, defense: strength - 3 },
       citizens: tent.citizens.map((citizen) => ({ ...citizen, home: { ...citizen.home, level: 'tent', defense: 1 } })),
     }
     tent = resolveNight(tent)
-    expect(tent.lastNight?.zombiesInside).toBe(1)
+    expect(tent.lastNight?.zombiesInside).toBe(3)
     expect(tent.citizens[0].alive).toBe(true)
     expect(tent.lastNight?.homeDeaths).toBe(0)
   })
