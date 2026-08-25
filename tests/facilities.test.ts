@@ -3,6 +3,7 @@ import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { createInitialGame } from '../src/core/game'
 import { DEPLETED_SCAVENGE_LOOT_POOL, NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
+import { isSpadeReplenishCommand } from '../src/core/scavenging'
 import { MYHORDES_DEPLETED_ZONE_LOOT } from '../src/core/scavengeLoot'
 import type { GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
@@ -10,7 +11,7 @@ import { availableScreens, FACILITY_SLOT_COUNT, FACILITY_SLOT_ORDER, facilitySlo
 import { bankFromCounts } from './bankFixtures'
 
 function command(game: GameState, citizenId: string, type: ReturnType<typeof getLegalActions>[number]['type']) {
-  const action = getLegalActions(game, citizenId).find((candidate) => candidate.type === type)
+  const action = getLegalActions(game, citizenId).find((candidate) => candidate.type === type&&!isSpadeReplenishCommand(candidate))
   if (!action) throw new Error(`Missing ${type}`)
   return action
 }
@@ -79,7 +80,7 @@ describe('undepleted and depleted scavenging', () => {
     let game = outsideAt(createInitialGame(456, 2), 1, 0)
     const key = zoneKey(1, 0)
     game = { ...game, world: { ...game.world, zones: { ...game.world.zones, [key]: { ...game.world.zones[key], zombies: 0, searchesRemaining: 0, hiddenLoot: [], searchedBy: [], depletedSearchedBy: [] } } } }
-    expect(getLegalActions(game, 'c01').some((action) => action.type === 'SEARCH_ZONE')).toBe(true)
+    expect(getLegalActions(game, 'c01').some((action) => action.type === 'SEARCH_ZONE'&&!isSpadeReplenishCommand(action))).toBe(true)
     const originalRng=game.rngState
     const result = executeCommand(game, command(game, 'c01', 'SEARCH_ZONE'))
     const searched = result.events.find((event) => event.type === 'ZONE_SEARCHED')
@@ -92,7 +93,7 @@ describe('undepleted and depleted scavenging', () => {
     expect(result.state.world.zones[key].searchesRemaining).toBe(0)
     expect(result.state.world.zones[key].hiddenLoot).toEqual([])
     expect(result.state.world.zones[key].depletedSearchedBy).toContain('c01')
-    expect(getLegalActions(result.state, 'c01').some((action) => action.type === 'SEARCH_ZONE')).toBe(false)
+    expect(getLegalActions(result.state, 'c01').some((action) => action.type === 'SEARCH_ZONE'&&!isSpadeReplenishCommand(action))).toBe(false)
   })
 })
 
