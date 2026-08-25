@@ -19,9 +19,9 @@ function EntryButton({entry,selected,onSelect,showDepth=true}:{entry:Constructio
 }
 
 function SpecializedBlueprintRow({entry}:{entry:SpecializedRuinBlueprintMetadata}){
-  return <div className="construction-codex-row wip">
-    <span className="construction-codex-row-copy"><strong>{entry.name}</strong><small>{entry.familyLabel} explorable-ruin family · {entry.rarityLabel}</small></span>
-    <span className="construction-codex-status wip">WIP</span>
+  return <div className="construction-codex-row implemented">
+    <span className="construction-codex-row-copy"><strong>{entry.name}</strong><small>{entry.familyLabel} explorable ruin · source weight {entry.sourceWeight} · {entry.poolSize} construction candidates</small></span>
+    <span className="construction-codex-status implemented">Implemented</span>
   </div>
 }
 
@@ -90,7 +90,7 @@ export function ConstructionCodexView(){
 
   const specializedBlueprintGroups=useMemo(()=>([2,3,4] as const).map((rarity)=>({
     id:`specialized-${rarity}`,
-    label:`${blueprintClassLabel(rarity)} · specialized ruins`,
+    label:`${rarity===4?'Exceptional':blueprintClassLabel(rarity)} · specialized ruins`,
     entries:specializedBlueprints.filter((entry)=>entry.rarity===rarity),
   })).filter((group)=>group.entries.length>0),[specializedBlueprints])
 
@@ -109,11 +109,11 @@ export function ConstructionCodexView(){
           ?branchGroups.map((group)=><section className="construction-codex-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3>{group.entries.map((entry)=><EntryButton key={entry.id} entry={entry} selected={selectedEntry?.id===entry.id} onSelect={()=>setSelected(entry.id)}/>)}</section>)
           :<>
             {blueprintGroups.map((group)=><section className="construction-codex-group blueprint-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3><p>{group.id==='special'?'These constructions use special/manual unlock rules rather than generic blueprint items.':BLUEPRINT_ACQUISITION_NOTES[group.blueprintClass]}</p>{group.entries.map((entry)=><EntryButton key={entry.id} entry={entry} selected={selectedEntry?.id===entry.id} onSelect={()=>setSelected(entry.id)} showDepth={false}/>)}</section>)}
-            {specializedBlueprintGroups.map((group)=><section className="construction-codex-group blueprint-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3><p>Specialized explorable-ruin blueprint metadata. Runtime acquisition and the dedicated unlock pool remain WIP.</p>{group.entries.map((entry)=><SpecializedBlueprintRow key={entry.id} entry={entry}/>)}</section>)}
+            {specializedBlueprintGroups.map((group)=><section className="construction-codex-group blueprint-group" key={group.id}><h3>{group.label}<small>{group.entries.length}</small></h3><p>Hotel, Bunker, and Hospital plans are found through explorable-ruin source loot and unlock only their dedicated prospective construction pools.</p>{group.entries.map((entry)=><SpecializedBlueprintRow key={entry.id} entry={entry}/>)}</section>)}
           </>}
         {!visible.length&&!(mode==='blueprints'&&specializedBlueprints.length)&&<p className="empty-state">No constructions or blueprint metadata match this view.</p>}
       </section>
-      {selectedEntry?<Detail entry={selectedEntry} onJump={jump}/>:specializedBlueprints.length?<article className="codex-detail"><p className="section-kicker">Explorable ruin blueprints</p><h2>Specialized blueprint families</h2><p className="codex-purpose">Hotel, Bunker, and Hospital each have Uncommon, Rare, and Very Rare blueprint variants in the source catalogue. These nine entries are reference metadata only until the explorable-ruin acquisition and dedicated unlock-pool mechanics are implemented.</p><div className="construction-wip-banner"><strong>Work in progress</strong><span>No specialized ruin blueprint currently becomes a runtime Live2Nite item or changes construction discovery.</span></div></article>:<article className="codex-detail"><p className="empty-state">No construction is available for the current filter.</p></article>}
+      {selectedEntry?<Detail entry={selectedEntry} onJump={jump}/>:specializedBlueprints.length?<article className="codex-detail"><p className="section-kicker">Explorable ruin blueprints</p><h2>Specialized blueprint families</h2><p className="codex-purpose">Hotel, Bunker, and Hospital each have Uncommon, Rare, and Exceptional specialized plans. They are recovered through the corresponding explorable ruin and select one prospective undiscovered construction from an explicit family-and-tier source pool when read.</p><div className="codex-detail-section"><h3>Source weighting</h3><p className="codex-purpose">Each family uses source drop weights 800 uncommon, 400 rare, and 200 exceptional. Unsupported non-plan ruin outcomes remain fail-closed rather than transferring probability to plans.</p></div>{specializedBlueprints.map((entry)=><p key={entry.id} className="construction-acquisition-note"><strong>{entry.name}:</strong> {entry.acquisitionNote}</p>)}</article>:<article className="codex-detail"><p className="empty-state">No construction is available for the current filter.</p></article>}
     </div>
   </>
 }
