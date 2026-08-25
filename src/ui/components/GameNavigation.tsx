@@ -4,9 +4,8 @@ import '../navigation.css'
 
 function NavButton({entry,screen,outside,onChange}:{entry:ScreenDefinition;screen:GameScreen;outside:boolean;onChange:(screen:GameScreen)=>void}){
   const disabled=outside&&entry.townOnly
-  return <button type="button" className={screen===entry.id?'active':''} disabled={disabled} onClick={()=>onChange(entry.id)}>
+  return <button type="button" className={screen===entry.id?'active':''} disabled={disabled} title={disabled?'Return to town to use this screen':entry.short} onClick={()=>onChange(entry.id)}>
     <strong>{entry.label}</strong>
-    <small>{disabled?'Return to town':entry.short}</small>
   </button>
 }
 
@@ -24,7 +23,7 @@ export function GameNavigation({ game, screen, outside, onChange }: {
     <div className="game-nav-row game-nav-facilities" aria-label="Constructed facilities">
       {facilities.map((entry,index)=>entry
         ? <NavButton key={entry.id} entry={entry} screen={screen} outside={outside} onChange={onChange}/>
-        : <span key={`facility-slot-${index}`} className="game-nav-placeholder" aria-label="Empty facility slot"><small>Facility slot</small></span>)}
+        : <span key={`facility-slot-${index}`} className="game-nav-placeholder" aria-label="Empty facility slot">·</span>)}
     </div>
   </nav>
 }

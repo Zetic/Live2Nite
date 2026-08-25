@@ -28,6 +28,13 @@ function resolveOpenedItems(items:ItemInstance[],event:Extract<GameEvent,{type:'
   const base=event.containerAfter?[...without,event.containerAfter]:without
   return[...base,...event.outputs]
 }
+function transferHomeItem(state:GameState,event:Extract<GameEvent,{type:'HOME_ITEM_STOLEN'|'HOME_ITEM_PILLAGED'}>):GameState{
+  return{...state,citizens:state.citizens.map((citizen)=>{
+    if(citizen.id===event.citizenId)return{...citizen,inventory:[...citizen.inventory,event.item]}
+    if(citizen.id===event.targetCitizenId)return{...citizen,home:{...citizen.home,storage:citizen.home.storage.filter((item)=>item.id!==event.item.id)}}
+    return citizen
+  })}
+}
 
 function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
   switch(event.type){
@@ -69,6 +76,10 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'ITEM_WITHDRAWN':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item]})),town:{...state.town,bank:removeBankItemById(state.town.bank,event.item.id)}}
     case 'ITEM_MOVED_TO_HOME':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id),home:{...citizen.home,storage:[...citizen.home.storage,event.item]}}))}
     case 'ITEM_MOVED_TO_RUCKSACK':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item],home:{...citizen.home,storage:citizen.home.storage.filter((item)=>item.id!==event.item.id)}}))}
+    case 'HOME_ITEM_DEPOSITED':return{...state,rngState:event.rngStateAfter,citizens:state.citizens.map((citizen)=>citizen.id===event.citizenId?{...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id)}:citizen.id===event.targetCitizenId?{...citizen,home:{...citizen.home,storage:[...citizen.home.storage,event.item]}}:citizen)}
+    case 'HOME_INTRUSION_ATTEMPTED':return state
+    case 'HOME_ITEM_STOLEN':return{...transferHomeItem(state,event),rngState:event.rngStateAfter}
+    case 'HOME_ITEM_PILLAGED':return transferHomeItem(state,event)
     case 'OPENABLE_RESOLVED':{
       if(event.source==='ground'&&event.zoneKey)return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,world:replaceGround(state,event.zoneKey,(items)=>resolveOpenedItems(items,event))}
       return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+event.outputs.length,citizens:replaceCitizen(state,event.citizenId,(citizen)=>event.source==='inventory'?{...citizen,inventory:resolveOpenedItems(citizen.inventory,event)}:{...citizen,home:{...citizen.home,storage:resolveOpenedItems(citizen.home.storage,event)}})}
@@ -120,6 +131,7 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     }
     case 'CORPSE_REANIMATED':return{...state,town:{...state.town,well:{water:Math.max(0,state.town.well.water-event.waterLost)}},citizens:replaceCitizen(state,event.corpseCitizenId,(citizen)=>({...citizen,home:{...citizen.home,corpseAttacked:true}}))}
     case 'HOME_IMPROVEMENT_BUILT':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,storageCapacity:event.storageCapacityAfter,improvements:{...paid.home.improvements,[event.improvementId]:event.level}}}})}
+    case 'HOME_SIESTA_USED':return{...state,rngState:event.rngStateAfter,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,ap:event.apAfter}))}
     case 'BLUEPRINT_READ':return{...state,rngState:event.rngStateAfter,citizens:replaceCitizen(state,event.citizenId,(citizen)=>removeStoredItem(citizen,event.item.id,event.source))}
     case 'CONSTRUCTION_DISCOVERED':{const ids=constructionDiscoveryCascade(event.projectId);let construction=state.town.construction;for(const id of ids){const project=construction[id];if(project&&!project.discovered)construction={...construction,[id]:{...project,discovered:true}}}return construction===state.town.construction?state:{...state,town:{...state.town,construction}}}
     case 'CONSTRUCTION_AP_CONTRIBUTED':{const project=state.town.construction[event.projectId];if(!project)return state;return{...state,town:{...state.town,construction:{...state.town.construction,[event.projectId]:{...project,apContributed:project.apContributed+event.amount}}}}}

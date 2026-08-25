@@ -21,54 +21,86 @@ This document records the historical basis for Live2Nite's citizen-home and dail
 
 ## Structural home progression
 
-PR #21 uses the later Hordes / Season-16 progression documented by Eternal Twin because it forms a complete mature progression and matches the later-style Home UI being used as an information-architecture reference.
+Live2Nite uses the later Hordes / Season-16 progression documented by Eternal Twin because it forms a complete mature progression and matches the later-style Home UI used by the project.
 
 | Level | Home | Structural defense | Upgrade AP | Live2Nite material handling |
 | ---: | --- | ---: | ---: | --- |
 | 0 | Camp Bed | 0 | — | starting state |
 | 1 | Tent | 1 | 2 | no materials |
-| 2 | Hovel | 4 | 4 | 1 Rotting Log; historical item maps directly |
-| 3 | Shack | 9 | 5 | 1 Twisted Plank; historical item maps directly |
-| 4 | House | 16 | 6 | 1 Scrap Metal; historical item maps directly |
-| 5 | Fenced House | 25 | 6 | later historical resource mix is simplified to represented wood/metal |
-| 6 | Fortified Shelter | 36 | 7 | later historical resource mix is simplified to represented concrete/wood/metal |
-| 7 | Bunker | 49 | 7 | later historical resource mix is simplified to represented advanced materials |
-| 8 | Castle | 64 | 8 | later historical resource mix is simplified to represented advanced materials |
+| 2 | Hovel | 4 | 4 | 1 Rotting Log; represented directly |
+| 3 | Shack | 9 | 5 | 1 Twisted Plank; represented directly |
+| 4 | House | 16 | 6 | 1 Scrap Metal; represented directly |
+| 5 | Fenced House | 25 | 6 | mapped represented materials plus explicit Padlock and Chain blocker |
+| 6 | Fortified Shelter | 36 | 7 | mapped represented materials plus explicit Cardboard blocker |
+| 7 | Bunker | 49 | 7 | mapped represented materials plus explicit Metal Structure / Powered Mini Hi-Fi blockers |
+| 8 | Castle | 64 | 8 | mapped represented materials plus explicit Metal Structure / Car Door blockers |
 
 Evidence: https://wiki.eternal-twin.net/hordes/maison
 
 Older English Die2Nite documentation records a different defense curve and some different names/material requirements. Those values remain useful historical evidence, but Live2Nite does **not** mix the older defense table into the Season-16 progression. See https://die2nite.fandom.com/wiki/Your_House.
 
+PR #51 removes the prior high-tier substitute-material approximation. If a source requirement has no modeled Live2Nite item/acquisition mechanic, that tier stays visible but fails closed rather than silently accepting a different material.
+
 ### High-tier AP boundary
 
-Ordinary Live2Nite citizens currently have the historically familiar 6 AP baseline. The Fortified Shelter, Bunker, and Castle upgrades therefore remain visible but cannot yet be completed from a fresh 6-AP day. This is intentional: the game will eventually gain historically grounded ways of exceeding the ordinary AP budget through other systems. The implementation does not falsify the home table by lowering those 7/8 AP costs.
+Ordinary Live2Nite citizens currently have the historically familiar 6 AP baseline. The Fortified Shelter, Bunker, and Castle upgrades therefore remain visible but cannot yet be completed from a fresh 6-AP day. The implementation does not falsify the home table by lowering those 7/8 AP costs.
+
+### Structural anti-theft threshold
+
+For the later Hordes progression used here, Fenced House and higher protect the home from ordinary foreign-home deposit/intrusion/theft. The separate Lock work supplies equivalent ordinary anti-theft protection before that structural threshold.
+
+Evidence: https://wiki.eternal-twin.net/hordes/maison and https://wiki.eternal-twin.net/hordes/vol
 
 ## Personal defense versus town contribution
 
-The Home now distinguishes two defense layers:
+The Home distinguishes two defense layers:
 
 1. **Personal home defense** protects that citizen when zombies breach the town.
 2. **Eligible/contributable home defense** is the structural and installed-improvement portion which feeds the shared town-defense calculation.
 
-Loose defensive objects stored in the citizen's private chest remain full-strength personal protection but are excluded from the 40%/80% town contribution. The historical town contribution is therefore derived from structural home defense and eligible installed improvements, not every defensive object a citizen happens to hoard privately.
-
-The shared calculation is:
+Loose defensive objects stored in the citizen's private chest remain full-strength personal protection but are excluded from the 40%/80% town contribution. The shared calculation is:
 
 `floor(sum(eligible home defense for living citizens in town) × contribution ratio)`
 
 where the contribution ratio is normally **0.40** and becomes **0.80** with Circular Quarters.
 
-## Supported Home Improvements
+## Home works represented in PR #51
 
-The later Home system contains many Hero/home works. PR #21 implements only the subset whose effects already fit Live2Nite's current simulation:
+The later Home system contains many Hero/home works. PR #51 records the broader work catalogue but only enables construction where the required effect and source dependencies are represented.
 
-- **Fence** — one installed level, +3 personal/eligible defense;
-- **Reinforcements** — up to ten levels, +1 personal/eligible defense per level;
-- **More Storage** — up to thirteen levels, +1 Home Chest slot per level, using the documented AP curve where available.
+- **Fence** — +3 personal/eligible defense; effect represented, missing structural input keeps construction blocked.
+- **Reinforcements** — up to ten levels, +1 personal/eligible defense per level; existing `wire_mesh` represents the source fencing input used by later levels.
+- **More Storage** — up to thirteen levels, +1 Home Chest slot per level.
+- **Rudimentary Alarm** — records/identifies intrusion and guarantees identification of theft from that home.
+- **Large Curtain** — hides Home Chest contents from visitors until a successful intrusion.
+- **Lock** — blocks ordinary foreign-home deposit, intrusion and theft; construction remains blocked while Padlock and Chain is unmodeled.
+- **Siesta** — one daily attempt when below full AP; 33% / 66% / 99% chance by level to recover +2 AP. The Mattress-dependent level remains blocked until Mattress is represented.
+- **Kitchen** — catalogued, effect unavailable until the cooking subsystem exists.
+- **Laboratory** — catalogued, effect unavailable until the production/drug subsystem exists.
 
-The identities/effects come from historical Home/Hero documentation. **Access is currently a Live2Nite adaptation:** until Hero/profession mechanics exist, ordinary citizens are allowed to construct this supported subset so the Home system can be exercised. That temporary access rule should be revisited when the Hero system is implemented. Some reinforcement/fence material costs are also adapted because Live2Nite does not yet represent the full historical item catalog.
+Hero/profession restrictions are still deferred. Until that system exists, ordinary-citizen access remains a Live2Nite integration boundary that should be revisited with Hero implementation.
 
-Deferred improvements include Alarm, Lock, Kitchen, Laboratory, Curtain, Siesta and other works whose real purpose depends on theft, cooking, drugs, privacy, Hero actions or other systems not yet present.
+Evidence: https://wiki.eternal-twin.net/hordes/travaux
+
+## Foreign-home transfer, theft, and pillage
+
+The ordinary pre-Chaos behavior implemented by PR #51 is:
+
+- a living resident must be outside town before another citizen can deposit into or steal from that home;
+- Fenced House+ or the Lock work blocks ordinary deposit/intrusion/theft;
+- Curtain hides chest contents until an intrusion succeeds;
+- deposit, theft and pillage share one successful foreign-home item transfer allowance per actor per day;
+- deposit has a 10% identification chance;
+- ordinary theft has a 50% identification chance;
+- Rudimentary Alarm guarantees identification of theft and identifies alarmed intrusion attempts;
+- pillage targets a dead citizen's abandoned chest, is always identified, and consumes the same daily transfer allowance;
+- corpse disposal remains a separate body-management action.
+
+Unspotted deposit/theft event text remains anonymous; spotted actions name the actor.
+
+Evidence: https://wiki.eternal-twin.net/hordes/vol and https://wiki.eternal-twin.net/hordes/travaux
+
+Chaos-mode overrides are intentionally not implemented in this pass.
 
 ## Starter-package handling
 
@@ -84,15 +116,18 @@ Container results use the game's seeded RNG, so the same state and action order 
 
 ## AP semantics
 
-Food and water do not add six AP on top of the current amount. They restore the ordinary citizen to the 6 AP cap. For example, eating at 1 AP leaves the citizen at 6 AP, effectively recovering 5. This is why players historically tried to spend their remaining AP before eating or drinking.
+Food and water do not add six AP on top of the current amount. They restore the ordinary citizen to the 6 AP cap. For example, eating at 1 AP leaves the citizen at 6 AP, effectively recovering 5.
 
 Food and water are separate daily refresh opportunities. Live2Nite records `ate` and `drank` separately and resets both at the start of the next day. Hydration/status timing is documented separately in `status-hydration.md`.
+
+Siesta is different: it is unavailable while already at full AP and, on success, adds 2 AP rather than restoring to the ordinary baseline.
 
 ## Deliberately deferred
 
 - complete special-food catalog and side effects;
 - complete Doggy Bag and Welcome Pack probability tables;
-- exact mature resource costs for high home tiers until their historical item types exist in the game;
-- theft, locks, curtains, alarms, and social consequences for taking bank/home items;
+- runtime/acquisition support for source items still represented as structural/work blockers;
 - Hero-only access restrictions and Hero-specific home actions;
-- cooking, laboratory, drugs and other improvement-dependent systems.
+- Chaos-mode theft/pillage overrides;
+- Kitchen cooking recipes/effects;
+- Laboratory production/drug actions.

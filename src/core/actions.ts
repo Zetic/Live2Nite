@@ -3,7 +3,7 @@ import { CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
-import { HOME_IMPROVEMENTS, hasPersonalMaterials, improvementNextLevel, nextHomeDefinition } from './home'
+import { HOME_IMPROVEMENTS, canBuildImprovementSource, foreignHomeStorageVisible, hasPersonalMaterials, homeImprovementLevel, homeLevelSourceReady, homePreventsTheft, homeTransferUsedToday, improvementNextLevel, nextHomeDefinition, siestaUsedToday } from './home'
 import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
 import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
 import { canToolOpen, openableDefinition } from './openables'
@@ -49,6 +49,23 @@ function addConsumableActions(state:GameState,actions:GameCommand[],citizen:Citi
   }
 }
 
+function addForeignHomeActions(state:GameState,actions:GameCommand[],citizen:Citizen):void{
+  const hasRucksackSpace=citizen.inventory.length<citizen.inventoryCapacity
+  const transferAvailable=!homeTransferUsedToday(state,citizen.id)
+  for(const target of state.citizens){
+    if(target.id===citizen.id)continue
+    if(target.alive){
+      if(target.location.type!=='world'||homePreventsTheft(target))continue
+      if(transferAvailable&&target.home.storage.length<target.home.storageCapacity){for(const item of citizen.inventory)actions.push({type:'DEPOSIT_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})}
+      const visible=foreignHomeStorageVisible(state,citizen.id,target)
+      if(!visible){actions.push({type:'INTRUDE_HOME',citizenId:citizen.id,targetCitizenId:target.id});continue}
+      if(transferAvailable&&hasRucksackSpace)for(const item of target.home.storage)actions.push({type:'STEAL_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
+      continue
+    }
+    if(transferAvailable&&hasRucksackSpace)for(const item of target.home.storage)actions.push({type:'PILLAGE_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
+  }
+}
+
 export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)
   if(!citizen||!citizen.alive||state.clock.phase!=='day')return[]
@@ -62,14 +79,22 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     for(const item of [...citizen.inventory,...citizen.home.storage])if(itemHasCapability(item.type,'blueprint'))actions.push({type:'READ_BLUEPRINT',citizenId,itemId:item.id})
     for(const item of citizen.inventory){actions.push({type:'DEPOSIT_ITEM',citizenId,itemId:item.id});if(citizen.home.storage.length<citizen.home.storageCapacity)actions.push({type:'MOVE_ITEM_TO_HOME',citizenId,itemId:item.id})}
     if(citizen.inventory.length<citizen.inventoryCapacity){for(const item of citizen.home.storage)actions.push({type:'MOVE_ITEM_TO_RUCKSACK',citizenId,itemId:item.id});for(const item of state.town.bank)actions.push({type:'WITHDRAW_BANK_ITEM',citizenId,itemId:item.id});const waterTaken=Number(citizen.daily.waterTaken)+Number(Boolean(citizen.daily.bonusWaterTaken));if(waterTaken<wellDailyWithdrawals(state)&&state.town.well.water>0)actions.push({type:'TAKE_WATER',citizenId})}
+    addForeignHomeActions(state,actions,citizen)
     const corpses=state.citizens.filter((target)=>target.id!==citizen.id&&!target.alive&&target.home.holdsBody)
     for(const corpse of corpses){
       if(citizen.ap>=2)actions.push({type:'DISPOSE_CORPSE_OUTSIDE',citizenId,targetCitizenId:corpse.id})
       if([...citizen.inventory,...citizen.home.storage].some((item)=>item.type==='water_ration'))actions.push({type:'DISPOSE_CORPSE_WATER',citizenId,targetCitizenId:corpse.id})
     }
     const nextHome=nextHomeDefinition(citizen.home.level)
-    if(nextHome&&citizen.home.upgradedDay!==state.day&&citizen.ap>=nextHome.apCost&&hasPersonalMaterials(citizen,nextHome.resources))actions.push({type:'UPGRADE_HOME',citizenId})
-    if(citizen.home.level!=='camp_bed'){for(const improvementId of Object.keys(HOME_IMPROVEMENTS) as HomeImprovementId[]){const nextLevel=improvementNextLevel(citizen,improvementId);if(nextLevel===null)continue;const definition=HOME_IMPROVEMENTS[improvementId];if(citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})}}
+    if(nextHome&&homeLevelSourceReady(nextHome)&&citizen.home.upgradedDay!==state.day&&citizen.ap>=nextHome.apCost&&hasPersonalMaterials(citizen,nextHome.resources))actions.push({type:'UPGRADE_HOME',citizenId})
+    if(citizen.home.level!=='camp_bed'){
+      for(const improvementId of Object.keys(HOME_IMPROVEMENTS) as HomeImprovementId[]){
+        const nextLevel=improvementNextLevel(citizen,improvementId);if(nextLevel===null)continue
+        const definition=HOME_IMPROVEMENTS[improvementId]
+        if(canBuildImprovementSource(definition,nextLevel)&&citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})
+      }
+      if(homeImprovementLevel(citizen,'siesta')>0&&citizen.ap<citizen.maxAp&&!siestaUsedToday(state,citizen.id))actions.push({type:'USE_HOME_SIESTA',citizenId})
+    }
     if(citizen.ap>=CONSTRUCTION_AP_COST&&canContributeConstructionByStatus(citizen)){for(const projectId of constructionFrontier(state))if(hasProjectMaterials(state,projectId))actions.push({type:'CONTRIBUTE_CONSTRUCTION',citizenId,projectId})}
     if(state.town.construction.workshop.completed){for(const recipeId of WORKSHOP_RECIPE_ORDER)if((!hasHandWound(citizen)||WORKSHOP_RECIPES[recipeId].category!=='repair')&&citizen.ap>=workshopRecipeApCost(state,recipeId,citizen.id)&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})}
     if(state.town.gateOpen){if(citizen.ap>=GATE_AP_COST&&canOperateGateByStatus(citizen))actions.push({type:'CLOSE_GATE',citizenId});actions.push({type:'EXIT_TOWN',citizenId})}else if(citizen.ap>=GATE_AP_COST&&canOperateGateByStatus(citizen)&&!gateLockedAtHour(state,state.clock.hour))actions.push({type:'OPEN_GATE',citizenId})
