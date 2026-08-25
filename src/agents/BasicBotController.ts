@@ -48,7 +48,15 @@ export class BasicBotController implements AgentController {
       const open=pick(actions,'OPEN_GATE');if(open)return open;return pick(actions,'EXIT_TOWN')
     }
     const control=zoneControl(game,citizen.location.x,citizen.location.y)
-    if(control.trapped&&!scoutCamouflageActive(citizen)){if(temporaryControlActive(game,citizen.id)||relativeControlActive(game,citizen.id)){const safety=missionSafety(game,citizenId);const refill=refillAction(citizen,actions,safety.returnAp);if(refill)return refill;return controlAwareStepTowardTown(game,citizen,actions)}const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon;const flee=pick(actions,'FLEE_ZOMBIES');if(flee&&(mission?.phase==='return'||game.clock.hour>=AI_TUNING.fleeZombieTrapHour))return flee;if(game.clock.hour>=AI_TUNING.lateBarehandedFightHour){const fists=pick(actions,'ATTACK_BAREHANDED');if(fists)return fists}if(mission?.phase==='camp')return campingAction(game,citizen,actions);return null}
+    if(control.trapped&&scoutCamouflageActive(citizen)){
+      if(mission?.phase==='camp')return campingAction(game,citizen,actions)
+      if(mission?.phase==='outbound'){
+        const direction=nextDirectionToward(game,{x:citizen.location.x,y:citizen.location.y},mission.target)
+        if(direction){const move=controlAwareMove(game,citizen,actions,direction,false);if(move)return move}
+      }
+      return controlAwareStepTowardTown(game,citizen,actions)
+    }
+    if(control.trapped){if(temporaryControlActive(game,citizen.id)||relativeControlActive(game,citizen.id)){const safety=missionSafety(game,citizenId);const refill=refillAction(citizen,actions,safety.returnAp);if(refill)return refill;return controlAwareStepTowardTown(game,citizen,actions)}const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon;const flee=pick(actions,'FLEE_ZOMBIES');if(flee&&(mission?.phase==='return'||game.clock.hour>=AI_TUNING.fleeZombieTrapHour))return flee;if(game.clock.hour>=AI_TUNING.lateBarehandedFightHour){const fists=pick(actions,'ATTACK_BAREHANDED');if(fists)return fists}if(mission?.phase==='camp')return campingAction(game,citizen,actions);return null}
     if(mission?.role==='rescue'&&zoneControlState(game,citizen.location.x,citizen.location.y)==='fragile'){const weapon=bestWeaponAction(citizen,actions);if(weapon)return weapon}
     const opportunistic=opportunisticFieldAction(game,citizen,actions,mission);if(opportunistic)return opportunistic
     if(citizen.status.hydration!=='normal'&&!carried(citizen,'water_ration'))return controlAwareStepTowardTown(game,citizen,actions)
