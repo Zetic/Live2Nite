@@ -12,7 +12,6 @@ export interface HomeLevelDefinition {
   resources: Partial<Record<ItemType, number>>
   /** Source requirements whose runtime item does not yet exist in Live2Nite. */
   unmodeledResources: readonly string[]
-  antiTheft?: boolean
 }
 
 /**
@@ -29,22 +28,22 @@ export const HOME_LEVELS: Record<HomeLevel, HomeLevelDefinition> = {
   fenced_house: {
     level:'fenced_house',name:'Fenced House',defense:25,apCost:6,
     resources:{twisted_plank:2,scrap_metal:2,patchwork_beam:1},
-    unmodeledResources:['Padlock and Chain × 1'],antiTheft:true,
+    unmodeledResources:['Padlock and Chain × 1'],
   },
   fortified_shelter: {
     level:'fortified_shelter',name:'Fortified Shelter',defense:36,apCost:7,
     resources:{unshaped_concrete_block:1,twisted_plank:2,scrap_metal:3,sheet_metal_bits:1},
-    unmodeledResources:['Cardboard × 1'],antiTheft:true,
+    unmodeledResources:['Cardboard × 1'],
   },
   bunker: {
     level:'bunker',name:'Bunker',defense:49,apCost:7,
     resources:{nuts_and_bolts:1,unshaped_concrete_block:2,sheet_metal_bits:1,scrap_metal:6,old_door:1},
-    unmodeledResources:['Metal Structure × 1','Powered Mini Hi-Fi × 1'],antiTheft:true,
+    unmodeledResources:['Metal Structure × 1','Powered Mini Hi-Fi × 1'],
   },
   castle: {
     level:'castle',name:'Castle',defense:64,apCost:8,
     resources:{nuts_and_bolts:2,unshaped_concrete_block:2,sheet_metal_bits:3,twisted_plank:5,scrap_metal:8,patchwork_beam:3},
-    unmodeledResources:['Metal Structure × 2','Car Door × 1'],antiTheft:true,
+    unmodeledResources:['Metal Structure × 2','Car Door × 1'],
   },
 }
 
@@ -116,7 +115,7 @@ export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefiniti
   lock:{
     id:'lock',name:'Lock',maxLevel:1,
     description:'Prevents ordinary citizens from intruding into or stealing from this home.',
-    defensePerLevel:0,storagePerLevel:0,apCost:()=>6,resources:()=>({chain:1}),unmodeledResources:()=>['Lock × 1'],
+    defensePerLevel:0,storagePerLevel:0,apCost:()=>6,resources:()=>({chain:1}),unmodeledResources:()=>['Padlock and Chain × 1'],
     status:'partial',effectReady:true,
   },
   siesta:{
@@ -176,7 +175,7 @@ export function improvementStorageCapacity(citizen:Citizen):number{return BASE_H
 export function improvementSourceReady(definition:HomeImprovementDefinition,nextLevel:number):boolean{return definition.unmodeledResources(nextLevel).length===0}
 export function canBuildImprovementSource(definition:HomeImprovementDefinition,nextLevel:number):boolean{return definition.effectReady&&improvementSourceReady(definition,nextLevel)}
 
-export function homePreventsTheft(citizen:Citizen):boolean{return Boolean(HOME_LEVELS[citizen.home.level].antiTheft)||hasHomeImprovement(citizen,'lock')}
+export function homePreventsTheft(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'lock')}
 export function homeHasCurtain(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'curtain')}
 export function homeHasAlarm(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'alarm')}
 
