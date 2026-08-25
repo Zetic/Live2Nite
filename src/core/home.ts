@@ -1,6 +1,6 @@
 import { homeDefenseBonus } from './construction'
 import { createItemInstance, homeDefenseFor } from './items'
-import type { Citizen, CitizenDailyState, CitizenHome, GameState, HomeImprovementId, HomeLevel, ItemType } from './types'
+import type { Citizen, CitizenDailyState, CitizenHome, GameEvent, GameState, HomeImprovementId, HomeLevel, ItemType } from './types'
 
 export const BASE_HOME_STORAGE = 4
 
@@ -10,29 +10,47 @@ export interface HomeLevelDefinition {
   defense: number
   apCost: number
   resources: Partial<Record<ItemType, number>>
-  historicalMaterials: boolean
+  /** Source requirements whose runtime item does not yet exist in Live2Nite. */
+  unmodeledResources: readonly string[]
+  antiTheft?: boolean
 }
 
 /**
- * Season-16 Hordes home defense/AP progression. The first four material costs map directly
- * to items already represented by Live2Nite. Higher tiers preserve the historical path,
- * AP, and defense values but use documented Live2Nite substitutions until the broader
- * resource catalog (beams, chains, sheet fragments, nuts/bolts, metal structures, etc.) exists.
+ * MyHordes/Hordes mature home progression. Runtime item substitutions are intentionally
+ * forbidden: when a source material is still absent from Live2Nite, the tier remains
+ * visible but fails closed until that item is implemented.
  */
 export const HOME_LEVELS: Record<HomeLevel, HomeLevelDefinition> = {
-  camp_bed: { level:'camp_bed', name:'Camp Bed', defense:0, apCost:0, resources:{}, historicalMaterials:true },
-  tent: { level:'tent', name:'Tent', defense:1, apCost:2, resources:{}, historicalMaterials:true },
-  hovel: { level:'hovel', name:'Hovel', defense:4, apCost:4, resources:{ rotten_log:1 }, historicalMaterials:true },
-  shack: { level:'shack', name:'Shack', defense:9, apCost:5, resources:{ twisted_plank:1 }, historicalMaterials:true },
-  house: { level:'house', name:'House', defense:16, apCost:6, resources:{ scrap_metal:1 }, historicalMaterials:true },
-  fenced_house: { level:'fenced_house', name:'Fenced House', defense:25, apCost:6, resources:{ twisted_plank:2, wrought_iron:2 }, historicalMaterials:false },
-  fortified_shelter: { level:'fortified_shelter', name:'Fortified Shelter', defense:36, apCost:7, resources:{ unshaped_concrete_block:1, twisted_plank:2, wrought_iron:3 }, historicalMaterials:false },
-  bunker: { level:'bunker', name:'Bunker', defense:49, apCost:7, resources:{ unshaped_concrete_block:2, twisted_plank:2, wrought_iron:6, old_door:1 }, historicalMaterials:false },
-  castle: { level:'castle', name:'Castle', defense:64, apCost:8, resources:{ unshaped_concrete_block:2, twisted_plank:5, wrought_iron:8, old_door:1, battery:1 }, historicalMaterials:false },
+  camp_bed: { level:'camp_bed', name:'Camp Bed', defense:0, apCost:0, resources:{}, unmodeledResources:[] },
+  tent: { level:'tent', name:'Tent', defense:1, apCost:2, resources:{}, unmodeledResources:[] },
+  hovel: { level:'hovel', name:'Hovel', defense:4, apCost:4, resources:{ rotten_log:1 }, unmodeledResources:[] },
+  shack: { level:'shack', name:'Shack', defense:9, apCost:5, resources:{ twisted_plank:1 }, unmodeledResources:[] },
+  house: { level:'house', name:'House', defense:16, apCost:6, resources:{ scrap_metal:1 }, unmodeledResources:[] },
+  fenced_house: {
+    level:'fenced_house',name:'Fenced House',defense:25,apCost:6,
+    resources:{twisted_plank:2,scrap_metal:2,patchwork_beam:1},
+    unmodeledResources:['Padlock and Chain × 1'],antiTheft:true,
+  },
+  fortified_shelter: {
+    level:'fortified_shelter',name:'Fortified Shelter',defense:36,apCost:7,
+    resources:{unshaped_concrete_block:1,twisted_plank:2,scrap_metal:3,sheet_metal_bits:1},
+    unmodeledResources:['Cardboard × 1'],antiTheft:true,
+  },
+  bunker: {
+    level:'bunker',name:'Bunker',defense:49,apCost:7,
+    resources:{nuts_and_bolts:1,unshaped_concrete_block:2,sheet_metal_bits:1,scrap_metal:6,old_door:1},
+    unmodeledResources:['Metal Structure × 1','Powered Mini Hi-Fi × 1'],antiTheft:true,
+  },
+  castle: {
+    level:'castle',name:'Castle',defense:64,apCost:8,
+    resources:{nuts_and_bolts:2,unshaped_concrete_block:2,sheet_metal_bits:3,twisted_plank:5,scrap_metal:8,patchwork_beam:3},
+    unmodeledResources:['Metal Structure × 2','Car Door × 1'],antiTheft:true,
+  },
 }
 
 export const HOME_LEVEL_ORDER: readonly HomeLevel[] = ['camp_bed','tent','hovel','shack','house','fenced_house','fortified_shelter','bunker','castle']
 
+export type HomeImprovementStatus='implemented'|'partial'|'wip'
 export interface HomeImprovementDefinition {
   id: HomeImprovementId
   name: string
@@ -42,8 +60,10 @@ export interface HomeImprovementDefinition {
   storagePerLevel: number
   apCost: (nextLevel:number) => number
   resources: (nextLevel:number) => Partial<Record<ItemType,number>>
-  historicalEffect: boolean
-  historicalCost: boolean
+  unmodeledResources: (nextLevel:number) => readonly string[]
+  status: HomeImprovementStatus
+  /** If false, the work is catalogued but cannot be constructed until its effect exists. */
+  effectReady: boolean
 }
 
 function storageAp(nextLevel:number):number {
@@ -52,94 +72,119 @@ function storageAp(nextLevel:number):number {
   if(nextLevel===5)return 4
   return 6
 }
-function reinforcementAp(nextLevel:number):number {return nextLevel<=4?3:6}
-function reinforcementResources(nextLevel:number):Partial<Record<ItemType,number>> {
-  if(nextLevel===1)return{}
-  if(nextLevel>=7)return{wrought_iron:1,scrap_metal:1}
-  return{wrought_iron:1}
-}
+function reinforcementAp(nextLevel:number):number{return nextLevel<=4?3:6}
+function reinforcementResources(nextLevel:number):Partial<Record<ItemType,number>>{if(nextLevel===1)return{};return nextLevel>=7?{wire_mesh:1,scrap_metal:1}:{wire_mesh:1}}
+function reinforcementMissing():readonly string[]{return[]}
+function siestaResources(nextLevel:number):Partial<Record<ItemType,number>>{return nextLevel===2?{twisted_plank:1}:{}}
+function siestaMissing(nextLevel:number):readonly string[]{return nextLevel===3?['Mattress × 1']:[]}
+function kitchenResources(nextLevel:number):Partial<Record<ItemType,number>>{return nextLevel===2?{pathetic_penknife:1}:{}}
+function kitchenMissing(nextLevel:number):readonly string[]{return nextLevel===3?['Microwave × 1']:nextLevel===4?['Refrigerator × 1']:[]}
+function laboratoryResources(nextLevel:number):Partial<Record<ItemType,number>>{if(nextLevel===2)return{electronic_component:1};if(nextLevel===3)return{copper_pipe:1};if(nextLevel===4)return{engine:1};return{}}
+function laboratoryMissing(nextLevel:number):readonly string[]{return nextLevel===1?['Washing Machine × 1']:[]}
 
 export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefinition> = {
   reinforcements:{
     id:'reinforcements',name:'Reinforcements',maxLevel:10,
-    description:'Permanent structural reinforcement. Each level adds 1 personal defense and is eligible for town contribution.',
-    defensePerLevel:1,storagePerLevel:0,apCost:reinforcementAp,resources:reinforcementResources,
-    historicalEffect:true,historicalCost:false,
+    description:'Permanent reinforcement. Each installed level adds 1 personal and contributable home defense.',
+    defensePerLevel:1,storagePerLevel:0,apCost:reinforcementAp,resources:reinforcementResources,unmodeledResources:reinforcementMissing,
+    status:'implemented',effectReady:true,
   },
   fence:{
     id:'fence',name:'Fence',maxLevel:1,
-    description:'A permanent defensive fence around the home. It adds 3 personal defense and contributes to town defense.',
-    defensePerLevel:3,storagePerLevel:0,apCost:()=>3,resources:()=>({twisted_plank:1,wrought_iron:1}),
-    historicalEffect:true,historicalCost:false,
+    description:'Permanent defensive fencing. Adds 3 personal and contributable home defense.',
+    defensePerLevel:3,storagePerLevel:0,apCost:()=>3,resources:()=>({chain:1}),unmodeledResources:()=>['Metal Structure × 1'],
+    status:'partial',effectReady:true,
   },
   storage:{
     id:'storage',name:'More Storage',maxLevel:13,
     description:'Adds one permanent Home Chest slot per level.',
-    defensePerLevel:0,storagePerLevel:1,apCost:storageAp,resources:()=>({}),
-    historicalEffect:true,historicalCost:true,
+    defensePerLevel:0,storagePerLevel:1,apCost:storageAp,resources:()=>({}),unmodeledResources:()=>[],
+    status:'implemented',effectReady:true,
+  },
+  alarm:{
+    id:'alarm',name:'Rudimentary Alarm',maxLevel:1,
+    description:'Records intrusion attempts against this home in its register.',
+    defensePerLevel:0,storagePerLevel:0,apCost:()=>4,resources:()=>({scrap_metal:1}),unmodeledResources:()=>[],
+    status:'implemented',effectReady:true,
+  },
+  curtain:{
+    id:'curtain',name:'Large Curtain',maxLevel:1,
+    description:'Hides the Home Chest contents from visitors until they successfully intrude.',
+    defensePerLevel:0,storagePerLevel:0,apCost:()=>4,resources:()=>({}),unmodeledResources:()=>[],
+    status:'implemented',effectReady:true,
+  },
+  lock:{
+    id:'lock',name:'Lock',maxLevel:1,
+    description:'Prevents ordinary citizens from intruding into or stealing from this home.',
+    defensePerLevel:0,storagePerLevel:0,apCost:()=>6,resources:()=>({chain:1}),unmodeledResources:()=>['Lock × 1'],
+    status:'partial',effectReady:true,
+  },
+  siesta:{
+    id:'siesta',name:'Siesta',maxLevel:3,
+    description:'Provides one daily attempt to recover 2 AP. Success improves from 33% to 66% to 99%.',
+    defensePerLevel:0,storagePerLevel:0,
+    apCost:(nextLevel)=>nextLevel===1?6:nextLevel===2?3:4,
+    resources:siestaResources,unmodeledResources:siestaMissing,
+    status:'partial',effectReady:true,
+  },
+  kitchen:{
+    id:'kitchen',name:'Kitchen',maxLevel:4,
+    description:'MyHordes home cooking progression. Listed now; cooking remains unavailable until the recipe/cooking subsystem exists.',
+    defensePerLevel:0,storagePerLevel:0,
+    apCost:(nextLevel)=>nextLevel===1?6:nextLevel===2?3:4,
+    resources:kitchenResources,unmodeledResources:kitchenMissing,
+    status:'wip',effectReady:false,
+  },
+  laboratory:{
+    id:'laboratory',name:'Laboratory',maxLevel:4,
+    description:'MyHordes home laboratory progression. Listed now; drug-production actions remain unavailable until that subsystem exists.',
+    defensePerLevel:0,storagePerLevel:0,
+    apCost:(nextLevel)=>nextLevel===1?6:nextLevel===2||nextLevel===3?4:6,
+    resources:laboratoryResources,unmodeledResources:laboratoryMissing,
+    status:'wip',effectReady:false,
   },
 }
 
-export function createDailyState(): CitizenDailyState {
-  return { ate: false, drank: false, waterTaken: false }
-}
+export function createDailyState(): CitizenDailyState {return{ate:false,drank:false,waterTaken:false}}
 
 export function createStarterHome(citizenId: string): CitizenHome {
   return {
-    level: 'camp_bed',
-    defense: HOME_LEVELS.camp_bed.defense,
-    storageCapacity: BASE_HOME_STORAGE,
-    storage: [
-      createItemInstance(`starter-${citizenId}-doggy`, 'doggy_bag'),
-      createItemInstance(`starter-${citizenId}-welcome`, 'citizen_welcome_pack'),
-    ],
+    level:'camp_bed',defense:HOME_LEVELS.camp_bed.defense,storageCapacity:BASE_HOME_STORAGE,
+    storage:[createItemInstance(`starter-${citizenId}-doggy`,'doggy_bag'),createItemInstance(`starter-${citizenId}-welcome`,'citizen_welcome_pack')],
     upgradedDay:null,
-    improvements:{reinforcements:0,fence:0,storage:0},
-    holdsBody:false,
-    corpseAttacked:false,
+    improvements:{reinforcements:0,fence:0,storage:0,alarm:0,curtain:0,lock:0,siesta:0,kitchen:0,laboratory:0},
+    holdsBody:false,corpseAttacked:false,
   }
 }
 
-export function homeName(level: HomeLevel): string { return HOME_LEVELS[level].name }
+export function homeName(level:HomeLevel):string{return HOME_LEVELS[level].name}
+export function nextHomeLevel(level:HomeLevel):HomeLevel|null{const index=HOME_LEVEL_ORDER.indexOf(level);return index>=0&&index<HOME_LEVEL_ORDER.length-1?HOME_LEVEL_ORDER[index+1]:null}
+export function nextHomeDefinition(level:HomeLevel):HomeLevelDefinition|null{const next=nextHomeLevel(level);return next?HOME_LEVELS[next]:null}
+export function homeLevelSourceReady(definition:HomeLevelDefinition):boolean{return definition.unmodeledResources.length===0}
 
-export function nextHomeLevel(level: HomeLevel): HomeLevel | null {
-  const index=HOME_LEVEL_ORDER.indexOf(level)
-  return index>=0&&index<HOME_LEVEL_ORDER.length-1?HOME_LEVEL_ORDER[index+1]:null
-}
+export function personalMaterialCount(citizen:Citizen,type:ItemType):number{return citizen.inventory.filter((item)=>item.type===type).length+citizen.home.storage.filter((item)=>item.type===type).length}
+export function hasPersonalMaterials(citizen:Citizen,resources:Partial<Record<ItemType,number>>):boolean{return Object.entries(resources).every(([type,amount])=>personalMaterialCount(citizen,type as ItemType)>=(amount??0))}
 
-export function nextHomeDefinition(level:HomeLevel):HomeLevelDefinition|null {
-  const next=nextHomeLevel(level)
-  return next?HOME_LEVELS[next]:null
-}
+export function homeImprovementLevel(citizen:Citizen,id:HomeImprovementId):number{return citizen.home.improvements?.[id]??0}
+export function hasHomeImprovement(citizen:Citizen,id:HomeImprovementId):boolean{return homeImprovementLevel(citizen,id)>0}
+export function homeImprovementDefense(citizen:Citizen):number{return homeImprovementLevel(citizen,'reinforcements')*HOME_IMPROVEMENTS.reinforcements.defensePerLevel+homeImprovementLevel(citizen,'fence')*HOME_IMPROVEMENTS.fence.defensePerLevel}
+export function contributableHomeDefense(citizen:Citizen,state?:GameState):number{return citizen.home.defense+homeImprovementDefense(citizen)+(state?homeDefenseBonus(state):0)}
+export function personalDefense(citizen:Citizen,state?:GameState):number{return contributableHomeDefense(citizen,state)+citizen.home.storage.reduce((sum,item)=>sum+homeDefenseFor(item.type),0)}
 
-export function personalMaterialCount(citizen:Citizen,type:ItemType):number {
-  return citizen.inventory.filter((item)=>item.type===type).length+citizen.home.storage.filter((item)=>item.type===type).length
-}
+export function improvementNextLevel(citizen:Citizen,id:HomeImprovementId):number|null{const current=homeImprovementLevel(citizen,id);return current<HOME_IMPROVEMENTS[id].maxLevel?current+1:null}
+export function improvementStorageCapacity(citizen:Citizen):number{return BASE_HOME_STORAGE+homeImprovementLevel(citizen,'storage')*HOME_IMPROVEMENTS.storage.storagePerLevel}
+export function improvementSourceReady(definition:HomeImprovementDefinition,nextLevel:number):boolean{return definition.unmodeledResources(nextLevel).length===0}
+export function canBuildImprovementSource(definition:HomeImprovementDefinition,nextLevel:number):boolean{return definition.effectReady&&improvementSourceReady(definition,nextLevel)}
 
-export function hasPersonalMaterials(citizen:Citizen,resources:Partial<Record<ItemType,number>>):boolean {
-  return Object.entries(resources).every(([type,amount])=>personalMaterialCount(citizen,type as ItemType)>=(amount??0))
-}
+export function homePreventsTheft(citizen:Citizen):boolean{return Boolean(HOME_LEVELS[citizen.home.level].antiTheft)||hasHomeImprovement(citizen,'lock')}
+export function homeHasCurtain(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'curtain')}
+export function homeHasAlarm(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'alarm')}
 
-export function homeImprovementDefense(citizen:Citizen):number {
-  return (citizen.home.improvements?.reinforcements??0)*HOME_IMPROVEMENTS.reinforcements.defensePerLevel
-    +(citizen.home.improvements?.fence??0)*HOME_IMPROVEMENTS.fence.defensePerLevel
-}
+function eventThisDay(state:GameState,citizenId:string,predicate:(event:GameEvent)=>boolean):boolean{return state.events.some((event)=>event.day===state.day&&'citizenId'in event&&event.citizenId===citizenId&&predicate(event))}
+export function theftUsedToday(state:GameState,citizenId:string):boolean{return eventThisDay(state,citizenId,(event)=>event.type==='HOME_ITEM_STOLEN')}
+export function pillageUsedToday(state:GameState,citizenId:string):boolean{return eventThisDay(state,citizenId,(event)=>event.type==='HOME_ITEM_PILLAGED')}
+export function siestaUsedToday(state:GameState,citizenId:string):boolean{return eventThisDay(state,citizenId,(event)=>event.type==='HOME_SIESTA_USED')}
+export function intrudedHomeToday(state:GameState,citizenId:string,targetCitizenId:string):boolean{return state.events.some((event)=>event.day===state.day&&event.type==='HOME_INTRUSION_ATTEMPTED'&&event.citizenId===citizenId&&event.targetCitizenId===targetCitizenId&&event.success)}
+export function foreignHomeStorageVisible(state:GameState,citizenId:string,target:Citizen):boolean{return !target.alive||!homeHasCurtain(target)||intrudedHomeToday(state,citizenId,target.id)}
 
-/** Structural/improvement defense eligible for the historical 40%/80% town contribution. */
-export function contributableHomeDefense(citizen:Citizen,state?:GameState):number {
-  return citizen.home.defense+homeImprovementDefense(citizen)+(state?homeDefenseBonus(state):0)
-}
-
-export function personalDefense(citizen: Citizen, state?: GameState): number {
-  return contributableHomeDefense(citizen,state)
-    + citizen.home.storage.reduce((sum, item) => sum + homeDefenseFor(item.type), 0)
-}
-
-export function improvementNextLevel(citizen:Citizen,id:HomeImprovementId):number|null {
-  const current=citizen.home.improvements?.[id]??0
-  return current<HOME_IMPROVEMENTS[id].maxLevel?current+1:null
-}
-
-export function improvementStorageCapacity(citizen:Citizen):number {
-  return BASE_HOME_STORAGE+(citizen.home.improvements?.storage??0)*HOME_IMPROVEMENTS.storage.storagePerLevel
-}
+export function siestaChancePercent(citizen:Citizen):number{const level=homeImprovementLevel(citizen,'siesta');return level<=0?0:level===1?33:level===2?66:99}
