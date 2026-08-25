@@ -1,3 +1,4 @@
+import { professionControlPoints } from './professions'
 import type { Citizen, CitizenStatusId, CitizenStatusState, GameEvent, GameState, HydrationStatus, ItemType, WoundLocation } from './types'
 
 export const DESERT_STEPS_PER_HYDRATION_STAGE = 11
@@ -174,7 +175,7 @@ export function hasHandWound(citizen:Citizen):boolean{return citizen.status.woun
 export function canOperateGateByStatus(citizen:Citizen):boolean{return citizen.status.wound!=='arms'}
 export function canContributeConstructionByStatus(citizen:Citizen):boolean{return citizen.status.wound!=='arms'}
 export function canFightBarehandedByStatus(citizen:Citizen):boolean{return citizen.status.wound!=='hands'&&!citizen.status.terrorized}
-export function citizenControlPoints(citizen:Citizen):number{return citizen.status.terrorized?0:2}
+export function citizenControlPoints(citizen:Citizen):number{return professionControlPoints(citizen)}
 const HAND_WOUND_WEAPON_EXCEPTIONS:readonly ItemType[]=['water_bomb','water_pistol']
 export function canUseWeaponByStatus(citizen:Citizen,type:ItemType):boolean{return !hasHandWound(citizen)||HAND_WOUND_WEAPON_EXCEPTIONS.includes(type)}
 export function travelHydrationTransition(citizen:Citizen):CitizenStatusState|null{
