@@ -8,6 +8,7 @@ import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
 import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
 import { canToolOpen, openableDefinition } from './openables'
 import { RUIN_CATALOG } from './ruinCatalog'
+import { canReplenishWithSpade, type ScavengerSearchCommand } from './scavenging'
 import { normalizeRuinId } from './specialSites'
 import { canContributeConstructionByStatus, canFightBarehandedByStatus, canOperateGateByStatus, canUseWeaponByStatus, hasHandWound } from './status'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
@@ -105,7 +106,15 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   addConsumableActions(state,actions,citizen,zone.groundItems,'ground')
   if(isTownGateZone(x,y)&&state.town.gateOpen)actions.push({type:'ENTER_TOWN',citizenId})
   const control=zoneControl(state,x,y)
-  if(!isTownGateZone(x,y)){if(!control.trapped){if(zone.searchesRemaining>0&&!zone.searchedBy.includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId});else if(zone.searchesRemaining===0&&!(zone.depletedSearchedBy??[]).includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId})}if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone))actions.push({type:'IMPROVE_CAMP',citizenId});actions.push({type:'HIDE_FOR_NIGHT',citizenId})}
+  if(!isTownGateZone(x,y)){
+    if(!control.trapped){
+      if(zone.searchesRemaining>0&&!zone.searchedBy.includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId})
+      else if(zone.searchesRemaining===0&&!(zone.depletedSearchedBy??[]).includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId})
+      if(canReplenishWithSpade(state,citizen,zone))actions.push({type:'SEARCH_ZONE',citizenId,replenishWithSpade:true} as unknown as ScavengerSearchCommand)
+    }
+    if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone))actions.push({type:'IMPROVE_CAMP',citizenId})
+    actions.push({type:'HIDE_FOR_NIGHT',citizenId})
+  }
   const site=zone.specialSite
   if(site&&!control.trapped){
     if(site.status==='buried'&&citizen.ap>=SPECIAL_EXCAVATION_AP_COST)actions.push({type:'EXCAVATE_SPECIAL_SITE',citizenId})
