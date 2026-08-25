@@ -1,4 +1,4 @@
-import { CONSTRUCTION_AP_COST, GATE_AP_COST, MOVE_AP_COST, SPECIAL_EXCAVATION_AP_COST, getLegalActions } from './actions'
+import { CONSTRUCTION_AP_COST, GATE_AP_COST, SPECIAL_EXCAVATION_AP_COST, getLegalActions } from './actions'
 import { CAMP_IMPROVEMENT_AP_COST, campingChancePercent } from './camping'
 import { BAREHANDED_AP_COST, resolveBarehandedAttack, resolveWeaponAttack } from './combat'
 import { COMBINATION_RECIPES, resolveCombination } from './combinations'
@@ -12,6 +12,7 @@ import { openableDefinition, resolveOpenable } from './openables'
 import { randomInt } from './rng'
 import { RUIN_CATALOG } from './ruinCatalog'
 import { isSpadeReplenishCommand, spadeReplenishmentEvent, type ScavengerSearchCommand } from './scavenging'
+import { mappingEvents, movementPointEvent, scoutArrivalEvents, scoutExposureEvent } from './scout'
 import { normalizeRuinId } from './specialSites'
 import { LEG_WOUND_MOVE_FAILURE_PERCENT, citizenControlPoints, travelHydrationTransition } from './status'
 import { WORLD_STATUS_ACTIONS } from './statusSources'
@@ -67,21 +68,25 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
   requireLegal(state,command)
   const citizen=state.citizens.find((candidate)=>candidate.id===command.citizenId)!
   const events:GameEvent[]=[]
+  const exposure=scoutExposureEvent(state,citizen,command);if(exposure)events.push(exposure)
   switch(command.type){
     case 'OPEN_GATE':events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:GATE_AP_COST},{type:'GATE_SET',day:state.day,open:true,citizenId:command.citizenId});break
     case 'CLOSE_GATE':events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:GATE_AP_COST},{type:'GATE_SET',day:state.day,open:false,citizenId:command.citizenId});break
     case 'EXIT_TOWN':events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'world',x:0,y:0}},{type:'ZONE_OBSERVED',day:state.day,zoneKey:'0,0',zombies:0,citizenId:command.citizenId});break
     case 'ENTER_TOWN':events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'town'}});break
+    case 'RECAMOUFLAGE':events.push({type:'SCOUT_CAMOUFLAGE_SET',day:state.day,citizenId:command.citizenId,active:true,reason:'recamouflaged'});break
+    case 'MAP_WASTELAND':events.push(...mappingEvents(state,citizen));break
     case 'MOVE':{
       if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
       const target=moveCoordinates(citizen.location.x,citizen.location.y,command.direction);const key=zoneKey(target.x,target.y);const targetZone=getZone(state.world,target.x,target.y);if(!targetZone)throw new InvalidCommandError('Target zone does not exist')
-      events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:MOVE_AP_COST})
+      events.push(movementPointEvent(state,citizen))
+      let arrivalRngState=state.rngState
       if(citizen.status.wound==='leg'){
-        const roll=randomInt(state.rngState,1,100);const failed=roll.value<=LEG_WOUND_MOVE_FAILURE_PERCENT
+        const roll=randomInt(state.rngState,1,100);arrivalRngState=roll.state;const failed=roll.value<=LEG_WOUND_MOVE_FAILURE_PERCENT
         events.push({type:'WOUNDED_MOVEMENT_RESOLVED',day:state.day,citizenId:command.citizenId,failed,rngStateAfter:roll.state})
         if(failed)break
       }
-      events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'world',x:target.x,y:target.y},desertStep:true},{type:'ZONE_DISCOVERED',day:state.day,zoneKey:key},{type:'ZONE_OBSERVED',day:state.day,zoneKey:key,zombies:targetZone.zombies,citizenId:command.citizenId},...movementControlEvents(state,citizen,target))
+      events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'world',x:target.x,y:target.y},desertStep:true},{type:'ZONE_DISCOVERED',day:state.day,zoneKey:key},{type:'ZONE_OBSERVED',day:state.day,zoneKey:key,zombies:targetZone.zombies,citizenId:command.citizenId},...movementControlEvents(state,citizen,target),...scoutArrivalEvents({...state,rngState:arrivalRngState},citizen,targetZone))
       const transition=travelHydrationTransition(citizen);if(transition)events.push({type:'CITIZEN_STATUS_CHANGED',day:state.day,citizenId:command.citizenId,status:transition,reason:'desert_travel'});break
     }
     case 'SEARCH_ZONE':{
