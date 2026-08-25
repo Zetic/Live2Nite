@@ -18,6 +18,7 @@
 .time-readout>strong{font-size:.7rem;color:#ead6c5}
 .time-buttons{display:flex;gap:4px}
 .time-buttons button{min-height:28px;padding:5px 7px;text-align:center;font-size:.59rem;font-weight:850;line-height:1;background:#131e23}
+.time-buttons button[aria-pressed="true"]{border-color:#5f7547;background:#172311;color:#cbe89a}
 .debug-new-town{min-height:40px;padding:5px 9px;border:1px solid #3b454a;border-radius:8px;background:rgba(15,20,23,.94);box-shadow:0 5px 18px rgba(0,0,0,.2);font-size:.58rem;font-weight:850;white-space:nowrap}
 .end-day-button:not(:disabled){border-color:#72503d;background:#21160f;color:#e9c4a4}
 .time-controls.attack-phase{border-color:#7f3d32;background:rgba(31,13,13,.95)}
@@ -33,5 +34,6 @@
   .debug-control-dock{top:8px;right:8px;max-width:calc(100vw - 16px);gap:5px}
   .time-readout{display:none}
   .time-buttons{flex:0 0 auto}
+  .time-buttons button{padding-left:6px;padding-right:6px}
   .debug-new-town{padding-left:7px;padding-right:7px}
 }

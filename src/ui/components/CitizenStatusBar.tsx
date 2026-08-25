@@ -1,8 +1,9 @@
+import { isGodCitizen } from '../../core/debugGod'
 import { CITIZEN_STATUS_DEFINITIONS, DESERT_STEPS_PER_HYDRATION_STAGE, activeCitizenStatuses, effectiveMaxAp, woundLabel } from '../../core/status'
 import type { Citizen, CitizenStatusId } from '../../core/types'
 
 interface StatusSlot {
-  id: CitizenStatusId | 'hydrated'
+  id: CitizenStatusId | 'hydrated' | 'god'
   icon: string
   label: string
   active: boolean
@@ -25,13 +26,14 @@ function statusSlots(citizen:Citizen):StatusSlot[]{
     {id:'satisfied_water',icon:'◉',label:active.has('satisfied_water')?'Refreshed':'Water unused',active:active.has('satisfied_water'),tone:'neutral',title:active.has('satisfied_water')?CITIZEN_STATUS_DEFINITIONS.satisfied_water.effect:'Water can still refresh AP today if hydration allows it.'},
   ]
   const conditions=CONDITION_ORDER.filter((id)=>active.has(id)).map((id):StatusSlot=>({id,icon:ICONS[id]??'•',label:conditionLabel(citizen,id),active:true,tone:toneFor(id),title:CITIZEN_STATUS_DEFINITIONS[id].effect}))
-  return[...baseline,...conditions]
+  const god=isGodCitizen(citizen)?[{id:'god' as const,icon:'∞',label:'God',active:true,tone:'safe' as const,title:'Debug God status: infinite AP, immunity to other conditions, and movement through zombie-controlled zones.'}]:[]
+  return[...god,...baseline,...conditions]
 }
 export function CitizenStatusBar({citizen}:{citizen:Citizen}){
-  const slots=statusSlots(citizen),cap=effectiveMaxAp(citizen)
+  const slots=statusSlots(citizen),god=isGodCitizen(citizen),cap=effectiveMaxAp(citizen)
   return <section className={`citizen-status-hud ${!citizen.alive?'dead':''}`} aria-label={`${citizen.name} status`}>
     <div className="citizen-status-identity"><span>Controlled citizen</span><strong>{citizen.name}</strong></div>
-    <div className="citizen-status-ap"><span>AP</span><strong>{citizen.ap}<small>/{cap}</small></strong></div>
+    <div className="citizen-status-ap"><span>AP</span><strong>{god?'∞':citizen.ap}<small>/{god?'∞':cap}</small></strong></div>
     <div className="citizen-status-label">Status</div>
     <div className="citizen-status-slots">{slots.map((slot)=><div key={slot.id} className={`citizen-status-slot ${slot.active?'active':''} ${slot.tone}`} title={slot.title} aria-label={`${slot.label}. ${slot.title}`}><span className="citizen-status-icon" aria-hidden="true">{slot.icon}</span><span className="citizen-status-slot-label">{slot.label}</span></div>)}</div>
     {!citizen.alive&&<strong className="citizen-status-dead">DEAD</strong>}

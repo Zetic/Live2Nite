@@ -55,10 +55,23 @@ Generic blueprint items only target classes 1-4. Current class-5 special/manual 
 
 ## Specialized explorable-ruin blueprints
 
-The current source catalogue also contains **nine specialized ruin blueprint variants** outside the four generic construction-blueprint items:
+Hotel, Bunker, and Hospital each use three specialized plan tiers: Uncommon, Rare, and Exceptional. Live2Nite stores the family/tier on its own generic runtime blueprint item state rather than copying upstream numeric item or building IDs.
 
-- Hotel Blueprint — Uncommon, Rare, Very Rare
-- Bunker Blueprint — Uncommon, Rare, Very Rare
-- Hospital Blueprint — Uncommon, Rare, Very Rare
+Current MyHordes source weights remain:
 
-Live2Nite records these as its own semantic WIP blueprint-family metadata. They are visible in the Construction Codex blueprint view and searchable there, but they are **not runtime items yet**, do not participate in the generic tier 1-4 candidate pools, and cannot alter construction discovery. The future explorable-ruin pass must implement their acquisition routing and dedicated unlock pools before those behaviors become active.
+- Uncommon: 800
+- Rare: 400
+- Exceptional: 200
+
+The default current MyHordes `explorable_ruin_params.plan_limits.lists` configuration defines **6 Uncommon / 10 Rare / 5 Exceptional** construction candidates for each explorable family. Live2Nite maps those source entries to semantic construction IDs in `EXPLORABLE_BLUEPRINT_POOLS` and regression-tests the complete lists.
+
+Reading a specialized plan in town selects only from its matching family/tier pool, excludes already discovered projects, and requires the direct parent to be known when a candidate has one. The Hotel/Hospital/Bunker exterior no longer exposes the old one-click special-site search; plan items remain staged in explorable-ruin loot until room-loot integration consumes that data.
+
+## Debug Codex controls
+
+The Codex contains temporary development controls that intentionally bypass normal acquisition/build rules:
+
+- **Summon** on an item state creates its active Live2Nite runtime item directly in the controlled citizen's rucksack. Source-only/WIP states without a runtime identity cannot be summoned.
+- **Instant Build** on a construction completes that construction and every prerequisite recursively without spending AP or Bank materials. Completion-only world/Well effects are applied once for projects that were not already complete.
+
+These controls are test tooling and are not part of MyHordes gameplay fidelity.

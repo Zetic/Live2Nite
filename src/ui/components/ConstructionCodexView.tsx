@@ -29,11 +29,11 @@ function RelationshipButton({id,label,onJump}:{id:ConstructionId;label:string;on
   return <button type="button" className="construction-codex-link" onClick={()=>onJump(id)}>{label}<span aria-hidden="true">›</span></button>
 }
 
-function Detail({entry,onJump}:{entry:ConstructionCodexEntry;onJump:(id:ConstructionId)=>void}){
+function Detail({entry,onJump,onInstantBuild}:{entry:ConstructionCodexEntry;onJump:(id:ConstructionId)=>void;onInstantBuild:(id:ConstructionId)=>void}){
   return <article className="codex-detail construction-codex-detail" aria-live="polite">
     <div className="codex-detail-heading">
       <div><p className="section-kicker">{entry.branchLabel}</p><h2>{entry.name}</h2></div>
-      <StatusChip entry={entry}/>
+      <div className="codex-item-heading-chips"><button type="button" className="codex-debug-action" onClick={()=>onInstantBuild(entry.id)} title="Debug: instantly build this construction and every prerequisite without spending AP or materials">Instant Build</button><StatusChip entry={entry}/></div>
     </div>
     <p className="codex-purpose">{entry.description}</p>
     {entry.implementation==='wip'&&<div className="construction-wip-banner"><strong>Work in progress</strong><span>{entry.wipReason??'The source construction is catalogued, but its gameplay mechanic is not implemented yet.'}</span><small>This site may be discovered by the normal construction/blueprint rules, but cannot accept construction work yet.</small></div>}
@@ -66,7 +66,7 @@ function Detail({entry,onJump}:{entry:ConstructionCodexEntry;onJump:(id:Construc
   </article>
 }
 
-export function ConstructionCodexView(){
+export function ConstructionCodexView({onInstantBuild}:{onInstantBuild:(id:ConstructionId)=>void}){
   const[mode,setMode]=useState<CatalogMode>('branches')
   const[branch,setBranch]=useState<'all'|ConstructionBranchId>('all')
   const[query,setQuery]=useState('')
@@ -113,7 +113,7 @@ export function ConstructionCodexView(){
           </>}
         {!visible.length&&!(mode==='blueprints'&&specializedBlueprints.length)&&<p className="empty-state">No constructions or blueprint metadata match this view.</p>}
       </section>
-      {selectedEntry?<Detail entry={selectedEntry} onJump={jump}/>:specializedBlueprints.length?<article className="codex-detail"><p className="section-kicker">Explorable ruin blueprints</p><h2>Specialized blueprint families</h2><p className="codex-purpose">Hotel, Bunker, and Hospital each have Uncommon, Rare, and Exceptional specialized plans. They are recovered through the corresponding explorable ruin and select one prospective undiscovered construction from an explicit family-and-tier source pool when read.</p><div className="codex-detail-section"><h3>Source weighting</h3><p className="codex-purpose">Each family uses source drop weights 800 uncommon, 400 rare, and 200 exceptional. Unsupported non-plan ruin outcomes remain fail-closed rather than transferring probability to plans.</p></div>{specializedBlueprints.map((entry)=><p key={entry.id} className="construction-acquisition-note"><strong>{entry.name}:</strong> {entry.acquisitionNote}</p>)}</article>:<article className="codex-detail"><p className="empty-state">No construction is available for the current filter.</p></article>}
+      {selectedEntry?<Detail entry={selectedEntry} onJump={jump} onInstantBuild={onInstantBuild}/>:specializedBlueprints.length?<article className="codex-detail"><p className="section-kicker">Explorable ruin blueprints</p><h2>Specialized blueprint families</h2><p className="codex-purpose">Hotel, Bunker, and Hospital each have Uncommon, Rare, and Exceptional specialized plans. They are recovered through the corresponding explorable ruin and select one prospective undiscovered construction from an explicit family-and-tier source pool when read.</p><div className="codex-detail-section"><h3>Source weighting</h3><p className="codex-purpose">Each family uses source drop weights 800 uncommon, 400 rare, and 200 exceptional. Unsupported non-plan ruin outcomes remain fail-closed rather than transferring probability to plans.</p></div>{specializedBlueprints.map((entry)=><p key={entry.id} className="construction-acquisition-note"><strong>{entry.name}:</strong> {entry.acquisitionNote}</p>)}</article>:<article className="codex-detail"><p className="empty-state">No construction is available for the current filter.</p></article>}
     </div>
   </>
 }
