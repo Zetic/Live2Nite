@@ -87,14 +87,14 @@ Implemented source behavior:
 
 - while physically in the World Beyond, a Tamer can send the dog away **once per day**;
 - the destination can be either the shared **town Bank** or the Tamer's own **Home Chest**;
-- the dog transports all currently eligible ordinary rucksack cargo in one trip; the locked Town Uniform and Profession Item are equipment rather than cargo and therefore remain with the citizen;
+- the dog returns the **entire ordinary rucksack cargo** in one trip; the locked Town Uniform and Profession Item are equipment rather than cargo and therefore remain with the citizen;
 - after the trip, the dog is treated as **tired** for the rest of the day and becomes available again automatically on the next day;
 - a **Terrorized** Tamer cannot send the dog;
-- the normal dog cannot transport cumbersome cargo. Light cargo is still sent and a cumbersome item remains with the Tamer;
-- giving the dog a carried **Anabolic Steroids** item consumes those steroids without applying their citizen status effects and lets that day's dog trip include **one cumbersome item**;
-- the Home Chest destination is only offered when every item that would be sent fits in the Tamer's current home storage capacity; the Bank remains the unlimited shared destination;
+- the normal dog cannot carry a cumbersome item, so any cumbersome cargo blocks the whole shipment instead of creating a partial delivery;
+- giving the dog a carried **Anabolic Steroids** item consumes those steroids without applying their citizen status effects and lets that day's dog trip include the one cumbersome item permitted by the shared rucksack rule, together with the rest of the cargo;
+- the Home Chest destination is only offered when the complete rucksack shipment fits in the Tamer's current home storage capacity; the Bank remains the unlimited shared destination;
 - inside explorable ruins, the Maltese provides directional guidance toward the exit. This is navigation information only and does not bypass rooms, zombies, stairs, oxygen, or ordinary movement rules;
-- bot-controlled Tamers use the same legal dog actions. Expedition bots prefer the shared Bank when they use the dog to clear a near-full field rucksack, and can steroid the dog first when a cumbersome haul would otherwise be left behind.
+- bot-controlled Tamers use the same legal dog actions. Expedition bots prefer the shared Bank when they use the dog to clear a near-full field rucksack, and can steroid the dog first when a cumbersome haul would otherwise block the trip.
 
 The dog usage and steroid state are derived from the day's Tamer events rather than stored as a separate citizen/profession flag. That keeps the Profession Item as the capability authority and makes the next-day reset follow the town day naturally.
 
