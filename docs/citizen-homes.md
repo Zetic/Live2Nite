@@ -22,7 +22,7 @@ The mature home progression remains:
 | 7 | Bunker | 49 | 7 |
 | 8 | Castle | 64 | 8 |
 
-Only mapped source requirements can be consumed. Tiers containing an unmodeled source dependency remain visible and fail closed. Structural defense does **not** grant theft protection; that behavior belongs to the Lock home work.
+Only mapped source requirements can be consumed. Tiers containing an unmodeled source dependency remain visible and fail closed. Fenced House and higher structural tiers protect the home from ordinary foreign-home deposits, intrusion and theft. The Lock home work supplies equivalent protection before that structural threshold.
 
 ## Home works
 
@@ -31,29 +31,33 @@ The Home UI lists the full ordinary-facing work set used by this pass:
 - Reinforcements — implemented; uses the existing `wire_mesh` mapping for source `fence_#00`.
 - Fence — defensive effect represented, but its missing source structural input keeps construction blocked.
 - More Storage — implemented.
-- Rudimentary Alarm — implemented; intrusion attempts can be recorded by the home register.
+- Rudimentary Alarm — implemented; intrusion attempts identify the intruder, and theft from an alarmed home is always identified.
 - Large Curtain — implemented; living chest contents are hidden until a successful intrusion.
-- Lock — theft/intrusion effect represented, but construction remains blocked until the Padlock and Chain item has a real runtime mechanic.
-- Siesta — implemented through the currently representable levels; one daily attempt, 33% / 66% / 99% success, +2 AP on success. The Mattress-dependent level remains blocked until Mattress is modeled.
+- Lock — ordinary foreign-home deposits, intrusion and theft are blocked, but construction remains blocked until the Padlock and Chain item has a real runtime mechanic.
+- Siesta — implemented through the currently representable levels; one daily attempt, 33% / 66% / 99% success, +2 AP on success. It cannot be attempted at full AP. The Mattress-dependent level remains blocked until Mattress is modeled.
 - Kitchen — catalogued but WIP; cooking is not invented before its subsystem exists.
-- Laboratory — catalogued but WIP; production actions are not invented before their subsystem exists.
+- Laboratory — catalogued but WIP; production actions are not invented before its subsystem exists.
 
 ## Visiting homes
 
-A living citizen's home supports:
+A living citizen's unattended and unprotected home supports:
 
-- discreet item deposits into available chest space;
-- ordinary theft only while the resident is outside town;
-- one stolen item per thief per day outside Chaos;
+- one discreet item deposit into available chest space;
+- ordinary theft while the resident is outside town;
 - Curtain-based hidden chest contents and an intrusion step;
-- Lock-based blocking of ordinary intrusion/theft;
-- Alarm logging for intrusion attempts.
+- 10% identification chance for a deposit;
+- 50% identification chance for ordinary theft;
+- Alarm-forced identification of theft and alarmed intrusion attempts.
 
-Discreet deposit and ordinary theft event text does not expose the actor. An Alarm-triggered intrusion can identify the intruder.
+Deposit, theft and pillage share one foreign-home item transfer allowance per citizen per day outside Chaos. The allowance is consumed by whichever of those three actions succeeds first that day.
+
+Fenced House and higher structural tiers, or the Lock work, block ordinary deposits, intrusion and theft. A resident who is currently in town also blocks ordinary deposit/theft access.
+
+Event text remains anonymous when the actor is not identified. When a deposit or theft spotting roll succeeds, or an Alarm guarantees identification, the actor is named in the home register/chronicle text.
 
 ## Pillaging dead citizens
 
-Pillaging is not implemented as an alias for living theft. A dead citizen's remaining Home Chest can be pillaged independently, with one pillaged item per citizen per day outside Chaos. Corpse disposal remains a separate action and does not erase the dead citizen's chest contents.
+Pillaging is not implemented as an alias for living theft. A dead citizen's remaining Home Chest can be pillaged, but pillage uses the same daily foreign-home transfer allowance as deposit and theft. Pillage is always identified. Corpse disposal remains a separate action and does not erase the dead citizen's chest contents.
 
 ## AI behavior
 
