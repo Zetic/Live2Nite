@@ -5,14 +5,16 @@ import type { GameCommand, GameEvent, GameState, SpecialSiteState, WorldZone } f
 import { getZone, zoneKey } from './world'
 
 type SiteWithInterior=SpecialSiteState&{interior?:RuinInteriorState}
-type SharedItemCommand=Extract<GameCommand,{type:'OPEN_CONTAINER'|'EAT_ITEM'|'DRINK_ITEM'|'USE_ITEM_ACTION'|'USE_WEAPON'}>
-type SharedCommand=SharedItemCommand|Extract<GameCommand,{type:'COMBINE_ITEMS'}>
+type SharedItemCommand=Extract<GameCommand,{type:'OPEN_CONTAINER'|'EAT_ITEM'|'DRINK_ITEM'|'USE_ITEM_ACTION'|'USE_WEAPON'|'DRUG_TAMER_DOG'}>
+type SharedDogCommand=Extract<GameCommand,{type:'SEND_TAMER_DOG'}>
+type SharedCommand=SharedItemCommand|SharedDogCommand|Extract<GameCommand,{type:'COMBINE_ITEMS'}>
 
-function isSharedType(command:GameCommand):command is SharedCommand{return command.type==='OPEN_CONTAINER'||command.type==='EAT_ITEM'||command.type==='DRINK_ITEM'||command.type==='USE_ITEM_ACTION'||command.type==='USE_WEAPON'||command.type==='COMBINE_ITEMS'}
+function isSharedType(command:GameCommand):command is SharedCommand{return command.type==='OPEN_CONTAINER'||command.type==='EAT_ITEM'||command.type==='DRINK_ITEM'||command.type==='USE_ITEM_ACTION'||command.type==='USE_WEAPON'||command.type==='COMBINE_ITEMS'||command.type==='DRUG_TAMER_DOG'||command.type==='SEND_TAMER_DOG'}
 function sameSharedCommand(left:GameCommand,right:GameCommand):boolean{
   if(left.type!==right.type||left.citizenId!==right.citizenId)return false
   if(left.type==='COMBINE_ITEMS'&&right.type==='COMBINE_ITEMS')return left.recipeId===right.recipeId&&left.itemIds.length===right.itemIds.length&&left.itemIds.every((id,index)=>id===right.itemIds[index])
   if(left.type==='USE_ITEM_ACTION'&&right.type==='USE_ITEM_ACTION')return left.itemId===right.itemId&&left.actionId===right.actionId
+  if(left.type==='SEND_TAMER_DOG'&&right.type==='SEND_TAMER_DOG')return left.destination===right.destination
   if('itemId'in left&&'itemId'in right)return left.itemId===right.itemId
   return true
 }
@@ -28,12 +30,16 @@ function projectedState(state:GameState,citizenId:string):GameState|null{
   const projectedZone:WorldZone={...current.zone,zombies:current.cell.zombies}
   return{...state,world:{...state.world,zones:{...state.world.zones,[current.key]:projectedZone}}}
 }
-function inventoryCommand(command:GameCommand,inventoryIds:Set<string>):boolean{return command.type==='COMBINE_ITEMS'?command.itemIds.every((id)=>inventoryIds.has(id)):('itemId'in command&&inventoryIds.has(command.itemId))}
+function inventoryCommand(command:SharedCommand,inventoryIds:Set<string>):boolean{
+  if(command.type==='SEND_TAMER_DOG')return true
+  if(command.type==='COMBINE_ITEMS')return command.itemIds.every((id)=>inventoryIds.has(id))
+  return inventoryIds.has(command.itemId)
+}
 
 export function getRuinSharedActions(state:GameState,citizenId:string):GameCommand[]{
   const current=context(state,citizenId);if(!current)return[]
   const inventoryIds=new Set(current.citizen.inventory.map((item)=>item.id))
-  const ordinary=getLegalActions(state,citizenId).filter((command)=>isSharedType(command)&&command.type!=='USE_WEAPON'&&inventoryCommand(command,inventoryIds))
+  const ordinary=getLegalActions(state,citizenId).filter((command):command is SharedCommand=>isSharedType(command)&&command.type!=='USE_WEAPON'&&inventoryCommand(command,inventoryIds))
   if(current.explorer.inRoomId||current.cell.zombies<=0)return ordinary
   const projected=projectedState(state,citizenId);if(!projected)return ordinary
   const localActions=getLegalActions(projected,citizenId).filter((command):command is Extract<GameCommand,{type:'USE_WEAPON'}>=>command.type==='USE_WEAPON'&&inventoryIds.has(command.itemId))
