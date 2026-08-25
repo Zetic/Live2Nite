@@ -44,6 +44,8 @@ Interior zombies block ordinary corridor movement. Preparing an escape permits m
 
 When oxygen expires, the exploration ends, the ruin's active-explorer lock is released, and the citizen is wounded while being forced back outside, matching the current source failure consequence represented by Live2Nite's status model.
 
+Explorable Hotel/Hospital/Bunker sites no longer expose the legacy exterior `SEARCH_SPECIAL_SITE` shortcut. Their existing source-weighted loot and specialized blueprint rolls remain staged on the ruin state for later room-loot integration, so autonomous or direct command paths cannot bypass the interior.
+
 ## Deliberate boundaries for this pass
 
 This PR focuses on a complete navigable interior loop rather than deep loot implementation. The following source mechanics remain explicit follow-up work:
