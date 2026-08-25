@@ -102,7 +102,7 @@ export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefiniti
   },
   alarm:{
     id:'alarm',name:'Rudimentary Alarm',maxLevel:1,
-    description:'Records intrusion attempts against this home in its register.',
+    description:'Records intrusion attempts and guarantees identification when an ordinary theft succeeds.',
     defensePerLevel:0,storagePerLevel:0,apCost:()=>4,resources:()=>({scrap_metal:1}),unmodeledResources:()=>[],
     status:'implemented',effectReady:true,
   },
@@ -114,13 +114,13 @@ export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefiniti
   },
   lock:{
     id:'lock',name:'Lock',maxLevel:1,
-    description:'Prevents ordinary citizens from intruding into or stealing from this home.',
+    description:'Prevents ordinary citizens from intruding, depositing into, or stealing from this home.',
     defensePerLevel:0,storagePerLevel:0,apCost:()=>6,resources:()=>({chain:1}),unmodeledResources:()=>['Padlock and Chain × 1'],
     status:'partial',effectReady:true,
   },
   siesta:{
     id:'siesta',name:'Siesta',maxLevel:3,
-    description:'Provides one daily attempt to recover 2 AP. Success improves from 33% to 66% to 99%.',
+    description:'Provides one daily attempt below full AP to recover 2 AP. Success improves from 33% to 66% to 99%.',
     defensePerLevel:0,storagePerLevel:0,
     apCost:(nextLevel)=>nextLevel===1?6:nextLevel===2?3:4,
     resources:siestaResources,unmodeledResources:siestaMissing,
@@ -175,13 +175,14 @@ export function improvementStorageCapacity(citizen:Citizen):number{return BASE_H
 export function improvementSourceReady(definition:HomeImprovementDefinition,nextLevel:number):boolean{return definition.unmodeledResources(nextLevel).length===0}
 export function canBuildImprovementSource(definition:HomeImprovementDefinition,nextLevel:number):boolean{return definition.effectReady&&improvementSourceReady(definition,nextLevel)}
 
-export function homePreventsTheft(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'lock')}
+export function homePreventsTheft(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'lock')||HOME_LEVEL_ORDER.indexOf(citizen.home.level)>=HOME_LEVEL_ORDER.indexOf('fenced_house')}
 export function homeHasCurtain(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'curtain')}
 export function homeHasAlarm(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'alarm')}
 
 function eventThisDay(state:GameState,citizenId:string,predicate:(event:GameEvent)=>boolean):boolean{return state.events.some((event)=>event.day===state.day&&'citizenId'in event&&event.citizenId===citizenId&&predicate(event))}
-export function theftUsedToday(state:GameState,citizenId:string):boolean{return eventThisDay(state,citizenId,(event)=>event.type==='HOME_ITEM_STOLEN')}
-export function pillageUsedToday(state:GameState,citizenId:string):boolean{return eventThisDay(state,citizenId,(event)=>event.type==='HOME_ITEM_PILLAGED')}
+export function homeTransferUsedToday(state:GameState,citizenId:string):boolean{return eventThisDay(state,citizenId,(event)=>event.type==='HOME_ITEM_DEPOSITED'||event.type==='HOME_ITEM_STOLEN'||event.type==='HOME_ITEM_PILLAGED')}
+export function theftUsedToday(state:GameState,citizenId:string):boolean{return homeTransferUsedToday(state,citizenId)}
+export function pillageUsedToday(state:GameState,citizenId:string):boolean{return homeTransferUsedToday(state,citizenId)}
 export function siestaUsedToday(state:GameState,citizenId:string):boolean{return eventThisDay(state,citizenId,(event)=>event.type==='HOME_SIESTA_USED')}
 export function intrudedHomeToday(state:GameState,citizenId:string,targetCitizenId:string):boolean{return state.events.some((event)=>event.day===state.day&&event.type==='HOME_INTRUSION_ATTEMPTED'&&event.citizenId===citizenId&&event.targetCitizenId===targetCitizenId&&event.success)}
 export function foreignHomeStorageVisible(state:GameState,citizenId:string,target:Citizen):boolean{return !target.alive||!homeHasCurtain(target)||intrudedHomeToday(state,citizenId,target.id)}
