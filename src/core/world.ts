@@ -1,3 +1,4 @@
+import { explorableBlueprintSpecFromSourceRef } from './explorableBlueprints'
 import { NORMAL_SCAVENGE_LOOT_POOL } from './items'
 import { randomInt } from './rng'
 import { EXPLORABLE_RUIN_IDS, type RuinId } from './ruinIds'
@@ -60,11 +61,13 @@ function generateSpecialSite(type:RuinId,rngState:number):{site:SpecialSiteState
   const emptyRoll=randomInt(next,1,10000);next=emptyRoll.state
   const empty=emptyRoll.value<=Math.round(ruin.emptyChance*10000)
   const hiddenLoot:ItemType[]=[]
-  if(!empty&&!ruin.explorable){
+  if(!empty||ruin.explorable){
     const lootCount=randomInt(next,2,4);next=lootCount.state
     for(let index=0;index<lootCount.value;index+=1){
       const loot=rollRuinSourceLoot(next,type);next=loot.rngStateAfter
+      const blueprint=explorableBlueprintSpecFromSourceRef(loot.sourceRef)
       if(loot.item)hiddenLoot.push(loot.item)
+      else if(blueprint)hiddenLoot.push(blueprint.type)
     }
   }
   return{
