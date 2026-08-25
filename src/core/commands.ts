@@ -8,11 +8,10 @@ import { explorableBlueprintEligibleProjects, explorableBlueprintTierFromType } 
 import { HOME_IMPROVEMENTS, homeHasAlarm, homeImprovementDefense, homePreventsTheft, improvementNextLevel, nextHomeDefinition, siestaChancePercent } from './home'
 import { itemUseActionDefinition, resolveCitizenEffects, resolveFoodItemAction, resolveItemUseAction, resolveWaterItemAction } from './itemEffects'
 import { containerPool, createItemInstance, normalizeItemState } from './items'
-import { rollWeightedLoot } from './loot'
 import { openableDefinition, resolveOpenable } from './openables'
 import { randomInt } from './rng'
 import { RUIN_CATALOG } from './ruinCatalog'
-import { MYHORDES_DEPLETED_ZONE_LOOT } from './scavengeLoot'
+import { isSpadeReplenishCommand, spadeReplenishmentEvent, type ScavengerSearchCommand } from './scavenging'
 import { normalizeRuinId } from './specialSites'
 import { LEG_WOUND_MOVE_FAILURE_PERCENT, citizenControlPoints, travelHydrationTransition } from './status'
 import { WORLD_STATUS_ACTIONS } from './statusSources'
@@ -25,6 +24,7 @@ export class InvalidCommandError extends Error {}
 
 function sameCommand(left:GameCommand,right:GameCommand):boolean{
   if(left.type!==right.type||left.citizenId!==right.citizenId)return false
+  if(left.type==='SEARCH_ZONE'&&right.type==='SEARCH_ZONE')return Boolean((left as ScavengerSearchCommand).replenishWithSpade)===Boolean((right as ScavengerSearchCommand).replenishWithSpade)
   if(left.type==='MOVE'&&right.type==='MOVE')return left.direction===right.direction
   if(left.type==='PICK_UP_ITEM'&&right.type==='PICK_UP_ITEM')return left.itemId===right.itemId
   if(left.type==='DROP_ITEM'&&right.type==='DROP_ITEM')return left.itemId===right.itemId
@@ -53,7 +53,6 @@ function sameCommand(left:GameCommand,right:GameCommand):boolean{
 function requireLegal(state:GameState,command:GameCommand):void{if(!getLegalActions(state,command.citizenId).some((candidate)=>sameCommand(candidate,command)))throw new InvalidCommandError(`Illegal ${command.type} action for ${command.citizenId}`)}
 function itemAt(state:GameState,type:ItemType,offset=0):ItemInstance{return createItemInstance(`i${String(state.nextItemId+offset).padStart(6,'0')}`,type)}
 function normalSearchItem(state:GameState,x:number,y:number):ItemInstance|null{const type=getZone(state.world,x,y)?.hiddenLoot[0];return type?itemAt(state,type):null}
-function depletedSearchOutcome(state:GameState):{item:ItemInstance;rngStateAfter:number}{const roll=rollWeightedLoot(state.rngState,MYHORDES_DEPLETED_ZONE_LOOT);const spec=roll.items[0];if(!spec)throw new Error('Depleted-zone loot table produced no item');return{item:createItemInstance(`i${String(state.nextItemId).padStart(6,'0')}`,spec.type,spec.state),rngStateAfter:roll.rngStateAfter}}
 function detectionOutcome(state:GameState,chancePercent:number):{spotted:boolean;rngStateAfter:number}{if(chancePercent>=100)return{spotted:true,rngStateAfter:state.rngState};const roll=randomInt(state.rngState,1,100);return{spotted:roll.value<=chancePercent,rngStateAfter:roll.state}}
 function locateItem(state:GameState,citizenId:string,itemId:string):{item:ItemInstance;source:ItemStorage;zoneKey?:string}{const citizen=state.citizens.find((candidate)=>candidate.id===citizenId)!;const inventoryItem=citizen.inventory.find((item)=>item.id===itemId);if(inventoryItem)return{item:inventoryItem,source:'inventory'};const homeItem=citizen.home.storage.find((item)=>item.id===itemId);if(homeItem)return{item:homeItem,source:'home'};if(citizen.location.type==='world'){const key=zoneKey(citizen.location.x,citizen.location.y);const groundItem=state.world.zones[key]?.groundItems.find((item)=>item.id===itemId);if(groundItem)return{item:groundItem,source:'ground',zoneKey:key}}throw new InvalidCommandError(`Missing item ${itemId}`)}
 function targetCitizen(state:GameState,citizenId:string):Citizen{const target=state.citizens.find((candidate)=>candidate.id===citizenId);if(!target)throw new InvalidCommandError(`Missing citizen ${citizenId}`);return target}
@@ -82,7 +81,13 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
       events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'world',x:target.x,y:target.y},desertStep:true},{type:'ZONE_DISCOVERED',day:state.day,zoneKey:key},{type:'ZONE_OBSERVED',day:state.day,zoneKey:key,zombies:targetZone.zombies,citizenId:command.citizenId},...movementControlEvents(state,citizen,target))
       const transition=travelHydrationTransition(citizen);if(transition)events.push({type:'CITIZEN_STATUS_CHANGED',day:state.day,citizenId:command.citizenId,status:transition,reason:'desert_travel'});break
     }
-    case 'SEARCH_ZONE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const zone=state.world.zones[key];const mode:SearchMode=zone.searchesRemaining>0?'normal':'depleted';if(mode==='normal')events.push({type:'ZONE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,mode,item:normalSearchItem(state,citizen.location.x,citizen.location.y)});else{const outcome=depletedSearchOutcome(state);events.push({type:'ZONE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,mode,item:outcome.item,rngStateAfter:outcome.rngStateAfter})}break}
+    case 'SEARCH_ZONE':{
+      if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
+      const key=zoneKey(citizen.location.x,citizen.location.y)
+      if(isSpadeReplenishCommand(command)){events.push(spadeReplenishmentEvent(state,command.citizenId,key));break}
+      const zone=state.world.zones[key];const mode:SearchMode=zone.searchesRemaining>0?'normal':'depleted'
+      events.push({type:'ZONE_SEARCHED',day:state.day,zoneKey:key,citizenId:command.citizenId,mode,item:mode==='normal'?normalSearchItem(state,citizen.location.x,citizen.location.y):null});break
+    }
     case 'EXCAVATE_SPECIAL_SITE':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:SPECIAL_EXCAVATION_AP_COST},{type:'SPECIAL_SITE_EXCAVATED',day:state.day,zoneKey:key,citizenId:command.citizenId,amount:SPECIAL_EXCAVATION_AP_COST});break}
     case 'SEARCH_SPECIAL_SITE':{
       if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
