@@ -20,6 +20,7 @@ import { normalizeRuinId } from '../../core/specialSites'
 import type { GameCommand, GameState, WorldZone } from '../../core/types'
 import { CombinationActionMenu, ItemActionMenu, ItemStrip, RucksackStrip } from './InventoryItems'
 import { ruinFloorLabel } from './RuinInteriorMap'
+import { TamerDogPanel } from './TamerDogPanel'
 import '../ruin-exploration.css'
 
 function clock(seconds:number):string{const value=Math.max(0,seconds);return`${Math.floor(value/60)}:${String(value%60).padStart(2,'0')}`}
@@ -75,6 +76,8 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
       <ItemActionMenu items={citizen.inventory} actions={sharedActions} act={sharedAct} sourceForItem={()=> 'Rucksack'}/>
       <CombinationActionMenu actions={sharedActions} act={sharedAct}/>
     </section>
+
+    <TamerDogPanel game={game} citizenId={citizenId} legalActions={sharedActions} act={sharedAct}/>
 
     <section className={`combat-panel ${movementBlocked?'combat-urgent':''}`}>
       <div className="section-heading-row"><div><p className="section-kicker">Interior combat</p><h3>{cell.zombies>0?`${cell.zombies} zombie${cell.zombies===1?'':'s'} present`:'Cell clear'}</h3></div></div>
