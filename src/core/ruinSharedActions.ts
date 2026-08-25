@@ -1,7 +1,7 @@
 import { getLegalActions } from './actions'
 import { executeCommand, InvalidCommandError, type CommandResult } from './commands'
 import { getRuinExplorer, getRuinInterior, ruinCurrentCell, type RuinInteriorState } from './ruinExploration'
-import type { GameCommand, GameEvent, GameState, SpecialSiteState } from './types'
+import type { GameCommand, GameEvent, GameState, SpecialSiteState, WorldZone } from './types'
 import { getZone, zoneKey } from './world'
 
 type SiteWithInterior=SpecialSiteState&{interior?:RuinInteriorState}
@@ -25,7 +25,8 @@ function context(state:GameState,citizenId:string){
 }
 function projectedState(state:GameState,citizenId:string):GameState|null{
   const current=context(state,citizenId);if(!current)return null
-  return{...state,world:{...state.world,zones:{...state.world.zones,[current.key]:{...current.zone,zombies:current.cell.zombies}}}}
+  const projectedZone:WorldZone={...current.zone,zombies:current.cell.zombies}
+  return{...state,world:{...state.world,zones:{...state.world.zones,[current.key]:projectedZone}}}
 }
 function inventoryCommand(command:GameCommand,inventoryIds:Set<string>):boolean{return command.type==='COMBINE_ITEMS'?command.itemIds.every((id)=>inventoryIds.has(id)):('itemId'in command&&inventoryIds.has(command.itemId))}
 
@@ -43,7 +44,9 @@ function updateLocalZombies(state:GameState,citizenId:string,kills:number):GameS
   const current=context(state,citizenId);if(!current||kills<=0)return state
   const site=current.zone.specialSite as SiteWithInterior,interior=site.interior;if(!interior)return state
   const nextInterior:RuinInteriorState={...interior,cells:interior.cells.map((cell)=>cell.id===current.cell.id?{...cell,zombies:Math.max(0,cell.zombies-kills)}:cell)}
-  return{...state,world:{...state.world,zones:{...state.world.zones,[current.key]:{...current.zone,specialSite:{...site,interior:nextInterior}}}}}
+  const nextSite:SiteWithInterior={...site,interior:nextInterior}
+  const nextZone:WorldZone={...current.zone,specialSite:nextSite}
+  return{...state,world:{...state.world,zones:{...state.world.zones,[current.key]:nextZone}}}
 }
 
 export function executeRuinSharedAction(state:GameState,command:GameCommand):CommandResult{
