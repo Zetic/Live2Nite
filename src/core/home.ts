@@ -102,7 +102,7 @@ export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefiniti
   },
   alarm:{
     id:'alarm',name:'Rudimentary Alarm',maxLevel:1,
-    description:'Records intrusion attempts and guarantees identification when an ordinary theft succeeds.',
+    description:'Identifies intrusion attempts and guarantees identification of theft from this home.',
     defensePerLevel:0,storagePerLevel:0,apCost:()=>4,resources:()=>({scrap_metal:1}),unmodeledResources:()=>[],
     status:'implemented',effectReady:true,
   },
@@ -114,7 +114,7 @@ export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefiniti
   },
   lock:{
     id:'lock',name:'Lock',maxLevel:1,
-    description:'Prevents ordinary citizens from intruding, depositing into, or stealing from this home.',
+    description:'Prevents ordinary citizens from depositing into, intruding into or stealing from this home.',
     defensePerLevel:0,storagePerLevel:0,apCost:()=>6,resources:()=>({chain:1}),unmodeledResources:()=>['Padlock and Chain × 1'],
     status:'partial',effectReady:true,
   },
@@ -175,7 +175,7 @@ export function improvementStorageCapacity(citizen:Citizen):number{return BASE_H
 export function improvementSourceReady(definition:HomeImprovementDefinition,nextLevel:number):boolean{return definition.unmodeledResources(nextLevel).length===0}
 export function canBuildImprovementSource(definition:HomeImprovementDefinition,nextLevel:number):boolean{return definition.effectReady&&improvementSourceReady(definition,nextLevel)}
 
-export function homePreventsTheft(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'lock')||HOME_LEVEL_ORDER.indexOf(citizen.home.level)>=HOME_LEVEL_ORDER.indexOf('fenced_house')}
+export function homePreventsTheft(citizen:Citizen):boolean{return HOME_LEVEL_ORDER.indexOf(citizen.home.level)>=HOME_LEVEL_ORDER.indexOf('fenced_house')||hasHomeImprovement(citizen,'lock')}
 export function homeHasCurtain(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'curtain')}
 export function homeHasAlarm(citizen:Citizen):boolean{return hasHomeImprovement(citizen,'alarm')}
 
