@@ -6,7 +6,6 @@ import { executeCommand, InvalidCommandError } from '../core/commands'
 import { hasUpgradeProjectsFacility } from '../core/constructionUpgrades'
 import { debugGodMove, debugInstantBuild, debugRefreshCitizen, debugSummonItem, debugToggleGod } from '../core/debug'
 import { enforceGodMode, isGodCitizen } from '../core/debugGod'
-import { totalTownDefense } from '../core/defense'
 import { createInitialGame } from '../core/game'
 import { townHasProfessionEquipment, type ProfessionId } from '../core/professions'
 import { getRuinExplorer, ruinCurrentCell, type RuinActionResult } from '../core/ruinExploration'
@@ -65,8 +64,6 @@ export function App() {
   const ruinExploring = Boolean(getRuinExplorer(game,player.id)?.active)
   const ruinCell = ruinExploring ? ruinCurrentCell(game,player.id) : null
   const alive = useMemo(() => game.citizens.filter((citizen) => citizen.alive).length, [game.citizens])
-  const outsideCitizens = useMemo(() => game.citizens.filter((citizen) => citizen.alive && citizen.location.type === 'world'), [game.citizens])
-  const townDefense = useMemo(() => totalTownDefense(game), [game])
   const legalActions = useMemo(() => {
     const actions=getLegalActions(game,player.id)
     if(!isGodCitizen(player)||player.location.type!=='world'||player.camping.hidden||game.clock.phase!=='day')return actions
@@ -147,14 +144,6 @@ export function App() {
 
     {townEnded ? <TownEndScreen game={game} onRestart={() => void reset()}/> : <>
       <CitizenStatusBar citizen={player}/>
-
-      <section className="status-strip" aria-label="Town status">
-        <article><span>Population</span><strong>{alive}<small>/ {game.citizens.length}</small></strong></article>
-        <article><span>Outside</span><strong className={outsideCitizens.length ? 'warning-value' : ''}>{outsideCitizens.length}</strong></article>
-        <article><span>Well water</span><strong>{game.town.well.water}</strong></article>
-        <article><span>Town defense</span><strong>{townDefense}</strong></article>
-        <article><span>Gate</span><strong className={game.town.gateOpen ? 'danger-value' : 'safe-value'}>{game.town.gateOpen ? 'OPEN' : 'SEALED'}</strong></article>
-      </section>
 
       <TimeControls game={game} onAdvanceOne={advanceHour} onAdvanceTarget={advanceTarget} onRefresh={refresh} onToggleGod={toggleGod} godActive={godActive} onNewTown={()=>void reset()} refreshDisabled={!player.alive}/>
 
