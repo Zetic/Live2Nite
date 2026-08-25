@@ -13,6 +13,11 @@ export function citizenName(game:GameState,citizenId:string):string{return game.
 export function describeEvent(event:GameEvent,game:GameState):string{
   switch(event.type){
     case 'AP_SPENT':return`${citizenName(game,event.citizenId)} spent ${event.amount} AP.`
+    case 'SCOUT_POINTS_SPENT':return`${citizenName(game,event.citizenId)} spent ${event.amount} Scout Point${event.amount===1?'':'s'} on long-range travel.`
+    case 'SCOUT_MAPPING_COMPLETED':return`${citizenName(game,event.citizenId)} mapped the wasteland and prepared ${event.nextDayBonus} bonus Scout Point${event.nextDayBonus===1?'':'s'} for tomorrow.`
+    case 'SCOUT_CAMOUFLAGE_SET':return event.active?`${citizenName(game,event.citizenId)} activated the Camouflage Suit.`:`${citizenName(game,event.citizenId)}'s camouflage was broken${event.reason==='detected'?' by nearby zombies':' by an exposed field action'}.`
+    case 'SCOUT_VISIT_RECORDED':return`${citizenName(game,event.citizenId)} recorded a Scout visit at [${event.zoneKey}].`
+    case 'SCOUT_DETECTION_RESOLVED':return event.spotted?`${citizenName(game,event.citizenId)} was detected while entering [${event.zoneKey}] (${event.chancePercent.toFixed(1)}% risk).`:`${citizenName(game,event.citizenId)} slipped through [${event.zoneKey}] without detection (${event.chancePercent.toFixed(1)}% risk).`
     case 'GATE_SET':return event.citizenId==='system'?`The Automatic Piston Lock ${event.open?'opened':'closed'} the gate.`:`${citizenName(game,event.citizenId)} ${event.open?'opened':'closed'} the gate.`
     case 'CITIZEN_LOCATION_CHANGED':return event.location.type==='town'?`${citizenName(game,event.citizenId)} returned to town.`:`${citizenName(game,event.citizenId)} moved to [${event.location.x},${event.location.y}].`
     case 'CITIZEN_STATUS_CHANGED':{const name=citizenName(game,event.citizenId);if(event.reason==='drank_water')return event.status.hydration==='normal'?`${name} drank water and is no longer thirsty.`:`${name} drank water; dehydration eased to Thirsty, but the water did not restore AP.`;if(event.status.infected&&event.status.wound)return`${name} is Wounded and Infected.`;if(event.status.infected)return`${name} is Infected.`;if(event.status.hangover)return`${name} has a Hangover.`;if(event.status.hydration==='dehydrated')return`${name} became ${CITIZEN_STATUS_DEFINITIONS.dehydrated.label}.`;if(event.status.hydration==='thirsty')return`${name} became ${CITIZEN_STATUS_DEFINITIONS.thirsty.label}.`;return`${name}'s conditions changed.`}
@@ -51,7 +56,7 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'ITEM_CONSUMED':{const remaining=event.chargesAfter!==undefined?` ${event.chargesAfter} ration${event.chargesAfter===1?'':'s'} remain in the container.`:'';return`${citizenName(game,event.citizenId)} ${event.kind==='food'?'ate':'drank'} ${itemName(event.item.type)}${event.restoresAp?' and refreshed their AP':''}.${remaining}`}
     case 'ITEM_ACTION_RESOLVED':{const definition=itemUseActionDefinition(event.item.type,event.actionId);return`${citizenName(game,event.citizenId)} ${definition?.label.toLocaleLowerCase()??'used an item action'} with ${itemName(event.item.type)}.`}
     case 'FLEE_ZOMBIES_RESOLVED':return`${citizenName(game,event.citizenId)} fled from zombie control at [${event.zoneKey}], suffered a ${event.statusAfter.wound??'body-part'} wound, and gained relative control to escape.`
-    case 'WOUNDED_MOVEMENT_RESOLVED':return event.failed?`${citizenName(game,event.citizenId)} spent 1 AP trying to move, but their leg wound stopped them.`:`${citizenName(game,event.citizenId)} pushed through their leg wound and moved.`
+    case 'WOUNDED_MOVEMENT_RESOLVED':return event.failed?`${citizenName(game,event.citizenId)} spent a movement point trying to move, but their leg wound stopped them.`:`${citizenName(game,event.citizenId)} pushed through their leg wound and moved.`
     case 'HOME_UPGRADED':return`${citizenName(game,event.citizenId)} upgraded their home to ${homeName(event.to)}.`
     case 'HOME_IMPROVEMENT_BUILT':return`${citizenName(game,event.citizenId)} improved their home: ${HOME_IMPROVEMENTS[event.improvementId].name} level ${event.level}.`
     case 'HOME_SIESTA_USED':return`${citizenName(game,event.citizenId)} tried Siesta (${event.chance}%): ${event.success?'recovered 2 AP':'no AP recovered'}.`
@@ -79,18 +84,19 @@ export function describeEvent(event:GameEvent,game:GameState):string{
 
 export function isHighlightEvent(event:GameEvent):boolean{
   if(event.type==='HOME_ITEM_DEPOSITED')return event.spotted
-  return !['AP_SPENT','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','ITEM_DROPPED','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED','COORDINATION_COMMITMENT_POSTED','COORDINATION_COMMITMENT_CLEARED','WOUNDED_MOVEMENT_RESOLVED'].includes(event.type)
+  return !['AP_SPENT','SCOUT_POINTS_SPENT','SCOUT_VISIT_RECORDED','SCOUT_DETECTION_RESOLVED','CITIZEN_LOCATION_CHANGED','CONSTRUCTION_AP_CONTRIBUTED','ITEM_MOVED_TO_HOME','ITEM_MOVED_TO_RUCKSACK','ITEM_DROPPED','TIME_ADVANCED','BOT_MISSION_PHASE_SET','CAMP_IMPROVEMENTS_DECAYED','ZONE_OBSERVED','TEMPORARY_CONTROL_GRANTED','TEMPORARY_CONTROL_EXPIRED','COORDINATION_COMMITMENT_POSTED','COORDINATION_COMMITMENT_CLEARED','WOUNDED_MOVEMENT_RESOLVED'].includes(event.type)
 }
 
 export function eventTone(event:GameEvent):'town'|'world'|'night'|'danger'|'system'|'home'{
   switch(event.type){
     case 'CITIZEN_DIED':case 'CORPSE_REANIMATED':case 'ZONE_CONTROL_LOST':case 'FLEE_ZOMBIES_RESOLVED':case 'HOME_ITEM_STOLEN':case 'HOME_ITEM_PILLAGED':return'danger'
+    case 'SCOUT_CAMOUFLAGE_SET':return event.active?'world':'danger'
     case 'CITIZEN_STATUS_CHANGED':return event.status.hydration==='dehydrated'||event.status.infected||event.status.terrorized||event.status.addicted?'danger':event.status.hydration==='thirsty'||Boolean(event.status.wound)||event.status.drunk||event.status.hangover?'home':'system'
     case 'CAMPING_RESOLVED':return event.survived?'world':'danger'
     case 'CAMPING_BLUEPRINT_DROPPED':return'world'
     case 'NIGHT_RESOLVED':return event.report.breached||(event.report.corpseReanimations??0)>0?'danger':'night'
     case 'DAY_STARTED':case 'WORLD_ZOMBIES_EVOLVED':return'night'
-    case 'WOUNDED_MOVEMENT_RESOLVED':case 'ZONE_DISCOVERED':case 'ZONE_OBSERVED':case 'ZONE_CONTROL_RESTORED':case 'TEMPORARY_CONTROL_GRANTED':case 'TEMPORARY_CONTROL_EXPIRED':case 'ZONE_SEARCHED':case 'ZONE_REPLENISHED':case 'SPECIAL_SITE_EXCAVATED':case 'SPECIAL_SITE_SEARCHED':case 'ITEM_PICKED_UP':case 'ITEM_DROPPED':case 'TAMER_DOG_DRUGGED':case 'TAMER_DOG_SENT':case 'COMBAT_RESOLVED':case 'CITIZEN_LOCATION_CHANGED':case 'BOT_MISSION_ASSIGNED':case 'BOT_MISSION_PHASE_SET':case 'BOT_MISSION_CLEARED':case 'CAMP_IMPROVED':case 'CAMP_IMPROVEMENTS_DECAYED':case 'CITIZEN_HIDING_SET':return'world'
+    case 'SCOUT_POINTS_SPENT':case 'SCOUT_MAPPING_COMPLETED':case 'SCOUT_VISIT_RECORDED':case 'SCOUT_DETECTION_RESOLVED':case 'WOUNDED_MOVEMENT_RESOLVED':case 'ZONE_DISCOVERED':case 'ZONE_OBSERVED':case 'ZONE_CONTROL_RESTORED':case 'TEMPORARY_CONTROL_GRANTED':case 'TEMPORARY_CONTROL_EXPIRED':case 'ZONE_SEARCHED':case 'ZONE_REPLENISHED':case 'SPECIAL_SITE_EXCAVATED':case 'SPECIAL_SITE_SEARCHED':case 'ITEM_PICKED_UP':case 'ITEM_DROPPED':case 'TAMER_DOG_DRUGGED':case 'TAMER_DOG_SENT':case 'COMBAT_RESOLVED':case 'CITIZEN_LOCATION_CHANGED':case 'BOT_MISSION_ASSIGNED':case 'BOT_MISSION_PHASE_SET':case 'BOT_MISSION_CLEARED':case 'CAMP_IMPROVED':case 'CAMP_IMPROVEMENTS_DECAYED':case 'CITIZEN_HIDING_SET':return'world'
     case 'ITEM_MOVED_TO_HOME':case 'ITEM_MOVED_TO_RUCKSACK':case 'HOME_ITEM_DEPOSITED':case 'HOME_INTRUSION_ATTEMPTED':case 'OPENABLE_RESOLVED':case 'CONTAINER_OPENED':case 'ITEM_CONSUMED':case 'ITEM_ACTION_RESOLVED':case 'ITEMS_COMBINED':case 'HOME_UPGRADED':case 'HOME_IMPROVEMENT_BUILT':case 'HOME_SIESTA_USED':case 'CORPSE_DISPOSED':return'home'
     case 'WATER_TAKEN':case 'ITEM_DEPOSITED':case 'ITEM_WITHDRAWN':case 'BLUEPRINT_READ':case 'CONSTRUCTION_DISCOVERED':case 'CONSTRUCTION_AP_CONTRIBUTED':case 'CONSTRUCTION_COMPLETED':case 'CONSTRUCTION_EXPIRED':case 'CONSTRUCTION_GENERATED_ITEM':case 'WORKSHOP_CONVERTED':case 'GATE_SET':case 'COORDINATION_COMMITMENT_POSTED':return'town'
     default:return'system'
