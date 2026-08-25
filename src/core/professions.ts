@@ -56,7 +56,14 @@ export function createCitizenEquipment(citizenId:string,profession:ProfessionId)
     professionItem:{id:`equipment-${citizenId}-profession`,type:PROFESSION_DEFINITIONS[profession].itemType},
   }
 }
-export function equipCitizenProfession(citizen:Citizen,profession:ProfessionId):Citizen{return{...citizen,equipment:createCitizenEquipment(citizen.id,profession)} as ProfessionCitizen}
+export function equipCitizenProfession(citizen:Citizen,profession:ProfessionId):Citizen{
+  const existing=citizenEquipment(citizen)
+  const equipment:CitizenEquipment={
+    townUniform:existing?.townUniform??{id:`equipment-${citizen.id}-uniform`,type:'town_uniform'},
+    professionItem:{id:existing?.professionItem.id??`equipment-${citizen.id}-profession`,type:PROFESSION_DEFINITIONS[profession].itemType},
+  }
+  return{...citizen,equipment} as ProfessionCitizen
+}
 
 export function validCitizenEquipment(value:unknown):value is CitizenEquipment{
   if(!value||typeof value!=='object')return false
@@ -70,15 +77,15 @@ export function townHasProfessionEquipment(citizens:readonly Citizen[]):boolean{
 function shuffledProfessionOrder(seed:number):ProfessionId[]{
   const order=[...PROFESSION_IDS]
   let state=((seed>>>0)^0x9e3779b9)>>>0||0x6d2b79f5
-  for(let index=order.length-1;index>0;index-=1){const roll=randomInt(state,0,index);state=roll.state;[order[index],order[roll.value]]=[order[roll.value],order[index]]}
+  for(let index=order.length-1;index>0;index-=1){const roll=randomInt(state,0,index);state=roll.state;const selected=order[roll.value]??order[index];const current=order[index];order[index]=selected;order[roll.value]=current}
   return order
 }
 
 export function assignBotProfessions(seed:number,count:number):ProfessionId[]{
   if(count<=0)return[]
   const order=shuffledProfessionOrder(seed)
-  const assignments=Array.from({length:count},(_,index)=>order[index%order.length])
+  const assignments=Array.from({length:count},(_,index)=>order[index%order.length]??'scavenger')
   let state=(((seed>>>0)^0x85ebca6b)>>>0)||0x6d2b79f5
-  for(let index=assignments.length-1;index>0;index-=1){const roll=randomInt(state,0,index);state=roll.state;[assignments[index],assignments[roll.value]]=[assignments[roll.value],assignments[index]]}
+  for(let index=assignments.length-1;index>0;index-=1){const roll=randomInt(state,0,index);state=roll.state;const selected=assignments[roll.value]??assignments[index];const current=assignments[index];assignments[index]=selected;assignments[roll.value]=current}
   return assignments
 }
