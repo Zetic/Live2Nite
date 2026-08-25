@@ -195,10 +195,10 @@ export type GameEvent = (
   | {type:'ITEM_WITHDRAWN';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_MOVED_TO_HOME';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_MOVED_TO_RUCKSACK';day:number;citizenId:string;item:ItemInstance}
-  | {type:'HOME_ITEM_DEPOSITED';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance}
+  | {type:'HOME_ITEM_DEPOSITED';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance;spotted:boolean;rngStateAfter:number}
   | {type:'HOME_INTRUSION_ATTEMPTED';day:number;citizenId:string;targetCitizenId:string;success:boolean;alarmed:boolean}
-  | {type:'HOME_ITEM_STOLEN';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance}
-  | {type:'HOME_ITEM_PILLAGED';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance}
+  | {type:'HOME_ITEM_STOLEN';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance;spotted:boolean;rngStateAfter:number}
+  | {type:'HOME_ITEM_PILLAGED';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance;spotted:true}
   | {type:'OPENABLE_RESOLVED';day:number;citizenId:string;container:ItemInstance;source:ItemStorage;zoneKey?:string;success:boolean;outputs:ItemInstance[];containerAfter?:ItemInstance;rngStateAfter:number}
   | {type:'CONTAINER_OPENED';day:number;citizenId:string;containerId:string;containerType:ItemType;source:ItemStorage;zoneKey?:string;output:ItemInstance;rngStateAfter:number}
   | {type:'WATER_TAKEN';day:number;citizenId:string;item:ItemInstance}
