@@ -8,6 +8,7 @@ import { planTownMissionAssignments } from '../agents/planning/TownMissionPlanne
 import { chooseTownWork } from '../agents/townWork'
 import { getLegalActions } from '../core/actions'
 import { executeCommand } from '../core/commands'
+import { gateAutoCloseAtHour } from '../core/construction'
 import { applyEvents } from '../core/events'
 import type { GameEvent, GameState } from '../core/types'
 import { relativeControlActive, temporaryControlActive, zoneControl } from '../core/world'
@@ -152,10 +153,17 @@ export function runBotHour(state: GameState, controller: AgentController, contro
   nextState=runTemporaryExtractionPass(nextState,controller,controlledCitizenId)
 
   if (state.clock.hour === 23 && nextState.town.gateOpen) {
-    const closer=gateCloser(nextState,controlledCitizenId)
-    if (closer) {
-      const close = getLegalActions(nextState, closer.id).find((action) => action.type==='CLOSE_GATE')
-      if (close) nextState = executeCommand(nextState, close).state
+    // Automatic Piston Lock closes at the start of 23:00 in advanceTime. A late return or
+    // other bot action can reopen the gate later in the same simulated hour, so reassert
+    // the automatic effect after all bot movement before falling back to a human closer.
+    if(gateAutoCloseAtHour(nextState,23)){
+      nextState=applyEvents(nextState,[{type:'GATE_SET',day:nextState.day,hour:23,open:false,citizenId:'system'}])
+    }else{
+      const closer=gateCloser(nextState,controlledCitizenId)
+      if (closer) {
+        const close = getLegalActions(nextState, closer.id).find((action) => action.type==='CLOSE_GATE')
+        if (close) nextState = executeCommand(nextState, close).state
+      }
     }
   }
   return nextState

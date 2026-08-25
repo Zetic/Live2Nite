@@ -14,7 +14,7 @@ import { planExpedition } from './planning/ExpeditionPlanner'
 import { opportunisticFieldAction } from './planning/LootPolicy'
 import { missionSafety } from './planning/MissionLifecycle'
 import { nextDirectionToward } from './planning/RoutePlanner'
-import { chooseTownWork } from './townWork'
+import { chooseTownWork, townWorkApCost } from './townWork'
 
 export class BasicBotController implements AgentController {
   readonly kind='basic-bot'
@@ -28,7 +28,17 @@ export class BasicBotController implements AgentController {
       const plan=planExpedition(game,citizenId);const unload=unloadAction(citizen,actions,plan,mission?.phase==='unload');if(unload)return unload;if(mission?.phase==='unload')return null
       const commitment=commitmentForCitizen(game,citizenId);const reservedAp=reservedApForCitizen(game,citizenId)
       if(!mission&&reservedAp>=citizen.ap){const packages=packageSharingAction(citizen,actions,null,game.clock.hour);if(packages)return packages;const reservedHydration=hydrationAction(game,citizen,actions,{forceThirstTreatment:game.clock.hour>=AI_TUNING.lateHydrationTreatmentHour});if(reservedHydration)return reservedHydration;return null}
-      if(!mission){const committedProject=committedConstructionProject(game,citizenId);if(committedProject){const contribution=actions.find((action)=>action.type==='CONTRIBUTE_CONSTRUCTION'&&action.projectId===committedProject);if(contribution)return contribution}const townWork=chooseTownWork(game,citizen,actions);const urgentCorpse=townWork?.type==='DISPOSE_CORPSE_OUTSIDE'||townWork?.type==='DISPOSE_CORPSE_WATER';const gateVolunteer=commitment?.kind==='gate_primary'||commitment?.kind==='gate_backup';const pressure=publicDefenseAssessment(game).pressure;const urgentDefense=pressure==='critical'||pressure==='shortfall';if(townWork&&(urgentCorpse||commitment?.kind==='construction'||(gateVolunteer&&citizen.ap>reservedAp)||urgentDefense||game.clock.hour>=AI_TUNING.townApDumpHour))return townWork}
+      if(!mission){
+        const committedProject=committedConstructionProject(game,citizenId)
+        if(committedProject){const contribution=actions.find((action)=>action.type==='CONTRIBUTE_CONSTRUCTION'&&action.projectId===committedProject);if(contribution)return contribution}
+        const townWork=chooseTownWork(game,citizen,actions)
+        const workPreservesReserve=townWork?citizen.ap-townWorkApCost(game,citizen,townWork)>=reservedAp:false
+        const urgentCorpse=townWork?.type==='DISPOSE_CORPSE_OUTSIDE'||townWork?.type==='DISPOSE_CORPSE_WATER'
+        const gateVolunteer=commitment?.kind==='gate_primary'||commitment?.kind==='gate_backup'
+        const pressure=publicDefenseAssessment(game).pressure
+        const urgentDefense=pressure==='critical'||pressure==='shortfall'
+        if(townWork&&workPreservesReserve&&(urgentCorpse||commitment?.kind==='construction'||(gateVolunteer&&citizen.ap>reservedAp)||urgentDefense||game.clock.hour>=AI_TUNING.townApDumpHour))return townWork
+      }
       if(!mission){const packages=packageSharingAction(citizen,actions,null,game.clock.hour);if(packages)return packages;const lateHydration=hydrationAction(game,citizen,actions,{forceThirstTreatment:game.clock.hour>=AI_TUNING.lateHydrationTreatmentHour});if(lateHydration)return lateHydration;return null}
       if(mission.phase!=='prepare')return null
       if(plan){const prep=prepareLoadout(game,citizen,actions,plan);if(prep)return prep;if(!plan.feasible&&!mission.emergency)return null}

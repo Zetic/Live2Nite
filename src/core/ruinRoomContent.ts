@@ -1,5 +1,6 @@
 import { explorableBlueprintSpecFromSourceRef } from './explorableBlueprints'
 import type { ItemState, ItemType } from './itemCatalog'
+import { normalizeInitialRuinZombieProfile } from './ruinEvolution'
 import type { RuinInteriorRoom, RuinInteriorState } from './ruinExploration'
 
 export const RUIN_LOCK_DISTANCE=10
@@ -62,20 +63,21 @@ export function ruinRoomDistanceFromEntrance(interior:RuinInteriorState,room:Rui
  * Live2Nite town seed and semantic room identities.
  */
 export function prepareRuinInteriorContent(seed:number,x:number,y:number,interior:RuinInteriorState):RuinInteriorState{
-  const distances=distancesFromEntrance(interior)
-  const stockedIds=new Set(interior.rooms
-    .map((room)=>({id:room.id,rank:stableHash(seed,x,y,`${interior.family}:stock:${room.id}`)}))
+  const normalized=normalizeInitialRuinZombieProfile(seed,x,y,interior)
+  const distances=distancesFromEntrance(normalized)
+  const stockedIds=new Set(normalized.rooms
+    .map((room)=>({id:room.id,rank:stableHash(seed,x,y,`${normalized.family}:stock:${room.id}`)}))
     .sort((left,right)=>left.rank-right.rank||left.id.localeCompare(right.id))
-    .slice(0,Math.min(RUIN_ITEM_FILLRATE,interior.rooms.length))
+    .slice(0,Math.min(RUIN_ITEM_FILLRATE,normalized.rooms.length))
     .map((entry)=>entry.id))
-  const rooms=interior.rooms.map((room)=>{
+  const rooms=normalized.rooms.map((room)=>{
     if(room.lockType!==undefined)return{...room,stocked:room.stocked??stockedIds.has(room.id)}
     const distance=distances.get(room.corridorCellId)??Number.POSITIVE_INFINITY
     if(distance<RUIN_LOCK_DISTANCE)return{...room,locked:false,lockType:null,stocked:room.stocked??stockedIds.has(room.id)}
-    const key=RUIN_KEY_TYPES[stableHash(seed,x,y,`${interior.family}:lock:${room.id}`)%RUIN_KEY_TYPES.length]!
+    const key=RUIN_KEY_TYPES[stableHash(seed,x,y,`${normalized.family}:lock:${room.id}`)%RUIN_KEY_TYPES.length]!
     return{...room,locked:true,lockType:key,stocked:room.stocked??stockedIds.has(room.id)}
   })
-  return{...interior,cells:interior.cells.map((cell)=>({...cell,floorItems:cell.floorItems??[]})),rooms}
+  return{...normalized,cells:normalized.cells.map((cell)=>({...cell,floorItems:cell.floorItems??[]})),rooms}
 }
 
 export function ruinKeyName(type:RuinKeyType):string{return RUIN_KEY_NAMES[type]}
