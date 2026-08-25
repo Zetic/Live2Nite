@@ -8,12 +8,15 @@ export const TAMER_DOG_HEAVY_LIMIT=1
 export function hasTamerDog(citizen:Citizen):boolean{return hasProfession(citizen,'tamer')}
 export function tamerDogUsedToday(state:GameState,citizenId:string):boolean{return state.events.some((event)=>event.type==='TAMER_DOG_SENT'&&event.day===state.day&&event.citizenId===citizenId)}
 export function tamerDogDruggedToday(state:GameState,citizenId:string):boolean{return state.events.some((event)=>event.type==='TAMER_DOG_DRUGGED'&&event.day===state.day&&event.citizenId===citizenId)}
-export function tamerDogBlockedByCumbersome(state:GameState,citizen:Citizen):boolean{return !tamerDogDruggedToday(state,citizen.id)&&citizen.inventory.some(isCumbersomeItem)}
+export function tamerDogCumbersomeCount(citizen:Citizen):number{return citizen.inventory.filter(isCumbersomeItem).length}
+export function tamerDogCumbersomeAllowance(state:GameState,citizen:Citizen):number{return tamerDogDruggedToday(state,citizen.id)?TAMER_DOG_HEAVY_LIMIT:0}
+export function tamerDogBlockedByCumbersome(state:GameState,citizen:Citizen):boolean{return tamerDogCumbersomeCount(citizen)>tamerDogCumbersomeAllowance(state,citizen)}
 
 /**
- * The Maltese returns the rucksack as one shipment. A cumbersome cargo item blocks
- * the whole trip unless the dog has been steroid-boosted; the generic inventory
- * rule already limits a citizen to one cumbersome item at a time.
+ * The Maltese returns the rucksack as one shipment. Cumbersome cargo blocks the
+ * whole trip when it exceeds the dog's current allowance: zero normally, one
+ * after Anabolic Steroids. This remains enforced even for legacy/debug states
+ * that predate the generic one-cumbersome-item rucksack rule.
  */
 export function tamerDogTransportableItems(state:GameState,citizen:Citizen):ItemInstance[]{
   if(tamerDogBlockedByCumbersome(state,citizen))return[]
