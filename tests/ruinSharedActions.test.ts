@@ -7,6 +7,8 @@ import { executeRuinSharedAction, getRuinSharedActions } from '../src/core/ruinS
 import type { GameState, SpecialSiteState, SpecialSiteType, WorldZone } from '../src/core/types'
 import { getZone, zoneKey } from '../src/core/world'
 
+type SiteWithInterior=SpecialSiteState&{interior:RuinInteriorState}
+
 function entranceThreat(interior:RuinInteriorState,zombies:number):RuinInteriorState{
   const entrance=interior.cells.find((cell)=>cell.kind==='entrance'&&cell.floor===0)!
   return{...interior,cells:interior.cells.map((cell)=>({...cell,zombies:cell.id===entrance.id?zombies:0}))}
@@ -23,6 +25,15 @@ function enterWithThreat(seed:number,zombies:number):GameState{
 }
 function currentInterior(game:GameState):RuinInteriorState{return getRuinInterior(getZone(game.world,1,0))!}
 function currentCell(game:GameState){const explorer=getRuinExplorer(game,'c01')!;return currentInterior(game).cells.find((cell)=>cell.id===explorer.cellId)!}
+function placeExplorerInRoomWithThreat(game:GameState,roomId:string,zombies:number):GameState{
+  const key=zoneKey(1,0),zone=game.world.zones[key],site=zone.specialSite as SiteWithInterior,interior=site.interior
+  const room=interior.rooms.find((candidate)=>candidate.id===roomId)!,explorer=getRuinExplorer(game,'c01')!
+  const shifted:RuinExplorerState={...explorer,cellId:room.corridorCellId,inRoomId:room.id}
+  const nextInterior:RuinInteriorState={...interior,cells:interior.cells.map((cell)=>({...cell,zombies:cell.id===room.corridorCellId?zombies:0}))}
+  const nextSite:SiteWithInterior={...site,interior:nextInterior}
+  const nextZone:WorldZone={...zone,specialSite:nextSite}
+  return{...game,world:{...game.world,zones:{...game.world.zones,[key]:nextZone}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,ruinExplorer:shifted}:citizen)}
+}
 
 describe('explorable ruin shared action adapter',()=>{
   it('exposes normal carried-item actions and combinations without exterior-only commands or barehand combat',()=>{
@@ -87,9 +98,8 @@ describe('explorable ruin shared action adapter',()=>{
   it('does not expose corridor weapon actions while the explorer is shifted into a room',()=>{
     let game=enterWithThreat(1005,2)
     game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:[createItemInstance('machete','machete'),createItemInstance('water','water_ration')]}:citizen)}
-    const interior=currentInterior(game),room=interior.rooms[0],explorer=getRuinExplorer(game,'c01')!
-    const shifted:RuinExplorerState={...explorer,cellId:room.corridorCellId,inRoomId:room.id}
-    game={...game,world:{...game.world,zones:{...game.world.zones,[zoneKey(1,0)]:{...game.world.zones[zoneKey(1,0)],specialSite:{...(game.world.zones[zoneKey(1,0)].specialSite as SpecialSiteState&{interior:RuinInteriorState}),interior:{...interior,cells:interior.cells.map((cell)=>({...cell,zombies:cell.id===room.corridorCellId?2:0}))}}}}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,ruinExplorer:shifted}:citizen)}
+    const room=currentInterior(game).rooms[0]
+    game=placeExplorerInRoomWithThreat(game,room.id,2)
     const actions=getRuinSharedActions(game,'c01')
     expect(actions.some((action)=>action.type==='USE_WEAPON')).toBe(false)
     expect(actions.some((action)=>action.type==='DRINK_ITEM')).toBe(true)
