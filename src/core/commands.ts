@@ -15,6 +15,7 @@ import { isSpadeReplenishCommand, spadeReplenishmentEvent, type ScavengerSearchC
 import { normalizeRuinId } from './specialSites'
 import { LEG_WOUND_MOVE_FAILURE_PERCENT, citizenControlPoints, travelHydrationTransition } from './status'
 import { WORLD_STATUS_ACTIONS } from './statusSources'
+import { tamerDogTransportableItems } from './tamer'
 import type { Citizen, GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, SearchMode } from './types'
 import { citizensInZone, getZone, moveCoordinates, zoneControl, zoneKey } from './world'
 import { WORKSHOP_RECIPES, resolveWorkshopRecipeOutput, workshopRecipeApCost, workshopRecipeInputItemIds } from './workshop'
@@ -28,6 +29,8 @@ function sameCommand(left:GameCommand,right:GameCommand):boolean{
   if(left.type==='MOVE'&&right.type==='MOVE')return left.direction===right.direction
   if(left.type==='PICK_UP_ITEM'&&right.type==='PICK_UP_ITEM')return left.itemId===right.itemId
   if(left.type==='DROP_ITEM'&&right.type==='DROP_ITEM')return left.itemId===right.itemId
+  if(left.type==='DRUG_TAMER_DOG'&&right.type==='DRUG_TAMER_DOG')return left.itemId===right.itemId
+  if(left.type==='SEND_TAMER_DOG'&&right.type==='SEND_TAMER_DOG')return left.destination===right.destination
   if(left.type==='USE_WEAPON'&&right.type==='USE_WEAPON')return left.itemId===right.itemId
   if(left.type==='DEPOSIT_ITEM'&&right.type==='DEPOSIT_ITEM')return left.itemId===right.itemId
   if(left.type==='WITHDRAW_BANK_ITEM'&&right.type==='WITHDRAW_BANK_ITEM')return left.itemId===right.itemId
@@ -99,6 +102,8 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     }
     case 'PICK_UP_ITEM':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const item=state.world.zones[key].groundItems.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_PICKED_UP',day:state.day,citizenId:command.citizenId,zoneKey:key,item});break}
     case 'DROP_ITEM':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId);if(!item)throw new InvalidCommandError(`Missing carried item ${command.itemId}`);events.push({type:'ITEM_DROPPED',day:state.day,citizenId:command.citizenId,zoneKey:key,item});break}
+    case 'DRUG_TAMER_DOG':{const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId&&candidate.type==='anabolic_steroids');if(!item)throw new InvalidCommandError('Anabolic Steroids are required for the Three-Legged Maltese');events.push({type:'TAMER_DOG_DRUGGED',day:state.day,citizenId:command.citizenId,item});break}
+    case 'SEND_TAMER_DOG':{const items=tamerDogTransportableItems(state,citizen);events.push({type:'TAMER_DOG_SENT',day:state.day,citizenId:command.citizenId,destination:command.destination,items});break}
     case 'ATTACK_BAREHANDED':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveBarehandedAttack(state);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:BAREHANDED_AP_COST},{type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:'fists',kills:outcome.kills,item:null,consumed:false,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills));break}
     case 'USE_WEAPON':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const zone=state.world.zones[key];const located=locateItem(state,command.citizenId,command.itemId);const outcome=resolveWeaponAttack(state,located.item,zone.zombies);events.push({type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:located.item.type,item:located.item,source:located.source,kills:outcome.kills,consumed:outcome.consumed,brokenInto:outcome.brokenInto,chargesAfter:outcome.chargesAfter,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills));break}
     case 'FLEE_ZOMBIES':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveCitizenEffects(citizen,WORLD_STATUS_ACTIONS.flee_zombies.effects,state.rngState);events.push({type:'FLEE_ZOMBIES_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,statusAfter:outcome.status,rngStateAfter:outcome.rng});break}

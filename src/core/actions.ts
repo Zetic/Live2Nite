@@ -4,6 +4,7 @@ import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
 import { HOME_IMPROVEMENTS, canBuildImprovementSource, foreignHomeStorageVisible, hasPersonalMaterials, homeImprovementLevel, homeLevelSourceReady, homePreventsTheft, homeTransferUsedToday, improvementNextLevel, nextHomeDefinition, siestaUsedToday } from './home'
+import { canCarryItem } from './inventory'
 import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
 import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
 import { canToolOpen, openableDefinition } from './openables'
@@ -11,6 +12,7 @@ import { RUIN_CATALOG } from './ruinCatalog'
 import { canReplenishWithSpade, type ScavengerSearchCommand } from './scavenging'
 import { normalizeRuinId } from './specialSites'
 import { canContributeConstructionByStatus, canFightBarehandedByStatus, canOperateGateByStatus, canUseWeaponByStatus, hasHandWound } from './status'
+import { canDrugTamerDog, canSendTamerDog, tamerDogSteroid } from './tamer'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, relativeControlActive, temporaryControlActive, zoneControl } from './world'
 import { WORKSHOP_RECIPES, WORKSHOP_RECIPE_ORDER, canRunWorkshopRecipe, workshopRecipeApCost } from './workshop'
@@ -51,7 +53,6 @@ function addConsumableActions(state:GameState,actions:GameCommand[],citizen:Citi
 }
 
 function addForeignHomeActions(state:GameState,actions:GameCommand[],citizen:Citizen):void{
-  const hasRucksackSpace=citizen.inventory.length<citizen.inventoryCapacity
   const transferAvailable=!homeTransferUsedToday(state,citizen.id)
   for(const target of state.citizens){
     if(target.id===citizen.id)continue
@@ -60,10 +61,10 @@ function addForeignHomeActions(state:GameState,actions:GameCommand[],citizen:Cit
       if(transferAvailable&&target.home.storage.length<target.home.storageCapacity){for(const item of citizen.inventory)actions.push({type:'DEPOSIT_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})}
       const visible=foreignHomeStorageVisible(state,citizen.id,target)
       if(!visible){actions.push({type:'INTRUDE_HOME',citizenId:citizen.id,targetCitizenId:target.id});continue}
-      if(transferAvailable&&hasRucksackSpace)for(const item of target.home.storage)actions.push({type:'STEAL_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
+      if(transferAvailable)for(const item of target.home.storage)if(canCarryItem(citizen,item))actions.push({type:'STEAL_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
       continue
     }
-    if(transferAvailable&&hasRucksackSpace)for(const item of target.home.storage)actions.push({type:'PILLAGE_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
+    if(transferAvailable)for(const item of target.home.storage)if(canCarryItem(citizen,item))actions.push({type:'PILLAGE_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
   }
 }
 
@@ -79,7 +80,9 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     addConsumableActions(state,actions,citizen,citizen.home.storage,'home')
     for(const item of [...citizen.inventory,...citizen.home.storage])if(itemHasCapability(item.type,'blueprint'))actions.push({type:'READ_BLUEPRINT',citizenId,itemId:item.id})
     for(const item of citizen.inventory){actions.push({type:'DEPOSIT_ITEM',citizenId,itemId:item.id});if(citizen.home.storage.length<citizen.home.storageCapacity)actions.push({type:'MOVE_ITEM_TO_HOME',citizenId,itemId:item.id})}
-    if(citizen.inventory.length<citizen.inventoryCapacity){for(const item of citizen.home.storage)actions.push({type:'MOVE_ITEM_TO_RUCKSACK',citizenId,itemId:item.id});for(const item of state.town.bank)actions.push({type:'WITHDRAW_BANK_ITEM',citizenId,itemId:item.id});const waterTaken=Number(citizen.daily.waterTaken)+Number(Boolean(citizen.daily.bonusWaterTaken));if(waterTaken<wellDailyWithdrawals(state)&&state.town.well.water>0)actions.push({type:'TAKE_WATER',citizenId})}
+    for(const item of citizen.home.storage)if(canCarryItem(citizen,item))actions.push({type:'MOVE_ITEM_TO_RUCKSACK',citizenId,itemId:item.id})
+    for(const item of state.town.bank)if(canCarryItem(citizen,item))actions.push({type:'WITHDRAW_BANK_ITEM',citizenId,itemId:item.id})
+    if(citizen.inventory.length<citizen.inventoryCapacity){const waterTaken=Number(citizen.daily.waterTaken)+Number(Boolean(citizen.daily.bonusWaterTaken));if(waterTaken<wellDailyWithdrawals(state)&&state.town.well.water>0)actions.push({type:'TAKE_WATER',citizenId})}
     addForeignHomeActions(state,actions,citizen)
     const corpses=state.citizens.filter((target)=>target.id!==citizen.id&&!target.alive&&target.home.holdsBody)
     for(const corpse of corpses){
@@ -102,6 +105,11 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     return actions
   }
 
+  const steroid=tamerDogSteroid(citizen)
+  if(steroid&&canDrugTamerDog(state,citizen))actions.push({type:'DRUG_TAMER_DOG',citizenId,itemId:steroid.id})
+  if(canSendTamerDog(state,citizen,'bank'))actions.push({type:'SEND_TAMER_DOG',citizenId,destination:'bank'})
+  if(canSendTamerDog(state,citizen,'home'))actions.push({type:'SEND_TAMER_DOG',citizenId,destination:'home'})
+
   const{x,y}=citizen.location;const zone=getZone(state.world,x,y);if(!zone)return actions
   addConsumableActions(state,actions,citizen,zone.groundItems,'ground')
   if(isTownGateZone(x,y)&&state.town.gateOpen)actions.push({type:'ENTER_TOWN',citizenId})
@@ -121,7 +129,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     const ruinId=normalizeRuinId(site.type);const explorable=RUIN_CATALOG[ruinId].explorable
     if(!explorable&&site.status==='accessible'&&site.hiddenLoot.length>0&&!site.searchedBy.includes(citizenId))actions.push({type:'SEARCH_SPECIAL_SITE',citizenId})
   }
-  if(citizen.inventory.length<citizen.inventoryCapacity)for(const item of zone.groundItems)actions.push({type:'PICK_UP_ITEM',citizenId,itemId:item.id})
+  for(const item of zone.groundItems)if(canCarryItem(citizen,item))actions.push({type:'PICK_UP_ITEM',citizenId,itemId:item.id})
   for(const item of citizen.inventory)actions.push({type:'DROP_ITEM',citizenId,itemId:item.id})
   if(zone.zombies>0&&citizen.ap>0){const terrorBlocked=terrorBlocksOrdinaryItems(state,citizen);for(const item of [...citizen.inventory,...zone.groundItems]){const weapon=weaponDefinition(item.type);if(!terrorBlocked&&weapon&&isWeapon(item.type)&&canUseWeaponByStatus(citizen,item.type)&&hasUsableCharges(item)&&(!weapon.requiresPositiveAp||citizen.ap>0))actions.push({type:'USE_WEAPON',citizenId,itemId:item.id})}if(citizen.ap>=BAREHANDED_AP_COST&&canFightBarehandedByStatus(citizen))actions.push({type:'ATTACK_BAREHANDED',citizenId})}
   if(control.trapped&&!temporaryControlActive(state,citizenId)&&!relativeControlActive(state,citizenId)&&!citizen.status.wound&&!citizen.status.terrorized)actions.push({type:'FLEE_ZOMBIES',citizenId})

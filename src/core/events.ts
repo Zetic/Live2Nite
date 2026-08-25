@@ -78,6 +78,12 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'SPECIAL_SITE_SEARCHED':{const zone=state.world.zones[event.zoneKey];const site=zone?.specialSite;if(!zone||!site)return state;const hiddenLoot=site.hiddenLoot.slice(1);const searchedBy=site.searchedBy.includes(event.citizenId)?site.searchedBy:[...site.searchedBy,event.citizenId];return{...state,nextItemId:event.item?state.nextItemId+1:state.nextItemId,world:{...state.world,zones:{...state.world.zones,[event.zoneKey]:{...zone,groundItems:event.item?[...zone.groundItems,event.item]:zone.groundItems,specialSite:{...site,hiddenLoot,searchedBy,status:hiddenLoot.length===0?'depleted':'accessible'}}}}}}
     case 'ITEM_PICKED_UP':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:[...citizen.inventory,event.item]})),world:replaceGround(state,event.zoneKey,(items)=>items.filter((item)=>item.id!==event.item.id))}}
     case 'ITEM_DROPPED':{const zone=state.world.zones[event.zoneKey];if(!zone)return state;return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id)})),world:replaceGround(state,event.zoneKey,(items)=>[...items,event.item])}}
+    case 'TAMER_DOG_DRUGGED':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,inventory:citizen.inventory.filter((item)=>item.id!==event.item.id)}))}
+    case 'TAMER_DOG_SENT':{
+      const sentIds=new Set(event.items.map((item)=>item.id))
+      const citizens=replaceCitizen(state,event.citizenId,(citizen)=>event.destination==='home'?{...citizen,inventory:citizen.inventory.filter((item)=>!sentIds.has(item.id)),home:{...citizen.home,storage:[...citizen.home.storage,...event.items]}}:{...citizen,inventory:citizen.inventory.filter((item)=>!sentIds.has(item.id))})
+      return event.destination==='bank'?{...state,citizens,town:{...state.town,bank:[...state.town.bank,...event.items]}}:{...state,citizens}
+    }
     case 'COMBAT_RESOLVED':{
       const zone=state.world.zones[event.zoneKey];if(!zone)return state
       let citizens=state.citizens;let world=state.world

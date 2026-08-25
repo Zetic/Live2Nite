@@ -1,6 +1,8 @@
 import { isWeapon } from '../../core/combat'
+import { isCumbersomeItem } from '../../core/inventory'
 import { ITEMS } from '../../core/items'
 import { isSpadeReplenishCommand } from '../../core/scavenging'
+import { hasTamerDog, tamerDogDruggedToday, tamerDogTransportableItems } from '../../core/tamer'
 import type { BotMissionAssignment, Citizen, GameCommand, GameState, ItemInstance, ItemType } from '../../core/types'
 import { distanceToTown, zoneKey } from '../../core/world'
 import { evaluateTownNeeds, type TownNeeds } from './TownNeeds'
@@ -50,10 +52,26 @@ function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:Bo
 }
 export function lootScore(state:GameState,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null=null):number{return scoreWithNeeds(evaluateTownNeeds(state),citizen,type,mission)}
 function isProtectedCarry(state:GameState,citizen:Citizen,item:ItemInstance,mission:BotMissionAssignment|null):boolean{if(ITEMS[item.type].capabilities.includes('blueprint'))return true;if(item.type==='water_ration')return citizen.status.hydration!=='normal'||(!citizen.daily.drank&&(citizen.status.desertStepsToday>=6||(citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)));if(isFood(item.type)&&!citizen.daily.ate&&citizen.location.type==='world'&&distanceToTown(citizen.location.x,citizen.location.y)>=4)return true;if(isWeapon(item.type)){const workingWeapons=citizen.inventory.filter((candidate)=>isWeapon(candidate.type));return workingWeapons.length<=1&&(mission?.purpose==='rescue'||mission?.purpose==='gather_weapons')}return false}
+function isDogCriticalCarry(state:GameState,citizen:Citizen,item:ItemInstance,mission:BotMissionAssignment|null):boolean{return !ITEMS[item.type].capabilities.includes('blueprint')&&isProtectedCarry(state,citizen,item,mission)}
 function pickupAction(actions:GameCommand[],itemId:string):GameCommand|null{return actions.find((action)=>action.type==='PICK_UP_ITEM'&&action.itemId===itemId)??null}
 function dropAction(actions:GameCommand[],itemId:string):GameCommand|null{return actions.find((action)=>action.type==='DROP_ITEM'&&action.itemId===itemId)??null}
+function tamerDogLogisticsAction(state:GameState,citizen:Citizen,actions:GameCommand[],mission:BotMissionAssignment|null):GameCommand|null{
+  if(!hasTamerDog(citizen))return null
+  const alreadyDrugged=tamerDogDruggedToday(state,citizen.id)
+  const hasCumbersome=citizen.inventory.some(isCumbersomeItem)
+  const nearFull=citizen.inventory.length>=Math.max(1,citizen.inventoryCapacity-1)
+  const valuableHaul=Boolean(mission&&shouldReturnWithHaul(state,citizen,mission))
+  if(!alreadyDrugged&&!nearFull&&!valuableHaul)return null
+  const plannedShipment=alreadyDrugged||hasCumbersome?citizen.inventory:tamerDogTransportableItems(state,citizen)
+  if(plannedShipment.some((item)=>isDogCriticalCarry(state,citizen,item,mission)))return null
+  const drug=actions.find((action)=>action.type==='DRUG_TAMER_DOG')??null
+  if(!alreadyDrugged&&hasCumbersome&&drug)return drug
+  return actions.find((action)=>action.type==='SEND_TAMER_DOG'&&action.destination==='bank')??null
+}
 export function opportunisticFieldAction(state:GameState,citizen:Citizen,actions:GameCommand[],mission:BotMissionAssignment|null):GameCommand|null{
-  if(citizen.location.type!=='world')return null;let needs:TownNeeds|null=null;const score=(type:ItemType)=>scoreWithNeeds(needs??(needs=evaluateTownNeeds(state)),citizen,type,mission);const zone=state.world.zones[zoneKey(citizen.location.x,citizen.location.y)];const ground=zone?.groundItems.length?[...zone.groundItems].sort((a,b)=>score(b.type)-score(a.type))[0]??null:null
+  if(citizen.location.type!=='world')return null
+  const dog=tamerDogLogisticsAction(state,citizen,actions,mission);if(dog)return dog
+  let needs:TownNeeds|null=null;const score=(type:ItemType)=>scoreWithNeeds(needs??(needs=evaluateTownNeeds(state)),citizen,type,mission);const zone=state.world.zones[zoneKey(citizen.location.x,citizen.location.y)];const ground=zone?.groundItems.length?[...zone.groundItems].sort((a,b)=>score(b.type)-score(a.type))[0]??null:null
   if(ground){const groundValue=score(ground.type);if(citizen.inventory.length<citizen.inventoryCapacity){const preserveTargetSlots=mission?.phase==='outbound'&&citizen.inventory.length>=citizen.inventoryCapacity-2;if(!preserveTargetSlots||groundValue>=88||mission?.phase==='return'){const pickup=pickupAction(actions,ground.id);if(pickup)return pickup}}else{const candidates=citizen.inventory.filter((item)=>!isProtectedCarry(state,citizen,item,mission));const lowest=[...candidates].sort((a,b)=>score(a.type)-score(b.type))[0]??null;if(lowest&&groundValue>=score(lowest.type)+15){const drop=dropAction(actions,lowest.id);if(drop)return drop}}}
   const specialSearch=actions.find((action)=>action.type==='SEARCH_SPECIAL_SITE')??null;if(specialSearch)return specialSearch
   const replenish=actions.find(isSpadeReplenishCommand)??null;if(replenish)return replenish

@@ -1,4 +1,5 @@
 import { getRuinExplorer, getRuinInterior, moveInsideRuin, ruinCurrentCell, type RuinActionResult, type RuinInteriorDirection } from '../../core/ruinExploration'
+import { tamerRuinExitGuidance } from '../../core/tamer'
 import type { GameState, WorldZone } from '../../core/types'
 import '../ruin-exploration.css'
 
@@ -43,14 +44,17 @@ export function RuinInteriorTravelControls({game,citizenId,onResult}:{game:GameS
   const citizen=game.citizens.find((candidate)=>candidate.id===citizenId)
   const zone=citizen?.location.type==='world'?game.world.zones[`${citizen.location.x},${citizen.location.y}`]:null
   const interior=getRuinInterior(zone)
-  if(!explorer?.active||!cell||!interior)return null
+  if(!explorer?.active||!cell||!interior||!citizen)return null
   const currentRoom=explorer.inRoomId?interior.rooms.find((room)=>room.id===explorer.inRoomId)??null:null
   const movementBlocked=cell.zombies>0&&!explorer.escaping
+  const guidance=tamerRuinExitGuidance(citizen,interior,cell)
+  const guidanceText=guidance?.kind==='direction'?`Three-Legged Maltese points toward the exit: ${guidance.direction.charAt(0)+guidance.direction.slice(1).toLowerCase()}.`:guidance?.kind==='stairs'?'Three-Legged Maltese points to the stairs as the route toward the exit.':guidance?.kind==='exit'?'Three-Legged Maltese indicates that the ruin exit is here.':null
   const canMove=(direction:(typeof DIRECTIONS)[number])=>!currentRoom&&!movementBlocked&&interior.cells.some((candidate)=>candidate.floor===cell.floor&&candidate.x===cell.x+direction.dx&&candidate.y===cell.y+direction.dy)
   return <section className="map-travel-controls" aria-label="Ruin interior travel controls">
     <div className="map-travel-heading"><div><p className="section-kicker">Navigation</p><h3>Interior</h3></div><span>0 AP / move</span></div>
+    {guidanceText&&<div className="ruin-inline-state tamer-exit-guidance">{guidanceText}</div>}
     <div className="direction-pad">
-      {DIRECTIONS.map((direction)=><button type="button" key={direction.direction} className={`direction-button ${direction.className}`} disabled={!canMove(direction)} onClick={()=>onResult(moveInsideRuin(game,citizenId,direction.direction,Date.now()))} aria-label={`Move ${direction.label.toLowerCase()} inside ruin`} title={`Move ${direction.label.toLowerCase()} inside ruin`}><strong>{direction.arrow}</strong><small>{direction.label}</small></button>)}
+      {DIRECTIONS.map((direction)=>{const suggested=guidance?.kind==='direction'&&guidance.direction===direction.direction;return <button type="button" key={direction.direction} className={`direction-button ${direction.className} ${suggested?'tamer-exit-direction':''}`} disabled={!canMove(direction)} onClick={()=>onResult(moveInsideRuin(game,citizenId,direction.direction,Date.now()))} aria-label={`Move ${direction.label.toLowerCase()} inside ruin${suggested?' toward exit':''}`} title={suggested?`${direction.label} · Three-Legged Maltese points toward the exit`:`Move ${direction.label.toLowerCase()} inside ruin`}><strong>{direction.arrow}</strong><small>{suggested?'EXIT':direction.label}</small></button>})}
       <div className="direction-pad-center" aria-hidden="true"><strong>0 AP</strong><small>corridor</small></div>
     </div>
   </section>

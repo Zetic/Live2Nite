@@ -66,6 +66,7 @@ export type ItemStorage = 'inventory' | 'home' | 'ground'
 export type PersonalItemStorage = 'inventory' | 'home'
 export type ConsumableKind = 'food' | 'water'
 export type SearchMode = 'normal' | 'depleted'
+export type TamerDogDestination = 'bank' | 'home'
 export type CombatMethod = 'fists' | ItemType
 export type ClockPhase = 'day' | 'attack'
 /** Historical six-site values remain accepted only for save migration and old fixtures. */
@@ -142,6 +143,8 @@ export type GameCommand =
   | {type:'IMPROVE_CAMP';citizenId:string}
   | {type:'HIDE_FOR_NIGHT';citizenId:string}
   | {type:'LEAVE_HIDEOUT';citizenId:string}
+  | {type:'DRUG_TAMER_DOG';citizenId:string;itemId:string}
+  | {type:'SEND_TAMER_DOG';citizenId:string;destination:TamerDogDestination}
   | {type:'DEPOSIT_ITEM';citizenId:string;itemId:string}
   | {type:'WITHDRAW_BANK_ITEM';citizenId:string;itemId:string}
   | {type:'MOVE_ITEM_TO_HOME';citizenId:string;itemId:string}
@@ -190,6 +193,8 @@ export type GameEvent = (
   | {type:'SPECIAL_SITE_SEARCHED';day:number;zoneKey:string;citizenId:string;item:ItemInstance|null}
   | {type:'ITEM_PICKED_UP';day:number;citizenId:string;zoneKey:string;item:ItemInstance}
   | {type:'ITEM_DROPPED';day:number;citizenId:string;zoneKey:string;item:ItemInstance}
+  | {type:'TAMER_DOG_DRUGGED';day:number;citizenId:string;item:ItemInstance}
+  | {type:'TAMER_DOG_SENT';day:number;citizenId:string;destination:TamerDogDestination;items:ItemInstance[]}
   | {type:'COMBAT_RESOLVED';day:number;citizenId:string;zoneKey:string;method:CombatMethod;kills:number;item:ItemInstance|null;source?:ItemStorage;consumed:boolean;brokenInto?:ItemType;chargesAfter?:number;rngStateAfter:number}
   | {type:'ITEM_DEPOSITED';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_WITHDRAWN';day:number;citizenId:string;item:ItemInstance}
