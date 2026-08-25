@@ -8,9 +8,9 @@ This document records the historical basis for Live2Nite's citizen-home and dail
 | --- | --- | --- | --- |
 | Starting town water | Seeded 80–140 Water Rations | High | https://die2nite.fandom.com/wiki/About_the_game |
 | Starter packages | Every citizen starts with a Citizen's Welcome Pack and Doggy Bag | High | https://die2nite.fandom.com/wiki/About_the_game |
-| Base home | Every citizen begins with a Camp Bed; personal defense 0 | High | https://die2nite.fandom.com/wiki/Your_House |
-| Base rucksack | 4 carried slots | High | https://wiki.eternal-twin.net/die2nite/inventory |
-| Base home chest | 4 storage slots for an ordinary citizen | Medium-high | https://wiki.eternal-twin.net/die2nite/inventory |
+| Base home | Every citizen begins with a Camp Bed; structural defense 0, plus Live2Nite's universal +2 inherent personal citizen defense | Adapted | https://die2nite.fandom.com/wiki/Your_House and https://wiki.eternal-twin.net/hordes/heros |
+| Base rucksack | 5 ordinary cargo slots plus locked Town Uniform and Profession Item equipment slots | Adapted | https://wiki.eternal-twin.net/die2nite/inventory and https://wiki.eternal-twin.net/hordes/heros |
+| Base home chest | 5 storage slots | Adapted | https://wiki.eternal-twin.net/die2nite/inventory and https://wiki.eternal-twin.net/hordes/heros |
 | Daily well ration | One Water Ration may be taken from the well per citizen per day before infrastructure modifiers | High | historical Die2Nite well/beginner documentation |
 | Food AP refresh | Ordinary food can refresh the citizen to 6/6 AP once per day | High | https://die2nite.fandom.com/wiki/Beginners%27_Welcome and https://die2nite.fandom.com/wiki/Action_Points |
 | Water AP refresh | Water can independently refresh the citizen to 6/6 AP once per day | High | https://die2nite.fandom.com/wiki/Beginners%27_Welcome and https://die2nite.fandom.com/wiki/Action_Points |
@@ -18,6 +18,8 @@ This document records the historical basis for Live2Nite's citizen-home and dail
 | Home upgrade cadence | After the initial state, a citizen can improve the structural home once per day | High | https://wiki.eternal-twin.net/hordes/maison and https://die2nite.fandom.com/wiki/Your_House |
 | Home contribution | Eligible home defense contributes 40% to town defense | High | https://wiki.eternal-twin.net/hordes/attaque and https://wiki.eternal-twin.net/hordes/maison |
 | Circular Quarters | Raises eligible home contribution to 80% | High | https://wiki.eternal-twin.net/hordes/attaque |
+
+The storage and inherent-defense values are deliberate Live2Nite adaptations. The source games separated some of these benefits behind Hero status; Live2Nite does not implement that paid-service distinction. Every citizen receives the higher baseline, while professions are ordinary equipment-backed roles documented in `docs/professions.md`.
 
 ## Structural home progression
 
@@ -55,10 +57,10 @@ Evidence: https://wiki.eternal-twin.net/hordes/maison and https://wiki.eternal-t
 
 The Home distinguishes two defense layers:
 
-1. **Personal home defense** protects that citizen when zombies breach the town.
+1. **Personal home defense** protects that citizen when zombies breach the town. Every Live2Nite citizen begins with +2 inherent personal defense before structural, work, or loose-object defense is counted.
 2. **Eligible/contributable home defense** is the structural and installed-improvement portion which feeds the shared town-defense calculation.
 
-Loose defensive objects stored in the citizen's private chest remain full-strength personal protection but are excluded from the 40%/80% town contribution. The shared calculation is:
+The universal +2 inherent citizen defense and loose defensive objects stored in the citizen's private chest remain full-strength personal protection but are excluded from the 40%/80% town contribution. The shared calculation is:
 
 `floor(sum(eligible home defense for living citizens in town) × contribution ratio)`
 
@@ -66,7 +68,7 @@ where the contribution ratio is normally **0.40** and becomes **0.80** with Circ
 
 ## Home works represented in PR #51
 
-The later Home system contains many Hero/home works. PR #51 records the broader work catalogue but only enables construction where the required effect and source dependencies are represented.
+The later source system attached many Home works to Hero status. Live2Nite deliberately discards that paid-status access distinction: supported Home works are ordinary citizen mechanics. PR #51 records the broader work catalogue but only enables construction where the required effect and source dependencies are represented.
 
 - **Fence** — +3 personal/eligible defense; effect represented, missing structural input keeps construction blocked.
 - **Reinforcements** — up to ten levels, +1 personal/eligible defense per level; existing `wire_mesh` represents the source fencing input used by later levels.
@@ -78,7 +80,7 @@ The later Home system contains many Hero/home works. PR #51 records the broader 
 - **Kitchen** — catalogued, effect unavailable until the cooking subsystem exists.
 - **Laboratory** — catalogued, effect unavailable until the production/drug subsystem exists.
 
-Hero/profession restrictions are still deferred. Until that system exists, ordinary-citizen access remains a Live2Nite integration boundary that should be revisited with Hero implementation.
+Profession-specific abilities are separate from Home-work access and are implemented incrementally through the equipped Profession Item.
 
 Evidence: https://wiki.eternal-twin.net/hordes/travaux
 
@@ -127,7 +129,7 @@ Siesta is different: it is unavailable while already at full AP and, on success,
 - complete special-food catalog and side effects;
 - complete Doggy Bag and Welcome Pack probability tables;
 - runtime/acquisition support for source items still represented as structural/work blockers;
-- Hero-only access restrictions and Hero-specific home actions;
+- profession-specific gameplay abilities beyond the equipment foundation;
 - Chaos-mode theft/pillage overrides;
 - Kitchen cooking recipes/effects;
 - Laboratory production/drug actions.
