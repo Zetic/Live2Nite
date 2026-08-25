@@ -13,7 +13,7 @@ This pass uses the public `eternaltwin/myhordes/myhordes` default rules as the c
 - `massive_respawn_threshold`: **50**;
 - `massive_respawn_factor`: **0.5**.
 
-The exact current server-side formula that turns distance/map-generation state into each Day-1 exterior zone's zombie count was not recovered from a stable public source path during this audit. Likewise, this pass verifies the respawn setting values but does not copy the upstream code that consumes them. Live2Nite therefore does **not** claim exact exterior generator/respawn parity and does not copy upstream generator code or IDs.
+The exact current server-side formula that turns distance/map-generation state into each Day-1 exterior zone's zombie count was not established from the source paths audited in this pass. Likewise, this pass verifies the respawn setting values but does not copy the upstream code that consumes them. Live2Nite therefore does **not** claim exact exterior generator/respawn parity and does not copy upstream generator code or IDs.
 
 ## Live2Nite World Beyond projection
 
@@ -33,7 +33,7 @@ The profile is deterministic by town seed. The immediate approaches are delibera
 
 Nightly natural growth is also distance-biased. It no longer uses neighbor-pressure diffusion, so one dense pocket cannot cascade through the starter area. Cleared zones at distance 1–2 do not immediately refill; farther empty zones can slowly repopulate and existing populations can grow gradually.
 
-For Live2Nite's adaptation, the exposed source threshold value **50** is interpreted as 50% of Live2Nite's deterministic Day-1 exterior baseline; when population falls below that point, the exposed **0.5** factor restores half of the deficit. Emergency repopulation excludes the first two travel rings and fills farther zones first. This interpretation is deliberately documented as Live2Nite behavior rather than an assertion that the unrecovered upstream consumer uses the setting in the same units.
+For Live2Nite's adaptation, the exposed source threshold value **50** is interpreted as 50% of Live2Nite's deterministic Day-1 exterior baseline; when population falls below that point, the exposed **0.5** factor restores half of the deficit. Emergency repopulation excludes the first two travel rings and fills farther zones first. This interpretation is deliberately documented as Live2Nite behavior rather than an assertion that the unaudited upstream consumer uses the setting in the same units.
 
 ## Explorable ruins
 
