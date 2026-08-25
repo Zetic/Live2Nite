@@ -103,7 +103,7 @@ describe('Tamer profession',()=>{
     expect(getLegalActions(game,'c01').some((action)=>action.type==='SEND_TAMER_DOG')).toBe(false)
   })
 
-  it('consumes Anabolic Steroids on the dog without drugging the citizen and enables the entire rucksack including one cumbersome item',()=>{
+  it('consumes Anabolic Steroids on the dog without drugging the citizen and enables exactly one cumbersome item with the entire rucksack',()=>{
     let game=outsideWith(createInitialGame(7104,1,'tamer'),[item('heavy','sheet_metal'),item('light','twisted_plank'),item('steroid','anabolic_steroids')])
     expect(getLegalActions(game,'c01').some((action)=>action.type==='SEND_TAMER_DOG')).toBe(false)
     const drug=getLegalActions(game,'c01').find((action):action is Extract<GameCommand,{type:'DRUG_TAMER_DOG'}>=>action.type==='DRUG_TAMER_DOG')
@@ -120,6 +120,16 @@ describe('Tamer profession',()=>{
     expect(game.citizens[0].inventory).toHaveLength(0)
     expect(game.town.bank.some((entry)=>entry.id==='heavy')).toBe(true)
     expect(game.town.bank.some((entry)=>entry.id==='light')).toBe(true)
+
+    let legacy=outsideWith(createInitialGame(7115,1,'tamer'),[item('heavy-a','sheet_metal'),item('heavy-b','engine'),item('legacy-steroid','anabolic_steroids')])
+    const legacyDrug=getLegalActions(legacy,'c01').find((action):action is Extract<GameCommand,{type:'DRUG_TAMER_DOG'}>=>action.type==='DRUG_TAMER_DOG')
+    expect(legacyDrug).toBeDefined()
+    if(!legacyDrug)return
+    legacy=executeCommand(legacy,legacyDrug).state
+    expect(tamerDogDruggedToday(legacy,'c01')).toBe(true)
+    expect(tamerDogBlockedByCumbersome(legacy,legacy.citizens[0])).toBe(true)
+    expect(tamerDogTransportableItems(legacy,legacy.citizens[0])).toEqual([])
+    expect(getLegalActions(legacy,'c01').some((action)=>action.type==='SEND_TAMER_DOG')).toBe(false)
   })
 
   it('resets tired and steroid-boosted dog state naturally when the next day begins',()=>{
