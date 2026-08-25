@@ -84,8 +84,8 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   const site=zone.specialSite
   if(site&&!control.trapped){
     if(site.status==='buried'&&citizen.ap>=SPECIAL_EXCAVATION_AP_COST)actions.push({type:'EXCAVATE_SPECIAL_SITE',citizenId})
-    const ruinId=normalizeRuinId(site.type);const explorable=Boolean(ruinId&&RUIN_CATALOG[ruinId].explorable)
-    if(site.status==='accessible'&&(site.hiddenLoot.length>0||explorable)&&!site.searchedBy.includes(citizenId))actions.push({type:'SEARCH_SPECIAL_SITE',citizenId})
+    const ruinId=normalizeRuinId(site.type);const explorable=RUIN_CATALOG[ruinId].explorable
+    if(!explorable&&site.status==='accessible'&&site.hiddenLoot.length>0&&!site.searchedBy.includes(citizenId))actions.push({type:'SEARCH_SPECIAL_SITE',citizenId})
   }
   if(citizen.inventory.length<citizen.inventoryCapacity)for(const item of zone.groundItems)actions.push({type:'PICK_UP_ITEM',citizenId,itemId:item.id})
   for(const item of citizen.inventory)actions.push({type:'DROP_ITEM',citizenId,itemId:item.id})
