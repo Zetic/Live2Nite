@@ -109,12 +109,12 @@ export interface CitizenStatusState {
 export interface CitizenCampingState { hidden:boolean; survivalChance:number|null; hiddenDay:number|null; nightsSurvived:number; lastSurvivedDay:number|null }
 export interface TemporaryControlState { zoneKey:string; grantedDay:number; grantedHour:number }
 export interface RelativeControlState { zoneKey:string }
-export interface Citizen { id:string; name:string; controller:CitizenControllerKind; alive:boolean; ap:number; maxAp:number; location:CitizenLocation; inventory:ItemInstance[]; inventoryCapacity:number; home:CitizenHome; corpseDisposition:CorpseDisposition|null; daily:CitizenDailyState; status:CitizenStatusState; camping:CitizenCampingState; temporaryControl:TemporaryControlState|null; relativeControl:RelativeControlState|null }
+export interface Citizen { id:string; name:string; controller:CitizenControllerKind; alive:boolean; ap:number; maxAp:number; scoutPoints?:number; scoutPointBonusNextDay?:number; location:CitizenLocation; inventory:ItemInstance[]; inventoryCapacity:number; home:CitizenHome; corpseDisposition:CorpseDisposition|null; daily:CitizenDailyState; status:CitizenStatusState; camping:CitizenCampingState; temporaryControl:TemporaryControlState|null; relativeControl:RelativeControlState|null }
 export interface BotMissionAssignment { missionId:string; role:BotMissionRole; purpose:BotMissionPurpose; target:{x:number;y:number}; targetLabel:string; reason:string; phase:BotMissionPhase; assignedDay:number; assignedHour:number; returnByHour:number; safetyReserve:number; emergency:boolean; allowsCamping?:boolean; overnightPlanned?:boolean; scoutKind?:ScoutMissionKind; searchMode?:SearchMode }
 export interface CoordinationCommitment { id:string; citizenId:string; kind:CoordinationCommitmentKind; taskKey:string; label:string; reservedAp:number; day:number; hour:number; expiresHour:number; projectId?:ConstructionId }
 export interface TownCoordinationState { commitments:CoordinationCommitment[] }
 export interface SpecialSiteState { type:SpecialSiteType; status:SpecialSiteStatus; excavationRequired:number; excavationProgress:number; hiddenLoot:ItemType[]; searchedBy:string[]; blueprintFound:boolean }
-export interface WorldZone { x:number; y:number; discovered:boolean; zombies:number; searchesRemaining:number; searchedBy:string[]; depletedSearchedBy:string[]; hiddenLoot:ItemType[]; groundItems:ItemInstance[]; campImprovements:number; specialSite?:SpecialSiteState }
+export interface WorldZone { x:number; y:number; discovered:boolean; zombies:number; searchesRemaining:number; searchedBy:string[]; depletedSearchedBy:string[]; hiddenLoot:ItemType[]; groundItems:ItemInstance[]; campImprovements:number; scoutVisits?:number; scoutMarkers?:number; specialSite?:SpecialSiteState }
 export interface ZoneIntelState { observedZombies:number|null; lastObservedDay:number|null; lastObservedHour:number|null }
 export interface WorldState { minX:number; maxX:number; minY:number; maxY:number; zones:Record<string,WorldZone>; intel:Record<string,ZoneIntelState> }
 export interface ConstructionProjectState { id:ConstructionId; discovered:boolean; apContributed:number; completed:boolean }
@@ -132,6 +132,8 @@ export type GameCommand =
   | {type:'EXIT_TOWN';citizenId:string}
   | {type:'ENTER_TOWN';citizenId:string}
   | {type:'MOVE';citizenId:string;direction:Direction}
+  | {type:'RECAMOUFLAGE';citizenId:string}
+  | {type:'MAP_WASTELAND';citizenId:string}
   | {type:'SEARCH_ZONE';citizenId:string}
   | {type:'EXCAVATE_SPECIAL_SITE';citizenId:string}
   | {type:'SEARCH_SPECIAL_SITE';citizenId:string}
@@ -172,6 +174,11 @@ export interface CombinationEventOutput { item:ItemInstance; storage:PersonalIte
 export type DeathReason='outside_at_night'|'camping_failure'|'home_breach'|'corpse_attack'|'dehydration'|'infection'|'drug_withdrawal'
 export type GameEvent = (
   | {type:'AP_SPENT';day:number;citizenId:string;amount:number}
+  | {type:'SCOUT_POINTS_SPENT';day:number;citizenId:string;amount:number}
+  | {type:'SCOUT_MAPPING_COMPLETED';day:number;citizenId:string;nextDayBonus:number}
+  | {type:'SCOUT_CAMOUFLAGE_SET';day:number;citizenId:string;active:boolean;reason:'recamouflaged'|'detected'|'action'}
+  | {type:'SCOUT_VISIT_RECORDED';day:number;citizenId:string;zoneKey:string}
+  | {type:'SCOUT_DETECTION_RESOLVED';day:number;citizenId:string;zoneKey:string;chancePercent:number;spotted:boolean;rngStateAfter:number}
   | {type:'GATE_SET';day:number;open:boolean;citizenId:string}
   | {type:'CITIZEN_LOCATION_CHANGED';day:number;citizenId:string;location:CitizenLocation;desertStep?:boolean}
   | {type:'CITIZEN_STATUS_CHANGED';day:number;citizenId:string;status:CitizenStatusState;reason:CitizenStatusChangeReason}
