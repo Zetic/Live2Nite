@@ -1,4 +1,5 @@
 import { isGodCitizen } from '../../core/debugGod'
+import { professionName } from '../../core/professions'
 import { CITIZEN_STATUS_DEFINITIONS, DESERT_STEPS_PER_HYDRATION_STAGE, activeCitizenStatuses, effectiveMaxAp, woundLabel } from '../../core/status'
 import type { Citizen, CitizenStatusId } from '../../core/types'
 
@@ -32,7 +33,7 @@ function statusSlots(citizen:Citizen):StatusSlot[]{
 export function CitizenStatusBar({citizen}:{citizen:Citizen}){
   const slots=statusSlots(citizen),god=isGodCitizen(citizen),cap=effectiveMaxAp(citizen)
   return <section className={`citizen-status-hud ${!citizen.alive?'dead':''}`} aria-label={`${citizen.name} status`}>
-    <div className="citizen-status-identity"><span>Controlled citizen</span><strong>{citizen.name}</strong></div>
+    <div className="citizen-status-identity"><span>Controlled citizen</span><strong>{citizen.name}</strong><small>{professionName(citizen)}</small></div>
     <div className="citizen-status-ap"><span>AP</span><strong>{god?'∞':citizen.ap}<small>/{god?'∞':cap}</small></strong></div>
     <div className="citizen-status-label">Status</div>
     <div className="citizen-status-slots">{slots.map((slot)=><div key={slot.id} className={`citizen-status-slot ${slot.active?'active':''} ${slot.tone}`} title={slot.title} aria-label={`${slot.label}. ${slot.title}`}><span className="citizen-status-icon" aria-hidden="true">{slot.icon}</span><span className="citizen-status-slot-label">{slot.label}</span></div>)}</div>

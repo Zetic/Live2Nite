@@ -79,7 +79,7 @@ describe('field opportunism and hydration assurance',()=>{
 
   it('drops a low-value carry before taking a substantially better ground item',()=>{
     let game=createInitialGame(8104,2)
-    game=patchCitizen(game,'c02',{location:{type:'world',x:2,y:0},inventory:[item('a','battery'),item('b','box_of_matches'),item('c','pharmaceutical_products'),item('d','broken_human_bone')],ap:4})
+    game=patchCitizen(game,'c02',{location:{type:'world',x:2,y:0},inventory:[item('a','battery'),item('b','box_of_matches'),item('c','pharmaceutical_products'),item('d','broken_human_bone'),item('e','rotten_log')],ap:4})
     game={...game,botMissions:{c02:mission({phase:'return'})},world:{...game.world,zones:{...game.world.zones,'2,0':{...game.world.zones['2,0'],discovered:true,zombies:0,groundItems:[item('pack','resource_pack')],searchedBy:['c02']}}}}
     const actions=getLegalActions(game,'c02')
     const first=opportunisticFieldAction(game,game.citizens.find((citizen)=>citizen.id==='c02')!,actions,game.botMissions.c02)

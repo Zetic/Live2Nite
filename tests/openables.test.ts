@@ -46,7 +46,7 @@ describe('source-backed openables',()=>{
   })
 
   it('requires a free slot while a Resource Pack remains, but final opening can reuse its slot',()=>{
-    const fillers=[createItemInstance('f1','twisted_plank'),createItemInstance('f2','wrought_iron'),createItemInstance('f3','battery')]
+    const fillers=[createItemInstance('f1','twisted_plank'),createItemInstance('f2','wrought_iron'),createItemInstance('f3','battery'),createItemInstance('f4','box_of_matches')]
     const retained=withInventory([createItemInstance('pack','resource_pack',{contents:2}),...fillers])
     expect(retained.citizens[0].inventory).toHaveLength(retained.citizens[0].inventoryCapacity)
     expect(openAction(retained,'pack')).toBeUndefined()

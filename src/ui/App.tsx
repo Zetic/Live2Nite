@@ -8,6 +8,7 @@ import { debugGodMove, debugInstantBuild, debugRefreshCitizen, debugSummonItem, 
 import { enforceGodMode, isGodCitizen } from '../core/debugGod'
 import { totalTownDefense } from '../core/defense'
 import { createInitialGame } from '../core/game'
+import { townHasProfessionEquipment, type ProfessionId } from '../core/professions'
 import { getRuinExplorer, ruinCurrentCell, type RuinActionResult } from '../core/ruinExploration'
 import { specialSiteName } from '../core/specialSites'
 import type { ConstructionId, Direction, GameCommand, GameEvent, GameState, ItemType } from '../core/types'
@@ -22,6 +23,7 @@ import { CodexView } from './components/CodexView'
 import { ConstructionView } from './components/ConstructionView'
 import { GameNavigation } from './components/GameNavigation'
 import { HomeView } from './components/HomeView'
+import { LandingScreen } from './components/LandingScreen'
 import { RuinInteriorMap, RuinInteriorTravelControls, ruinFloorLabel } from './components/RuinInteriorMap'
 import { TimeControls } from './components/TimeControls'
 import { TownEndScreen } from './components/TownEndScreen'
@@ -49,12 +51,14 @@ function newSeed(): number { const values = new Uint32Array(1); crypto.getRandom
 export function App() {
   const [game, setGame] = useState<GameState>(() => createInitialGame(1))
   const [loaded, setLoaded] = useState(false)
+  const [atLanding,setAtLanding]=useState(true)
+  const [selectedProfession,setSelectedProfession]=useState<ProfessionId|null>(null)
   const [error, setError] = useState<string | null>(null)
   const [screen, setScreen] = useState<GameScreen>('chronicle')
   const [controlledCitizenId, setControlledCitizenId] = useState('c01')
   const [visitedCitizenId, setVisitedCitizenId] = useState<string | null>(null)
-  useEffect(() => { repository.load().then((saved) => setGame(enforceGodMode(saved ?? createInitialGame(newSeed())))).catch(() => setGame(createInitialGame(newSeed()))).finally(() => setLoaded(true)) }, [])
-  useEffect(() => { if (loaded) void repository.save(game) }, [game, loaded])
+  useEffect(() => { repository.load().then((saved) => {if(saved&&townHasProfessionEquipment(saved.citizens)){setGame(enforceGodMode(saved));setAtLanding(false)}else{setAtLanding(true);if(saved)void repository.clear()}}).catch(() => setAtLanding(true)).finally(() => setLoaded(true)) }, [])
+  useEffect(() => { if (loaded&&!atLanding) void repository.save(game) }, [game, loaded, atLanding])
 
   const player = game.citizens.find((citizen) => citizen.id === controlledCitizenId) ?? game.citizens[0]
   const godActive=isGodCitizen(player)
@@ -116,7 +120,8 @@ export function App() {
     try { setGame(enforceGodMode(advanceToHour(game,hour,botController,controlledCitizenId))); setError(null) }
     catch (caught) { setError(caught instanceof InvalidTimeAdvanceError ? caught.message : 'Time advance failed.') }
   }
-  const reset = async () => { await repository.clear(); setGame(createInitialGame(newSeed())); setControlledCitizenId('c01'); setVisitedCitizenId(null); setScreen('chronicle'); setError(null) }
+  const startNewTown=()=>{if(!selectedProfession)return;setGame(createInitialGame(newSeed(),40,selectedProfession));setControlledCitizenId('c01');setVisitedCitizenId(null);setScreen('chronicle');setError(null);setAtLanding(false)}
+  const reset = async () => { await repository.clear(); setSelectedProfession(null); setControlledCitizenId('c01'); setVisitedCitizenId(null); setScreen('chronicle'); setError(null); setAtLanding(true) }
   const refresh = () => { setGame((current)=>debugRefreshCitizen(current,controlledCitizenId)); setError(null) }
   const toggleGod = () => { setGame((current)=>debugToggleGod(current,controlledCitizenId)); setError(null) }
   const summonItem = (type:ItemType) => { setGame((current)=>debugSummonItem(current,controlledCitizenId,type)); setError(null) }
@@ -127,6 +132,7 @@ export function App() {
   const visitHome = (citizenId:string) => { if(!player.alive||player.location.type!=='town')return;setVisitedCitizenId(citizenId);setScreen('home');setError(null) }
 
   if (!loaded) return <main className="shell loading-shell"><p>Opening the town gates…</p></main>
+  if(atLanding)return <LandingScreen selected={selectedProfession} onSelect={setSelectedProfession} onStart={startNewTown}/>
 
   const zombiesInside = game.lastNight?.zombiesInside ?? (game.lastNight ? Math.max(0, game.lastNight.attackStrength - game.lastNight.effectiveDefense) : 0)
   const nightHadCorpseAttack = (game.lastNight?.corpseReanimations ?? 0) > 0

@@ -46,7 +46,7 @@ describe('historical-style Home progression',()=>{
       ...game,
       citizens:game.citizens.map((citizen)=>({...citizen,home:{...citizen.home,level:'tent',defense:1,storage:[{id:'door',type:'old_door'}],improvements:{reinforcements:0,fence:1,storage:0}}})),
     }
-    expect(personalDefense(game.citizens[0],game)).toBe(5)
+    expect(personalDefense(game.citizens[0],game)).toBe(7)
     expect(homeTownDefense(game)).toBe(1)
   })
 

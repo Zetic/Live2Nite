@@ -2,7 +2,8 @@ import { homeDefenseBonus } from './construction'
 import { createItemInstance, homeDefenseFor } from './items'
 import type { Citizen, CitizenDailyState, CitizenHome, GameEvent, GameState, HomeImprovementId, HomeLevel, ItemType } from './types'
 
-export const BASE_HOME_STORAGE = 4
+export const BASE_HOME_STORAGE = 5
+export const BASE_PERSONAL_HOME_DEFENSE = 2
 
 export interface HomeLevelDefinition {
   level: HomeLevel
@@ -168,7 +169,7 @@ export function homeImprovementLevel(citizen:Citizen,id:HomeImprovementId):numbe
 export function hasHomeImprovement(citizen:Citizen,id:HomeImprovementId):boolean{return homeImprovementLevel(citizen,id)>0}
 export function homeImprovementDefense(citizen:Citizen):number{return homeImprovementLevel(citizen,'reinforcements')*HOME_IMPROVEMENTS.reinforcements.defensePerLevel+homeImprovementLevel(citizen,'fence')*HOME_IMPROVEMENTS.fence.defensePerLevel}
 export function contributableHomeDefense(citizen:Citizen,state?:GameState):number{return citizen.home.defense+homeImprovementDefense(citizen)+(state?homeDefenseBonus(state):0)}
-export function personalDefense(citizen:Citizen,state?:GameState):number{return contributableHomeDefense(citizen,state)+citizen.home.storage.reduce((sum,item)=>sum+homeDefenseFor(item.type),0)}
+export function personalDefense(citizen:Citizen,state?:GameState):number{return BASE_PERSONAL_HOME_DEFENSE+contributableHomeDefense(citizen,state)+citizen.home.storage.reduce((sum,item)=>sum+homeDefenseFor(item.type),0)}
 
 export function improvementNextLevel(citizen:Citizen,id:HomeImprovementId):number|null{const current=homeImprovementLevel(citizen,id);return current<HOME_IMPROVEMENTS[id].maxLevel?current+1:null}
 export function improvementStorageCapacity(citizen:Citizen):number{return BASE_HOME_STORAGE+homeImprovementLevel(citizen,'storage')*HOME_IMPROVEMENTS.storage.storagePerLevel}
