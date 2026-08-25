@@ -1,7 +1,7 @@
 import { bankCount } from '../core/bank'
 import { COMBINATION_RECIPES, combinationRecipeForOutput } from '../core/combinations'
 import { CONSTRUCTIONS, missingMaterials } from '../core/construction'
-import { HOME_IMPROVEMENTS, improvementNextLevel, nextHomeDefinition, personalMaterialCount } from '../core/home'
+import { HOME_IMPROVEMENTS, homeLevelSourceReady, improvementNextLevel, nextHomeDefinition, personalMaterialCount } from '../core/home'
 import type { Citizen, CombinationRecipeId, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemType, WorkshopRecipeId } from '../core/types'
 import { workshopRecipeApCost } from '../core/workshop'
 import { publicDefenseAssessment, rankStrategicConstruction, strategicConstructionNeed } from './planning/TownDefenseStrategy'
@@ -14,7 +14,7 @@ function corpseDisposalAction(actions:GameCommand[]):GameCommand|null{return act
 function improvementAction(actions:GameCommand[],id:HomeImprovementId):GameCommand|null{return actions.find((action)=>action.type==='BUILD_HOME_IMPROVEMENT'&&action.improvementId===id)??null}
 function withdrawAction(state:GameState,actions:GameCommand[],type:ItemType):GameCommand|null{return actions.find((action)=>action.type==='WITHDRAW_BANK_ITEM'&&state.town.bank.some((item)=>item.id===action.itemId&&item.type===type))??null}
 function communalReserve(state:GameState,type:ItemType,projectId:ConstructionId|null):number{if(!projectId||state.town.construction[projectId]?.completed)return 0;return CONSTRUCTIONS[projectId].resources[type]??0}
-function homeMaterialWithdrawal(state:GameState,citizen:Citizen,actions:GameCommand[],communalProjectId:ConstructionId|null):GameCommand|null{const target=nextHomeDefinition(citizen.home.level);if(!target||citizen.home.upgradedDay===state.day||target.apCost>citizen.maxAp)return null;for(const[type,required]of Object.entries(target.resources)){const itemType=type as ItemType;const missing=Math.max(0,(required??0)-personalMaterialCount(citizen,itemType));if(missing<=0)continue;if(bankCount(state,itemType)<=communalReserve(state,itemType,communalProjectId))continue;const action=withdrawAction(state,actions,itemType);if(action)return action}return null}
+function homeMaterialWithdrawal(state:GameState,citizen:Citizen,actions:GameCommand[],communalProjectId:ConstructionId|null):GameCommand|null{const target=nextHomeDefinition(citizen.home.level);if(!target||!homeLevelSourceReady(target)||citizen.home.upgradedDay===state.day||target.apCost>citizen.maxAp)return null;for(const[type,required]of Object.entries(target.resources)){const itemType=type as ItemType;const missing=Math.max(0,(required??0)-personalMaterialCount(citizen,itemType));if(missing<=0)continue;if(bankCount(state,itemType)<=communalReserve(state,itemType,communalProjectId))continue;const action=withdrawAction(state,actions,itemType);if(action)return action}return null}
 function personalCount(citizen:Citizen,type:ItemType):number{return [...citizen.inventory,...citizen.home.storage].filter((item)=>item.type===type).length}
 function prepareCombination(state:GameState,citizen:Citizen,actions:GameCommand[],recipeId:CombinationRecipeId):GameCommand|null{
   const ready=combinationAction(actions,recipeId);if(ready)return ready
