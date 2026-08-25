@@ -2,7 +2,7 @@
 
 ## Current MyHordes source baseline
 
-This pass uses the public `eternaltwin/myhordes/myhordes` default rules as the configuration baseline. The current default rules expose:
+This pass uses the public `eternaltwin/myhordes/myhordes` `master` default rules audited on 2026-08-25 as the configuration baseline. The current default rules expose:
 
 - map size: 25–27 with margin 0.25;
 - population: 40;
