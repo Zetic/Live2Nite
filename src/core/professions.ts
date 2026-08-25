@@ -8,6 +8,7 @@ export interface EquipmentItemInstance{id:string;type:EquipmentItemType}
 export interface CitizenEquipment{townUniform:EquipmentItemInstance;professionItem:EquipmentItemInstance}
 export type ProfessionCitizen=Citizen&{equipment?:CitizenEquipment}
 
+export const BASE_CARGO_CAPACITY=5
 export const PROFESSION_IDS:readonly ProfessionId[]=['scavenger','scout','guardian','hermit','tamer','technician']
 
 export interface ProfessionDefinition {
