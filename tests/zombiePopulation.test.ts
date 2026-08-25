@@ -68,7 +68,9 @@ describe('source-calibrated zombie population',()=>{
     const cached=createItemInstance('cached-item','bandage')
     const site=game.world.zones[key]!.specialSite as SpecialSiteState&{interior:typeof initial}
     const customized={...initial,rooms:initial.rooms.map((candidate)=>candidate.id===room.id?{...candidate,searched:true,locked:false}:candidate),cells:initial.cells.map((cell)=>cell.id===cacheCell.id?{...cell,floorItems:[...(cell.floorItems??[]),cached]}:cell)}
-    game={...game,world:{...game.world,zones:{...game.world.zones,[key]:{...game.world.zones[key]!,specialSite:{...site,interior:customized}}}}}
+    const updatedSite:SpecialSiteState&{interior:typeof initial}={...site,interior:customized}
+    const updatedZone:WorldZone={...game.world.zones[key]!,specialSite:updatedSite}
+    game={...game,world:{...game.world,zones:{...game.world.zones,[key]:updatedZone}}}
     const before=ruinInteriorZombieTotal(customized)
     const next=advanceExplorableRuinLifecycleForNewDay(game,2)
     const evolved=getRuinInterior(next.world.zones[key])!
