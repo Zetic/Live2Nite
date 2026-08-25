@@ -8,22 +8,22 @@ export type ExplorableBlueprintTier='uncommon'|'rare'|'exceptional'
 export type ExplorableBlueprintKey=`${ExplorableRuinFamily}_${ExplorableBlueprintTier}`
 
 /**
- * Live2Nite semantic construction IDs corresponding to the explicit MyHordes
- * Hotel/Bunker/Hospital unlock lists. Upstream building IDs are intentionally
- * not used as runtime identities.
+ * Live2Nite semantic construction IDs corresponding to the current MyHordes
+ * default explorable_ruin_params.plan_limits.lists configuration. Upstream
+ * building IDs remain source-audit references only and are never runtime IDs.
  */
 export const EXPLORABLE_BLUEPRINT_POOLS:Readonly<Record<ExplorableBlueprintKey,readonly ConstructionId[]>>={
-  hotel_uncommon:['la_bamba','small_trebuchet','animal_dump','wood_dump','metal_dump','food_dump','people_s_court','uberwall'],
-  hotel_rare:['automatic_sprinklers','fertilizer','defensive_supports','fortified_homes','false_town','all_or_nothing','lighthouse','circular_quarters','faucet'],
-  hotel_exceptional:['cinema','no_holes_barred','dump_upgrade','giant_sandcastle','spring_coffins'],
+  hotel_uncommon:['ravaged_pumpkins','urban_plan','defensive_supports','perforator','concrete_wall','eden_project'],
+  hotel_rare:['faucet','outer_world_apple_tree','scarecrow_fields','swedish_workshop','grand_relocation','labyrinth','tamer_s_trap_system','third_layer','scavenger_s_gallery','spring_coffins'],
+  hotel_exceptional:['water_detector','blue_gold_thermal_baths','buzzard_s_wonder_wheel','cinema','pool'],
 
-  bunker_uncommon:['mines','grapeboom','weapons_dump','defence_dump','mist_spray','shooting_gallery','miniature_armory'],
-  bunker_rare:['upgradeable_wall','water_turrets','labyrinth','eden_project','air_strike','divining_rocket','organized_dump','faucet','water_filter'],
-  bunker_exceptional:['water_detector','reactor','ministry_of_slavery','dump_upgrade','buzzard_s_wonder_wheel'],
+  bunker_uncommon:['divining_rocket','mist_spray','grapeboom','small_trebuchet','cremato_cue','fortified_homes'],
+  bunker_rare:['water_turrets','grenade_launcher','pigsty','guard_tower','manual_grinder','underground_city','air_strike','technicians_workbench','upgradeable_wall','spring_coffins'],
+  bunker_exceptional:['pool','giant_sandcastle','reactor','ministry_of_slavery','giant_brd'],
 
-  hospital_uncommon:['swedish_workshop','cremato_cue','shooting_gallery','guard_tower'],
-  hospital_rare:['fertilizer','water_filter','defensive_supports','outer_world_apple_tree','henhouse','infirmary','organized_dump','lighthouse','divining_rocket'],
-  hospital_exceptional:['builder_s_merchant','hot_air_balloon','crow_statue','no_holes_barred','giant_brd'],
+  hospital_uncommon:['second_layer','eden_project','henhouse','defensive_supports','hammam','screaming_saws'],
+  hospital_rare:['fertilizer','vita_mines','scouts_lair','gutters','false_town','organized_dump','infirmary','nature_area_of_the_survivalists','automatic_sprinklers','spring_coffins'],
+  hospital_exceptional:['no_holes_barred','crow_statue','giant_brd','dump_upgrade','hot_air_balloon'],
 }
 
 export const EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS:Readonly<Record<ExplorableBlueprintTier,number>>={
