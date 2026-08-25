@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER, constructionCatalogTreeRows } from '../src/core/constructionCatalog'
 import { CONSTRUCTION_CODEX_ENTRIES, GENERIC_BLUEPRINT_CLASSES, SPECIALIZED_RUIN_BLUEPRINTS, filterSpecializedRuinBlueprints } from '../src/core/constructionCodex'
 import { CONSTRUCTION_ORDER, CONSTRUCTIONS, blueprintEligibleProjects, constructionBlueprintTier, constructionImplementationStatus, constructionPlayable, constructionUnlocked } from '../src/core/construction'
+import { EXPLORABLE_BLUEPRINT_POOLS } from '../src/core/explorableBlueprints'
 import { createInitialGame } from '../src/core/game'
 import { migrateStoredGame } from '../src/persistence/IndexedDbGameRepository'
 
@@ -101,14 +102,18 @@ describe('complete current construction catalog',()=>{
     expect([...blueprintEligibleProjects(game,1),...blueprintEligibleProjects(game,2),...blueprintEligibleProjects(game,3),...blueprintEligibleProjects(game,4)].some((id)=>constructionBlueprintTier(id)>=5)).toBe(false)
   })
 
-  it('represents all nine specialized explorable-ruin blueprint variants as WIP metadata',()=>{
+  it('represents all nine specialized explorable-ruin blueprints as active source-weighted pools',()=>{
     expect(SPECIALIZED_RUIN_BLUEPRINTS).toHaveLength(9)
     expect(new Set(SPECIALIZED_RUIN_BLUEPRINTS.map((entry)=>entry.id)).size).toBe(9)
-    expect(SPECIALIZED_RUIN_BLUEPRINTS.every((entry)=>entry.implementation==='wip')).toBe(true)
+    expect(SPECIALIZED_RUIN_BLUEPRINTS.every((entry)=>entry.implementation==='implemented')).toBe(true)
     expect(Object.fromEntries(['hotel','bunker','hospital'].map((family)=>[family,SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>entry.family===family).length]))).toEqual({hotel:3,bunker:3,hospital:3})
     expect(Object.fromEntries([2,3,4].map((rarity)=>[rarity,SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>entry.rarity===rarity).length]))).toEqual({2:3,3:3,4:3})
+    expect(SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>entry.tier==='uncommon').every((entry)=>entry.sourceWeight===800)).toBe(true)
+    expect(SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>entry.tier==='rare').every((entry)=>entry.sourceWeight===400)).toBe(true)
+    expect(SPECIALIZED_RUIN_BLUEPRINTS.filter((entry)=>entry.tier==='exceptional').every((entry)=>entry.sourceWeight===200&&entry.rarityLabel==='Exceptional')).toBe(true)
+    for(const entry of SPECIALIZED_RUIN_BLUEPRINTS)expect(entry.poolSize).toBe(EXPLORABLE_BLUEPRINT_POOLS[`${entry.family}_${entry.tier}`].length)
     expect(filterSpecializedRuinBlueprints('hotel')).toHaveLength(3)
-    expect(filterSpecializedRuinBlueprints('very rare')).toHaveLength(3)
+    expect(filterSpecializedRuinBlueprints('exceptional')).toHaveLength(3)
     expect(CONSTRUCTION_CATALOG_ORDER).toHaveLength(166)
   })
 
