@@ -7,6 +7,7 @@ import { createInitialGame, resolveNight } from '../src/core/game'
 import { attackRangeForDay, attackStrengthForDay, watchtowerEstimate } from '../src/core/night'
 import { equipCitizenProfession } from '../src/core/professions'
 import type { GameEvent, GameState } from '../src/core/types'
+import { contributeWatchtowerEstimation } from '../src/core/watchtowerEstimation'
 
 function withWatchtower(game: GameState): GameState {
   return {
@@ -87,13 +88,16 @@ describe('Watchtower and horde strength', () => {
     expect(strength).toBeLessThanOrEqual(29)
   })
 
-  it('only exposes an estimate after the Watchtower is built and never exposes the hidden exact attack', () => {
-    const initial = createInitialGame(222, 4)
+  it('requires collaborative threshold progress and never exposes the hidden exact attack', () => {
+    const initial = createInitialGame(222, 8)
     expect(watchtowerEstimate(initial)).toBeNull()
-    const game = withWatchtower(initial)
+    let game = withWatchtower(initial)
+    expect(watchtowerEstimate(game)).toBeNull()
+    for(const citizen of game.citizens)game=contributeWatchtowerEstimation(game,citizen.id)
     const estimate = watchtowerEstimate(game)!
     const actual = attackStrengthForDay(game.seed, game.day)
     expect('actual' in estimate).toBe(false)
+    expect(estimate.quality).toBeGreaterThanOrEqual(.33)
     expect(estimate.min).toBeLessThanOrEqual(actual)
     expect(estimate.max).toBeGreaterThanOrEqual(actual)
   })
