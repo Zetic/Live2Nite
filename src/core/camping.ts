@@ -3,12 +3,13 @@ import { randomInt } from './rng'
 import { RUIN_CATALOG } from './ruinCatalog'
 import { campingZombiePenaltyPerZombie } from './scout'
 import { normalizeRuinId } from './specialSites'
-import type { CampingChanceBreakdown, Citizen, CitizenCampingState, CampingOutlook, GameState, WorldZone } from './types'
+import type { CampingChanceBreakdown, Citizen, CitizenCampingState, CampingOutlook, GameCommand, GameEvent, GameState, ItemInstance, WorldZone } from './types'
 import { distanceToTown, isTownGateZone, zoneKey } from './world'
 
 export const CAMP_IMPROVEMENT_AP_COST = 1
-export const CAMP_IMPROVEMENT_CAP = 10
 export const CAMP_IMPROVEMENT_POINTS = 5
+export const TRESTLE_CAMP_IMPROVEMENT_POINTS = 9
+export const CAMP_IMPROVEMENT_MAX_LEVEL = 50
 export const CAMPING_GRAVE_AP_COST = 1
 export const CAMPING_GRAVE_BONUS = 8
 export const ORDINARY_CAMPING_CAP_PERCENT = 90
@@ -18,9 +19,35 @@ export const CAMPING_ITEM_BONUS = 5
 /** Source-confirmed carry bonuses: Smelly Meat (smelly_meat_#00) and Groundsheet (sheet_#00). */
 export const CAMPING_ITEM_TYPES = ['smelly_meat','groundsheet'] as const
 
+/**
+ * Schema-19 saves store the original Live2Nite campsite representation as a number of +5
+ * improvement actions in campImprovements. Source items such as Trestle add non-multiple-of-five
+ * values, so current saves persist the exact source level alongside the legacy field. The fallback
+ * keeps every existing schema-19 town compatible without rewriting or reinterpreting its save.
+ */
+declare module './types' { interface WorldZone { campImprovementLevel?:number } }
+export type CampImproveCommand=Extract<GameCommand,{type:'IMPROVE_CAMP'}>&{itemId?:string}
+export type CampImprovedEvent=Extract<GameEvent,{type:'CAMP_IMPROVED'}>&{item?:ItemInstance}
+
 const PREVIOUS_CAMPING_POINTS = [80,60,35,15,0,-50,-100,-200,-400,-1000,-2000,-5000] as const
 const DISTANCE_POINTS = [-100,-75,-50,-25,-10,0,0,0,0,0,0,0,5,7,10,15,20] as const
 const PREVIOUS_CAMPERS_POINTS = [0,0,-10,-30,-50,-70] as const
+
+export function campImprovementLevel(zone:WorldZone):number{
+  const exact=zone.campImprovementLevel
+  if(typeof exact==='number'&&Number.isFinite(exact))return Math.min(CAMP_IMPROVEMENT_MAX_LEVEL,Math.max(0,Math.trunc(exact)))
+  return Math.min(CAMP_IMPROVEMENT_MAX_LEVEL,Math.max(0,Math.trunc(zone.campImprovements??0))*CAMP_IMPROVEMENT_POINTS)
+}
+export function campImproveCommandItemId(command:GameCommand):string|null{
+  if(command.type!=='IMPROVE_CAMP')return null
+  const itemId=(command as CampImproveCommand).itemId
+  return typeof itemId==='string'&&itemId.length>0?itemId:null
+}
+export function campImprovedEventItem(event:Extract<GameEvent,{type:'CAMP_IMPROVED'}>):ItemInstance|null{return(event as CampImprovedEvent).item??null}
+export function trestleCampImproveCommands(citizen:Citizen,zone:WorldZone):GameCommand[]{
+  if(citizen.ap<CAMP_IMPROVEMENT_AP_COST||!canImproveCamp(zone))return[]
+  return citizen.inventory.filter((item)=>item.type==='trestle').map((item)=>({type:'IMPROVE_CAMP',citizenId:citizen.id,itemId:item.id} as CampImproveCommand))
+}
 
 export function createCitizenCampingState():CitizenCampingState{return{hidden:false,grave:false,survivalChance:null,chanceBreakdown:null,hiddenDay:null,nightsSurvived:0,lastSurvivedDay:null}}
 
@@ -55,7 +82,7 @@ export function campingChanceBreakdown(state:GameState,citizenId:string,options:
     previous:previousCampingPoints(citizen.camping.nightsSurvived),
     tomb:grave?CAMPING_GRAVE_BONUS:0,
     town:0,
-    zone:Math.min(CAMP_IMPROVEMENT_CAP,Math.max(0,zone.campImprovements??0))*CAMP_IMPROVEMENT_POINTS,
+    zone:campImprovementLevel(zone),
     zoneBuilding:ruinCampingPoints(zone,previousCampers),
     lighthouse:state.town.construction.lighthouse?.completed?LIGHTHOUSE_CAMPING_BONUS:0,
     campitems:campingItemPoints(citizen),
@@ -97,4 +124,4 @@ export function campingOutlook(state:GameState,citizenId:string):{chancePercent:
 function citizenNumber(citizenId:string):number{return Number(citizenId.replace(/\D/g,''))||1}
 function isolatedCampingSeed(seed:number,day:number,citizenId:string):number{const mixed=((seed>>>0)^Math.imul(day+1,0x9e3779b1)^Math.imul(citizenNumber(citizenId)+17,0x85ebca6b)^0xc4a9f173)>>>0;return mixed||1}
 export function resolveCampingRoll(state:GameState,citizen:Citizen):{roll:number;survived:boolean}{const chance=Math.max(0,Math.min(100,citizen.camping.survivalChance??0));const result=randomInt(isolatedCampingSeed(state.seed,state.day,citizen.id),1,100);return{roll:result.value,survived:result.value<=chance}}
-export function canImproveCamp(zone:WorldZone):boolean{return(zone.campImprovements??0)<CAMP_IMPROVEMENT_CAP}
+export function canImproveCamp(zone:WorldZone):boolean{return campImprovementLevel(zone)<CAMP_IMPROVEMENT_MAX_LEVEL}
