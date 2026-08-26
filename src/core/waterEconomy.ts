@@ -36,9 +36,9 @@ export function waterTurretTotalDefense(state:GameState):number{
 /**
  * MyHordes treats Well consumers as all-or-nothing. Consumers are ordered before water is
  * assigned; a consumer whose complete requirement cannot be paid remains inactive and uses 0.
- * Water Turrets are the directly verified defensive consumer. Pool is retained as a lower-priority
- * civic consumer; its day-scaled requirement is an explicit Live2Nite representation pending a
- * separately exposed upstream fixture value, and never suppresses a higher-priority defense.
+ * Water Turrets are the directly verified defensive consumer. Pool is retained as a dormant,
+ * lower-priority consumer hook because its exact current requirement fixture was not exposed in
+ * this source pass; the Pool itself remains WIP and is not activated by this PR.
  */
 export function poolNightlyRequirement(state:GameState):number{
   if(!state.town.construction.pool?.completed)return 0
@@ -99,7 +99,6 @@ export function purifierYield(state:GameState):{amount:number;rngStateAfter:numb
 }
 
 export function refillableWaterItem(item:ItemInstance):{maxCharges:number}|null{
-  if(item.type==='water_pistol')return{maxCharges:4}
-  if(item.type==='water_cooler_bottle')return{maxCharges:5}
+  if(item.type==='water_pistol'||item.type==='water_cooler_bottle')return{maxCharges:3}
   return null
 }
