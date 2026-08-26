@@ -20,19 +20,17 @@ function completed(game:GameState,...ids:ConstructionId[]):GameState{
 function withBank(game:GameState,...types:ItemType[]):GameState{return{...game,town:{...game.town,bank:types.map((type,index)=>createItemInstance(`dump-${index}`,type))}}}
 
 describe('Garbage Dump source rules',()=>{
-  it('activates the base Dump, wet upgrade, and six category specializations while keeping unresolved Organized Dump fail-closed',()=>{
-    for(const id of ['garbage_dump','dump_upgrade','defence_dump','weapons_dump','food_dump','wood_dump','metal_dump','animal_dump'] as const){
+  it('activates the full Garbage Dump construction family including Organized Dump',()=>{
+    for(const id of ['garbage_dump','dump_upgrade','defence_dump','weapons_dump','food_dump','wood_dump','metal_dump','animal_dump','organized_dump'] as const){
       expect(constructionImplementationStatus(id)).toBe('implemented')
       expect(constructionPlayable(id)).toBe(true)
     }
-    expect(constructionImplementationStatus('organized_dump')).toBe('wip')
-    expect(constructionPlayable('organized_dump')).toBe(false)
   })
 
   it('classifies only supported categories and uses base 4/1 yields',()=>{
     const game=completed(createInitialGame(9801,1),'garbage_dump')
     const cases:[ItemType,string|null,number][]=[
-      ['old_door','defense',4],['human_bone','weapon',1],['vegetable','food',1],['rotten_log','wood',1],['twisted_plank','wood',1],['scrap_metal','metal',1],['wrought_iron','metal',1],['chicken','animal',1],
+      ['old_door','defense',4],['trestle','defense',4],['human_bone','weapon',1],['vegetable','food',1],['rotten_log','wood',1],['twisted_plank','wood',1],['scrap_metal','metal',1],['wrought_iron','metal',1],['chicken','animal',1],
       ['water_ration',null,0],['patchwork_beam',null,0],['metal_support',null,0],['broken_human_bone',null,0],
     ]
     for(const[type,category,defense]of cases){const item=createItemInstance(`case-${type}`,type);expect(garbageDumpCategory(item)).toBe(category);expect(garbageDumpDefenseForItem(game,item)).toBe(defense)}
@@ -66,7 +64,7 @@ describe('Garbage Dump source rules',()=>{
     expect(garbageDumpTemporaryDefense(game)).toBe(7)
   })
 
-  it('implements Organized Dump zero-AP behavior without making its unresolved construction falsely playable',()=>{
+  it('uses Organized Dump to make destructive actions cost zero AP',()=>{
     const game=withBank(completed(createInitialGame(9804,1),'garbage_dump','organized_dump'),'vegetable')
     const before=game.citizens[0].ap
     expect(garbageDumpActionCost(game)).toBe(0)
