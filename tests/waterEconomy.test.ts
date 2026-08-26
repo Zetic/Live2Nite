@@ -110,7 +110,7 @@ describe('agriculture',()=>{
   it('Vegetable Plot uses 4-7 ordinary and 0-2 rich food before Fertilizer',()=>{
     let state=createInitialGame('veg-base',1)
     state=complete(state,'vegetable_plot')
-    const outputs=agricultureProduction(state).outputs
+    const outputs=agricultureProduction(state)
     const ordinary=outputs.find((output)=>output.itemType==='vegetable')?.amount??0
     const rich=outputs.find((output)=>output.itemType==='blue_apple')?.amount??0
     expect(ordinary).toBeGreaterThanOrEqual(4);expect(ordinary).toBeLessThanOrEqual(7)
@@ -120,7 +120,7 @@ describe('agriculture',()=>{
   it('Fertilizer raises Vegetable Plot production to 6-8 ordinary and 3-5 rich food',()=>{
     let state=createInitialGame('veg-fertilized',1)
     state=complete(state,'vegetable_plot','fertilizer')
-    const outputs=agricultureProduction(state).outputs
+    const outputs=agricultureProduction(state)
     const ordinary=outputs.find((output)=>output.itemType==='vegetable')?.amount??0
     const rich=outputs.find((output)=>output.itemType==='blue_apple')?.amount??0
     expect(ordinary).toBeGreaterThanOrEqual(6);expect(ordinary).toBeLessThanOrEqual(8)
@@ -130,7 +130,7 @@ describe('agriculture',()=>{
   it('Grapeboom and Apple Tree use their documented daily ranges',()=>{
     let state=createInitialGame('water-crops',1)
     state=complete(state,'grapeboom','outer_world_apple_tree')
-    const outputs=agricultureProduction(state).outputs
+    const outputs=agricultureProduction(state)
     const grapes=outputs.find((output)=>output.itemType==='exploding_grapefruit')?.amount??0
     const apples=outputs.find((output)=>output.projectId==='outer_world_apple_tree')?.amount??0
     expect(grapes).toBeGreaterThanOrEqual(3);expect(grapes).toBeLessThanOrEqual(7)
