@@ -38,7 +38,7 @@ Upstream numeric/prototype IDs and upstream implementation code are deliberately
 
 Every catalogue entry has one of three statuses.
 
-Current catalogue status: **55 Implemented / 24 Partial / 87 WIP**.
+Current catalogue status: **79 Implemented / 24 Partial / 63 WIP**.
 
 ### Implemented
 
@@ -58,6 +58,8 @@ WIP is separate from discovery:
 - class 1-4 WIP sites remain valid generic blueprint candidates;
 - discovering a WIP site exposes it in Construction Sites;
 - no AP or materials can be contributed until the implementation status is promoted.
+
+Class-6 Dump specializations remain a separate non-generic acquisition class. Their Garbage Dump effects are implemented, but they are not injected into the class 1-4 generic blueprint pool.
 
 This preserves the current source blueprint candidate pools without inventing placeholder effects or allowing players to spend resources into inert buildings.
 
@@ -95,6 +97,10 @@ The blueprint view also represents the **nine active specialized explorable-ruin
 The Codex displays the source drop weight and candidate-pool size for each specialized plan. Individual construction entries within those pools still retain their own Implemented/Partial/WIP status; discovering a WIP construction through a specialized plan does not make the WIP construction buildable.
 
 The Codex is intentionally complete even when the current town has not discovered a project. Construction Sites remains the town-state view; the Codex is the reference/implementation view.
+
+## Garbage Dump boundary
+
+The Garbage Dump, Dump Upgrade, and six class-6 category specialization effects are active. Organized Dump's zero-AP effect is represented in the Dump rules, but the construction itself remains WIP until its unresolved Trestle dependency has a verified runtime/acquisition path. See `docs/garbage-dump.md` for the interaction details.
 
 ## Legacy cleanup
 
