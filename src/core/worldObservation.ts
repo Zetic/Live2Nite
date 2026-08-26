@@ -9,6 +9,8 @@ const OBSERVATION_RADIUS_BY_LEVEL:readonly number[]=[0,3,6,10]
 const SEARCH_RECOVERY_BY_LEVEL:readonly number[]=[25,37,49,61,73,85]
 export const SEARCHTOWER_MINIMUM_DISTANCE=2
 
+type WorldEvolutionEventWithSearchtower=Extract<GameEvent,{type:'WORLD_ZOMBIES_EVOLVED'}>&{searchTowerDirection?:NightWindDirection}
+
 function isolatedWorldSeed(seed:number,day:number,salt:number):number{const mixed=((seed>>>0)^Math.imul(day+1,0x85ebca6b)^salt)>>>0;return mixed||1}
 export function observationPlatformRadius(state:GameState):number{
   if(!state.town.construction.observation_platform?.completed)return 0
@@ -24,6 +26,15 @@ export function searchTowerRecoveryChance(state:GameState):number{
 export function searchTowerWindDirectionForDay(seed:number,day:number):NightWindDirection{
   const roll=randomInt(isolatedWorldSeed(seed,day,0x51ea7e11),0,WIND_DIRECTIONS.length-1)
   return WIND_DIRECTIONS[roll.value]!
+}
+export function lastRecordedSearchTowerDirection(state:GameState):NightWindDirection|null{
+  for(let index=state.events.length-1;index>=0;index-=1){
+    const event=state.events[index]
+    if(event.type!=='WORLD_ZOMBIES_EVOLVED')continue
+    const direction=(event as WorldEvolutionEventWithSearchtower).searchTowerDirection
+    if(direction)return direction
+  }
+  return null
 }
 /**
  * Searchtower sectors follow the discrete grid geometry documented for the source game:
