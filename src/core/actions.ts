@@ -1,5 +1,5 @@
 import { bankCount } from './bank'
-import { CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
+import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
@@ -13,6 +13,7 @@ import { canReplenishWithSpade, type ScavengerSearchCommand } from './scavenging
 import { canMapWasteland, canPayMovementPoint, canRecamouflage, scoutCamouflageActive } from './scout'
 import { normalizeRuinId } from './specialSites'
 import { canContributeConstructionByStatus, canFightBarehandedByStatus, canOperateGateByStatus, canUseWeaponByStatus, hasHandWound } from './status'
+import { canSurvivalistForage } from './survivalist'
 import { canDrugTamerDog, canSendTamerDog, tamerDogSteroid } from './tamer'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, relativeControlActive, temporaryControlActive, zoneControl } from './world'
@@ -116,6 +117,8 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   const{x,y}=citizen.location;const zone=getZone(state.world,x,y);if(!zone)return actions
   addConsumableActions(state,actions,citizen,zone.groundItems,'ground')
   if(canRecamouflage(state,citizen))actions.push({type:'RECAMOUFLAGE',citizenId})
+  if(canSurvivalistForage(state,citizen,'food'))actions.push({type:'SURVIVALIST_SEARCH_FOOD',citizenId})
+  if(canSurvivalistForage(state,citizen,'water'))actions.push({type:'SURVIVALIST_SEARCH_WATER',citizenId})
   if(isTownGateZone(x,y)&&state.town.gateOpen)actions.push({type:'ENTER_TOWN',citizenId})
   const control=zoneControl(state,x,y);const camouflage=scoutCamouflageActive(citizen);const productiveAccess=!control.trapped||camouflage
   if(!isTownGateZone(x,y)){
@@ -125,6 +128,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
       if(canReplenishWithSpade(state,citizen,zone))actions.push({type:'SEARCH_ZONE',citizenId,replenishWithSpade:true} as unknown as ScavengerSearchCommand)
     }
     if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone))actions.push({type:'IMPROVE_CAMP',citizenId})
+    if(citizen.ap>=CAMPING_GRAVE_AP_COST)actions.push({type:'DIG_CAMPING_GRAVE',citizenId})
     actions.push({type:'HIDE_FOR_NIGHT',citizenId})
   }
   const site=zone.specialSite
