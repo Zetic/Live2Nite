@@ -1,6 +1,7 @@
 import { getLegalActions } from './actions'
-import { executeCommand, InvalidCommandError, type CommandResult } from './commands'
+import { InvalidCommandError, type CommandResult } from './commands'
 import { getRuinExplorer, getRuinInterior, ruinCurrentCell, type RuinInteriorState } from './ruinExploration'
+import { executeCommandWithTechnician } from './technicianCommandExecutor'
 import type { GameCommand, GameEvent, GameState, SpecialSiteState, WorldZone } from './types'
 import { getZone, zoneKey } from './world'
 
@@ -58,9 +59,9 @@ function updateLocalZombies(state:GameState,citizenId:string,kills:number):GameS
 export function executeRuinSharedAction(state:GameState,command:GameCommand):CommandResult{
   const legal=getRuinSharedActions(state,command.citizenId)
   if(!legal.some((candidate)=>sameSharedCommand(candidate,command)))throw new InvalidCommandError(`Illegal ${command.type} action for ${command.citizenId} inside explorable ruin`)
-  if(command.type!=='USE_WEAPON')return executeCommand(state,command)
+  if(command.type!=='USE_WEAPON')return executeCommandWithTechnician(state,command)
   const projected=projectedState(state,command.citizenId);if(!projected)throw new InvalidCommandError('No active explorable ruin action context.')
-  const resolved=executeCommand(projected,command)
+  const resolved=executeCommandWithTechnician(projected,command)
   const combat=resolved.events.find((event):event is Extract<GameEvent,{type:'COMBAT_RESOLVED'}>=>event.type==='COMBAT_RESOLVED')
   if(!combat)throw new InvalidCommandError('Shared action did not produce a combat result.')
   const projectedCitizen=resolved.state.citizens.find((citizen)=>citizen.id===command.citizenId);if(!projectedCitizen)throw new InvalidCommandError(`Missing citizen ${command.citizenId} after shared action.`)

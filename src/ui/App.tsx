@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { BasicBotController } from '../agents/BasicBotController'
 import { getLegalActions } from '../core/actions'
 import { formatGameHour } from '../core/clock'
-import { executeCommand, InvalidCommandError } from '../core/commands'
+import { InvalidCommandError } from '../core/commands'
 import { hasUpgradeProjectsFacility } from '../core/constructionUpgrades'
 import { debugGodMove, debugInstantBuild, debugRefreshCitizen, debugSummonItem, debugToggleGod } from '../core/debug'
 import { enforceGodMode, isGodCitizen } from '../core/debugGod'
@@ -10,6 +10,7 @@ import { createInitialGame } from '../core/game'
 import { townHasProfessionEquipment, type ProfessionId } from '../core/professions'
 import { getRuinExplorer, ruinCurrentCell, type RuinActionResult } from '../core/ruinExploration'
 import { specialSiteName } from '../core/specialSites'
+import { executeCommandWithTechnician } from '../core/technicianCommandExecutor'
 import type { ConstructionId, Direction, GameCommand, GameEvent, GameState, ItemType } from '../core/types'
 import { getZone, moveCoordinates, zoneControl } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
@@ -99,7 +100,7 @@ export function App() {
 
   const act = (command: GameCommand | undefined) => {
     if (!command) return
-    try { setGame((current) => enforceGodMode(executeCommand(current, command).state)); setError(null) }
+    try { setGame((current) => enforceGodMode(executeCommandWithTechnician(current, command).state)); setError(null) }
     catch (caught) { setError(caught instanceof InvalidCommandError ? caught.message : 'Action failed.') }
   }
   const move = (direction: Direction) => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { canCarryItem } from '../../core/inventory'
+import { hasProfession } from '../../core/professions'
 import { RUIN_CATALOG } from '../../core/ruinCatalog'
 import {
   expireRuinExploration,
@@ -17,6 +18,7 @@ import { dropRuinInventoryItem, searchRuinRoom, takeRuinFloorItem, unlockRuinRoo
 import { ruinKeyName } from '../../core/ruinRoomContent'
 import { executeRuinSharedAction, getRuinSharedActions } from '../../core/ruinSharedActions'
 import { normalizeRuinId } from '../../core/specialSites'
+import { takeTechnicianRuinImprint } from '../../core/technician'
 import type { GameCommand, GameState, WorldZone } from '../../core/types'
 import { CombinationActionMenu, ItemActionMenu, ItemStrip, RucksackStrip } from './InventoryItems'
 import { ruinFloorLabel } from './RuinInteriorMap'
@@ -50,6 +52,7 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
     catch(caught){onResult({state:game,ok:false,message:caught instanceof Error?caught.message:'Action failed.'})}
   }
   const matchingKey=roomAtCell?.lockType?citizen.inventory.some((item)=>item.type===roomAtCell.lockType):false
+  const technician=hasProfession(citizen,'technician')
   const floorLabel=ruinFloorLabel(cell.floor)
 
   return <div className="ruin-world-context">
@@ -96,7 +99,7 @@ export function RuinInteriorPanel({game,citizenId,zone,onResult}:{game:GameState
     </section>:<>
       {roomAtCell&&<section className={`special-site-card ${roomAtCell.locked?'':'status-accessible'}`}>
         <div className="special-site-heading"><div><p className="section-kicker">Interior room</p><h3>Room {roomAtCell.id.replace('room-','')}</h3></div><span>{roomAtCell.locked?'LOCKED':roomAtCell.searched?'SEARCHED':'OPEN'}</span></div>
-        {roomAtCell.locked&&roomAtCell.lockType?<><p>Requires {ruinKeyName(roomAtCell.lockType)}. Unlocking consumes the matching key.</p><button className="secondary" disabled={movementBlocked||!matchingKey} onClick={()=>action(unlockRuinRoom(game,citizenId,Date.now()))}>Unlock with {ruinKeyName(roomAtCell.lockType)}</button></>:<button className="primary" disabled={movementBlocked} onClick={()=>action(shiftRuinRoom(game,citizenId,Date.now()))}>Enter room</button>}
+        {roomAtCell.locked&&roomAtCell.lockType?<><p>Requires {ruinKeyName(roomAtCell.lockType)}. Unlocking consumes the matching key.</p>{technician&&!matchingKey&&<button className="primary" disabled={movementBlocked} onClick={()=>action(takeTechnicianRuinImprint(game,citizenId,Date.now()))}>Take {ruinKeyName(roomAtCell.lockType)} imprint <small>0 AP</small></button>}<button className="secondary" disabled={movementBlocked||!matchingKey} onClick={()=>action(unlockRuinRoom(game,citizenId,Date.now()))}>Unlock with {ruinKeyName(roomAtCell.lockType)}</button></>:<button className="primary" disabled={movementBlocked} onClick={()=>action(shiftRuinRoom(game,citizenId,Date.now()))}>Enter room</button>}
       </section>}
       {cell.stairTo&&<section className="special-site-card status-accessible"><div className="special-site-heading"><div><p className="section-kicker">Interior transition</p><h3>Stairs</h3></div><span>−15–24 SEC O₂</span></div><button disabled={movementBlocked} onClick={()=>action(useRuinStairs(game,citizenId,Date.now()))}>Use stairs</button></section>}
       {cell.kind==='entrance'&&cell.floor===0&&<section className="world-town-return ruin-exit-strip"><div><p className="section-kicker">Ruin entrance</p><strong>The exterior is within reach.</strong><span>Leaving restores the World Beyond map and travel controls.</span></div><button type="button" className="primary" onClick={()=>action(leaveRuin(game,citizenId,Date.now()))}>Leave ruin</button></section>}

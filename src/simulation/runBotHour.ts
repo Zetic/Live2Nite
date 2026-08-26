@@ -7,9 +7,9 @@ import { missionCompleteAtTown, nextMissionLifecycleEvent } from '../agents/plan
 import { planTownMissionAssignments } from '../agents/planning/TownMissionPlanner'
 import { chooseTownWork } from '../agents/townWork'
 import { getLegalActions } from '../core/actions'
-import { executeCommand } from '../core/commands'
 import { gateAutoCloseAtHour } from '../core/construction'
 import { applyEvents } from '../core/events'
+import { executeCommandWithTechnician } from '../core/technicianCommandExecutor'
 import type { GameEvent, GameState } from '../core/types'
 import { relativeControlActive, temporaryControlActive, zoneControl } from '../core/world'
 
@@ -56,7 +56,7 @@ function runTemporaryExtractionPass(state:GameState,controller:AgentController,c
       if(lifecycle){nextState=applyEvents(nextState,[lifecycle]);continue}
       const command=controller.decide(createAgentDecisionContext(nextState),citizen.id)
       if(!command)break
-      nextState=executeCommand(nextState,command).state
+      nextState=executeCommandWithTechnician(nextState,command).state
     }
   }
   return nextState
@@ -128,7 +128,7 @@ export function runBotHour(state: GameState, controller: AgentController, contro
         break
       }
 
-      nextState = executeCommand(nextState, command).state
+      nextState = executeCommandWithTechnician(nextState, command).state
       const emitted = nextState.events.slice(beforeEvents)
       if (objective === 'town_work' && emitted.some(meaningfulTownWork)) {
         const citizen=nextState.citizens.find((candidate)=>candidate.id===startingCitizen.id)
@@ -162,7 +162,7 @@ export function runBotHour(state: GameState, controller: AgentController, contro
       const closer=gateCloser(nextState,controlledCitizenId)
       if (closer) {
         const close = getLegalActions(nextState, closer.id).find((action) => action.type==='CLOSE_GATE')
-        if (close) nextState = executeCommand(nextState, close).state
+        if (close) nextState = executeCommandWithTechnician(nextState, close).state
       }
     }
   }
