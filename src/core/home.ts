@@ -78,8 +78,8 @@ function reinforcementResources(nextLevel:number):Partial<Record<ItemType,number
 function reinforcementMissing():readonly string[]{return[]}
 function siestaResources(nextLevel:number):Partial<Record<ItemType,number>>{return nextLevel===2?{twisted_plank:1}:{}}
 function siestaMissing(nextLevel:number):readonly string[]{return nextLevel===3?['Mattress × 1']:[]}
-function kitchenResources(nextLevel:number):Partial<Record<ItemType,number>>{return nextLevel===2?{pathetic_penknife:1}:{}}
-function kitchenMissing(nextLevel:number):readonly string[]{return nextLevel===3?['Microwave × 1']:nextLevel===4?['Refrigerator × 1']:[]}
+function kitchenResources(nextLevel:number):Partial<Record<ItemType,number>>{if(nextLevel===2)return{pathetic_penknife:1};if(nextLevel===3)return{carcinogenic_oven:1};if(nextLevel===4)return{student_refrigerator:1};return{}}
+function kitchenMissing():readonly string[]{return[]}
 function laboratoryResources(nextLevel:number):Partial<Record<ItemType,number>>{if(nextLevel===1)return{old_washing_machine:1};if(nextLevel===2)return{electronic_component:1};if(nextLevel===3)return{copper_pipe:1};if(nextLevel===4)return{engine:1};return{}}
 function laboratoryMissing():readonly string[]{return[]}
 
@@ -130,11 +130,11 @@ export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefiniti
   },
   kitchen:{
     id:'kitchen',name:'Kitchen',maxLevel:4,
-    description:'MyHordes home cooking progression. Listed now; cooking remains unavailable until the recipe/cooking subsystem exists.',
+    description:'Prepares ordinary cookable personal food into a Good or Dubious Home-made Meal. Success is 33/66/99/99%; levels 1–4 allow 1/1/2/3 attempts each day before Central Cafeteria.',
     defensePerLevel:0,storagePerLevel:0,
     apCost:(nextLevel)=>nextLevel===1?6:nextLevel===2?3:4,
     resources:kitchenResources,unmodeledResources:kitchenMissing,
-    status:'wip',effectReady:false,
+    status:'implemented',effectReady:true,
   },
   laboratory:{
     id:'laboratory',name:'Home Laboratory',maxLevel:4,
