@@ -119,19 +119,22 @@ export function scoutDetectionChancePercent(state:GameState,citizen:Citizen,targ
   // MyHordes applies an additional night modifier. Live2Nite currently has no traversable
   // night-time World Beyond phase, so that modifier has no equivalent until such a phase exists.
   if(delta<=6)delta*=0.5
-  return Math.max(0,delta-(3*scoutLevelAfterVisit(target)))
+  // Source order is detection first, ScoutVisit second. A milestone visit therefore improves
+  // future entries, not the same entry that earns the new Scout Level.
+  return Math.max(0,delta-(3*scoutLevel(target)))
 }
 export function scoutArrivalEvents(state:GameState,citizen:Citizen,target:WorldZone):GameEvent[]{
   if(!isScout(citizen))return[]
   const key=zoneKey(target.x,target.y)
-  const events:GameEvent[]=[{type:'SCOUT_VISIT_RECORDED',day:state.day,hour:state.clock.hour,citizenId:citizen.id,zoneKey:key}]
-  if(!scoutCamouflageActive(citizen))return events
+  const visit:GameEvent={type:'SCOUT_VISIT_RECORDED',day:state.day,hour:state.clock.hour,citizenId:citizen.id,zoneKey:key}
+  if(!scoutCamouflageActive(citizen))return[visit]
   const chance=scoutDetectionChancePercent(state,citizen,target)
-  if(chance<=0)return events
+  if(chance<=0)return[visit]
   const roll=randomInt(state.rngState,1,1000)
   const spotted=roll.value<=Math.round(chance*10)
-  events.push({type:'SCOUT_DETECTION_RESOLVED',day:state.day,hour:state.clock.hour,citizenId:citizen.id,zoneKey:key,chancePercent:chance,spotted,rngStateAfter:roll.state})
+  const events:GameEvent[]=[{type:'SCOUT_DETECTION_RESOLVED',day:state.day,hour:state.clock.hour,citizenId:citizen.id,zoneKey:key,chancePercent:chance,spotted,rngStateAfter:roll.state}]
   if(spotted)events.push({type:'SCOUT_CAMOUFLAGE_SET',day:state.day,hour:state.clock.hour,citizenId:citizen.id,active:false,reason:'detected'})
+  events.push(visit)
   return events
 }
 
