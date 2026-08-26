@@ -6,7 +6,7 @@ import { CONSTRUCTIONS } from '../src/core/construction'
 import { applyEvents } from '../src/core/events'
 import { createInitialGame } from '../src/core/game'
 import { watchtowerEstimate } from '../src/core/night'
-import type { ConstructionId, GameState } from '../src/core/types'
+import type { ConstructionId, GameEvent, GameState } from '../src/core/types'
 import { canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerContributors, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
 import { nightlyObservationEvents, observationPlatformRadius, searchTowerRecoveryChance, searchTowerReplenishmentEventsForNight, searchTowerWindDirectionForDay, zoneWindDirection } from '../src/core/worldObservation'
 import { worldZombieEvolutionEvent } from '../src/core/worldEvolution'
@@ -141,5 +141,11 @@ describe('Searchtower nightly recovery',()=>{
     const event=worldZombieEvolutionEvent(game)
     expect(event?.type).toBe('WORLD_ZOMBIES_EVOLVED')
     expect(describeEvent(event!,game)).toContain(`Searchtower recorded the recovery sector as ${searchTowerWindDirectionForDay(game.seed,game.day)}.`)
+  })
+
+  it('does not rewrite pre-Searchtower Chronicle entries after the building is completed later',()=>{
+    const oldEvent={type:'WORLD_ZOMBIES_EVOLVED',day:1,hour:0,changes:[]} as GameEvent
+    const laterGame=complete({...createInitialGame(7204,2),day:2},'watchtower','search_tower')
+    expect(describeEvent(oldEvent,laterGame)).not.toContain('Searchtower recorded')
   })
 })
