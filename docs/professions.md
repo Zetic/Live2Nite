@@ -9,7 +9,7 @@ Live2Nite treats professions as ordinary citizen roles, not as a paid or Hero-st
 | Guardian | Riot Shield | control and defense perks implemented |
 | Survivalist | Survival Manual | forage, hydration, camping-cap, and bot endurance perks implemented |
 | Tamer | Three-Legged Maltese | dog logistics and ruin-exit guidance implemented |
-| Technician | Technician's Wrench | equipment present; gameplay perks deferred |
+| Technician | Technician's Wrench | CP labor, Wrench repair, ruin imprints, Workbench, and bot parity implemented |
 
 ## Source policy
 
@@ -164,6 +164,25 @@ The dog usage and steroid state are derived from the day's Tamer events rather t
 
 The upstream Tamer's separate Watch/Veilleur defense bonus is intentionally deferred because Live2Nite does not yet implement the Watch system.
 
+## Technician
+
+The **Technician's Wrench** is the sole capability token for Technician mechanics. There is no separate authoritative Technician flag; changing the Profession Item removes the Technician-specific CP, repair and ruin-imprint capabilities immediately.
+
+Implemented source behavior:
+
+- Technicians receive **6 Construction Points (CP)** at the start of every town day.
+- Eligible technical work spends **CP before AP**, including town construction contributions and normal Workshop recipes. If the CP pool is insufficient, only the remainder is paid in AP.
+- CP is a real persisted daily resource shown beside AP in the citizen HUD. Old profession-era saves remain compatible because an omitted Technician pool normalizes to the daily 6-point maximum until the first spend.
+- The Technician's Wrench can repair supported broken equipment for **3 CP and 0 AP**. The repair is unavailable when the Technician is exhausted or has a hand wound, matching the source requirements. Live2Nite maps this onto the broken/repaired item families already present in its current item catalogue rather than inventing parallel repair objects.
+- Inside an explorable ruin, a Technician can take a **matching key imprint without input material** at a supported locked room. The imprint creates the semantic key item only; the existing unlock action must still be used and still consumes that key. Zombies, corridor position, oxygen, storage capacity and all ordinary ruin restrictions remain in force.
+- The **Technicians Workbench** construction is now active. Once per citizen per day it permits controlled selection of the output from an eligible random Workshop recipe: **4 technical work points for a Technician, 6 for another profession**. A Technician therefore spends CP first and falls back to AP; an ordinary citizen pays AP.
+- Autonomous Technician citizens use the same payment helper as the player. Their town-work reserve logic treats CP-funded labor as zero AP rather than incorrectly preserving CP while refusing useful construction or Workshop work.
+- Technician bots can use the Workbench to target a currently missing construction component when the once-daily action is available.
+
+Source provenance is split deliberately rather than flattened. The 6-CP pool, CP-first fallback behavior and empty-input ruin key imprint are present in the current MyHordes core behavior. The Wrench repair action and Technicians Workbench behavior are retained by the current repository's Prime/seasonal fixture layer and are documented separately in `docs/technician.md`. Live2Nite reproduces those gameplay semantics with its own semantic ids and command architecture.
+
+Hero-only extensions and unrelated special-mode behavior remain outside this implementation.
+
 ## New Town flow
 
 With no compatible active town, Live2Nite opens on the profession-selection landing screen. One of the six professions must be selected before **New Town** is enabled. The selected profession determines the player's starting Profession Item.
@@ -171,7 +190,3 @@ With no compatible active town, Live2Nite opens on the profession-selection land
 Bots are assigned professions during town creation using a seeded balanced distribution. Across the bot population, profession counts differ by at most one when population size permits. Assignment is deterministic for the same town seed and does not consume the simulation RNG stream.
 
 A valid profession-era local save resumes normally. Debug **New Town** and the restart action after town extinction clear the active save and return to the profession-selection screen with no previous profession selected. Older saves without valid profession equipment are intentionally treated as incompatible with this foundation rather than silently assigning a profession to an existing citizen.
-
-## Deferred professions
-
-Technician construction points/actions remain for a dedicated follow-up PR. That implementation should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.
