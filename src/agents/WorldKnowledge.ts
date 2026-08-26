@@ -1,11 +1,14 @@
+import { scoutZombieEstimate } from '../core/scout'
 import type { GameState, SpecialSiteState, ZoneIntelFreshness } from '../core/types'
 import { getZone, zoneKey } from '../core/world'
 
+export type AgentZombieIntelKind='none'|'observed'|'scout_estimate'
 export interface AgentZoneKnowledge {
   x: number
   y: number
   discovered: boolean
   zombies: number | null
+  zombieIntel:AgentZombieIntelKind
   freshness: ZoneIntelFreshness
   lastObservedDay: number | null
   lastObservedHour: number | null
@@ -14,6 +17,7 @@ export interface AgentZoneKnowledge {
 }
 
 export interface AgentWorldKnowledge {
+  viewerCitizenId:string|null
   zone(x: number, y: number): AgentZoneKnowledge | null
 }
 
@@ -23,19 +27,35 @@ function freshnessFor(state:GameState,x:number,y:number):ZoneIntelFreshness{
   return intel.lastObservedDay===state.day?'fresh':'stale'
 }
 
-export function createAgentWorldKnowledge(state: GameState): AgentWorldKnowledge {
+/**
+ * Citizen-aware world knowledge remains a projection of legal information, never raw world state.
+ * A Scout viewer may receive the current bounded adjacent-zone estimate supplied by Scout sense;
+ * hidden resources, sites, and exact zombie counts remain suppressed until independently discovered.
+ */
+export function createAgentWorldKnowledge(state: GameState,viewerCitizenId?:string): AgentWorldKnowledge {
+  const viewer=viewerCitizenId?state.citizens.find((citizen)=>citizen.id===viewerCitizenId)??null:null
   return {
+    viewerCitizenId:viewer?.id??null,
     zone(x: number, y: number): AgentZoneKnowledge | null {
       const zone = getZone(state.world, x, y)
       if (!zone) return null
       const intel=state.world.intel?.[zoneKey(x,y)]
+      const freshness=freshnessFor(state,x,y)
+      const estimate=viewer?scoutZombieEstimate(state,viewer,zone):null
+      const currentObservation=freshness==='fresh'&&intel?.observedZombies!==null&&intel?.observedZombies!==undefined
+      const zombies=currentObservation?intel!.observedZombies:estimate!==null?estimate:intel?.observedZombies??null
+      const zombieIntel:AgentZombieIntelKind=currentObservation?'observed':estimate!==null?'scout_estimate':zombies!==null?'observed':'none'
+      const effectiveFreshness:ZoneIntelFreshness=estimate!==null&&!currentObservation?'fresh':freshness
+      const lastObservedDay=zombieIntel==='scout_estimate'?null:intel?.lastObservedDay??null
+      const lastObservedHour=zombieIntel==='scout_estimate'?null:intel?.lastObservedHour??null
       if (!zone.discovered) {
         return {
           x: zone.x,
           y: zone.y,
           discovered: false,
-          zombies: null,
-          freshness:'unknown',
+          zombies: estimate,
+          zombieIntel:estimate===null?'none':'scout_estimate',
+          freshness:estimate===null?'unknown':'fresh',
           lastObservedDay:null,
           lastObservedHour:null,
           searchesRemaining: null,
@@ -46,10 +66,11 @@ export function createAgentWorldKnowledge(state: GameState): AgentWorldKnowledge
         x: zone.x,
         y: zone.y,
         discovered: true,
-        zombies: intel?.observedZombies ?? null,
-        freshness:freshnessFor(state,x,y),
-        lastObservedDay:intel?.lastObservedDay??null,
-        lastObservedHour:intel?.lastObservedHour??null,
+        zombies,
+        zombieIntel,
+        freshness:effectiveFreshness,
+        lastObservedDay,
+        lastObservedHour,
         searchesRemaining: zone.searchesRemaining,
         specialSite: zone.specialSite,
       }
@@ -57,19 +78,19 @@ export function createAgentWorldKnowledge(state: GameState): AgentWorldKnowledge
   }
 }
 
-export function knownZombieCount(state: GameState, x: number, y: number): number | null {
-  return createAgentWorldKnowledge(state).zone(x, y)?.zombies ?? null
+export function knownZombieCount(state: GameState, x: number, y: number,viewerCitizenId?:string): number | null {
+  return createAgentWorldKnowledge(state,viewerCitizenId).zone(x, y)?.zombies ?? null
 }
 
-export function freshZombieCount(state:GameState,x:number,y:number):number|null{
-  const knowledge=createAgentWorldKnowledge(state).zone(x,y)
+export function freshZombieCount(state:GameState,x:number,y:number,viewerCitizenId?:string):number|null{
+  const knowledge=createAgentWorldKnowledge(state,viewerCitizenId).zone(x,y)
   return knowledge?.freshness==='fresh'?knowledge.zombies:null
 }
 
-export function zoneIntelFreshness(state:GameState,x:number,y:number):ZoneIntelFreshness{
-  return createAgentWorldKnowledge(state).zone(x,y)?.freshness??'unknown'
+export function zoneIntelFreshness(state:GameState,x:number,y:number,viewerCitizenId?:string):ZoneIntelFreshness{
+  return createAgentWorldKnowledge(state,viewerCitizenId).zone(x,y)?.freshness??'unknown'
 }
 
-export function hasFreshZoneIntel(state:GameState,x:number,y:number):boolean{
-  return zoneIntelFreshness(state,x,y)==='fresh'
+export function hasFreshZoneIntel(state:GameState,x:number,y:number,viewerCitizenId?:string):boolean{
+  return zoneIntelFreshness(state,x,y,viewerCitizenId)==='fresh'
 }
