@@ -1,7 +1,7 @@
 import { constructionUpgradeLevel } from './constructionUpgrades'
 import { randomInt } from './rng'
 import type { GameEvent, GameState } from './types'
-import { isTownGateZone, zoneKey } from './world'
+import { distanceToTown, isTownGateZone, zoneKey } from './world'
 
 export type NightWindDirection='NW'|'N'|'NE'|'W'|'E'|'SW'|'S'|'SE'
 const WIND_DIRECTIONS:readonly NightWindDirection[]=['NW','N','NE','W','E','SW','S','SE']
@@ -25,19 +25,24 @@ export function searchTowerWindDirectionForDay(seed:number,day:number):NightWind
   const roll=randomInt(isolatedWorldSeed(seed,day,0x51ea7e11),0,WIND_DIRECTIONS.length-1)
   return WIND_DIRECTIONS[roll.value]!
 }
+/**
+ * Searchtower sectors follow the discrete grid geometry documented for the source game:
+ * cardinal sectors use the 2-forward / 1-side boundary and the four diagonal sectors fill
+ * the remaining quadrant wedges. This makes N/S/E/W sectors wider than diagonal sectors.
+ */
 export function zoneWindDirection(x:number,y:number):NightWindDirection|null{
   if(x===0&&y===0)return null
-  const angle=Math.atan2(y,x)*180/Math.PI
-  if(angle>=-22.5&&angle<22.5)return'E'
-  if(angle>=22.5&&angle<67.5)return'NE'
-  if(angle>=67.5&&angle<112.5)return'N'
-  if(angle>=112.5&&angle<157.5)return'NW'
-  if(angle>=157.5||angle<-157.5)return'W'
-  if(angle>=-157.5&&angle<-112.5)return'SW'
-  if(angle>=-112.5&&angle<-67.5)return'S'
-  return'SE'
+  const ax=Math.abs(x);const ay=Math.abs(y)
+  if(y>0&&2*ax<=ay)return'N'
+  if(y<0&&2*ax<=ay)return'S'
+  if(x>0&&2*ay<=ax)return'E'
+  if(x<0&&2*ay<=ax)return'W'
+  if(x>0&&y>0)return'NE'
+  if(x<0&&y>0)return'NW'
+  if(x>0&&y<0)return'SE'
+  return'SW'
 }
-function zoneDistance(x:number,y:number):number{return Math.sqrt(x*x+y*y)}
+function zoneDistance(x:number,y:number):number{return distanceToTown(x,y)}
 function estimatedZombieBand(zombies:number):number{
   if(zombies<=0)return 0
   if(zombies<=2)return 2
@@ -48,6 +53,7 @@ function estimatedZombieBand(zombies:number):number{
 /**
  * Nightly world observation updates shared town intelligence after zombie evolution.
  * Occupied zones always refresh. Observation Platform adds the voted radius around town.
+ * Live2Nite interprets source distances in the same Manhattan/AP kilometres used by travel.
  * Without Upgraded Map the observation records only Live2Nite's existing map band using
  * hour=-1 as an internal precision marker; Upgraded Map records the exact evolved count.
  */
