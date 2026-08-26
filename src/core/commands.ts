@@ -6,6 +6,7 @@ import { CONSTRUCTIONS, blueprintEligibleProjects } from './construction'
 import { resolveHomeLabUse } from './drugLab'
 import { applyEvents } from './events'
 import { explorableBlueprintEligibleProjects, explorableBlueprintTierFromType } from './explorableBlueprints'
+import { garbageDumpActionCost, resolveGarbageDump } from './garbageDump'
 import { HOME_IMPROVEMENTS, homeHasAlarm, homeImprovementDefense, homePreventsTheft, improvementNextLevel, nextHomeDefinition, siestaChancePercent } from './home'
 import { itemUseActionDefinition, resolveCitizenEffects, resolveFoodItemAction, resolveItemUseAction, resolveWaterItemAction } from './itemEffects'
 import { containerPool, createItemInstance, normalizeItemState } from './items'
@@ -39,6 +40,7 @@ function sameCommand(left:GameCommand,right:GameCommand):boolean{
   if(left.type==='USE_WEAPON'&&right.type==='USE_WEAPON')return left.itemId===right.itemId
   if(left.type==='DEPOSIT_ITEM'&&right.type==='DEPOSIT_ITEM')return left.itemId===right.itemId
   if(left.type==='WITHDRAW_BANK_ITEM'&&right.type==='WITHDRAW_BANK_ITEM')return left.itemId===right.itemId
+  if(left.type==='DUMP_BANK_ITEM'&&right.type==='DUMP_BANK_ITEM')return left.itemId===right.itemId
   if(left.type==='MOVE_ITEM_TO_HOME'&&right.type==='MOVE_ITEM_TO_HOME')return left.itemId===right.itemId
   if(left.type==='MOVE_ITEM_TO_RUCKSACK'&&right.type==='MOVE_ITEM_TO_RUCKSACK')return left.itemId===right.itemId
   if(left.type==='RETURN_WATER_TO_WELL'&&right.type==='RETURN_WATER_TO_WELL')return left.itemId===right.itemId
@@ -129,6 +131,7 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     case 'LEAVE_HIDEOUT':events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:false,grave:false,survivalChance:null,breakdown:null});break
     case 'DEPOSIT_ITEM':{const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_DEPOSITED',day:state.day,citizenId:command.citizenId,item});break}
     case 'WITHDRAW_BANK_ITEM':{const item=state.town.bank.find((candidate)=>candidate.id===command.itemId);if(!item)throw new InvalidCommandError(`Missing Bank item ${command.itemId}`);events.push({type:'ITEM_WITHDRAWN',day:state.day,citizenId:command.citizenId,item});break}
+    case 'DUMP_BANK_ITEM':{const cost=garbageDumpActionCost(state);if(cost>0)events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:cost});events.push(resolveGarbageDump(state,citizen,command.itemId));break}
     case 'MOVE_ITEM_TO_HOME':{const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_MOVED_TO_HOME',day:state.day,citizenId:command.citizenId,item});break}
     case 'MOVE_ITEM_TO_RUCKSACK':{const item=citizen.home.storage.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_MOVED_TO_RUCKSACK',day:state.day,citizenId:command.citizenId,item});break}
     case 'DEPOSIT_HOME_ITEM':{const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId);if(!item)throw new InvalidCommandError(`Missing carried item ${command.itemId}`);targetCitizen(state,command.targetCitizenId);const detected=detectionOutcome(state,10);events.push({type:'HOME_ITEM_DEPOSITED',day:state.day,citizenId:command.citizenId,targetCitizenId:command.targetCitizenId,item,spotted:detected.spotted,rngStateAfter:detected.rngStateAfter});break}
