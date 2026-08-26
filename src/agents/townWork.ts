@@ -50,7 +50,7 @@ export function townWorkApCost(state:GameState,citizen:Citizen,action:GameComman
   switch(action.type){
     case 'DISPOSE_CORPSE_OUTSIDE':return 2
     case 'CONTRIBUTE_CONSTRUCTION':return technicianPayment(citizen,1).ap
-    case 'WORKSHOP_CONVERT':{const cost=workbenchOutput(action)?technicianWorkbenchCost(citizen):workshopRecipeApCost(state,action.recipeId,citizen.id);return technicianPayment(citizen,cost).ap}
+    case 'WORKSHOP_CONVERT':{const base=workshopRecipeApCost(state,action.recipeId,citizen.id);const cost=workbenchOutput(action)?technicianWorkbenchCost(citizen,base):base;return technicianPayment(citizen,cost).ap}
     case 'COMBINE_ITEMS':return action.itemIds.length===1&&COMBINATION_RECIPES[action.recipeId].category==='repair'?0:COMBINATION_RECIPES[action.recipeId].apCost
     case 'UPGRADE_HOME':return nextHomeDefinition(citizen.home.level)?.apCost??0
     case 'BUILD_HOME_IMPROVEMENT':{const next=improvementNextLevel(citizen,action.improvementId);return next===null?0:HOME_IMPROVEMENTS[action.improvementId].apCost(next)}
