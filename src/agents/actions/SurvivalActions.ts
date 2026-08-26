@@ -8,7 +8,7 @@ export function hydrationAction(state:GameState,citizen:Citizen,actions:GameComm
   if(citizen.status.hydration==='normal')return null
   const urgent=citizen.status.hydration==='dehydrated'||citizen.ap<=1||Boolean(options.forceThirstTreatment);if(!urgent)return null
   const drink=actions.find((action)=>action.type==='DRINK_ITEM')??null;if(drink)return drink
-  if(citizen.location.type==='world')return null
+  if(citizen.location.type==='world')return pick(actions,'SURVIVALIST_SEARCH_WATER')
   const bank=bankAction(state,actions,'water_ration');if(bank)return bank
   const take=pick(actions,'TAKE_WATER');if(take&&state.town.well.water>0)return take
   return null
@@ -22,4 +22,20 @@ export function conditionTreatmentAction(state:GameState,citizen:Citizen,actions
   if(citizen.status.addicted&&!citizen.status.drugged)return byId('anabolic_steroids')??byId('paracetoid')??byId('valium_shot')
   return null
 }
-export function campingAction(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{if(citizen.camping.hidden)return null;const chance=campingChancePercent(state,citizen.id);const improve=pick(actions,'IMPROVE_CAMP');if(chance<AI_TUNING.campingImproveTargetPercent&&citizen.ap>1&&improve)return improve;return pick(actions,'HIDE_FOR_NIGHT')}
+export function survivalistRecoveryAction(citizen:Citizen,actions:GameCommand[]):GameCommand|null{
+  if(citizen.location.type!=='world'||citizen.ap>1)return null
+  return pick(actions,'SURVIVALIST_SEARCH_FOOD')??pick(actions,'SURVIVALIST_SEARCH_WATER')
+}
+export function campingAction(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
+  if(citizen.camping.hidden)return null
+  const chance=campingChancePercent(state,citizen.id)
+  const improve=pick(actions,'IMPROVE_CAMP')
+  const grave=pick(actions,'DIG_CAMPING_GRAVE')
+  const graveChance=grave?campingChancePercent(state,citizen.id,{grave:true}):chance
+  if(chance<AI_TUNING.campingImproveTargetPercent){
+    if(grave&&graveChance>=AI_TUNING.campingImproveTargetPercent)return grave
+    if(citizen.ap>1&&improve)return improve
+    if(grave)return grave
+  }
+  return pick(actions,'HIDE_FOR_NIGHT')
+}
