@@ -22,8 +22,8 @@ function homeRegisterEvent(event:GameEvent,citizenId:string):boolean{
 function foreignHomeRegisterEvent(event:GameEvent,citizenId:string):boolean{return homeRegisterEvent(event,citizenId)||(event.type==='CORPSE_REANIMATED'&&event.corpseCitizenId===citizenId)||(event.type==='CITIZEN_DIED'&&event.citizenId===citizenId)}
 function statusLabel(status:'implemented'|'partial'|'wip'):string{return status==='implemented'?'IMPLEMENTED':status==='partial'?'PARTIAL':'WIP'}
 
-export function HomeView({game,citizenId,ownerCitizenId,legalActions,act,onReturnHome}:{game:GameState;citizenId:string;ownerCitizenId?:string;legalActions:GameCommand[];act:(command:GameCommand|undefined)=>void;onReturnHome?:()=>void}){
-  const[tab,setTab]=useState<HomeTab>('inventory')
+export function HomeView({game,citizenId,ownerCitizenId,legalActions,act,onReturnHome,initialTab='inventory'}:{game:GameState;citizenId:string;ownerCitizenId?:string;legalActions:GameCommand[];act:(command:GameCommand|undefined)=>void;onReturnHome?:()=>void;initialTab?:HomeTab}){
+  const[tab,setTab]=useState<HomeTab>(initialTab)
   const actor=game.citizens.find((citizen)=>citizen.id===citizenId)??game.citizens[0]
   const owner=game.citizens.find((citizen)=>citizen.id===(ownerCitizenId??citizenId))??actor
   const visiting=owner.id!==actor.id
