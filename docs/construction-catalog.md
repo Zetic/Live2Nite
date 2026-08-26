@@ -38,7 +38,7 @@ Upstream numeric/prototype IDs and upstream implementation code are deliberately
 
 Every catalogue entry has one of three statuses.
 
-Current catalogue status: **79 Implemented / 24 Partial / 63 WIP**.
+Current catalogue status: **80 Implemented / 24 Partial / 62 WIP**.
 
 ### Implemented
 
@@ -100,7 +100,7 @@ The Codex is intentionally complete even when the current town has not discovere
 
 ## Garbage Dump boundary
 
-The Garbage Dump, Dump Upgrade, and six class-6 category specialization effects are active. Organized Dump's zero-AP effect is represented in the Dump rules, but the construction itself remains WIP until its unresolved Trestle dependency has a verified runtime/acquisition path. See `docs/garbage-dump.md` for the interaction details.
+The Garbage Dump, Dump Upgrade, Organized Dump, and all six class-6 category specialization effects are active. Organized Dump is now normally buildable because Trestle has a runtime identity and exact source ruin acquisition paths; its completed effect reduces Garbage Dump actions from 1 AP to 0 AP. See `docs/garbage-dump.md` for the interaction and Trestle dependency details.
 
 ## Legacy cleanup
 
