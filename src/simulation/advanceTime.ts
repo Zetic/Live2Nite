@@ -6,6 +6,7 @@ import { applyEvents } from '../core/events'
 import { resolveNightAttack } from '../core/night'
 import { runAutomaticSearches } from '../core/search'
 import type { GameEvent, GameState } from '../core/types'
+import { contributeAutonomousWatchtowerEstimation } from '../core/watchtowerEstimation'
 import { runBotHour } from './runBotHour'
 
 export class InvalidTimeAdvanceError extends Error {}
@@ -29,7 +30,8 @@ export function advanceOneHour(
   const afterAutomaticGate=applyEvents(state,automaticGateEvents(state))
   const afterAutoSearch = runAutomaticSearches(afterAutomaticGate)
   const afterBots = runBotHour(afterAutoSearch, controller, controlledCitizenId)
-  const afterUpgradeVotes=castAutonomousConstructionUpgradeVotes(afterBots,controlledCitizenId)
+  const afterWatchtower=contributeAutonomousWatchtowerEstimation(afterBots,controlledCitizenId)
+  const afterUpgradeVotes=castAutonomousConstructionUpgradeVotes(afterWatchtower,controlledCitizenId)
   const afterGraceExpiry=applyEvents(afterUpgradeVotes,temporaryControlExpiryEvents(afterUpgradeVotes))
   const toHour = nextClockHour(currentHour)
   const beforeClock=toHour===0?resolveConstructionUpgradeVotesAtMidnight(afterGraceExpiry):afterGraceExpiry
