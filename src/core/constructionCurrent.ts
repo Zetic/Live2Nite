@@ -20,8 +20,11 @@ export function applyCurrentConstructionEconomy():void{
   }
 
   // Scout gameplay now supplies the source-backed daily mapping / next-day SP behavior.
+  // Keep both catalogue presentation metadata and runtime build-gating metadata aligned.
   CONSTRUCTION_CATALOG.scouts_lair.implementation='implemented'
   CONSTRUCTION_CATALOG.scouts_lair.wipReason=null
+  CONSTRUCTIONS.scouts_lair.implementationStatus='implemented'
+  CONSTRUCTIONS.scouts_lair.wipReason=undefined
   CONSTRUCTIONS.scouts_lair.playable=true
 }
 
