@@ -9,7 +9,7 @@ import { watchtowerEstimate } from '../src/core/night'
 import type { ConstructionId, GameEvent, GameState } from '../src/core/types'
 import { watchtowerContributors, canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
 import { distanceToTown } from '../src/core/world'
-import { nightlyObservationEvents, observationPlatformRadius, searchTowerRecoveryChance, searchTowerReplenishmentEventsForNight, searchTowerWindDirectionForDay, zoneWindDirection } from '../src/core/worldObservation'
+import { lastRecordedSearchTowerDirection, nightlyObservationEvents, observationPlatformRadius, searchTowerRecoveryChance, searchTowerReplenishmentEventsForNight, searchTowerWindDirectionForDay, zoneWindDirection } from '../src/core/worldObservation'
 import { worldZombieEvolutionEvent } from '../src/core/worldEvolution'
 import { advanceOneHour } from '../src/simulation/advanceTime'
 import { describeEvent } from '../src/ui/eventText'
@@ -163,9 +163,17 @@ describe('Searchtower nightly recovery',()=>{
     expect(describeEvent(event!,game)).toContain(`Searchtower recorded the recovery sector as ${searchTowerWindDirectionForDay(game.seed,game.day)}.`)
   })
 
-  it('does not rewrite pre-Searchtower Chronicle entries after the building is completed later',()=>{
+  it('reads the most recent stored Searchtower sector for facility history',()=>{
+    const direction=searchTowerWindDirectionForDay(7206,1)
+    const event={type:'WORLD_ZOMBIES_EVOLVED',day:1,hour:0,changes:[],searchTowerDirection:direction} as GameEvent&{searchTowerDirection:typeof direction}
+    const game={...complete(createInitialGame(7206,2),'watchtower','search_tower'),day:2,events:[event]}
+    expect(lastRecordedSearchTowerDirection(game)).toBe(direction)
+  })
+
+  it('does not invent previous Searchtower history when the building is completed later',()=>{
     const oldEvent={type:'WORLD_ZOMBIES_EVOLVED',day:1,hour:0,changes:[]} as GameEvent
-    const laterGame=complete({...createInitialGame(7204,2),day:2},'watchtower','search_tower')
+    const laterGame={...complete(createInitialGame(7204,2),'watchtower','search_tower'),day:2,events:[oldEvent]}
     expect(describeEvent(oldEvent,laterGame)).not.toContain('Searchtower recorded')
+    expect(lastRecordedSearchTowerDirection(laterGame)).toBeNull()
   })
 })
