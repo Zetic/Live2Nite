@@ -4,7 +4,8 @@ import type { Citizen, GameState } from './types'
 export type ProfessionId='scavenger'|'scout'|'guardian'|'survivalist'|'tamer'|'technician'
 export type ProfessionItemType='profession_small_shovel'|'profession_camouflage_suit'|'profession_riot_shield'|'profession_survival_manual'|'profession_three_legged_maltese'|'profession_technician_wrench'
 export type EquipmentItemType='town_uniform'|ProfessionItemType
-export interface EquipmentItemInstance{id:string;type:EquipmentItemType}
+export interface EquipmentItemState{camouflaged?:boolean}
+export interface EquipmentItemInstance{id:string;type:EquipmentItemType;state?:EquipmentItemState}
 export interface CitizenEquipment{townUniform:EquipmentItemInstance;professionItem:EquipmentItemInstance}
 export type ProfessionCitizen=Citizen&{equipment?:CitizenEquipment}
 
@@ -27,7 +28,7 @@ export interface ProfessionDefinition {
 
 export const PROFESSION_DEFINITIONS:Record<ProfessionId,ProfessionDefinition>={
   scavenger:{id:'scavenger',name:'Scavenger',summary:'Resource gathering specialist.',itemType:'profession_small_shovel',itemName:'Small Shovel',itemPurpose:'Scavenger equipment. Improves search success, shortens repeat automatic searches to 75% of the base interval, reveals qualitative resource depletion, adds 50% ruin oxygen, and can replenish each depleted zone with the spade once.'},
-  scout:{id:'scout',name:'Scout',summary:'Reconnaissance and dangerous-zone exploration specialist.',itemType:'profession_camouflage_suit',itemName:'Camouflage Suit',itemPurpose:'Locked profession equipment. Enables Scout mechanics as they are implemented.'},
+  scout:{id:'scout',name:'Scout',summary:'Reconnaissance and dangerous-zone exploration specialist.',itemType:'profession_camouflage_suit',itemName:'Camouflage Suit',itemPurpose:'Scout equipment. Provides 2 daily Scout Points, nearby zombie reconnaissance, persistent Scout visits, and camouflage for dangerous-zone movement, camping, and explorable-ruin entry.'},
   guardian:{id:'guardian',name:'Guardian',summary:'Defense and zombie-control specialist.',itemType:'profession_riot_shield',itemName:'Riot Shield',itemPurpose:'Guardian equipment. Provides 4 World Beyond control points, +1 personal Home defense, and +5 town defense while its citizen is alive in town. A completed Guard Tower raises that town contribution to +15.'},
   survivalist:{id:'survivalist',name:'Survivalist',summary:'Long-range survival and camping specialist.',itemType:'profession_survival_manual',itemName:'Survival Manual',itemPurpose:'Locked profession equipment. Enables Survivalist mechanics as they are implemented.'},
   tamer:{id:'tamer',name:'Tamer',summary:'Expedition logistics specialist.',itemType:'profession_three_legged_maltese',itemName:'Three-Legged Maltese',itemPurpose:'Tamer equipment. Once per day outside town, returns the whole ordinary rucksack cargo to the Bank or Home Chest. A cumbersome item blocks the trip unless Anabolic Steroids let the dog carry that one cumbersome item with the rest of the shipment. The Maltese also points toward explorable-ruin exits.'},
@@ -55,7 +56,12 @@ export function citizenProfession(citizen:Citizen):ProfessionId|null{const equip
 export function hasProfession(citizen:Citizen,profession:ProfessionId):boolean{return citizenProfession(citizen)===profession}
 export function professionName(citizen:Citizen):string{const profession=citizenProfession(citizen);return profession?PROFESSION_DEFINITIONS[profession].name:'Unassigned'}
 export function equipmentItemName(item:EquipmentItemInstance):string{if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.name;const profession=PROFESSION_BY_ITEM[item.type];return PROFESSION_DEFINITIONS[profession].itemName}
-export function equipmentItemPurpose(item:EquipmentItemInstance):string{if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.purpose;const profession=PROFESSION_BY_ITEM[item.type];return PROFESSION_DEFINITIONS[profession].itemPurpose}
+export function equipmentItemPurpose(item:EquipmentItemInstance):string{
+  if(item.type==='town_uniform')return TOWN_UNIFORM_DEFINITION.purpose
+  const profession=PROFESSION_BY_ITEM[item.type]
+  const purpose=PROFESSION_DEFINITIONS[profession].itemPurpose
+  return item.type==='profession_camouflage_suit'?`${purpose} Camouflage is currently ${item.state?.camouflaged===false?'inactive':'active'}.`:purpose
+}
 
 /** Profession items are capability tokens: every Guardian bonus is derived from the Riot Shield slot. */
 export function professionControlPoints(citizen:Citizen):number{return citizen.status.terrorized?0:hasProfession(citizen,'guardian')?GUARDIAN_CONTROL_POINTS:ORDINARY_CONTROL_POINTS}
@@ -67,16 +73,20 @@ export function guardianTownDefenseBonus(state:GameState):number{
 }
 
 export function createCitizenEquipment(citizenId:string,profession:ProfessionId):CitizenEquipment{
+  const professionItem:EquipmentItemInstance={id:`equipment-${citizenId}-profession`,type:PROFESSION_DEFINITIONS[profession].itemType}
+  if(profession==='scout')professionItem.state={camouflaged:true}
   return{
     townUniform:{id:`equipment-${citizenId}-uniform`,type:'town_uniform'},
-    professionItem:{id:`equipment-${citizenId}-profession`,type:PROFESSION_DEFINITIONS[profession].itemType},
+    professionItem,
   }
 }
 export function equipCitizenProfession(citizen:Citizen,profession:ProfessionId):Citizen{
   const existing=citizenEquipment(citizen)
+  const professionItem:EquipmentItemInstance={id:existing?.professionItem.id??`equipment-${citizen.id}-profession`,type:PROFESSION_DEFINITIONS[profession].itemType}
+  if(profession==='scout')professionItem.state={camouflaged:true}
   const equipment:CitizenEquipment={
     townUniform:existing?.townUniform??{id:`equipment-${citizen.id}-uniform`,type:'town_uniform'},
-    professionItem:{id:existing?.professionItem.id??`equipment-${citizen.id}-profession`,type:PROFESSION_DEFINITIONS[profession].itemType},
+    professionItem,
   }
   return{...citizen,equipment} as ProfessionCitizen
 }

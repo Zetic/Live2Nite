@@ -1,4 +1,5 @@
 import { CONSTRUCTIONS } from './construction'
+import { CONSTRUCTION_CATALOG } from './constructionCatalog'
 import { MYHORDES_CURRENT_CONSTRUCTION_COSTS } from './constructionEconomy'
 import type { ConstructionId } from './constructionIds'
 
@@ -17,6 +18,14 @@ export function applyCurrentConstructionEconomy():void{
     project.sourceConfidence='confirmed'
     project.historicalCostConfidence='confirmed'
   }
+
+  // Scout gameplay now supplies the source-backed daily mapping / next-day SP behavior.
+  // Keep both catalogue presentation metadata and runtime build-gating metadata aligned.
+  CONSTRUCTION_CATALOG.scouts_lair.implementation='implemented'
+  CONSTRUCTION_CATALOG.scouts_lair.wipReason=null
+  CONSTRUCTIONS.scouts_lair.implementationStatus='implemented'
+  CONSTRUCTIONS.scouts_lair.wipReason=undefined
+  CONSTRUCTIONS.scouts_lair.playable=true
 }
 
 applyCurrentConstructionEconomy()

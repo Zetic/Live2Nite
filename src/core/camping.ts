@@ -1,6 +1,7 @@
 import { campingConstructionBonus } from './construction'
 import { randomInt } from './rng'
 import { RUIN_CATALOG } from './ruinCatalog'
+import { campingZombiePenaltyPerZombie } from './scout'
 import { normalizeRuinId } from './specialSites'
 import type { Citizen, CitizenCampingState, CampingOutlook, GameState, WorldZone } from './types'
 import { distanceToTown, isTownGateZone, zoneKey } from './world'
@@ -24,7 +25,7 @@ export function campingChancePercent(state: GameState, citizenId: string): numbe
   const topologyBonus = zone.specialSite ? ruinCampingBase(zone.specialSite.type) : 0
   const improvementBonus = Math.min(CAMP_IMPROVEMENT_CAP, zone.campImprovements ?? 0) * 5
   const constructionBonus=campingConstructionBonus(state)
-  const zombiePenalty = Math.min(45, zone.zombies * 7)
+  const zombiePenalty = Math.min(45, zone.zombies * campingZombiePenaltyPerZombie(citizen))
   const alreadyHiddenHere = state.citizens.filter((other) => other.id !== citizenId && other.alive && other.location.type === 'world' && other.location.x === zone.x && other.location.y === zone.y && other.camping.hidden).length
   const crowdPenalty = alreadyHiddenHere * 7
   const repeatPenalty = citizen.camping.nightsSurvived * 12

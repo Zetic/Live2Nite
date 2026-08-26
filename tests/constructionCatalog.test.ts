@@ -63,7 +63,8 @@ describe('complete current construction catalog',()=>{
   it('tracks the implementation backlog explicitly',()=>{
     const counts={implemented:0,partial:0,wip:0}
     for(const id of CONSTRUCTION_CATALOG_ORDER)counts[CONSTRUCTION_CATALOG[id].implementation]+=1
-    expect(counts).toEqual({implemented:55,partial:24,wip:87})
+    expect(counts).toEqual({implemented:56,partial:24,wip:86})
+    expect(CONSTRUCTION_CATALOG.scouts_lair.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.henhouse.implementation).toBe('partial')
   })
 
@@ -92,6 +93,8 @@ describe('complete current construction catalog',()=>{
 
     expect(constructionImplementationStatus('defensive_supports')).toBe('partial')
     expect(constructionPlayable('defensive_supports')).toBe(true)
+    expect(constructionImplementationStatus('scouts_lair')).toBe('implemented')
+    expect(constructionPlayable('scouts_lair')).toBe(true)
   })
 
   it('includes WIP projects in generic blueprint candidate pools while excluding special classes',()=>{

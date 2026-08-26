@@ -8,7 +8,7 @@ import { itemAction, pick } from './actionSelectors'
 export function stepTowardTown(state: GameState, citizen: Citizen, actions: GameCommand[]): GameCommand | null {
   if (citizen.location.type !== 'world') return null
   if (citizen.location.x === 0 && citizen.location.y === 0) return pick(actions, 'ENTER_TOWN')
-  const direction = nextDirectionToward(state, { x: citizen.location.x, y: citizen.location.y }, { x: 0, y: 0 })
+  const direction = nextDirectionToward(state, { x: citizen.location.x, y: citizen.location.y }, { x: 0, y: 0 },citizen.id)
   return direction
     ? actions.find((action) => action.type === 'MOVE' && action.direction === direction) ?? null
     : null
@@ -66,6 +66,6 @@ export function controlAwareMove(
 export function controlAwareStepTowardTown(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
   if(citizen.location.type!=='world')return null
   if(citizen.location.x===0&&citizen.location.y===0)return pick(actions,'ENTER_TOWN')
-  const direction=nextDirectionToward(state,{x:citizen.location.x,y:citizen.location.y},{x:0,y:0})
+  const direction=nextDirectionToward(state,{x:citizen.location.x,y:citizen.location.y},{x:0,y:0},citizen.id)
   return direction?controlAwareMove(state,citizen,actions,direction,true):null
 }

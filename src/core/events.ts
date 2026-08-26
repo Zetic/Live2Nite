@@ -2,6 +2,7 @@ import { removeBankItemById, removeBankItems } from './bank'
 import { completionWaterBonus, constructionDiscoveryCascade, revealsAllTerrain } from './construction'
 import { foodApTarget } from './food'
 import { resolveSearchAttempt } from './scavenging'
+import { reduceScoutEvent, resetScoutForNewDay } from './scout'
 import { effectiveMaxAp } from './status'
 import { createItemInstance, normalizeItemState } from './items'
 import { zoneKey } from './world'
@@ -42,6 +43,7 @@ function resetDailyZoneSearchMarkers(state:GameState):GameState['world']{
 }
 
 function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
+  const scoutState=reduceScoutEvent(state,event);if(scoutState)return scoutState
   switch(event.type){
     case 'AP_SPENT':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,ap:Math.max(0,citizen.ap-event.amount)}))}
     case 'GATE_SET':return{...state,town:{...state.town,gateOpen:event.open}}
@@ -180,8 +182,9 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CITIZEN_DIED':return{...state,coordination:{commitments:state.coordination.commitments.filter((commitment)=>commitment.citizenId!==event.citizenId)},botMissions:withoutMission(state,event.citizenId),citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const diedInTown=citizen.location.type==='town';return{...citizen,alive:false,ap:0,inventory:diedInTown?[]:citizen.inventory,corpseDisposition:null,home:{...citizen.home,storage:diedInTown?[...citizen.home.storage,...citizen.inventory]:citizen.home.storage,holdsBody:diedInTown,corpseAttacked:false},temporaryControl:null,relativeControl:null,camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}})}
     case 'NIGHT_RESOLVED':return{...state,lastNight:event.report}
     case 'TIME_ADVANCED':return{...state,clock:{hour:event.toHour,phase:event.phase}}
-    case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:missionsForNewDay(state),coordination:{commitments:[]},world:resetDailyZoneSearchMarkers(state),citizens:state.citizens.map((citizen)=>({...citizen,ap:citizen.alive?effectiveMaxAp(citizen):0,temporaryControl:null,daily:{ate:false,drank:false,waterTaken:false},camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
+    case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:missionsForNewDay(state),coordination:{commitments:[]},world:resetDailyZoneSearchMarkers(state),citizens:state.citizens.map((citizen)=>resetScoutForNewDay({...citizen,ap:citizen.alive?effectiveMaxAp(citizen):0,temporaryControl:null,daily:{ate:false,drank:false,waterTaken:false},camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
   }
+  throw new Error(`Unhandled game event: ${event.type}`)
 }
 export function applyEvents(state:GameState,events:GameEvent[]):GameState{
   let nextState=state

@@ -5,7 +5,7 @@ Live2Nite treats professions as ordinary citizen roles, not as a paid or Hero-st
 | Profession | Profession item | Current state |
 | --- | --- | --- |
 | Scavenger | Small Shovel | search, depletion-intel, replenishment, and ruin-oxygen perks implemented |
-| Scout | Camouflage Suit | equipment present; gameplay perks deferred |
+| Scout | Camouflage Suit | SP movement, camouflage, reconnaissance, Scout Levels, camping, ruin-entry, and Scouts Lair perks implemented |
 | Guardian | Riot Shield | control and defense perks implemented |
 | Survivalist | Survival Manual | equipment present; gameplay perks deferred |
 | Tamer | Three-Legged Maltese | dog logistics and ruin-exit guidance implemented |
@@ -79,6 +79,31 @@ A depleted zone also exposes **Replenish with Spade** to a Scavenger. Spade repl
 
 Bot-controlled Scavengers receive the same probability, timing, depletion-information and Spade-action rules as the controlled citizen; there are no bot-only Scavenger bonuses.
 
+## Scout
+
+The **Camouflage Suit** is the sole capability token for Scout mechanics. Active/inactive camouflage is state on that locked Profession Item, so losing cover does not remove Scout identity.
+
+Implemented source behavior:
+
+- Scouts begin each day with **2 Scout Points (SP)**.
+- Movement uses the source zone distance `round(sqrt(x² + y²))`. Below distance 3 a move costs 1 AP; from distance 3 onward it spends 1 SP first and falls back to 1 AP when SP is exhausted.
+- A completed **Scouts Lair** exposes **Map the Wasteland** once per citizen per day for 1 AP. On the following day a Scout receives +4 SP on top of the 2-SP base, while another profession receives +2 SP.
+- Active camouflage lets the Scout leave a zombie-controlled zone without pretending the Scout has gained human control. Desperate fleeing is not offered while camouflage already supplies the escape route.
+- Entering a zone as a Scout records a persistent **Scout Visit**. Every five visits raise that zone's global Scout Level by one, capped at level 3.
+- Camouflage detection uses the destination's Scout Level **before** the arriving visit is recorded, matching source ordering. A milestone fifth, tenth, or fifteenth visit therefore improves later entries rather than the same entry that earns the level.
+- When destination zombies exceed arriving human control, camouflage detection is deterministic from the game RNG and uses the current source formula. Each Scout Level removes 3 percentage points of detection pressure.
+- A Scout can re-camouflage for 0 AP in town or while an outside zone is genuinely/temporarily controlled. An exposed Scout still trapped under zombie control cannot simply reactivate the suit.
+- Productive/exposed field actions represented by Live2Nite's current command set break camouflage when performed under zombie control. MyHordes models this through per-action `keepsCover` and recipe stealth metadata; Live2Nite will generalize to that metadata model when its item-action catalogue exposes equivalent cover flags.
+- Adjacent zones receive Scout zombie estimates. Zero zombies is exact; otherwise Scout Level 0 is within ±2, level 1 within ±1, and level 2+ is exact. The estimate uses the zone's global Scout Level, so town reconnaissance collectively improves future Scout estimates.
+- Scout estimates flow through the same citizen-aware **WorldKnowledge** boundary used by bots and UI. An adjacent undiscovered zone may reveal only the bounded zombie estimate; hidden resources, ruin identity, and other authoritative world data remain hidden.
+- Each Scout Level adds **+2.5 percentage points** to ordinary search success for everyone scavenging that zone.
+- Active camouflage reduces the camping zombie penalty from **-7 to -3 per zombie** while retaining the ordinary camping cap and other camping factors.
+- Active camouflage allows entry into an accessible explorable ruin from a zombie-controlled exterior zone. Scout receives no special interior oxygen, movement, lock, room, or loot bonus.
+- With Scouts Lair built, the world map exposes accumulated Scout Level markings without falsely refreshing stale zombie observations.
+- Autonomous citizens use the same Scout actions and knowledge projection. Scout bots re-camouflage, preserve cover in hostile zones, spend SP on long-range travel, and plan routes/risk from the same bounded Scout estimates shown to the player. Non-Scout bots can also use Map the Wasteland when legal, matching the source non-Scout action.
+
+Source-bound omissions are explicit rather than invented. MyHordes' nighttime camouflage modifier is deferred because Live2Nite has no traversable World Beyond night phase, and the source re-camouflage follower restriction cannot apply until Live2Nite has an escort/follower subsystem. Hero-only systems and Night Watch behavior remain outside the current profession scope.
+
 ## Tamer
 
 The **Three-Legged Maltese** is the sole capability token for Tamer mechanics. There is no independent `isTamer` state. Replacing the Profession Item immediately removes the dog logistics controls and ruin-exit guidance.
@@ -110,4 +135,4 @@ A valid profession-era local save resumes normally. Debug **New Town** and the r
 
 ## Deferred professions
 
-Scout camouflage/intelligence, Survivalist survival mechanics, and Technician construction points/actions remain for individual follow-up PRs. Those implementations should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.
+Survivalist survival mechanics and Technician construction points/actions remain for individual follow-up PRs. Those implementations should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.
