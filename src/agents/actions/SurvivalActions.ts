@@ -24,6 +24,9 @@ export function conditionTreatmentAction(state:GameState,citizen:Citizen,actions
 }
 export function survivalistRecoveryAction(citizen:Citizen,actions:GameCommand[]):GameCommand|null{
   if(citizen.location.type!=='world'||citizen.ap>1)return null
+  // Preserve real carried food/water first; the once-per-day Manual is emergency endurance,
+  // not a reason to waste ordinary refills already packed for the return trip.
+  if(actions.some((action)=>action.type==='EAT_ITEM'||action.type==='DRINK_ITEM'))return null
   return pick(actions,'SURVIVALIST_SEARCH_FOOD')??pick(actions,'SURVIVALIST_SEARCH_WATER')
 }
 export function campingAction(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
