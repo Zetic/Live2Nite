@@ -46,21 +46,22 @@ function estimatedZombieBand(zombies:number):number{
 }
 
 /**
- * Observation Platform updates shared town intelligence after nightly zombie evolution.
+ * Nightly world observation updates shared town intelligence after zombie evolution.
+ * Occupied zones always refresh. Observation Platform adds the voted radius around town.
  * Without Upgraded Map the observation records only Live2Nite's existing map band using
  * hour=-1 as an internal precision marker; Upgraded Map records the exact evolved count.
  */
 export function nightlyObservationEvents(state:GameState):GameEvent[]{
   const radius=observationPlatformRadius(state)
-  if(radius<=0)return[]
   const exact=upgradedMapExact(state)
   const occupied=new Set(state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world').map((citizen)=>zoneKey(citizen.location.x,citizen.location.y)))
   const events:GameEvent[]=[]
+  const nextDay=state.day+1
   for(const [key,zone] of Object.entries(state.world.zones)){
     if(isTownGateZone(zone.x,zone.y))continue
     if(zoneDistance(zone.x,zone.y)>radius&&!occupied.has(key))continue
-    if(!zone.discovered)events.push({type:'ZONE_DISCOVERED',day:state.day,hour:0,zoneKey:key})
-    events.push({type:'ZONE_OBSERVED',day:state.day,hour:exact?0:-1,zoneKey:key,zombies:exact?zone.zombies:estimatedZombieBand(zone.zombies)})
+    if(!zone.discovered)events.push({type:'ZONE_DISCOVERED',day:nextDay,hour:0,zoneKey:key})
+    events.push({type:'ZONE_OBSERVED',day:nextDay,hour:exact?0:-1,zoneKey:key,zombies:exact?zone.zombies:estimatedZombieBand(zone.zombies)})
   }
   return events
 }
