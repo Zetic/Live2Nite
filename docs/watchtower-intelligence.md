@@ -35,13 +35,14 @@ After nightly zombie evolution, living occupied outside zones and zones within t
 
 ## Searchtower
 
-Searchtower recovery is no longer an independent roll over every discovered depleted zone.
+World Beyond recovery is a natural nightly process; Searchtower does **not** switch it on.
 
-- one deterministic compass sector is selected per night;
+- one deterministic compass sector is selected every night, even before Searchtower is built;
 - zones must be more than 2 km from town;
 - only depleted zones in that sector are eligible;
 - eligibility does not depend on the town already having discovered the zone;
-- the base recovery chance is 25%;
-- voted upgrades raise it to 37%, 49%, 61%, 73%, then 85%.
+- without Searchtower, eligible zones recover at the base 25% chance and the selected sector remains hidden;
+- constructing Searchtower at level 0 keeps recovery at 25% but reveals/records the selected sector;
+- voted Searchtower upgrades raise recovery to 37%, 49%, 61%, 73%, then 85%.
 
-The selected sector is stored on that night's world-evolution event and is shown in both the Chronicle and the Watchtower facility. Chronicle rendering uses the stored historical value, so constructing Searchtower later cannot retroactively add recovery directions to older nights. World truth and shared town intelligence remain separate throughout this process.
+The selected sector is stored on that night's world-evolution event only when Searchtower is completed, allowing the Chronicle and Watchtower facility to reveal it without retroactively inventing information for nights before construction. World truth and shared town intelligence remain separate throughout this process.
