@@ -67,7 +67,7 @@ describe('complete Trestle source behavior',()=>{
     expect(game.citizens[0].inventory.some((item)=>item.id==='trestle-field')).toBe(false)
     expect(campImprovementLevel(game.world.zones[zoneKey(6,0)])).toBe(TRESTLE_CAMP_IMPROVEMENT_POINTS)
     expect(campingChanceBreakdown(game,'c01').zone).toBe(TRESTLE_CAMP_IMPROVEMENT_POINTS)
-    expect(result.events.find((event)=>event.type==='CAMP_IMPROVED')).toMatchObject({amount:9})
+    expect(result.events.find((event)=>event.type==='CAMP_IMPROVED')).toMatchObject({amount:1,improvementPoints:9})
   })
 
   it('preserves legacy +5-step camps, supports exact mixed values, and clamps improvement at 50',()=>{
