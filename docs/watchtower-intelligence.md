@@ -31,7 +31,7 @@ Observation Platform is intentionally **Partial** in this pass. The directly sup
 
 Current-source levels 4 and 5 additionally alter free-return distance. Those effects remain deferred until the corresponding listener path is verified, so Live2Nite does not offer inert level-4/5 votes.
 
-After nightly zombie evolution, living occupied outside zones and zones within the active Observation Platform radius receive fresh shared intelligence for the new day. Without Upgraded Map, the town receives only the existing Live2Nite zombie bands (0, 1–2, 3–4, 5+). Upgraded Map records exact counts for the same refreshed zones. Coarse map observations retain their band identity when they become stale, and stale observations are rendered with stale-intelligence styling rather than being presented as current.
+After nightly zombie evolution, living occupied outside zones and zones within the active Observation Platform radius receive fresh shared zombie intelligence for the new day. Platform intelligence does **not** mark an unseen zone as discovered: special sites, ground items, search state, and other exploration metadata remain hidden until ordinary exploration reaches that zone. Without Upgraded Map, the town receives only the existing Live2Nite zombie bands (0, 1–2, 3–4, 5+). Upgraded Map records exact zombie counts for the same refreshed cells without bypassing that discovery boundary. Coarse map observations retain their band identity when they become stale, and stale observations are rendered with stale-intelligence styling rather than being presented as current.
 
 ## Searchtower
 
