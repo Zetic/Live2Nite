@@ -184,6 +184,7 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'TIME_ADVANCED':return{...state,clock:{hour:event.toHour,phase:event.phase}}
     case 'DAY_STARTED':return{...state,day:event.day,clock:{hour:event.hour??1,phase:'day'},botMissions:missionsForNewDay(state),coordination:{commitments:[]},world:resetDailyZoneSearchMarkers(state),citizens:state.citizens.map((citizen)=>resetScoutForNewDay({...citizen,ap:citizen.alive?effectiveMaxAp(citizen):0,temporaryControl:null,daily:{ate:false,drank:false,waterTaken:false},camping:{...citizen.camping,hidden:false,survivalChance:null,hiddenDay:null}}))}
   }
+  throw new Error(`Unhandled game event: ${event.type}`)
 }
 export function applyEvents(state:GameState,events:GameEvent[]):GameState{
   let nextState=state
