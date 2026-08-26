@@ -15,8 +15,10 @@ import { getZone, zoneKey } from './world'
 
 export const TECHNICIAN_MAX_CP=6
 export const TECHNICIAN_REPAIR_CP_COST=3
-export const TECHNICIAN_WORKBENCH_TECH_COST=4
-export const TECHNICIAN_WORKBENCH_OTHER_COST=6
+/** Prime Workbench adds this many work points on top of the ordinary Workshop recipe cost. */
+export const TECHNICIAN_WORKBENCH_TECH_PENALTY=4
+/** Non-Technicians pay the larger Prime Workbench surcharge on top of the ordinary Workshop recipe cost. */
+export const TECHNICIAN_WORKBENCH_OTHER_PENALTY=6
 
 declare module './types' {
   interface CitizenDailyState { technicianPointsSpent?:number; technicianWorkbenchUsed?:boolean }
@@ -89,8 +91,10 @@ export function resolveTechnicianRepair(citizen:Citizen,command:Extract<GameComm
   return{consumedItemIds:[ref.item.id],outputs:[{item:createItemInstance(ref.item.id,spec.repaired),storage:ref.storage}],createdCount:0}
 }
 
-export function technicianWorkbenchCost(citizen:Citizen):number{return hasProfession(citizen,'technician')?TECHNICIAN_WORKBENCH_TECH_COST:TECHNICIAN_WORKBENCH_OTHER_COST}
-export function technicianWorkbenchAvailable(state:GameState,citizen:Citizen):boolean{return Boolean(state.town.construction.technicians_workbench?.completed)&&citizen.alive&&citizen.location.type==='town'&&!citizen.daily.technicianWorkbenchUsed&&canPayTechnicalWork(citizen,technicianWorkbenchCost(citizen))}
+export function technicianWorkbenchPenalty(citizen:Citizen):number{return hasProfession(citizen,'technician')?TECHNICIAN_WORKBENCH_TECH_PENALTY:TECHNICIAN_WORKBENCH_OTHER_PENALTY}
+/** Source Workbench total = ordinary discounted Workshop recipe cost + profession-specific surcharge. */
+export function technicianWorkbenchCost(citizen:Citizen,ordinaryWorkshopCost:number):number{return Math.max(0,ordinaryWorkshopCost)+technicianWorkbenchPenalty(citizen)}
+export function technicianWorkbenchAvailable(state:GameState,citizen:Citizen):boolean{return Boolean(state.town.construction.technicians_workbench?.completed)&&citizen.alive&&citizen.location.type==='town'&&!citizen.daily.technicianWorkbenchUsed}
 export function workbenchOutput(command:GameCommand):ItemType|null{return command.type==='WORKSHOP_CONVERT'&&'workbenchOutput'in command?(command as TechnicianWorkbenchCommand).workbenchOutput:null}
 export function workbenchCommand(citizenId:string,recipeId:Extract<GameCommand,{type:'WORKSHOP_CONVERT'}>['recipeId'],output:ItemType):TechnicianWorkbenchCommand{return{type:'WORKSHOP_CONVERT',citizenId,recipeId,workbenchOutput:output}}
 
