@@ -27,7 +27,7 @@ export const CAMPING_ITEM_TYPES = ['smelly_meat','groundsheet'] as const
  */
 declare module './types' { interface WorldZone { campImprovementLevel?:number } }
 export type CampImproveCommand=Extract<GameCommand,{type:'IMPROVE_CAMP'}>&{itemId?:string}
-export type CampImprovedEvent=Extract<GameEvent,{type:'CAMP_IMPROVED'}>&{item?:ItemInstance}
+export type CampImprovedEvent=Extract<GameEvent,{type:'CAMP_IMPROVED'}>&{item?:ItemInstance;improvementPoints?:number}
 
 const PREVIOUS_CAMPING_POINTS = [80,60,35,15,0,-50,-100,-200,-400,-1000,-2000,-5000] as const
 const DISTANCE_POINTS = [-100,-75,-50,-25,-10,0,0,0,0,0,0,0,5,7,10,15,20] as const
@@ -44,6 +44,10 @@ export function campImproveCommandItemId(command:GameCommand):string|null{
   return typeof itemId==='string'&&itemId.length>0?itemId:null
 }
 export function campImprovedEventItem(event:Extract<GameEvent,{type:'CAMP_IMPROVED'}>):ItemInstance|null{return(event as CampImprovedEvent).item??null}
+export function campImprovedEventPoints(event:Extract<GameEvent,{type:'CAMP_IMPROVED'}>):number{
+  const points=(event as CampImprovedEvent).improvementPoints
+  return typeof points==='number'&&Number.isFinite(points)?Math.max(0,Math.trunc(points)):Math.max(0,Math.trunc(event.amount))*CAMP_IMPROVEMENT_POINTS
+}
 export function trestleCampImproveCommands(citizen:Citizen,zone:WorldZone):GameCommand[]{
   if(citizen.ap<CAMP_IMPROVEMENT_AP_COST||!canImproveCamp(zone))return[]
   return citizen.inventory.filter((item)=>item.type==='trestle').map((item)=>({type:'IMPROVE_CAMP',citizenId:citizen.id,itemId:item.id} as CampImproveCommand))
