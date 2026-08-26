@@ -15,14 +15,14 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
   nuts_and_bolts:92,copper_pipe:86,wire_reel:82,duct_tape:78,compact_detonator:96,semtex:100,electronic_component:90,laser_diode:96,telescope:94,convex_lens:72,battery:70,empty_oil_can:64,
   mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,radio_cassette_player_off:68,guitar:66,table:70,chicken:62,wire_mesh:72,grain_sack:58,full_jerrycan:76,
   tool_bag:78,kwik_fix:82,plastic_bag:36,engine_incomplete:86,engine:90,claymore:94,torch:48,battery_launcher:74,strong_spices:44,exploding_grapefruit:70,
-  water_ration:62,food:52,mouldy_twinkies:52,half_eaten_chicken_wings:52,rancid_shortbread_pack:52,out_of_date_jaffa_cakes:52,dried_chewing_gum:52,stale_tart:52,soft_crisps:52,can:58,open_can:52,vegetable:52,blue_apple:64,tasty_looking_steak:64,chinese_noodles:52,spicy_chinese_noodles:64,
+  water_ration:62,food:52,mouldy_twinkies:52,half_eaten_chicken_wings:52,rancid_shortbread_pack:52,out_of_date_jaffa_cakes:52,dried_chewing_gum:52,stale_tart:52,soft_crisps:52,can:58,open_can:52,vegetable:52,blue_apple:64,tasty_looking_steak:64,chinese_noodles:52,spicy_chinese_noodles:64,dried_marshmallows:52,burnt_marshmallows:64,good_home_made_meal:64,dubious_home_made_meal:52,
   groundsheet:66,smelly_meat:66,
   old_door:58,water_bomb:70,machete:72,serrated_knife:66,staff:50,pathetic_penknife:40,human_bone:58,doggy_bag:58,citizen_welcome_pack:42,pharmaceutical_products:72,box_of_matches:22,
   adjustable_spanner:62,screwdriver:54,swiss_army_knife:52,box_cutter:60,chain:60,can_opener:58,ektorp_gluten_chair:60,pc_base_unit:68,saw_tool_part:72,saw_tool:92,
   broken_machete:20,broken_serrated_knife:18,broken_staff:26,broken_pathetic_penknife:14,broken_human_bone:12,
   broken_adjustable_spanner:18,broken_screwdriver:16,broken_swiss_army_knife:16,broken_box_cutter:16,broken_chain:18,broken_can_opener:14,broken_ektorp_gluten_chair:18,broken_pc_base_unit:20,
   water_pistol:68,water_cooler_bottle:66,repair_kit:84,bandage:92,paracetoid:96,anabolic_steroids:78,valium_shot:90,vodka_marinostov:50,wake_the_dead:54,ems_system_empty:62,ems_system_charged:76,
-  twinoid_500mg:104,hydratone_100mg:92,unlabelled_drug:58,water_purifying_tablets:48,old_washing_machine:82,
+  twinoid_500mg:104,hydratone_100mg:92,unlabelled_drug:58,water_purifying_tablets:48,old_washing_machine:82,carcinogenic_oven:88,student_refrigerator:86,
 }
 
 function isFood(type:ItemType):boolean{return ITEMS[type].consumableKind==='food'}
