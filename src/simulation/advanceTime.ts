@@ -29,9 +29,12 @@ export function advanceOneHour(
   const currentHour = state.clock.hour
   const afterAutomaticGate=applyEvents(state,automaticGateEvents(state))
   const afterAutoSearch = runAutomaticSearches(afterAutomaticGate)
-  const afterBots = runBotHour(afterAutoSearch, controller, controlledCitizenId)
-  const afterWatchtower=contributeAutonomousWatchtowerEstimation(afterBots,controlledCitizenId)
-  const afterUpgradeVotes=castAutonomousConstructionUpgradeVotes(afterWatchtower,controlledCitizenId)
+  // Estimation is a free town action. Record it before this hour's bot movement so a citizen
+  // who starts 08:00 in town does not lose its once-daily contribution by departing on a mission.
+  // The resulting public estimate may then inform the same hour's ordinary bot planning.
+  const afterWatchtower=contributeAutonomousWatchtowerEstimation(afterAutoSearch,controlledCitizenId)
+  const afterBots = runBotHour(afterWatchtower, controller, controlledCitizenId)
+  const afterUpgradeVotes=castAutonomousConstructionUpgradeVotes(afterBots,controlledCitizenId)
   const afterGraceExpiry=applyEvents(afterUpgradeVotes,temporaryControlExpiryEvents(afterUpgradeVotes))
   const toHour = nextClockHour(currentHour)
   const beforeClock=toHour===0?resolveConstructionUpgradeVotesAtMidnight(afterGraceExpiry):afterGraceExpiry
