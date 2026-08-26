@@ -22,6 +22,8 @@ export function applyCurrentConstructionEconomy():void{
     fertilizer:{referenceName:'Fertilizer',apCost:30,resources:{water_ration:10,anabolic_steroids:2,wrought_iron:5,pharmaceutical_products:8,bag_of_damp_grass:3}},
     grapeboom:{referenceName:'Grapeboom',apCost:40,resources:{water_ration:10,twisted_plank:5,semtex:5,empty_oil_can:1}},
     central_cafeteria:{referenceName:'Central Cafeteria',apCost:20,resources:{pharmaceutical_products:1,patchwork_beam:5,metal_support:1,table:1,bag_of_damp_grass:1,carcinogenic_oven:1}},
+    garbage_dump:{referenceName:'Garbage Dump',apCost:50,resources:{twisted_plank:3,patchwork_beam:10,wrought_iron:5,metal_support:10,nuts_and_bolts:1,unshaped_concrete_block:2}},
+    dump_upgrade:{referenceName:'Dump Upgrade',apCost:150,resources:{water_ration:20,patchwork_beam:15,metal_support:15,poison_gland:1,nuts_and_bolts:1}},
   } satisfies Partial<Record<ConstructionId,NonNullable<(typeof MYHORDES_CURRENT_CONSTRUCTION_COSTS)[ConstructionId]>>>)
 
   for(const [id,snapshot] of Object.entries(MYHORDES_CURRENT_CONSTRUCTION_COSTS) as Array<[ConstructionId,NonNullable<(typeof MYHORDES_CURRENT_CONSTRUCTION_COSTS)[ConstructionId]>]>) {
@@ -54,6 +56,19 @@ export function applyCurrentConstructionEconomy():void{
   activate('search_tower','Reveals the nightly recovery sector; upgrades natural 25% recovery chance')
   activate('observation_platform','Upgradeable nightly map-intelligence radius: 3 / 6 / 10 km','partial')
   activate('central_cafeteria','Doubles personal Kitchen daily cooking attempts')
+
+  // Garbage Dump. Base dump accepts every supported source category at 4 defense for defensive
+  // objects and 1 for all other supported categories. Dump plans add category yield, and the
+  // wet Dump Upgrade adds +1 to every item. Organized Dump's 0-AP resolver is implemented in
+  // garbageDump.ts but its construction remains fail-closed until Trestle acquisition exists.
+  activate('garbage_dump','Destroy supported Bank items for temporary defense until the next attack')
+  activate('dump_upgrade','Every Garbage Dump item grants +1 additional temporary defense')
+  activate('defence_dump','Defensive objects grant +2 additional temporary defense')
+  activate('weapons_dump','Weapons grant +5 additional temporary defense')
+  activate('food_dump','Food grants +3 additional temporary defense')
+  activate('wood_dump','Rotting Logs and Twisted Planks grant +1 additional temporary defense')
+  activate('metal_dump','Scrap Metal and Wrought Iron grant +1 additional temporary defense')
+  activate('animal_dump','Supported animals grant +6 additional temporary defense')
 
   // Well / Pump economy. Existing current-source fidelity snapshots retain their verified
   // completion-water values for Pump, Drilling Rig, Hydraulic Network, Eden, Derrick and
