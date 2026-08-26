@@ -22,10 +22,11 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
   broken_machete:20,broken_serrated_knife:18,broken_staff:26,broken_pathetic_penknife:14,broken_human_bone:12,
   broken_adjustable_spanner:18,broken_screwdriver:16,broken_swiss_army_knife:16,broken_box_cutter:16,broken_chain:18,broken_can_opener:14,broken_ektorp_gluten_chair:18,broken_pc_base_unit:20,
   water_pistol:68,water_cooler_bottle:66,repair_kit:84,bandage:92,paracetoid:96,anabolic_steroids:78,valium_shot:90,vodka_marinostov:50,wake_the_dead:54,ems_system_empty:62,ems_system_charged:76,
+  twinoid_500mg:104,hydratone_100mg:92,unlabelled_drug:58,water_purifying_tablets:48,old_washing_machine:82,
 }
 
 function isFood(type:ItemType):boolean{return ITEMS[type].consumableKind==='food'}
-function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if(!mission)return 0;if(mission.allowsCamping&&(type==='groundsheet'||type==='smelly_meat'))return 35;if(mission.purpose==='gather_construction'&&['raw','construction','misc','container'].includes(ITEMS[type].category))return 24;if(mission.purpose==='gather_food'&&(isFood(type)||['grain_sack','chicken','food_box','doggy_bag','can'].includes(type)))return 35;if(mission.purpose==='gather_medical'&&['pharmaceutical_products','bandage','paracetoid','valium_shot','duct_tape','kwik_fix','repair_kit','toolbox'].includes(type))return 35;if((mission.purpose==='gather_weapons'||mission.purpose==='rescue')&&isWeapon(type))return 28;return 0}
+function missionBonus(mission:BotMissionAssignment|null,type:ItemType):number{if(!mission)return 0;if(mission.allowsCamping&&(type==='groundsheet'||type==='smelly_meat'))return 35;if(mission.purpose==='gather_construction'&&['raw','construction','misc','container'].includes(ITEMS[type].category))return 24;if(mission.purpose==='gather_food'&&(isFood(type)||['grain_sack','chicken','food_box','doggy_bag','can'].includes(type)))return 35;if(mission.purpose==='gather_medical'&&['pharmaceutical_products','bandage','paracetoid','valium_shot','twinoid_500mg','hydratone_100mg','unlabelled_drug','water_purifying_tablets','duct_tape','kwik_fix','repair_kit','toolbox'].includes(type))return 35;if((mission.purpose==='gather_weapons'||mission.purpose==='rescue')&&isWeapon(type))return 28;return 0}
 function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:BotMissionAssignment|null):number{
   let score=BASE_LOOT_VALUE[type]+missionBonus(mission,type);const directlyMissing=needs.missingConstruction[type]??0
   if(directlyMissing>0)score+=70+Math.min(28,directlyMissing*4)
@@ -48,6 +49,7 @@ function scoreWithNeeds(needs:TownNeeds,citizen:Citizen,type:ItemType,mission:Bo
   if((type==='food_box'||type==='doggy_bag'||type==='can')&&needs.foodLow)score+=55
   if(isWeapon(type)&&needs.weaponsLow)score+=35
   if(type==='water_ration'){if(citizen.status.hydration!=='normal')score+=90;else if(!citizen.daily.drank&&citizen.status.desertStepsToday>=6)score+=45;if(needs.waterPerCitizen<1)score+=55;else if(needs.waterPerCitizen<2)score+=24}
+  if(type==='hydratone_100mg'&&citizen.status.hydration!=='normal')score+=55
   if(type==='old_door'&&(needs.defense.pressure==='critical'||needs.defense.pressure==='shortfall'))score+=45
   return score
 }
