@@ -13,7 +13,7 @@ interface CurrentItemSourceOverride {
  * belong here so source metadata is not rewritten merely because a Live2Nite dependency lands.
  */
 export const CURRENT_ITEM_SOURCE_OVERRIDES:Readonly<Partial<Record<string,CurrentItemSourceOverride>>>={
-  'trestle_#00':{runtimeType:'trestle',implementation:'partial'},
+  'trestle_#00':{runtimeType:'trestle',implementation:'implemented'},
 }
 
 function currentEntry(entry:ItemSourceCatalogEntry):ItemSourceCatalogEntry{
