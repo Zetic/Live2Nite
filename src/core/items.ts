@@ -57,6 +57,7 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   wire_reel:resource('wire_reel','Wire Reel','Electrical/mechanical supply used by traps, defenses and portable equipment assembly.'),
   broken_electronic_device:def({type:'broken_electronic_device',name:'Broken Electronic Device',purpose:'Unprocessed salvage. The Workshop dismantles it into a useful electronic or mechanical supply.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
   mechanism:def({type:'mechanism',name:'Mechanism',purpose:'Unprocessed mechanical salvage. The Workshop dismantles it into metal, fasteners or pipe.',category:'raw',displayCategory:'resources',capabilities:['raw_material'],source:'MYHORDES_CURRENT'}),
+  full_jerrycan:def({type:'full_jerrycan',name:'Full Jerrycan',purpose:'Non-potable desert water. A completed Water Purifier converts it directly into 1–3 Well rations, or 4–9 when the Water Filter is complete.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   meaty_bone:resource('meaty_bone','Meaty Bone','Organic construction supply used as bait in current MyHordes construction costs.'),
   human_flesh:resource('human_flesh','Human Flesh','Organic supply used by a small number of current construction projects.'),
   poison_gland:resource('poison_gland','Corrosive Liquid','Toxic component used by the neurotoxin construction.'),
@@ -66,6 +67,7 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   chicken:resource('chicken','Chicken','Living supply required by the Henhouse construction.'),
   wire_mesh:resource('wire_mesh','Wire Mesh','Fencing supply required by livestock and filtration constructions.'),
   grain_sack:resource('grain_sack','Grain Sack','Agricultural supply used by food-production constructions.'),
+  exploding_grapefruit:def({type:'exploding_grapefruit',name:'Exploding Grapefruit',purpose:'Volatile fruit cultivated by Grapeboom. Retained in the Bank for its agriculture/defense branch.',category:'misc',displayCategory:'armoury',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   tool_bag:def({type:'tool_bag',name:'Tool Bag',purpose:'Incomplete repair equipment used with Duct Tape, Nuts & Bolts and a Twisted Plank to assemble a Repair Kit.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   kwik_fix:def({type:'kwik_fix',name:'Kwik-Fix',purpose:'Single-use portable repair supply. Combine it with a broken item for 1 AP to repair that item.',category:'misc',displayCategory:'miscellaneous',capabilities:['repairable'],source:'MYHORDES_CURRENT'}),
   plastic_bag:def({type:'plastic_bag',name:'Plastic Bag',purpose:'Simple container component that can be filled with a Water Ration to make a Water Bomb.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
@@ -86,6 +88,7 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   can:def({type:'can',name:'Can',purpose:'Closed MyHordes food can. Open it with a Hacksaw, Can Opener, Screwdriver, or Swiss Army Knife before eating.',category:'container',displayCategory:'food',capabilities:['container'],source:'MYHORDES_CURRENT'}),
   open_can:sourceFood('open_can','Open Can'),
   vegetable:sourceFood('vegetable','Suspicious-looking Vegetable','MyHordes Vegetable. Eating follows the ordinary 6 AP food action.'),
+  blue_apple:sourceFood('blue_apple','Blue Apple','Strange fruit cultivated by the Apple Tree. Eating follows the ordinary food action.'),
   tasty_looking_steak:sourceFood('tasty_looking_steak','Tasty-looking Steak','Higher-value MyHordes food. Eating uses the source 7 AP food action.'),
   chinese_noodles:sourceFood('chinese_noodles','Chinese Noodles','MyHordes Chinese Noodles. Eating follows the source 6 AP food action; combine with Strong Spices and a Water Ration for the spicy version.'),
   spicy_chinese_noodles:sourceFood('spicy_chinese_noodles','Spicy Chinese Noodles','Prepared from Chinese Noodles, Strong Spices and a Water Ration. Eating follows the source 7 AP food action.'),
@@ -140,8 +143,8 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   radio_cassette_player_off:def({type:'radio_cassette_player_off',name:'Radio Cassette Player (no battery)',purpose:'Batteryless MyHordes cassette player. Combine it with one Battery at 0 AP to produce a powered Working Radio while preserving the physical item.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   box_of_matches:def({type:'box_of_matches',name:'Box of Matches',purpose:'A utility component found in the desert and Welcome Packs. Combine with a Rotting Log to make a Torch.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'DIE2NITE_ARCHIVE'}),
   pharmaceutical_products:def({type:'pharmaceutical_products',name:'Pharmaceutical Products',purpose:'Medical/chemical supply. Two are consumed per Home Laboratory experiment and the item is also required by several town constructions.',category:'misc',displayCategory:'pharmacy',capabilities:['component','medical'],source:'MYHORDES_CURRENT'}),
-  water_pistol:def({type:'water_pistol',name:'Water Pistol',purpose:'Three-shot water weapon. Each attack spends one charge; combine an empty/part-used pistol with a Water Ration to restore three shots.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','charge_bearing'],state:{charges:{min:0,max:3,initial:3}},source:'MYHORDES_CURRENT'}),
-  water_cooler_bottle:def({type:'water_cooler_bottle',name:'Water Cooler Bottle',purpose:'Multi-ration water container. Drinking spends one stored ration; combine with Water Rations one at a time up to three.',category:'consumable',displayCategory:'food',capabilities:['consumable','charge_bearing'],state:{charges:{min:0,max:3,initial:3},contamination:{initial:'clean'}},source:'MYHORDES_CURRENT',consumableKind:'water'}),
+  water_pistol:def({type:'water_pistol',name:'Water Pistol',purpose:'Three-shot water weapon. Each attack spends one charge; a Faucet refills it for free while in town.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','charge_bearing'],state:{charges:{min:0,max:3,initial:3}},source:'MYHORDES_CURRENT'}),
+  water_cooler_bottle:def({type:'water_cooler_bottle',name:'Water Cooler Bottle',purpose:'Multi-ration water container. Drinking spends one stored ration; a Faucet refills it for free while in town.',category:'consumable',displayCategory:'food',capabilities:['consumable','charge_bearing'],state:{charges:{min:0,max:3,initial:3},contamination:{initial:'clean'}},source:'MYHORDES_CURRENT',consumableKind:'water'}),
   repair_kit:def({type:'repair_kit',name:'Repair Kit',purpose:'Portable repair tool. Repairing a broken item costs 1 AP and damages the kit; a damaged kit is restored at the Workshop.',category:'misc',displayCategory:'miscellaneous',capabilities:['repairable'],state:{condition:{initial:'intact'}},source:'MYHORDES_CURRENT'}),
   magnetic_key:def({type:'magnetic_key',name:'Magnetic Key',purpose:'Explorable-ruin door key. A matching locked room consumes the key when opened.',category:'misc',displayCategory:'miscellaneous',capabilities:[],source:'MYHORDES_CURRENT'}),
   bump_key:def({type:'bump_key',name:'Bump Key',purpose:'Explorable-ruin door key. A matching locked room consumes the key when opened.',category:'misc',displayCategory:'miscellaneous',capabilities:[],source:'MYHORDES_CURRENT'}),
@@ -168,7 +171,7 @@ export const NORMAL_SCAVENGE_LOOT_POOL:ItemType[]=[
   'wrought_iron','wrought_iron','wrought_iron','wrought_iron','wrought_iron',
   'resource_pack','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
   'human_bone','human_bone','pathetic_penknife','staff','serrated_knife','water_bomb','battery','box_of_matches','pharmaceutical_products',
-  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag','toolbox','ems_system_empty','groundsheet','smelly_meat','old_washing_machine',
+  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag','toolbox','ems_system_empty','groundsheet','smelly_meat','old_washing_machine','full_jerrycan',
 ]
 export const DEPLETED_SCAVENGE_LOOT_POOL:ItemType[]=['rotten_log','rotten_log','rotten_log','scrap_metal','scrap_metal','scrap_metal']
 

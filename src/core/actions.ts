@@ -18,6 +18,7 @@ import { canSurvivalistForage } from './survivalist'
 import { canDrugTamerDog, canSendTamerDog, tamerDogSteroid } from './tamer'
 import { canPayTechnicalWork, technicianRepairCommands, technicianWorkbenchAvailable, technicianWorkbenchCost, workbenchCommand } from './technician'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
+import { refillableWaterItem } from './waterEconomy'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, relativeControlActive, temporaryControlActive, zoneControl } from './world'
 import { WORKSHOP_RECIPES, WORKSHOP_RECIPE_ORDER, canRunWorkshopRecipe, workshopRecipeApCost } from './workshop'
 
@@ -55,6 +56,15 @@ function addConsumableActions(state:GameState,actions:GameCommand[],citizen:Citi
     for(const definition of itemUseActionsForType(item.type))if(itemUseActionAvailable(citizen,definition)&&(!terrorBlocked||definition.allowWhenTerrorized))actions.push({type:'USE_ITEM_ACTION',citizenId:citizen.id,itemId:item.id,actionId:definition.id})
   }
 }
+function addWellUtilityActions(state:GameState,actions:GameCommand[],citizen:Citizen):void{
+  const personal=[...citizen.inventory,...citizen.home.storage]
+  for(const item of personal){
+    if(item.type==='water_ration')actions.push({type:'RETURN_WATER_TO_WELL',citizenId:citizen.id,itemId:item.id})
+    if(item.type==='full_jerrycan'&&state.town.construction.water_purifier?.completed)actions.push({type:'PURIFY_JERRYCAN',citizenId:citizen.id,itemId:item.id})
+    const refill=refillableWaterItem(item)
+    if(refill&&state.town.construction.faucet?.completed&&(normalizeItemState(item.type,item.state).charges??0)<refill.maxCharges)actions.push({type:'REFILL_WATER_ITEM',citizenId:citizen.id,itemId:item.id})
+  }
+}
 
 function addForeignHomeActions(state:GameState,actions:GameCommand[],citizen:Citizen):void{
   const transferAvailable=!homeTransferUsedToday(state,citizen.id)
@@ -88,6 +98,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     if(canRecamouflage(state,citizen))actions.push({type:'RECAMOUFLAGE',citizenId})
     if(canMapWasteland(state,citizen))actions.push({type:'MAP_WASTELAND',citizenId})
     addConsumableActions(state,actions,citizen,citizen.home.storage,'home')
+    addWellUtilityActions(state,actions,citizen)
     for(const item of [...citizen.inventory,...citizen.home.storage])if(itemHasCapability(item.type,'blueprint'))actions.push({type:'READ_BLUEPRINT',citizenId,itemId:item.id})
     for(const item of citizen.inventory){actions.push({type:'DEPOSIT_ITEM',citizenId,itemId:item.id});if(citizen.home.storage.length<citizen.home.storageCapacity)actions.push({type:'MOVE_ITEM_TO_HOME',citizenId,itemId:item.id})}
     for(const item of citizen.home.storage)if(canCarryItem(citizen,item))actions.push({type:'MOVE_ITEM_TO_RUCKSACK',citizenId,itemId:item.id})

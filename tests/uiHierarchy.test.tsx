@@ -44,7 +44,7 @@ describe('town UI hierarchy',()=>{
     for(const label of ['Population','Outside','Well water','Town defense','Gate'])expect(markup).toContain(label)
   })
 
-  it('keeps the Well focused on reserve amount and taking a ration',()=>{
+  it('keeps the Well focused on reserve amount and water handling',()=>{
     const game=createInitialGame(7204,1,'technician')
     const markup=renderToStaticMarkup(<WellView game={game} citizenId="c01" legalActions={getLegalActions(game,'c01')} act={()=>{}}/>)
     expect(markup).toContain('Take ration')
@@ -54,10 +54,14 @@ describe('town UI hierarchy',()=>{
     expect(markup).not.toContain('Well withdrawals reset')
   })
 
-  it('marks Bank withdrawals suspicious without marking deposits suspicious',()=>{
+  it('marks Bank withdrawals and only extra Well withdrawals suspicious',()=>{
     const withdrawn={type:'ITEM_WITHDRAWN',day:1,hour:2,citizenId:'c01',item:{id:'test-withdraw',type:'battery'}} as GameEvent
     const deposited={type:'ITEM_DEPOSITED',day:1,hour:2,citizenId:'c01',item:{id:'test-deposit',type:'battery'}} as GameEvent
+    const normalWater={type:'WATER_TAKEN',day:1,hour:2,citizenId:'c01',item:{id:'water-1',type:'water_ration'},extra:false} as GameEvent
+    const extraWater={type:'WATER_TAKEN',day:1,hour:2,citizenId:'c01',item:{id:'water-2',type:'water_ration'},extra:true} as GameEvent
     expect(registerEntryTone(withdrawn)).toBe('suspicious')
     expect(registerEntryTone(deposited)).toBeNull()
+    expect(registerEntryTone(normalWater)).toBeNull()
+    expect(registerEntryTone(extraWater)).toBe('suspicious')
   })
 })

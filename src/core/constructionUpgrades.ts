@@ -3,7 +3,7 @@ import { randomInt } from './rng'
 import type { ConstructionId, GameState } from './types'
 import type { UpgradeProjectsState } from './upgradeProjectsState'
 
-export type ConstructionUpgradeKind='defense_total'|'well_once'|'construction_discount'|'night_watch'|'observation_radius'|'search_recovery'
+export type ConstructionUpgradeKind='defense_total'|'water_defense'|'well_once'|'construction_discount'|'night_watch'|'observation_radius'|'search_recovery'
 export interface ConstructionUpgradeTrack {
   projectId:ConstructionId
   maxLevel:number
@@ -22,6 +22,7 @@ export const CONSTRUCTION_UPGRADE_TRACKS:Readonly<Partial<Record<ConstructionId,
   upgradeable_wall:{projectId:'upgradeable_wall',maxLevel:5,kind:'defense_total',values:[55,85,120,170,235,315],benefits:['Evolutive Wall defense rises from 55 to 85 (+30).','Evolutive Wall defense rises from 85 to 120 (+35).','Evolutive Wall defense rises from 120 to 170 (+50).','Evolutive Wall defense rises from 170 to 235 (+65).','Evolutive Wall defense rises from 235 to 315 (+80).'],sourceNote:'MyHordes daily-upgrade defense track.'},
   pump:{projectId:'pump',maxLevel:5,kind:'well_once',values:[0,20,20,30,30,40],benefits:['Immediately adds 20 Water Rations to the Well.','Immediately adds another 20 Water Rations to the Well.','Immediately adds 30 Water Rations to the Well.','Immediately adds another 30 Water Rations to the Well.','Immediately adds 40 Water Rations to the Well.'],sourceNote:'MyHordes Pump daily-upgrade one-time water additions.'},
   workshop:{projectId:'workshop',maxLevel:5,kind:'construction_discount',values:[0,6,12,18,24,30],benefits:['Reduces every unfinished construction AP requirement by 6% of its base cost.','Total construction AP reduction becomes 12% of base cost.','Total construction AP reduction becomes 18% of base cost.','Total construction AP reduction becomes 24% of base cost.','Total construction AP reduction becomes 30% of base cost.'],sourceNote:'Current MyHordes behavior: one Workshop upgrade removes 18 AP from a 300 AP project (6%).'},
+  water_turrets:{projectId:'water_turrets',maxLevel:5,kind:'water_defense',values:[70,126,182,238,294,350],benefits:['Water Turrets rise from 70 to 126 defense and require 2 Well water at the attack.','Defense rises to 182 and requires 4 Well water at the attack.','Defense rises to 238 and requires 6 Well water at the attack.','Defense rises to 294 and requires 9 Well water at the attack.','Defense rises to 350 and requires 12 Well water at the attack.'],sourceNote:'Current MyHordes Water Turrets track. Upgrade bonus is all-or-nothing: 0 / 2 / 4 / 6 / 9 / 12 Well water funds 70 / 126 / 182 / 238 / 294 / 350 total defense; insufficient water leaves the base 70 and consumes nothing.'},
   battlements:{projectId:'battlements',maxLevel:3,kind:'night_watch',values:[10,20,40,40],benefits:['Night Watch capacity rises from 10 to 20 citizens.','Night Watch capacity rises from 20 to 40 citizens.','Capacity remains 40 and every Watchman receives −1 percentage point death chance.'],sourceNote:'Current MyHordes Battlements daily-upgrade track: 10 → 20 → 40 Watchmen, then −1pp Watch death risk at level 3.'},
   observation_platform:{projectId:'observation_platform',maxLevel:3,kind:'observation_radius',values:[0,3,6,10],benefits:['Nightly World Beyond intelligence refresh expands to 3 km from town.','Nightly intelligence refresh expands to 6 km from town.','Nightly intelligence refresh expands to 10 km from town.'],sourceNote:'Current Observation Platform radius behavior. Source levels 4–5 additionally grant free-return distance and remain deferred until that listener path is verified.'},
   search_tower:{projectId:'search_tower',maxLevel:5,kind:'search_recovery',values:[25,37,49,61,73,85],benefits:['Affected-direction depleted-zone recovery chance rises from 25% to 37%.','Recovery chance rises from 37% to 49%.','Recovery chance rises from 49% to 61%.','Recovery chance rises from 61% to 73%.','Recovery chance rises from 73% to 85%.'],sourceNote:'Current Searchtower recovery progression: 25 / 37 / 49 / 61 / 73 / 85 percent.'},
@@ -57,6 +58,7 @@ export function castConstructionUpgradeVote(state:GameState,citizenId:string,pro
 export function botUpgradeProjectChoice(state:GameState,citizenId:string):ConstructionId|null{
   const candidates=availableConstructionUpgradeProjects(state);if(!candidates.length)return null
   if(candidates.includes('pump')&&state.town.well.water<80)return'pump'
+  if(candidates.includes('water_turrets')&&(state.lastNight?.breached||state.day>=3)&&state.town.well.water>=12)return'water_turrets'
   if(candidates.includes('battlements')&&(state.lastNight?.breached||state.day>=3))return'battlements'
   if(candidates.includes('observation_platform')&&state.day>=2)return'observation_platform'
   if(candidates.includes('search_tower')&&state.day>=3)return'search_tower'

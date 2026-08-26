@@ -1,3 +1,4 @@
+import { agricultureOutputEvents } from './agriculture'
 import { resolveCampingRoll } from './camping'
 import { ATTACK_HOUR, DAY_START_HOUR } from './clock'
 import { dailyConstructionOutputs, temporaryCompletedProjects } from './construction'
@@ -11,6 +12,7 @@ import { advanceExplorableRuinLifecycleForNewDay } from './ruinEvolution'
 import { nightlyStatusEvents } from './status'
 import type { GameEvent, GameState, HomeAttackOutcome, NightReport } from './types'
 import { WATCHTOWER_ESTIMATION_TARGET, watchtowerTodayComplete, watchtowerTodayVisible, watchtowerTodayWeightedContributions, watchtowerTomorrowVisible, watchtowerTomorrowWeightedContributions } from './watchtowerEstimation'
+import { townWaterAllocation } from './waterEconomy'
 import { zoneKey } from './world'
 import { nightlyObservationEvents, searchTowerReplenishmentEventsForNight } from './worldObservation'
 import { worldZombieEvolutionEvent } from './worldEvolution'
@@ -152,6 +154,12 @@ export function resolveNightAttack(state:GameState):GameState{
   const afterOutside=applyEvents(state,camping.events)
   const corpseStage=corpseReanimationEvents(afterOutside)
   const afterCorpses=applyEvents(afterOutside,corpseStage.events)
+
+  // Pump upgrade votes have already resolved before this attack phase. The resulting Well water
+  // is therefore available to fund the same night's consumers. Allocation is computed before
+  // defense is locked and is all-or-nothing per consumer.
+  const waterAllocation=townWaterAllocation(afterCorpses)
+  const waterConsumers=waterAllocation.consumers.map(({projectId,label,required,active})=>({projectId,label,required,active}))
   const attackStrength=attackStrengthForDay(afterCorpses.seed,afterCorpses.day)
   const defenseBeforeAttack=totalTownDefense(afterCorpses)
   const effectiveDefense=afterCorpses.town.gateOpen?0:defenseBeforeAttack
@@ -175,10 +183,12 @@ export function resolveNightAttack(state:GameState):GameState{
   const afterStatuses=applyEvents(afterHomeDeaths,statusEvents)
   const afterWatchConditions=applyNightWatchConditions(afterStatuses,watchStage.report)
 
-  const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,infectionDeaths,withdrawalDeaths,corpseReanimations:corpseStage.reanimations,corpseAttackDeaths:corpseStage.attackDeaths,corpseWaterLost:corpseStage.waterLost,homeAttacks,nightWatch:watchStage.report}
-  const outputs=constructionOutputEvents(afterWatchConditions)
+  const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,infectionDeaths,withdrawalDeaths,corpseReanimations:corpseStage.reanimations,corpseAttackDeaths:corpseStage.attackDeaths,corpseWaterLost:corpseStage.waterLost,waterConsumed:waterAllocation.consumed,waterConsumers,homeAttacks,nightWatch:watchStage.report}
+  const outputs=[...constructionOutputEvents(afterWatchConditions),...agricultureOutputEvents(afterWatchConditions)]
   const expiries=constructionExpiryEvents(afterWatchConditions)
-  const afterNightEvents=applyEvents(afterWatchConditions,[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...outputs,...expiries])
+  const waterEvent:GameEvent[] = waterConsumers.length?[{type:'WELL_WATER_CONSUMED',day:state.day,hour:ATTACK_HOUR,amount:waterAllocation.consumed,consumers:waterConsumers}]:[]
+  // Defense is already locked. Debit the funded consumers now, then publish production/expiry.
+  const afterNightEvents=applyEvents(afterWatchConditions,[...waterEvent,{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...outputs,...expiries])
 
   // World truth evolves first. Searchtower then recovers depleted zones in one deterministic
   // compass sector, and Observation Platform writes only the permitted shared intelligence.

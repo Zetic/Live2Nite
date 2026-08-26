@@ -18,6 +18,7 @@ const SOURCE_FOOD_AP_TARGET:Partial<Record<ItemType,number>>={
   chinese_noodles:6,
   tasty_looking_steak:7,
   spicy_chinese_noodles:7,
+  blue_apple:7,
 }
 
 export function foodApTarget(type:ItemType,fallbackMaxAp:number):number{

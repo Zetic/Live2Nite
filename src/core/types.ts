@@ -138,8 +138,9 @@ export interface WorldState { minX:number; maxX:number; minY:number; maxY:number
 export interface ConstructionProjectState { id:ConstructionId; discovered:boolean; apContributed:number; completed:boolean }
 export interface TownWellState { water:number }
 export interface TownState { gateOpen:boolean; defense:number; bank:ItemInstance[]; construction:Record<ConstructionId,ConstructionProjectState>; well:TownWellState; devastated?:boolean }
+export interface WaterConsumerResult { projectId:ConstructionId; label:string; required:number; active:boolean }
 export interface HomeAttackOutcome { citizenId:string; zombies:number; defense:number; survived:boolean }
-export interface NightReport { day:number; attackStrength:number; defenseBeforeAttack:number; effectiveDefense:number; gateOpen:boolean; breached:boolean; outsideDeaths:number; campingSurvivors?:number; campingDeaths?:number; zombiesInside?:number; homeDeaths?:number; dehydrationDeaths?:number; infectionDeaths?:number; withdrawalDeaths?:number; corpseReanimations?:number; corpseAttackDeaths?:number; corpseWaterLost?:number; homeAttacks?:HomeAttackOutcome[] }
+export interface NightReport { day:number; attackStrength:number; defenseBeforeAttack:number; effectiveDefense:number; gateOpen:boolean; breached:boolean; outsideDeaths:number; campingSurvivors?:number; campingDeaths?:number; zombiesInside?:number; homeDeaths?:number; dehydrationDeaths?:number; infectionDeaths?:number; withdrawalDeaths?:number; corpseReanimations?:number; corpseAttackDeaths?:number; corpseWaterLost?:number; waterConsumed?:number; waterConsumers?:WaterConsumerResult[]; homeAttacks?:HomeAttackOutcome[] }
 export interface WorldZombieChange { zoneKey:string; before:number; after:number }
 export interface GameState { schemaVersion:19; gameId:string; seed:number; rngState:number; nextItemId:number; day:number; clock:GameClock; citizens:Citizen[]; botMissions:Record<string,BotMissionAssignment>; coordination:TownCoordinationState; town:TownState; world:WorldState; lastNight:NightReport|null; events:GameEvent[] }
 
@@ -179,6 +180,9 @@ export type GameCommand =
   | {type:'OPEN_CONTAINER';citizenId:string;itemId:string}
   | {type:'READ_BLUEPRINT';citizenId:string;itemId:string}
   | {type:'TAKE_WATER';citizenId:string}
+  | {type:'RETURN_WATER_TO_WELL';citizenId:string;itemId:string}
+  | {type:'PURIFY_JERRYCAN';citizenId:string;itemId:string}
+  | {type:'REFILL_WATER_ITEM';citizenId:string;itemId:string}
   | {type:'EAT_ITEM';citizenId:string;itemId:string}
   | {type:'DRINK_ITEM';citizenId:string;itemId:string}
   | {type:'USE_ITEM_ACTION';citizenId:string;itemId:string;actionId:ItemUseActionId}
@@ -236,7 +240,11 @@ export type GameEvent = (
   | {type:'HOME_ITEM_PILLAGED';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance;spotted:true}
   | {type:'OPENABLE_RESOLVED';day:number;citizenId:string;container:ItemInstance;source:ItemStorage;zoneKey?:string;success:boolean;outputs:ItemInstance[];containerAfter?:ItemInstance;rngStateAfter:number}
   | {type:'CONTAINER_OPENED';day:number;citizenId:string;containerId:string;containerType:ItemType;source:ItemStorage;zoneKey?:string;output:ItemInstance;rngStateAfter:number}
-  | {type:'WATER_TAKEN';day:number;citizenId:string;item:ItemInstance}
+  | {type:'WATER_TAKEN';day:number;citizenId:string;item:ItemInstance;extra:boolean}
+  | {type:'WATER_RETURNED';day:number;citizenId:string;item:ItemInstance;source:PersonalItemStorage}
+  | {type:'WATER_PURIFIED';day:number;citizenId:string;item:ItemInstance;source:PersonalItemStorage;amount:number;filtered:boolean;rngStateAfter:number}
+  | {type:'WATER_ITEM_REFILLED';day:number;citizenId:string;item:ItemInstance;source:PersonalItemStorage;chargesAfter:number}
+  | {type:'WELL_WATER_CONSUMED';day:number;amount:number;consumers:WaterConsumerResult[]}
   | {type:'ITEM_CONSUMED';day:number;citizenId:string;item:ItemInstance;source:ItemStorage;zoneKey?:string;kind:ConsumableKind;restoresAp:boolean;chargesAfter?:number;apAfter?:number;statusAfter?:CitizenStatusState;dailyAfter?:CitizenDailyState;rngStateAfter?:number}
   | {type:'ITEM_ACTION_RESOLVED';day:number;citizenId:string;actionId:ItemUseActionId;item:ItemInstance;source:ItemStorage;zoneKey?:string;consumed:boolean;morphTo?:ItemType;apAfter:number;statusAfter:CitizenStatusState;dailyAfter:CitizenDailyState;rngStateAfter:number}
   | {type:'WOUNDED_MOVEMENT_RESOLVED';day:number;citizenId:string;failed:boolean;rngStateAfter:number}
