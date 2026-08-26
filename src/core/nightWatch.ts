@@ -103,7 +103,10 @@ function normalizedNightWatchState(state:GameState):NightWatchState{
 function withNightWatchState(state:GameState,nightWatch:NightWatchState):GameState{return{...state,town:{...state.town,nightWatch}}}
 function itemDefinition(item:ItemInstance):NightWatchItemDefinition|null{return WATCH_ITEMS[item.type]??null}
 function rawItemWatchpoint(item:ItemInstance):number{const definition=itemDefinition(item);if(!definition)return 0;return typeof definition.watchpoint==='function'?definition.watchpoint(item):definition.watchpoint}
-function completedConstructionNamed(state:GameState,name:string):boolean{return Object.values(CONSTRUCTION_CATALOG).some((entry)=>entry.name===name&&state.town.construction[entry.id]?.completed===true)}
+function completedConstructionNamed(state:GameState,name:string):boolean{
+  const sourceId=name==='Swedish Carpentry'?'swedish_workshop':name==='Filtering Gutters'?'gutters':name==='Hand Grinder'?'manual_grinder':name==='Animal Shop'?'pet_shop':name==='Guardroom'?'guardroom':null
+  return Boolean((sourceId&&state.town.construction[sourceId]?.completed===true)||Object.values(CONSTRUCTION_CATALOG).some((entry)=>entry.name===name&&state.town.construction[entry.id]?.completed===true))
+}
 function specialistMultiplier(state:GameState,family:NightWatchEquipmentFamily|undefined):number{
   if(family==='ikea'&&completedConstructionNamed(state,'Swedish Carpentry'))return 1.3
   if(family==='shooting'&&completedConstructionNamed(state,'Filtering Gutters'))return 1.3
