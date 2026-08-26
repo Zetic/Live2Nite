@@ -90,6 +90,7 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `door_#00` | `old_door` |
 | `concrete_#00` | `bag_of_cement` |
 | `table_#00` | `table` |
+| `trestle_#00` | `trestle` (Implemented: heavy defense furniture, verified acquisition, +9 outside install, and 15-point IKEA Night Watch behavior) |
 | `lights_#00` | `box_of_matches` |
 | `wire_#00` | `wire_reel` |
 | `oilcan_#00` | `empty_oil_can` |
@@ -117,10 +118,17 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `rhum_#00` | `wake_the_dead` |
 | `sport_elec_empty_#00` / `sport_elec_#00` | `ems_system_empty` / `ems_system_charged` |
 
+### Trestle coverage
+
+`trestle_#00` is no longer an unresolved ordinary-loot dependency. Live2Nite models it as a heavy/cumbersome defensive furniture item with +1 Bank defense and +1 Home defense. It is mapped in the source normal-loot table and resolves from the exact source ruin rows already represented by Live2Nite: Home Depot, Construction Site Shelter, PI-KEYA Furniture, Disused Car Park, Abandoned Construction Site, and Blocked Road. Two Trestles are required by the now-buildable Organized Dump.
+
+The source outside action costs 1 AP, consumes the exact carried Trestle, and adds +9 permanent campsite improvement points up to the 50-point source cap. The campsite representation remains compatible with older schema-19 saves by interpreting legacy `campImprovements` values as +5-point steps while retaining an exact level for current non-multiple-of-five effects.
+
+The source registry's 15 Watch points are active as IKEA-family Night Watch equipment. A Trestle is destroyed when the Watch actually uses it, and the Swedish Workshop furniture specialist bonus raises its contribution by 30% (15 to 19 after integer flooring). The current Trestle implementation status is therefore **Implemented**. Flatpacked Furniture remains a known source route, but its exact current output weights are not guessed because verified normal and ruin acquisition already provide an active runtime path.
+
 ## Ordinary normal-loot backlog
 
 Source-name audit correction: `chama_#00` is **Dried Marshmallows** and remains WIP; it is not Bag of Damp Grass.
-
 
 These source IDs remain unresolved in the current ordinary normal-loot dependency pass. This is a development backlog for future source-item passes; entries leave this list only when their active runtime mechanic and mapping are represented.
 
@@ -141,7 +149,6 @@ These source IDs remain unresolved in the current ordinary normal-loot dependenc
 - [ ] `food_armag_#00`
 - [ ] `wood_plate_part_#00`
 - [ ] `lock_#00`
-- [ ] `trestle_#00`
 - [ ] `home_def_#00`
 - [ ] `car_door_part_#00`
 - [ ] `bag_#00` — Manbag; needs carry-extension mechanics

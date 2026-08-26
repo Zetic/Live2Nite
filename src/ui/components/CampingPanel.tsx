@@ -1,4 +1,4 @@
-import { campingOutlook, campingOutlookFromChance, campingOutlookText } from '../../core/camping'
+import { campImproveCommandItemId, campImprovementLevel, campingOutlook, campingOutlookFromChance, campingOutlookText } from '../../core/camping'
 import { isSurvivalist, survivalistForageChancePercent, survivalManualUsed } from '../../core/survivalist'
 import type { CampingChanceBreakdown, Citizen, GameCommand, GameState, WorldZone } from '../../core/types'
 import { distanceToTown } from '../../core/world'
@@ -16,7 +16,8 @@ export function CampingPanel({game,citizen,zone,legalActions,act}:{game:GameStat
   const breakdown=citizen.camping.hidden&&citizen.camping.chanceBreakdown?citizen.camping.chanceBreakdown:current.breakdown
   const displayedChance=frozen??current.chancePercent
   const displayedOutlook=frozen===null?current.outlook:campingOutlookFromChance(frozen)
-  const improve=action(legalActions,'IMPROVE_CAMP')
+  const improve=legalActions.find((candidate)=>candidate.type==='IMPROVE_CAMP'&&!campImproveCommandItemId(candidate))
+  const trestleImprove=legalActions.find((candidate)=>candidate.type==='IMPROVE_CAMP'&&Boolean(campImproveCommandItemId(candidate)))
   const grave=action(legalActions,'DIG_CAMPING_GRAVE')
   const hide=action(legalActions,'HIDE_FOR_NIGHT')
   const leave=action(legalActions,'LEAVE_HIDEOUT')
@@ -34,7 +35,7 @@ export function CampingPanel({game,citizen,zone,legalActions,act}:{game:GameStat
       <div><dt>Survival chance</dt><dd>{displayedChance}%{frozen!==null?' · locked':''}</dd></div>
       <div><dt>Raw total</dt><dd>{breakdown.raw}</dd></div>
       <div><dt>Profession cap</dt><dd>{breakdown.cap}%</dd></div>
-      <div><dt>Permanent site improvement</dt><dd>{(zone.campImprovements??0)*5}/50</dd></div>
+      <div><dt>Permanent site improvement</dt><dd>{campImprovementLevel(zone)}/50</dd></div>
       <div><dt>Distance</dt><dd>{distanceToTown(zone.x,zone.y)} km</dd></div>
       <div><dt>Successful camp nights</dt><dd>{citizen.camping.nightsSurvived}</dd></div>
       {factorRows(breakdown).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{signed(value)}</dd></div>)}
@@ -51,6 +52,7 @@ export function CampingPanel({game,citizen,zone,legalActions,act}:{game:GameStat
     <div className="camping-actions">
       {citizen.camping.hidden?<button className="secondary" disabled={!leave} onClick={()=>act(leave)}>Leave hiding place <small>0 AP</small></button>:<>
         <button disabled={!improve} onClick={()=>act(improve)}>Improve site <small>1 AP · +5 permanent</small></button>
+        {trestleImprove&&<button className="secondary" onClick={()=>act(trestleImprove)}>Install Trestle <small>1 AP · consumes Trestle · +9 permanent</small></button>}
         <button className="secondary" disabled={!grave} onClick={()=>act(grave)}>Dig grave &amp; camp <small>1 AP · +8 tonight</small></button>
         <button className="primary" disabled={!hide} onClick={()=>act(hide)}>Hide for the night <small>0 AP</small></button>
       </>}

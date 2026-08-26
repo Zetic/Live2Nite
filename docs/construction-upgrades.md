@@ -16,7 +16,7 @@ Live2Nite models the MyHordes daily building-upgrade vote as the town facility *
 
 ## Active upgrade tracks
 
-The complete construction catalogue retains `hasUpgrade` for every source construction that supports daily upgrades, but this PR activates only tracks whose effect can be represented faithfully by current Live2Nite mechanics.
+The complete construction catalogue retains `hasUpgrade` for every source construction that supports daily upgrades, but only tracks whose effect can be represented faithfully by current Live2Nite mechanics are votable.
 
 ### Great Pit
 
@@ -62,11 +62,17 @@ Current MyHordes behavior demonstrates that the first Workshop daily upgrade rem
 
 Internally this is represented as credited construction labor when the Workshop level is gained. That lets all existing construction consumers—player contribution, progress display, and autonomous town-work planning—observe the same reduced paid-AP requirement without maintaining a second construction-cost system. Credited labor can make a project ready to finish but never marks it completed by itself.
 
+## Garbage Dump specializations
+
+The six blueprint-class-6 Dump constructions are not ordinary daily vote levels. Their category effects are implemented directly by the Garbage Dump system and remain separate from the generic class 1-4 blueprint ladder. Dump Upgrade and Organized Dump are also separate constructions rather than daily vote levels.
+
+The Garbage Dump may still retain source upgrade-track metadata in the catalogue; that metadata does not convert the class-6 specialization constructions into Upgrade Projects candidates. See `docs/garbage-dump.md` for the active interaction rules.
+
 ## Pending source upgrade tracks
 
 Other completed source-upgrade constructions remain visible in a collapsed **Tracked upgrade projects awaiting mechanics** section. They are intentionally not votable yet.
 
-Examples include tracks whose effects depend on systems such as Water Turret nightly water consumption, special night-search lighting, blueprint generation, dedicated Dump specialization behavior, or other mechanics not yet represented faithfully.
+Examples include tracks whose effects depend on systems such as special night-search lighting, blueprint generation, or other mechanics not yet represented faithfully. Water Turret upgrade behavior is handled by its dedicated nightly Well-water allocation logic.
 
 This follows the same catalogue rule used elsewhere in Live2Nite: source content may be represented completely while unsupported behavior remains WIP rather than receiving a placeholder effect.
 

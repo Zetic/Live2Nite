@@ -23,6 +23,7 @@ import { CitizenStatusBar } from './components/CitizenStatusBar'
 import { CodexView } from './components/CodexView'
 import { ConstructionView } from './components/ConstructionView'
 import { GameNavigation } from './components/GameNavigation'
+import { GarbageDumpView } from './components/GarbageDumpView'
 import { HomeView } from './components/HomeView'
 import { LandingScreen } from './components/LandingScreen'
 import { RuinInteriorMap, RuinInteriorTravelControls, ruinFloorLabel } from './components/RuinInteriorMap'
@@ -99,6 +100,7 @@ export function App() {
     if (screen === 'workshop' && !game.town.construction.workshop.completed) setScreen('construction')
     if (screen === 'watchtower' && !game.town.construction.watchtower.completed) setScreen('construction')
     if (screen === 'battlements' && !game.town.construction.battlements.completed) setScreen('construction')
+    if (screen === 'garbage_dump' && !game.town.construction.garbage_dump.completed) setScreen('construction')
     if (screen === 'upgrade_projects' && !hasUpgradeProjectsFacility(game)) setScreen('construction')
   }, [player.location.type, screen, game])
 
@@ -185,6 +187,7 @@ export function App() {
         {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'watchtower' && <WatchtowerView game={game} citizenId={player.id} onContribute={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>} 
         {screen === 'battlements' && <BattlementsView game={game} citizenId={player.id} onChange={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
+        {screen === 'garbage_dump' && <GarbageDumpView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
         {screen === 'upgrade_projects' && <UpgradeProjectsView game={game} citizenId={player.id} onVote={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
         {screen === 'world' && <div className="world-screen-layout">
           <div className="world-primary-column">

@@ -71,6 +71,7 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'plate_#00':mapped('sheet_metal'),
   'door_#00':mapped('old_door'),
   'concrete_#00':mapped('bag_of_cement'),
+  'trestle_#00':mapped('trestle'),
   'sheet_#00':mapped('groundsheet'),
   'smelly_meat_#00':mapped('smelly_meat'),
   // Source grenade_empty_#00 is the fillable Plastic Bag. bag_#00 is a distinct Manbag

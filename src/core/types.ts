@@ -66,6 +66,7 @@ export type CorpseDisposition = 'dragged_out' | 'watered'
 export type ItemStorage = 'inventory' | 'home' | 'ground'
 export type PersonalItemStorage = 'inventory' | 'home'
 export type ConsumableKind = 'food' | 'water'
+export type DumpCategory = 'defense' | 'weapon' | 'food' | 'wood' | 'metal' | 'animal'
 export type SearchMode = 'normal' | 'depleted'
 export type TamerDogDestination = 'bank' | 'home'
 export type CombatMethod = 'fists' | ItemType
@@ -172,6 +173,7 @@ export type GameCommand =
   | {type:'SEND_TAMER_DOG';citizenId:string;destination:TamerDogDestination}
   | {type:'DEPOSIT_ITEM';citizenId:string;itemId:string}
   | {type:'WITHDRAW_BANK_ITEM';citizenId:string;itemId:string}
+  | {type:'DUMP_BANK_ITEM';citizenId:string;itemId:string}
   | {type:'MOVE_ITEM_TO_HOME';citizenId:string;itemId:string}
   | {type:'MOVE_ITEM_TO_RUCKSACK';citizenId:string;itemId:string}
   | {type:'DEPOSIT_HOME_ITEM';citizenId:string;targetCitizenId:string;itemId:string}
@@ -234,6 +236,7 @@ export type GameEvent = (
   | {type:'COMBAT_RESOLVED';day:number;citizenId:string;zoneKey:string;method:CombatMethod;kills:number;item:ItemInstance|null;source?:ItemStorage;consumed:boolean;brokenInto?:ItemType;chargesAfter?:number;rngStateAfter:number}
   | {type:'ITEM_DEPOSITED';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_WITHDRAWN';day:number;citizenId:string;item:ItemInstance}
+  | {type:'BANK_ITEM_DUMPED';day:number;citizenId:string;item:ItemInstance;category:DumpCategory;defenseGained:number}
   | {type:'ITEM_MOVED_TO_HOME';day:number;citizenId:string;item:ItemInstance}
   | {type:'ITEM_MOVED_TO_RUCKSACK';day:number;citizenId:string;item:ItemInstance}
   | {type:'HOME_ITEM_DEPOSITED';day:number;citizenId:string;targetCitizenId:string;item:ItemInstance;spotted:boolean;rngStateAfter:number}

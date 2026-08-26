@@ -64,6 +64,7 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   working_radio:resource('working_radio','Radio Cassette Player','MyHordes Radio Cassette Player with a battery installed; consumed by several observation and emergency projects.'),
   guitar:resource('guitar','Makeshift Guitar','Portable combination result made from a Wire Reel, Empty Oil Can and Broken Staff; used by Frat House / La Bamba.'),
   table:def({type:'table',name:'Järpen Table',purpose:'Furniture used as a structural/work surface by Factory and observation constructions.',category:'misc',displayCategory:'furniture',capabilities:['component','decoration'],source:'MYHORDES_CURRENT'}),
+  trestle:def({type:'trestle',name:'Trestle',purpose:'Heavy defensive furniture recovered in the World Beyond. It provides +1 defense in the Bank or at Home and is required by Organized Dump.',category:'defense',displayCategory:'defences',capabilities:['defense','component','decoration'],source:'MYHORDES_CURRENT',bankDefense:1,homeDefense:1}),
   chicken:resource('chicken','Chicken','Living supply required by the Henhouse construction.'),
   wire_mesh:resource('wire_mesh','Wire Mesh','Fencing supply required by livestock and filtration constructions.'),
   grain_sack:resource('grain_sack','Grain Sack','Agricultural supply used by food-production constructions.'),

@@ -24,7 +24,7 @@ export interface ChronicleFilters{mode:ChronicleMode;day:number|null;citizenId:s
 
 export function chronicleCategory(event:GameEvent):ChronicleCategory{
   switch(event.type){
-    case 'ITEM_DEPOSITED':case 'ITEM_WITHDRAWN':return'bank'
+    case 'ITEM_DEPOSITED':case 'ITEM_WITHDRAWN':case 'BANK_ITEM_DUMPED':return'bank'
     case 'COMBAT_RESOLVED':return'combat'
     case 'ZONE_DISCOVERED':case 'ZONE_SEARCHED':case 'ZONE_REPLENISHED':case 'SPECIAL_SITE_EXCAVATED':case 'SPECIAL_SITE_SEARCHED':case 'ITEM_PICKED_UP':case 'ITEM_DROPPED':case 'TAMER_DOG_DRUGGED':case 'TAMER_DOG_SENT':return'scavenging'
     case 'SCOUT_POINTS_SPENT':case 'SCOUT_CAMOUFLAGE_SET':case 'SCOUT_VISIT_RECORDED':case 'SCOUT_DETECTION_RESOLVED':case 'ZONE_OBSERVED':case 'CITIZEN_LOCATION_CHANGED':return'travel'

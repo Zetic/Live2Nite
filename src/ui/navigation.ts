@@ -1,7 +1,7 @@
 import { hasUpgradeProjectsFacility } from '../core/constructionUpgrades'
 import type { ConstructionId, GameState } from '../core/types'
 
-export type GameScreen = 'home' | 'well' | 'bank' | 'construction' | 'workshop' | 'watchtower' | 'battlements' | 'upgrade_projects' | 'world' | 'citizens' | 'chronicle' | 'codex'
+export type GameScreen = 'home' | 'well' | 'bank' | 'construction' | 'workshop' | 'watchtower' | 'battlements' | 'garbage_dump' | 'upgrade_projects' | 'world' | 'citizens' | 'chronicle' | 'codex'
 
 export interface ScreenDefinition {
   id: GameScreen
@@ -43,6 +43,7 @@ const FACILITY_DEFINITIONS: readonly FacilityScreenDefinition[] = [
   { id: 'watchtower', slot:'watchtower', projectId: 'watchtower', label: 'Watchtower', short: 'Horde estimates', townOnly: true },
   { id: 'workshop', slot:'workshop', projectId: 'workshop', label: 'Workshop', short: 'Material processing', townOnly: true },
   { id: 'battlements', slot:'battlements', projectId:'battlements', label:'Battlements', short:'Night Watch', townOnly:true },
+  { id: 'garbage_dump', slot:'garbage_dump', projectId:'garbage_dump', label:'Garbage Dump', short:'Temporary defense', townOnly:true },
 ]
 function facilityAvailable(game:GameState,entry:FacilityScreenDefinition):boolean{return entry.available?.(game)??Boolean(entry.projectId&&game.town.construction[entry.projectId]?.completed)}
 function facilityOrder(entry:FacilityScreenDefinition):number{return FACILITY_SLOT_ORDER.indexOf(entry.slot)}
@@ -59,5 +60,5 @@ export function availableScreens(game: GameState): ScreenDefinition[] {
 }
 
 export function isTownOnlyScreen(screen: GameScreen): boolean {
-  return ['home', 'well', 'bank', 'construction', 'workshop', 'watchtower','battlements','upgrade_projects'].includes(screen)
+  return ['home', 'well', 'bank', 'construction', 'workshop', 'watchtower','battlements','garbage_dump','upgrade_projects'].includes(screen)
 }

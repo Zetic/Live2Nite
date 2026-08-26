@@ -1,6 +1,7 @@
 import { ITEM_TYPE_IDS, type ItemDisplayCategory, type ItemType } from './itemCatalog'
+import { CURRENT_ITEM_SOURCE_CATALOG } from './itemSourceCurrent'
 import { ITEMS } from './items'
-import { ITEM_SOURCE_CATALOG, type ItemImplementationStatus, type ItemSourceCatalogEntry } from './itemSourceCatalog'
+import type { ItemImplementationStatus, ItemSourceCatalogEntry } from './itemSourceCatalog'
 
 export type ItemCodexCategory=
   | 'resources'
@@ -191,7 +192,7 @@ function bucket(id:string){
   return value
 }
 
-for(const source of ITEM_SOURCE_CATALOG){
+for(const source of CURRENT_ITEM_SOURCE_CATALOG){
   const id=sourceFamilyId(source)
   const target=bucket(id)
   target.states.push(sourceState(source))
@@ -199,7 +200,7 @@ for(const source of ITEM_SOURCE_CATALOG){
   if(runtimeType)target.runtimeTypes.add(runtimeType)
 }
 
-const mappedRuntimeTypes=new Set<ItemType>(ITEM_SOURCE_CATALOG.flatMap((entry)=>{const runtimeType=sourceRuntimeType(entry);return runtimeType?[runtimeType]:[]}))
+const mappedRuntimeTypes=new Set<ItemType>(CURRENT_ITEM_SOURCE_CATALOG.flatMap((entry)=>{const runtimeType=sourceRuntimeType(entry);return runtimeType?[runtimeType]:[]}))
 for(const type of ITEM_TYPE_IDS){
   if(mappedRuntimeTypes.has(type))continue
   const id=runtimeFamilyId(type)

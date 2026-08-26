@@ -1,9 +1,10 @@
 import { bankCount } from './bank'
-import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
+import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, canImproveCamp, trestleCampImproveCommands } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
 import { homeLabCanUse } from './drugLab'
+import { garbageDumpCommandsForCitizen } from './garbageDump'
 import { HOME_IMPROVEMENTS, canBuildImprovementSource, foreignHomeStorageVisible, hasPersonalMaterials, homeImprovementLevel, homeLevelSourceReady, homePreventsTheft, homeTransferUsedToday, improvementNextLevel, nextHomeDefinition, siestaUsedToday } from './home'
 import { canCarryItem } from './inventory'
 import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
@@ -104,6 +105,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
     for(const item of citizen.inventory){actions.push({type:'DEPOSIT_ITEM',citizenId,itemId:item.id});if(citizen.home.storage.length<citizen.home.storageCapacity)actions.push({type:'MOVE_ITEM_TO_HOME',citizenId,itemId:item.id})}
     for(const item of citizen.home.storage)if(canCarryItem(citizen,item))actions.push({type:'MOVE_ITEM_TO_RUCKSACK',citizenId,itemId:item.id})
     for(const item of state.town.bank)if(canCarryItem(citizen,item))actions.push({type:'WITHDRAW_BANK_ITEM',citizenId,itemId:item.id})
+    actions.push(...garbageDumpCommandsForCitizen(state,citizen))
     if(citizen.inventory.length<citizen.inventoryCapacity){const waterTaken=Number(citizen.daily.waterTaken)+Number(Boolean(citizen.daily.bonusWaterTaken));if(waterTaken<wellDailyWithdrawals(state)&&state.town.well.water>0)actions.push({type:'TAKE_WATER',citizenId})}
     addForeignHomeActions(state,actions,citizen)
     const corpses=state.citizens.filter((target)=>target.id!==citizen.id&&!target.alive&&target.home.holdsBody)
@@ -161,7 +163,10 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
       else if(zone.searchesRemaining===0&&!(zone.depletedSearchedBy??[]).includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId})
       if(canReplenishWithSpade(state,citizen,zone))actions.push({type:'SEARCH_ZONE',citizenId,replenishWithSpade:true} as unknown as ScavengerSearchCommand)
     }
-    if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone))actions.push({type:'IMPROVE_CAMP',citizenId})
+    if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone)){
+      actions.push({type:'IMPROVE_CAMP',citizenId})
+      actions.push(...trestleCampImproveCommands(citizen,zone))
+    }
     if(citizen.ap>=CAMPING_GRAVE_AP_COST)actions.push({type:'DIG_CAMPING_GRAVE',citizenId})
     actions.push({type:'HIDE_FOR_NIGHT',citizenId})
   }
