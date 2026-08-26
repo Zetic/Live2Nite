@@ -9,7 +9,7 @@ import { watchtowerEstimate } from '../src/core/night'
 import type { ConstructionId, GameEvent, GameState } from '../src/core/types'
 import { watchtowerContributors, canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
 import { distanceToTown } from '../src/core/world'
-import { lastRecordedSearchTowerDirection, nightlyObservationEvents, observationPlatformRadius, searchTowerRecoveryChance, searchTowerReplenishmentEventsForNight, searchTowerWindDirectionForDay, zoneWindDirection } from '../src/core/worldObservation'
+import { BASE_WORLD_RECOVERY_CHANCE, lastRecordedSearchTowerDirection, nightlyObservationEvents, observationPlatformRadius, searchTowerRecoveryChance, searchTowerReplenishmentEventsForNight, searchTowerWindDirectionForDay, zoneWindDirection } from '../src/core/worldObservation'
 import { worldZombieEvolutionEvent } from '../src/core/worldEvolution'
 import { advanceOneHour } from '../src/simulation/advanceTime'
 import { describeEvent } from '../src/ui/eventText'
@@ -118,11 +118,26 @@ describe('Observation Platform and Upgraded Map',()=>{
 })
 
 describe('Searchtower nightly recovery',()=>{
-  it('uses the 25 to 85 percent voted recovery progression',()=>{
-    let game=complete(createInitialGame(7201,2),'watchtower','search_tower')
+  it('keeps natural recovery at 25 percent before Searchtower construction, then upgrades from the same level-0 baseline',()=>{
+    let game=createInitialGame(7201,2)
+    expect(BASE_WORLD_RECOVERY_CHANCE).toBe(25)
+    expect(searchTowerRecoveryChance(game)).toBe(25)
+
+    game=complete(game,'watchtower','search_tower')
     expect(searchTowerRecoveryChance(game)).toBe(25)
     const expected=[37,49,61,73,85]
     for(let level=1;level<=5;level+=1){game=upgrade(game,'search_tower',level);expect(searchTowerRecoveryChance(game)).toBe(expected[level-1])}
+  })
+
+  it('runs the base 25 percent sector recovery even when Searchtower has not been constructed',()=>{
+    let game=createInitialGame(7207,2)
+    game={...game,world:{...game.world,zones:Object.fromEntries(Object.entries(game.world.zones).map(([key,zone])=>[key,{...zone,searchesRemaining:0}]))}}
+    let recovered:GameEvent[]=[]
+    for(let seed=1;seed<=128&&recovered.length===0;seed+=1){
+      recovered=searchTowerReplenishmentEventsForNight({...game,seed},['rotten_log'])
+    }
+    expect(recovered.length).toBeGreaterThan(0)
+    expect(lastRecordedSearchTowerDirection(game)).toBeNull()
   })
 
   it('uses the source grid-sector boundary rather than equal 45-degree octants',()=>{
@@ -156,8 +171,9 @@ describe('Searchtower nightly recovery',()=>{
     expect(events.every((event)=>event.type!=='ZONE_REPLENISHED'||applied.world.zones[event.zoneKey].searchesRemaining===1)).toBe(true)
   })
 
-  it('keeps a nightly Chronicle hook and records the selected recovery sector',()=>{
+  it('level-0 Searchtower records the selected recovery sector without changing the 25 percent baseline',()=>{
     const game=complete(createInitialGame(7203,2),'watchtower','search_tower')
+    expect(searchTowerRecoveryChance(game)).toBe(25)
     const event=worldZombieEvolutionEvent(game)
     expect(event?.type).toBe('WORLD_ZOMBIES_EVOLVED')
     expect(describeEvent(event!,game)).toContain(`Searchtower recorded the recovery sector as ${searchTowerWindDirectionForDay(game.seed,game.day)}.`)
