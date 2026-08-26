@@ -95,9 +95,10 @@ describe('Home Kitchen progression',()=>{
     const cookBone=actions.find((candidate)=>candidate.type==='USE_HOME_KITCHEN'&&candidate.itemId==='bone')
     expect(cookBone).toBeTruthy()
     game=executeCommand(game,cookBone!).state
-    const prepared=game.citizens[0].inventory[0]
-    expect(['good_home_made_meal','dubious_home_made_meal']).toContain(prepared.type)
-    expect(normalizeItemState(prepared.type,prepared.state).contamination).toBe('clean')
+    const prepared=game.citizens[0].inventory.find((candidate)=>candidate.type==='good_home_made_meal'||candidate.type==='dubious_home_made_meal')
+    expect(prepared).toBeTruthy()
+    expect(normalizeItemState(prepared!.type,prepared!.state).contamination).toBe('clean')
+    expect(game.citizens[0].inventory.some((candidate)=>candidate.id==='poisoned')).toBe(true)
   })
 
   it('does not offer already-good or already-prepared meals as Kitchen inputs',()=>{
