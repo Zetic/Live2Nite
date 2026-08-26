@@ -53,22 +53,26 @@ Water Rations are not treated as food for the Dump. Broken weapons are not treat
 
 Additional source animals or material identities should be added only when their actual Live2Nite runtime items are implemented. Source-only Codex rows are not enough to make an object destructible.
 
-## Trestle dependency
+## Trestle dependency and gameplay
 
-Trestle is now a real Live2Nite item mapped to the pinned source identity `trestle_#00`.
+Trestle is a complete Live2Nite item mapped to the pinned source identity `trestle_#00`.
 
-Its current runtime coverage includes:
+Its runtime coverage includes:
 
 - source `heavy` metadata, so it obeys the one-cumbersome-item carrying rule;
 - +1 Bank defense and +1 Home defense;
 - defensive/decoration/component capabilities;
 - Garbage Dump defensive-object classification;
 - ordinary source-loot mapping at the source table's weight 8, ready for the full normal-zone table when the remaining unrelated source-item dependencies are complete;
-- exact currently represented source ruin rows: Home Depot (8), Construction Site Shelter (10), PI-KEYA Furniture (10), Disused Car Park (8), Abandoned Construction Site (15), and Blocked Road (5).
+- exact currently represented source ruin rows: Home Depot (8), Construction Site Shelter (10), PI-KEYA Furniture (10), Disused Car Park (8), Abandoned Construction Site (15), and Blocked Road (5);
+- outside installation for **1 AP**, consuming the exact carried Trestle and adding **+9 permanent campsite improvement points**, capped at 50;
+- backward-compatible campsite storage: existing schema-19 `campImprovements` values remain +5-point legacy steps while current zones may retain an exact improvement level for non-multiple-of-five effects;
+- **15 Night Watch defense** as IKEA-family equipment, with the Trestle destroyed when the Watch actually uses it;
+- the Swedish Workshop furniture specialist bonus, which raises its Watch contribution by 30% to 19 after integer flooring.
 
-The source catalogue marks Trestle with 15 Watch points, but its exact Night Watch consumption/action behavior and outside camping installation action are not introduced here without a verified interaction path. For that reason the current source item remains **Partial**, even though the mechanics required by Organized Dump are complete.
+The current source item status is therefore **Implemented**.
 
-Flatpacked Furniture is also a known source route to furniture, but no output probability table is invented in this PR because its exact current output weights have not been recovered.
+Flatpacked Furniture is also a known source route to furniture, but no output probability table is invented in this PR because its exact current output weights have not been recovered. Trestle already has verified active acquisition routes without relying on that unresolved table.
 
 ## Organized Dump
 
@@ -89,10 +93,10 @@ The Garbage Dump uses its current construction catalogue identity and current-so
 
 The six Dump specializations remain blueprint class 6: **Dump specialization**. They are deliberately not injected into the generic class 1–4 blueprint pool. This PR implements their runtime effects without inventing a new acquisition route.
 
-Dump Upgrade remains an ordinary class-4 construction. Organized Dump remains an ordinary class-3 construction and now passes the normal buildability/material checks because Trestle has a verified runtime and acquisition path.
+Dump Upgrade remains an ordinary class-4 construction. Organized Dump remains an ordinary class-3 construction and passes the normal buildability/material checks because Trestle has a verified runtime and acquisition path.
 
 ## Autonomous citizens
 
-Bots do not automatically destroy Bank items in this pass. Dumping is irreversible communal-resource destruction, and the existing autonomous planning system does not yet provide a sufficiently strong reservation/consensus rule for deciding when shared food, weapons, or construction resources should be sacrificed.
+Bots do not automatically destroy shared Bank items in this pass. Dumping is irreversible communal-resource destruction, and the existing autonomous planning system does not yet provide a sufficiently strong reservation/consensus rule for deciding when shared food, weapons, or construction resources should be sacrificed.
 
-Bots can continue to gather and deposit resources normally; a future AI pass can add dumping once resource reservations and late-night defense tradeoffs are modeled explicitly.
+Trestle field use is resource-aware. Autonomous campers preserve carried Trestles while Organized Dump still requires them; once that dependency is satisfied, a low-AP camper may consume a spare Trestle for the stronger +9 campsite improvement when needed.
