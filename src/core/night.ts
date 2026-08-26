@@ -5,6 +5,7 @@ import { totalTownDefense } from './defense'
 import { applyEvents } from './events'
 import { personalDefense } from './home'
 import { NORMAL_SCAVENGE_LOOT_POOL, createItemInstance } from './items'
+import { applyNightWatchConditions, enrollAutonomousNightWatch, resetNightWatchEnrollment, resolveNightWatch } from './nightWatch'
 import { randomInt } from './rng'
 import { advanceExplorableRuinLifecycleForNewDay } from './ruinEvolution'
 import { nightlyStatusEvents } from './status'
@@ -123,23 +124,36 @@ export function resolveNightAttack(state:GameState):GameState{
   const attackStrength=attackStrengthForDay(afterCorpses.seed,afterCorpses.day)
   const defenseBeforeAttack=totalTownDefense(afterCorpses)
   const effectiveDefense=afterCorpses.town.gateOpen?0:defenseBeforeAttack
-  const zombiesInside=Math.max(0,attackStrength-effectiveDefense)
-  const homeAttacks=distributeBreachedZombies(afterCorpses,zombiesInside)
+
+  // Autonomous citizens only use the public Watchtower envelope when deciding whether to
+  // volunteer. The hidden deterministic attack value is never fed into the planning step.
+  const estimate=watchtowerEstimate(afterCorpses)
+  const expectedOverflow=Math.max(0,(estimate?.max??effectiveDefense)-effectiveDefense)
+  const watchPrepared=enrollAutonomousNightWatch(afterCorpses,expectedOverflow)
+  const overflowBeforeWatch=Math.max(0,attackStrength-effectiveDefense)
+  const watchStage=resolveNightWatch(watchPrepared,overflowBeforeWatch)
+  const zombiesInside=watchStage.report.overflowAfter
+
+  const homeAttacks=distributeBreachedZombies(watchStage.state,zombiesInside)
   const homeDeathEvents:GameEvent[]=homeAttacks.filter((outcome)=>!outcome.survived).map((outcome)=>({type:'CITIZEN_DIED',day:state.day,hour:ATTACK_HOUR,citizenId:outcome.citizenId,reason:'home_breach'}))
-  const afterHomeDeaths=applyEvents(afterCorpses,homeDeathEvents)
+  const afterHomeDeaths=applyEvents(watchStage.state,homeDeathEvents)
   const statusEvents=nightlyStatusEvents(afterHomeDeaths,(citizenId)=>randomInt(isolatedNightSeed(afterHomeDeaths.seed,afterHomeDeaths.day,stableStringSalt(`infection:${citizenId}`)),1,100).value)
   const dehydrationDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='dehydration').length
   const infectionDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='infection').length
   const withdrawalDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='drug_withdrawal').length
   const afterStatuses=applyEvents(afterHomeDeaths,statusEvents)
-  const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,infectionDeaths,withdrawalDeaths,corpseReanimations:corpseStage.reanimations,corpseAttackDeaths:corpseStage.attackDeaths,corpseWaterLost:corpseStage.waterLost,homeAttacks}
-  const replenishment=searchTowerReplenishmentEvents(afterStatuses)
-  const outputs=constructionOutputEvents(afterStatuses)
-  const expiries=constructionExpiryEvents(afterStatuses)
-  const evolution=worldZombieEvolutionEvent(afterStatuses)
+  // A wound acquired during this Watch is source-exempt from the infection pass above.
+  const afterWatchConditions=applyNightWatchConditions(afterStatuses,watchStage.report)
+
+  const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,infectionDeaths,withdrawalDeaths,corpseReanimations:corpseStage.reanimations,corpseAttackDeaths:corpseStage.attackDeaths,corpseWaterLost:corpseStage.waterLost,homeAttacks,nightWatch:watchStage.report}
+  const replenishment=searchTowerReplenishmentEvents(afterWatchConditions)
+  const outputs=constructionOutputEvents(afterWatchConditions)
+  const expiries=constructionExpiryEvents(afterWatchConditions)
+  const evolution=worldZombieEvolutionEvent(afterWatchConditions)
   const rollover:GameEvent[]=[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...replenishment,...outputs,...expiries]
   if(evolution)rollover.push(evolution)
-  const afterWorldRollover=applyEvents(afterStatuses,rollover)
+  const afterWorldRollover=applyEvents(afterWatchConditions,rollover)
   const afterRuinRollover=advanceExplorableRuinLifecycleForNewDay(afterWorldRollover,state.day+1)
-  return applyEvents(afterRuinRollover,[{type:'DAY_STARTED',day:state.day+1,hour:DAY_START_HOUR}])
+  const withFreshWatch=resetNightWatchEnrollment(afterRuinRollover)
+  return applyEvents(withFreshWatch,[{type:'DAY_STARTED',day:state.day+1,hour:DAY_START_HOUR}])
 }
