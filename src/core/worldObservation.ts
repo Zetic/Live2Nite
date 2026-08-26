@@ -62,11 +62,13 @@ function estimatedZombieBand(zombies:number):number{
 }
 
 /**
- * Nightly world observation updates shared town intelligence after zombie evolution.
+ * Nightly world observation updates shared town zombie intelligence after zombie evolution.
  * Occupied zones always refresh. Observation Platform adds the voted radius around town.
  * Live2Nite interprets source distances in the same Manhattan/AP kilometres used by travel.
- * Without Upgraded Map the observation records only Live2Nite's existing map band using
- * hour=-1 as an internal precision marker; Upgraded Map records the exact evolved count.
+ * Observation does not mark an unseen zone as discovered: ruins, ground items and search state
+ * remain hidden until ordinary exploration discovers that zone. Without Upgraded Map the
+ * observation records only Live2Nite's existing map band using hour=-1 as an internal precision
+ * marker; Upgraded Map records the exact evolved count.
  */
 export function nightlyObservationEvents(state:GameState):GameEvent[]{
   const radius=observationPlatformRadius(state)
@@ -77,7 +79,6 @@ export function nightlyObservationEvents(state:GameState):GameEvent[]{
   for(const [key,zone] of Object.entries(state.world.zones)){
     if(isTownGateZone(zone.x,zone.y))continue
     if(zoneDistance(zone.x,zone.y)>radius&&!occupied.has(key))continue
-    if(!zone.discovered)events.push({type:'ZONE_DISCOVERED',day:nextDay,hour:0,zoneKey:key})
     events.push({type:'ZONE_OBSERVED',day:nextDay,hour:exact?0:-1,zoneKey:key,zombies:exact?zone.zombies:estimatedZombieBand(zone.zombies)})
   }
   return events
