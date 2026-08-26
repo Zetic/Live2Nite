@@ -2,7 +2,7 @@ import { totalTownDefense } from '../../core/defense'
 import { watchtowerEstimate } from '../../core/night'
 import type { GameState } from '../../core/types'
 import { canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerContributors, watchtowerTodayQuality, watchtowerTodayWeightedContributions, watchtowerTomorrowQuality, watchtowerTomorrowWeightedContributions } from '../../core/watchtowerEstimation'
-import { observationPlatformRadius, searchTowerRecoveryChance, searchTowerWindDirectionForDay, upgradedMapExact } from '../../core/worldObservation'
+import { lastRecordedSearchTowerDirection, observationPlatformRadius, searchTowerRecoveryChance, upgradedMapExact } from '../../core/worldObservation'
 
 export function WatchtowerView({game,citizenId,onContribute}:{game:GameState;citizenId:string;onContribute:(next:GameState)=>void}) {
   const estimate=watchtowerEstimate(game)
@@ -20,7 +20,7 @@ export function WatchtowerView({game,citizenId,onContribute}:{game:GameState;cit
   const exactMap=upgradedMapExact(game)
   const searchtower=game.town.construction.search_tower?.completed===true
   const recovery=searchTowerRecoveryChance(game)
-  const previousWind=searchtower&&game.day>1?searchTowerWindDirectionForDay(game.seed,game.day-1):null
+  const previousWind=searchtower?lastRecordedSearchTowerDirection(game):null
   const exposed=game.town.gateOpen
   const safe=Boolean(estimate)&&defense>=estimate!.max&&!exposed
   const danger=Boolean(estimate)&&(defense<estimate!.min||exposed)
