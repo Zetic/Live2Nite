@@ -27,6 +27,14 @@ export function applyCurrentConstructionEconomy():void{
   CONSTRUCTIONS.scouts_lair.wipReason=undefined
   CONSTRUCTIONS.scouts_lair.playable=true
 
+  // Technician gameplay supplies the Prime/current-repository Workbench behavior: one
+  // controlled-output Workshop operation per citizen/day, with Technician-preferred cost.
+  CONSTRUCTION_CATALOG.technicians_workbench.implementation='implemented'
+  CONSTRUCTION_CATALOG.technicians_workbench.wipReason=null
+  CONSTRUCTIONS.technicians_workbench.implementationStatus='implemented'
+  CONSTRUCTIONS.technicians_workbench.wipReason=undefined
+  CONSTRUCTIONS.technicians_workbench.playable=true
+
   // Current MyHordes camping calculation gives a completed Lighthouse +25 camping points.
   const lighthouse=CONSTRUCTIONS.lighthouse
   lighthouse.effects=lighthouse.effects.map((effect)=>effect.type==='camping_survival_bonus'?{...effect,amount:25}:effect)
