@@ -79,6 +79,7 @@ const WATCH_ITEMS:Readonly<Partial<Record<ItemType,NightWatchItemDefinition>>>={
   old_door:{watchpoint:15,use:'destroy'},
   human_flesh:{watchpoint:15,family:'trebuchet',use:'destroy'},
   ektorp_gluten_chair:{watchpoint:15,family:'ikea',use:'destroy'},
+  trestle:{watchpoint:15,family:'ikea',use:'destroy'},
   pc_base_unit:{watchpoint:15,family:'ikea',use:'break',breaksInto:'broken_pc_base_unit'},
   meaty_bone:{watchpoint:10,family:'trebuchet',use:'destroy'},
   groundsheet:{watchpoint:10,use:'destroy'},
