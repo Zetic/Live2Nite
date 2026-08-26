@@ -7,7 +7,8 @@ import { applyEvents } from '../src/core/events'
 import { createInitialGame } from '../src/core/game'
 import { watchtowerEstimate } from '../src/core/night'
 import type { ConstructionId, GameEvent, GameState } from '../src/core/types'
-import { canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerContributors, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
+import { watchtowerContributors, canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
+import { distanceToTown } from '../src/core/world'
 import { nightlyObservationEvents, observationPlatformRadius, searchTowerRecoveryChance, searchTowerReplenishmentEventsForNight, searchTowerWindDirectionForDay, zoneWindDirection } from '../src/core/worldObservation'
 import { worldZombieEvolutionEvent } from '../src/core/worldEvolution'
 import { advanceOneHour } from '../src/simulation/advanceTime'
@@ -82,6 +83,14 @@ describe('Observation Platform and Upgraded Map',()=>{
     game=upgrade(game,'observation_platform',3);expect(observationPlatformRadius(game)).toBe(10)
   })
 
+  it('measures the observation radius in the same Manhattan/AP kilometres used by travel',()=>{
+    let game=complete(createInitialGame(7105,2),'watchtower','observation_platform')
+    game=upgrade(game,'observation_platform',1)
+    const events=nightlyObservationEvents(game)
+    expect(events.some((event)=>event.type==='ZONE_OBSERVED'&&event.zoneKey==='2,1')).toBe(true)
+    expect(events.some((event)=>event.type==='ZONE_OBSERVED'&&event.zoneKey==='2,2')).toBe(false)
+  })
+
   it('writes next-day coarse map intelligence without Upgraded Map and exact intelligence with it',()=>{
     let game=complete(createInitialGame(7102,2),'watchtower','observation_platform')
     game=upgrade(game,'observation_platform',1)
@@ -116,7 +125,18 @@ describe('Searchtower nightly recovery',()=>{
     for(let level=1;level<=5;level+=1){game=upgrade(game,'search_tower',level);expect(searchTowerRecoveryChance(game)).toBe(expected[level-1])}
   })
 
-  it('selects one deterministic compass sector and only recovers depleted zones in that sector beyond 2 km',()=>{
+  it('uses the source grid-sector boundary rather than equal 45-degree octants',()=>{
+    expect(zoneWindDirection(0,1)).toBe('N')
+    expect(zoneWindDirection(1,2)).toBe('N')
+    expect(zoneWindDirection(1,1)).toBe('NE')
+    expect(zoneWindDirection(2,1)).toBe('E')
+    expect(zoneWindDirection(-1,2)).toBe('N')
+    expect(zoneWindDirection(-2,1)).toBe('W')
+    expect(zoneWindDirection(1,-2)).toBe('S')
+    expect(zoneWindDirection(1,-1)).toBe('SE')
+  })
+
+  it('selects one deterministic compass sector and only recovers depleted zones in that sector beyond 2 travel km',()=>{
     let game=complete(createInitialGame(7202,2),'watchtower','search_tower')
     game=upgrade(game,'search_tower',5)
     game={...game,world:{...game.world,zones:Object.fromEntries(Object.entries(game.world.zones).map(([key,zone])=>[key,{...zone,discovered:false,searchesRemaining:0}]))}}
@@ -128,7 +148,7 @@ describe('Searchtower nightly recovery',()=>{
       expect(event.type).toBe('ZONE_REPLENISHED')
       if(event.type!=='ZONE_REPLENISHED')continue
       const zone=game.world.zones[event.zoneKey]
-      expect(Math.sqrt(zone.x*zone.x+zone.y*zone.y)).toBeGreaterThan(2)
+      expect(distanceToTown(zone.x,zone.y)).toBeGreaterThan(2)
       expect(zoneWindDirection(zone.x,zone.y)).toBe(wind)
     }
     const applied=applyEvents(game,events)
