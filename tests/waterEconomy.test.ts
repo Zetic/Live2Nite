@@ -19,7 +19,7 @@ function withPlayerItem(state:GameState,type:Parameters<typeof createItemInstanc
 
 describe('Well transactions',()=>{
   it('marks a Pump-enabled second ration as an extra withdrawal',()=>{
-    let state=createInitialGame('water-extra',1)
+    let state=createInitialGame(9101,1)
     state=complete(state,'pump')
     state={...state,town:{...state.town,well:{water:10}}}
     const citizenId=state.citizens[0].id
@@ -31,7 +31,7 @@ describe('Well transactions',()=>{
   })
 
   it('returns a Water Ration to the Well and removes the exact personal item',()=>{
-    let state=createInitialGame('water-return',1)
+    let state=createInitialGame(9102,1)
     state=withPlayerItem(state,'water_ration','return-me')
     const citizenId=state.citizens[0].id
     const before=state.town.well.water
@@ -43,7 +43,7 @@ describe('Well transactions',()=>{
 
   it('Purifier consumes a Full Jerrycan and adds 1-3 water, while Filter raises output to 4-9',()=>{
     const run=(filtered:boolean)=>{
-      let state=createInitialGame(filtered?'water-filter':'water-purifier',1)
+      let state=createInitialGame(filtered?9104:9103,1)
       state=complete(state,'water_purifier',...(filtered?(['water_filter'] as ConstructionId[]):[]))
       state=withPlayerItem(state,'full_jerrycan','jerry')
       const citizenId=state.citizens[0].id
@@ -63,7 +63,7 @@ describe('Well transactions',()=>{
   })
 
   it('Faucet refills supported equipment without consuming Well water',()=>{
-    let state=createInitialGame('water-faucet',1)
+    let state=createInitialGame(9105,1)
     state=complete(state,'faucet')
     state=withPlayerItem(state,'water_pistol','pistol')
     state={...state,citizens:state.citizens.map((citizen,index)=>index===0?{...citizen,inventory:citizen.inventory.map((item)=>item.id==='pistol'?createItemInstance(item.id,item.type,{charges:0}):item)}:citizen)}
@@ -77,7 +77,7 @@ describe('Well transactions',()=>{
 
 describe('nightly Well consumers',()=>{
   it('uses the source-backed Water Turret requirement/defense upgrade track',()=>{
-    let state=createInitialGame('water-turrets',1)
+    let state=createInitialGame(9106,1)
     state=complete(state,'water_turrets')
     state={...state,town:{...state.town,upgradeProjects:{...state.town.upgradeProjects,levels:{...state.town.upgradeProjects.levels,water_turrets:5}},well:{water:20}}}
     expect(waterTurretNightlyRequirement(state)).toBe(12)
@@ -86,7 +86,7 @@ describe('nightly Well consumers',()=>{
   })
 
   it('keeps the 70 base defense when upgraded turrets cannot be funded',()=>{
-    let funded=createInitialGame('water-funded',1)
+    let funded=createInitialGame(9107,1)
     funded=complete(funded,'water_turrets')
     funded={...funded,town:{...funded.town,upgradeProjects:{...funded.town.upgradeProjects,levels:{...funded.town.upgradeProjects.levels,water_turrets:1}},well:{water:2}}}
     const dry={...funded,town:{...funded.town,well:{water:1}}}
@@ -95,7 +95,7 @@ describe('nightly Well consumers',()=>{
   })
 
   it('debits only funded all-or-nothing consumer requests',()=>{
-    let state=createInitialGame('water-consume',1)
+    let state=createInitialGame(9108,1)
     state=complete(state,'water_turrets')
     state={...state,town:{...state.town,upgradeProjects:{...state.town.upgradeProjects,levels:{...state.town.upgradeProjects.levels,water_turrets:1}},well:{water:2}}}
     const allocation=townWaterAllocation(state)
@@ -108,7 +108,7 @@ describe('nightly Well consumers',()=>{
 
 describe('agriculture',()=>{
   it('Vegetable Plot uses 4-7 ordinary and 0-2 rich food before Fertilizer',()=>{
-    let state=createInitialGame('veg-base',1)
+    let state=createInitialGame(9109,1)
     state=complete(state,'vegetable_plot')
     const outputs=agricultureProduction(state)
     const ordinary=outputs.find((output)=>output.itemType==='vegetable')?.amount??0
@@ -118,7 +118,7 @@ describe('agriculture',()=>{
   })
 
   it('Fertilizer raises Vegetable Plot production to 6-8 ordinary and 3-5 rich food',()=>{
-    let state=createInitialGame('veg-fertilized',1)
+    let state=createInitialGame(9110,1)
     state=complete(state,'vegetable_plot','fertilizer')
     const outputs=agricultureProduction(state)
     const ordinary=outputs.find((output)=>output.itemType==='vegetable')?.amount??0
@@ -128,7 +128,7 @@ describe('agriculture',()=>{
   })
 
   it('Grapeboom and Apple Tree use their documented daily ranges',()=>{
-    let state=createInitialGame('water-crops',1)
+    let state=createInitialGame(9111,1)
     state=complete(state,'grapeboom','outer_world_apple_tree')
     const outputs=agricultureProduction(state)
     const grapes=outputs.find((output)=>output.itemType==='exploding_grapefruit')?.amount??0
