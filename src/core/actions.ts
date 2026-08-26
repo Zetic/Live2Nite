@@ -16,6 +16,7 @@ import { normalizeRuinId } from './specialSites'
 import { canContributeConstructionByStatus, canFightBarehandedByStatus, canOperateGateByStatus, canUseWeaponByStatus, hasHandWound } from './status'
 import { canSurvivalistForage } from './survivalist'
 import { canDrugTamerDog, canSendTamerDog, tamerDogSteroid } from './tamer'
+import { canPayTechnicalWork, technicianRepairCommands, technicianWorkbenchAvailable, technicianWorkbenchCost, workbenchCommand } from './technician'
 import type { Citizen, ConstructionId, GameCommand, GameState, HomeImprovementId, ItemInstance, ItemStorage } from './types'
 import { canCitizenMoveFromZone, getZone, isTownGateZone, moveCoordinates, relativeControlActive, temporaryControlActive, zoneControl } from './world'
 import { WORKSHOP_RECIPES, WORKSHOP_RECIPE_ORDER, canRunWorkshopRecipe, workshopRecipeApCost } from './workshop'
@@ -77,7 +78,11 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   if(citizen.camping.hidden)return[{type:'LEAVE_HIDEOUT',citizenId}]
   const actions:GameCommand[]=[]
   addConsumableActions(state,actions,citizen,citizen.inventory,'inventory')
-  if(!terrorBlocksOrdinaryItems(state,citizen)){const combinations=combinationCommandsForCitizen(state,citizen);actions.push(...combinations.filter((action)=>!hasHandWound(citizen)||action.recipeId==='load_ems_battery'))}
+  if(!terrorBlocksOrdinaryItems(state,citizen)){
+    const combinations=combinationCommandsForCitizen(state,citizen)
+    actions.push(...combinations.filter((action)=>!hasHandWound(citizen)||action.recipeId==='load_ems_battery'))
+    if(!hasHandWound(citizen))actions.push(...technicianRepairCommands(citizen))
+  }
 
   if(citizen.location.type==='town'){
     if(canRecamouflage(state,citizen))actions.push({type:'RECAMOUFLAGE',citizenId})
@@ -105,8 +110,21 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
       if(homeImprovementLevel(citizen,'siesta')>0&&citizen.ap<citizen.maxAp&&!siestaUsedToday(state,citizen.id))actions.push({type:'USE_HOME_SIESTA',citizenId})
       if(homeLabCanUse(state,citizen))actions.push({type:'USE_HOME_LAB',citizenId})
     }
-    if(citizen.ap>=CONSTRUCTION_AP_COST&&canContributeConstructionByStatus(citizen)){for(const projectId of constructionFrontier(state))if(hasProjectMaterials(state,projectId))actions.push({type:'CONTRIBUTE_CONSTRUCTION',citizenId,projectId})}
-    if(state.town.construction.workshop.completed){for(const recipeId of WORKSHOP_RECIPE_ORDER)if((!hasHandWound(citizen)||WORKSHOP_RECIPES[recipeId].category!=='repair')&&citizen.ap>=workshopRecipeApCost(state,recipeId,citizen.id)&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})}
+    if(canPayTechnicalWork(citizen,CONSTRUCTION_AP_COST)&&canContributeConstructionByStatus(citizen)){for(const projectId of constructionFrontier(state))if(hasProjectMaterials(state,projectId))actions.push({type:'CONTRIBUTE_CONSTRUCTION',citizenId,projectId})}
+    if(state.town.construction.workshop.completed){
+      for(const recipeId of WORKSHOP_RECIPE_ORDER){
+        const recipe=WORKSHOP_RECIPES[recipeId]
+        if((!hasHandWound(citizen)||recipe.category!=='repair')&&canPayTechnicalWork(citizen,workshopRecipeApCost(state,recipeId,citizen.id))&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})
+      }
+      if(technicianWorkbenchAvailable(state,citizen)){
+        const specialCost=technicianWorkbenchCost(citizen)
+        if(canPayTechnicalWork(citizen,specialCost))for(const recipeId of WORKSHOP_RECIPE_ORDER){
+          const recipe=WORKSHOP_RECIPES[recipeId]
+          if(!recipe.outcomes?.length||!canRunWorkshopRecipe(state,recipeId))continue
+          for(const output of [...new Set(recipe.outcomes.map((outcome)=>outcome.output))])actions.push(workbenchCommand(citizenId,recipeId,output))
+        }
+      }
+    }
     if(state.town.gateOpen){if(citizen.ap>=GATE_AP_COST&&canOperateGateByStatus(citizen))actions.push({type:'CLOSE_GATE',citizenId});actions.push({type:'EXIT_TOWN',citizenId})}else if(citizen.ap>=GATE_AP_COST&&canOperateGateByStatus(citizen)&&!gateLockedAtHour(state,state.clock.hour))actions.push({type:'OPEN_GATE',citizenId})
     return actions
   }
