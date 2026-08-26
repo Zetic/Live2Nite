@@ -10,6 +10,7 @@ function constructionActions(actions:GameCommand[]):Array<Extract<GameCommand,{t
 function recipeAction(actions:GameCommand[],recipeId:WorkshopRecipeId):GameCommand|null{return actions.find((action)=>action.type==='WORKSHOP_CONVERT'&&action.recipeId===recipeId)??null}
 function combinationAction(actions:GameCommand[],recipeId:CombinationRecipeId):GameCommand|null{return actions.find((action)=>action.type==='COMBINE_ITEMS'&&action.recipeId===recipeId)??null}
 function homeUpgradeAction(actions:GameCommand[]):GameCommand|null{return actions.find((action)=>action.type==='UPGRADE_HOME')??null}
+function homeLabAction(actions:GameCommand[]):GameCommand|null{return actions.find((action)=>action.type==='USE_HOME_LAB')??null}
 function corpseDisposalAction(actions:GameCommand[]):GameCommand|null{return actions.find((action)=>action.type==='DISPOSE_CORPSE_OUTSIDE')??actions.find((action)=>action.type==='DISPOSE_CORPSE_WATER')??null}
 function improvementAction(actions:GameCommand[],id:HomeImprovementId):GameCommand|null{return actions.find((action)=>action.type==='BUILD_HOME_IMPROVEMENT'&&action.improvementId===id)??null}
 function withdrawAction(state:GameState,actions:GameCommand[],type:ItemType):GameCommand|null{return actions.find((action)=>action.type==='WITHDRAW_BANK_ITEM'&&state.town.bank.some((item)=>item.id===action.itemId&&item.type===type))??null}
@@ -62,5 +63,9 @@ export function chooseTownWork(state:GameState,citizen:Citizen,actions:GameComma
   if(defenseUrgent){const withdraw=homeMaterialWithdrawal(state,citizen,actions,strategic);if(withdraw)return withdraw}
   if(defenseUrgent||state.clock.hour>=20){const fence=improvementAction(actions,'fence');if(fence)return fence;const reinforcement=improvementAction(actions,'reinforcements');if(reinforcement)return reinforcement}
   if(state.clock.hour>=20&&citizen.home.storage.length>=citizen.home.storageCapacity-1){const storage=improvementAction(actions,'storage');if(storage)return storage}
+  if(!defenseUrgent&&state.clock.hour>=20){
+    const laboratory=improvementAction(actions,'laboratory');if(laboratory)return laboratory
+    const experiment=homeLabAction(actions);if(experiment)return experiment
+  }
   return null
 }
