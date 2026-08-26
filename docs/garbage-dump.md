@@ -53,13 +53,35 @@ Water Rations are not treated as food for the Dump. Broken weapons are not treat
 
 Additional source animals or material identities should be added only when their actual Live2Nite runtime items are implemented. Source-only Codex rows are not enough to make an object destructible.
 
+## Trestle dependency
+
+Trestle is now a real Live2Nite item mapped to the pinned source identity `trestle_#00`.
+
+Its current runtime coverage includes:
+
+- source `heavy` metadata, so it obeys the one-cumbersome-item carrying rule;
+- +1 Bank defense and +1 Home defense;
+- defensive/decoration/component capabilities;
+- Garbage Dump defensive-object classification;
+- ordinary source-loot mapping at the source table's weight 8, ready for the full normal-zone table when the remaining unrelated source-item dependencies are complete;
+- exact currently represented source ruin rows: Home Depot (8), Construction Site Shelter (10), PI-KEYA Furniture (10), Disused Car Park (8), Abandoned Construction Site (15), and Blocked Road (5).
+
+The source catalogue marks Trestle with 15 Watch points, but its exact Night Watch consumption/action behavior and outside camping installation action are not introduced here without a verified interaction path. For that reason the current source item remains **Partial**, even though the mechanics required by Organized Dump are complete.
+
+Flatpacked Furniture is also a known source route to furniture, but no output probability table is invented in this PR because its exact current output weights have not been recovered.
+
 ## Organized Dump
 
-The Organized Dump source effect is implemented: when the construction is complete, the Dump action cost becomes **0 AP**.
+Organized Dump is fully buildable. Its current construction bill is:
 
-The construction itself remains WIP and is not normally buildable yet because its current source material bill requires **Trestles**, and Live2Nite does not yet have a verified runtime identity/acquisition path for that material. No substitute resource or fabricated acquisition path is introduced here.
+- 20 AP;
+- 2 Handfuls of Nuts and Bolts;
+- 1 Unshaped Concrete Block;
+- 5 Patchwork Beams;
+- 10 Metal Supports;
+- 2 Trestles.
 
-Debug/fixture completion can exercise the zero-AP mechanic for regression coverage without making the unresolved construction normally playable.
+When completed, Garbage Dump destruction actions cost **0 AP**.
 
 ## Construction and blueprint boundaries
 
@@ -67,7 +89,7 @@ The Garbage Dump uses its current construction catalogue identity and current-so
 
 The six Dump specializations remain blueprint class 6: **Dump specialization**. They are deliberately not injected into the generic class 1–4 blueprint pool. This PR implements their runtime effects without inventing a new acquisition route.
 
-Dump Upgrade remains an ordinary class-4 construction. Organized Dump remains class 3 but fails closed at the buildability layer until its Trestle dependency is represented.
+Dump Upgrade remains an ordinary class-4 construction. Organized Dump remains an ordinary class-3 construction and now passes the normal buildability/material checks because Trestle has a verified runtime and acquisition path.
 
 ## Autonomous citizens
 
