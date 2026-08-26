@@ -15,7 +15,7 @@ export function mapZombieBand(zombies:number|null|undefined):MapZombieBand{
   return'high'
 }
 
-/** Never-seen zones deliberately suppress all horde information. */
+/** Never-seen zones deliberately suppress ordinary horde information. Scout sense is handled separately by the viewer-aware knowledge layer. */
 export function mapZombieBandForIntel(discovered:boolean,zombies:number|null|undefined):MapZombieBand{return discovered?mapZombieBand(zombies):'unknown'}
 
 function stackedGroundLabel(items:readonly {type:ItemType}[]):string{
@@ -28,7 +28,7 @@ function peopleDots(count:number){if(count<=0)return null;return <span className
 
 export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
   const player=game.citizens.find((citizen)=>citizen.id===citizenId)??game.citizens[0]
-  const knowledge=createAgentWorldKnowledge(game)
+  const knowledge=createAgentWorldKnowledge(game,player.id)
   // Current MyHordes uses Crow's Nest to expose accumulated Scout markings. Live2Nite
   // does not decay zones from current to past discovery, so markings expose Scout Level
   // only; they deliberately do not refresh stale zombie observations.
@@ -46,17 +46,19 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
       const rescueInbound=Object.values(game.botMissions).some((mission)=>mission.role==='rescue'&&mission.target.x===x&&mission.target.y===y&&mission.phase!=='unload')
       const controlState=humanCount>0?zoneControlState(game,x,y,isPlayer?player.id:undefined):null
       const known=knowledge.zone(x,y)
+      const scoutEstimate=known?.zombieIntel==='scout_estimate'
       const siteLabel=site?specialSiteCode(site.type):null
-      const zombieBand=mapZombieBandForIntel(zone.discovered,known?.zombies)
-      const intelClass=!zone.discovered?'intel-unknown':known?.freshness==='fresh'?'intel-current':known?.freshness==='stale'?'intel-stale':'intel-visited-unknown'
+      const zombieBand=scoutEstimate?mapZombieBand(known?.zombies):mapZombieBandForIntel(zone.discovered,known?.zombies)
+      const intelClass=scoutEstimate?'intel-current':!zone.discovered?'intel-unknown':known?.freshness==='fresh'?'intel-current':known?.freshness==='stale'?'intel-stale':'intel-visited-unknown'
       const depleted=zone.discovered&&zone.searchesRemaining===0
       const marking=showScoutMarkings&&zone.discovered?scoutLevel(zone):0
       const titleParts=[`[${x},${y}]`]
-      if(!zone.discovered)titleParts.push('unexplored · zombie count unknown')
-      else {
-        if(known?.zombies===null||known?.zombies===undefined)titleParts.push('visited · zombie count unknown')
-        else if(known.freshness==='fresh')titleParts.push(`${known.zombies} zombies observed today${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
-        else titleParts.push(`last known: ${known.zombies} zombies · Day ${known.lastObservedDay??'?'}${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
+      if(scoutEstimate)titleParts.push(`Scout estimate: ~${known?.zombies??0} zombie${known?.zombies===1?'':'s'}`)
+      else if(!zone.discovered)titleParts.push('unexplored · zombie count unknown')
+      else if(known?.zombies===null||known?.zombies===undefined)titleParts.push('visited · zombie count unknown')
+      else if(known.freshness==='fresh')titleParts.push(`${known.zombies} zombies observed today${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
+      else titleParts.push(`last known: ${known.zombies} zombies · Day ${known.lastObservedDay??'?'}${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
+      if(zone.discovered){
         titleParts.push(depleted?'search: depleted':'search: available')
         titleParts.push(zone.groundItems.length?`ground: ${stackedGroundLabel(zone.groundItems)}`:'ground: empty')
       }
