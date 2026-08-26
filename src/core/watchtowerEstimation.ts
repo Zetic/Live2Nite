@@ -47,8 +47,9 @@ export function contributeWatchtowerEstimation(state:GameState,citizenId:string)
 
 /**
  * Autonomous estimation uses the same public town action as a player. It is free, once per
- * citizen/day, and never reads the hidden attack value. Bots contribute after the morning
- * planning window so normal 40-citizen towns can collaboratively improve the estimate.
+ * citizen/day, and never reads the hidden attack value. From 08:00 onward, advanceTime records
+ * this contribution before ordinary bot movement so citizens beginning the hour in town retain
+ * the valid daily action and the resulting public estimate can inform same-hour planning.
  */
 export function contributeAutonomousWatchtowerEstimation(state:GameState,controlledCitizenId?:string):GameState{
   if(state.clock.phase!=='day'||state.clock.hour<8||!state.town.construction.watchtower?.completed)return state
