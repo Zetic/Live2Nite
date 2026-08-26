@@ -63,7 +63,7 @@ describe('complete current construction catalog',()=>{
   it('tracks the implementation backlog explicitly',()=>{
     const counts={implemented:0,partial:0,wip:0}
     for(const id of CONSTRUCTION_CATALOG_ORDER)counts[CONSTRUCTION_CATALOG[id].implementation]+=1
-    expect(counts).toEqual({implemented:62,partial:23,wip:81})
+    expect(counts).toEqual({implemented:70,partial:24,wip:72})
     expect(CONSTRUCTION_CATALOG.scouts_lair.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.technicians_workbench.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.battlements.implementation).toBe('implemented')
@@ -71,6 +71,14 @@ describe('complete current construction catalog',()=>{
     expect(CONSTRUCTION_CATALOG.scanner.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.upgraded_map.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.search_tower.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.water_purifier.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.water_filter.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.faucet.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.water_turrets.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.vegetable_plot.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.fertilizer.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.grapeboom.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.outer_world_apple_tree.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.observation_platform.implementation).toBe('partial')
     expect(CONSTRUCTION_CATALOG.henhouse.implementation).toBe('partial')
   })
