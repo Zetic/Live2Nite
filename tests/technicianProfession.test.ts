@@ -7,9 +7,10 @@ import { createInitialGame } from '../src/core/game'
 import { createItemInstance } from '../src/core/items'
 import { equipCitizenProfession } from '../src/core/professions'
 import { enterRuin, getRuinExplorer, getRuinInterior, type RuinInteriorState } from '../src/core/ruinExploration'
-import { takeTechnicianRuinImprint, technicianPoints, TECHNICIAN_MAX_CP, workbenchOutput } from '../src/core/technician'
+import { takeTechnicianRuinImprint, technicianPoints, technicianWorkbenchCost, TECHNICIAN_MAX_CP, workbenchOutput } from '../src/core/technician'
 import { executeCommandWithTechnician } from '../src/core/technicianCommandExecutor'
 import type { Citizen, GameCommand, GameState, SpecialSiteState, WorldZone } from '../src/core/types'
+import { workshopRecipeApCost } from '../src/core/workshop'
 import { zoneKey } from '../src/core/world'
 
 function replaceCitizen(game:GameState,citizen:Citizen):GameState{return{...game,citizens:game.citizens.map((candidate)=>candidate.id===citizen.id?citizen:candidate)}}
@@ -81,24 +82,45 @@ describe('Technician profession',()=>{
     expect(getLegalActions(wounded,'c01').some((candidate)=>candidate.type==='COMBINE_ITEMS'&&candidate.itemIds.length===1)).toBe(false)
   })
 
-  it('activates the Technicians Workbench and lets a Technician choose one random-recipe output per day for 4 CP',()=>{
+  it('adds the +4 Technician Workbench surcharge to the ordinary Workshop cost',()=>{
     expect(CONSTRUCTION_CATALOG.technicians_workbench.implementation).toBe('implemented')
     let game=workshop(createInitialGame(9007,1,'technician'),true)
     game={...game,town:{...game.town,bank:[createItemInstance('device','broken_electronic_device')]}}
+    const ordinaryCost=workshopRecipeApCost(game,'dismantle_electronic_device','c01')
+    expect(ordinaryCost).toBe(3)
+    expect(technicianWorkbenchCost(game.citizens[0],ordinaryCost)).toBe(7)
     const selected=command(game,'WORKSHOP_CONVERT',(candidate)=>candidate.recipeId==='dismantle_electronic_device'&&workbenchOutput(candidate)==='nuts_and_bolts')
     const rng=game.rngState
     const result=executeCommandWithTechnician(game,selected)
     expect(result.state.rngState).toBe(rng)
-    expect(result.state.citizens[0].ap).toBe(6)
-    expect(technicianPoints(result.state.citizens[0])).toBe(2)
+    expect(result.events).toContainEqual(expect.objectContaining({type:'AP_SPENT',amount:1}))
+    expect(result.state.citizens[0].ap).toBe(5)
+    expect(technicianPoints(result.state.citizens[0])).toBe(0)
     expect(result.state.citizens[0].daily.technicianWorkbenchUsed).toBe(true)
     expect(result.state.town.bank).toContainEqual(expect.objectContaining({type:'nuts_and_bolts'}))
     expect(getLegalActions(result.state,'c01').some((candidate)=>candidate.type==='WORKSHOP_CONVERT'&&Boolean(workbenchOutput(candidate)))).toBe(false)
   })
 
-  it('charges an ordinary citizen 6 AP for the once-daily Workbench selection',()=>{
+  it('applies Factory and Hacksaw discounts to the base before the Workbench surcharge',()=>{
+    let game=workshop(createInitialGame(9011,1,'technician'),true)
+    game={...game,town:{...game.town,bank:[createItemInstance('device','broken_electronic_device')],construction:{...game.town.construction,factory:{...game.town.construction.factory,completed:true,discovered:true}}}}
+    game=replaceCitizen(game,{...game.citizens[0],ap:0,inventory:[createItemInstance('saw','saw_tool')]})
+    const ordinaryCost=workshopRecipeApCost(game,'dismantle_electronic_device','c01')
+    expect(ordinaryCost).toBe(1)
+    expect(technicianWorkbenchCost(game.citizens[0],ordinaryCost)).toBe(5)
+    const selected=command(game,'WORKSHOP_CONVERT',(candidate)=>candidate.recipeId==='dismantle_electronic_device'&&workbenchOutput(candidate)==='electronic_component')
+    game=executeCommandWithTechnician(game,selected).state
+    expect(game.citizens[0].ap).toBe(0)
+    expect(technicianPoints(game.citizens[0])).toBe(1)
+  })
+
+  it('adds the +6 non-Technician Workbench surcharge to the ordinary Workshop cost',()=>{
     let game=workshop(createInitialGame(9008,1,'guardian'),true)
     game={...game,town:{...game.town,bank:[createItemInstance('device','broken_electronic_device')]}}
+    expect(workshopRecipeApCost(game,'dismantle_electronic_device','c01')).toBe(3)
+    expect(technicianWorkbenchCost(game.citizens[0],3)).toBe(9)
+    expect(getLegalActions(game,'c01').some((candidate)=>candidate.type==='WORKSHOP_CONVERT'&&Boolean(workbenchOutput(candidate)))).toBe(false)
+    game=replaceCitizen(game,{...game.citizens[0],ap:9})
     const selected=command(game,'WORKSHOP_CONVERT',(candidate)=>candidate.recipeId==='dismantle_electronic_device'&&workbenchOutput(candidate)==='battery')
     game=executeCommandWithTechnician(game,selected).state
     expect(game.citizens[0].ap).toBe(0)
