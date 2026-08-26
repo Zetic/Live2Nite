@@ -85,6 +85,24 @@ export type CitizenStatusId =
 export type CitizenStatusChangeReason = 'desert_travel' | 'drank_water' | 'nightly_progression' | 'item_effect'
 export type ItemUseActionId = 'bandage' | 'paracetoid' | 'anabolic_steroids' | 'valium_shot' | 'drink_alcohol' | 'ems_system'
 export type CampingOutlook = 'suicidal' | 'very_poor' | 'poor' | 'limited' | 'satisfactory' | 'decent'
+export type SurvivalistForageKind = 'food' | 'water'
+export interface CampingChanceBreakdown {
+  previous:number
+  tomb:number
+  town:number
+  zone:number
+  zoneBuilding:number
+  lighthouse:number
+  campitems:number
+  zombies:number
+  campers:number
+  night:number
+  distance:number
+  devastated:number
+  raw:number
+  cap:number
+  final:number
+}
 export type ZoneIntelFreshness = 'fresh' | 'stale' | 'unknown'
 export type ZoneControlState = 'secure' | 'fragile' | 'temporary' | 'relative' | 'trapped'
 export type CoordinationCommitmentKind = 'gate_primary' | 'gate_backup' | 'construction'
@@ -93,7 +111,7 @@ export interface GameClock { hour: number; phase: ClockPhase }
 export interface ItemInstance { id: string; type: ItemType; state?: ItemState }
 export type CitizenLocation = { type: 'town' } | { type: 'world'; x: number; y: number }
 export interface CitizenHome { level:HomeLevel; defense:number; storage:ItemInstance[]; storageCapacity:number; upgradedDay:number|null; improvements:Partial<Record<HomeImprovementId,number>>; holdsBody:boolean; corpseAttacked:boolean }
-export interface CitizenDailyState { ate:boolean; drank:boolean; waterTaken:boolean; bonusWaterTaken?:boolean; woundTreated?:boolean }
+export interface CitizenDailyState { ate:boolean; drank:boolean; waterTaken:boolean; bonusWaterTaken?:boolean; woundTreated?:boolean; survivalManualUsed?:boolean; survivalistAreaUsed?:boolean }
 export interface CitizenStatusState {
   hydration:HydrationStatus
   desertStepsToday:number
@@ -106,7 +124,7 @@ export interface CitizenStatusState {
   hangover:boolean
   immune:boolean
 }
-export interface CitizenCampingState { hidden:boolean; survivalChance:number|null; hiddenDay:number|null; nightsSurvived:number; lastSurvivedDay:number|null }
+export interface CitizenCampingState { hidden:boolean; grave?:boolean; survivalChance:number|null; chanceBreakdown?:CampingChanceBreakdown|null; hiddenDay:number|null; nightsSurvived:number; lastSurvivedDay:number|null }
 export interface TemporaryControlState { zoneKey:string; grantedDay:number; grantedHour:number }
 export interface RelativeControlState { zoneKey:string }
 export interface Citizen { id:string; name:string; controller:CitizenControllerKind; alive:boolean; ap:number; maxAp:number; scoutPoints?:number; scoutPointBonusNextDay?:number; location:CitizenLocation; inventory:ItemInstance[]; inventoryCapacity:number; home:CitizenHome; corpseDisposition:CorpseDisposition|null; daily:CitizenDailyState; status:CitizenStatusState; camping:CitizenCampingState; temporaryControl:TemporaryControlState|null; relativeControl:RelativeControlState|null }
@@ -119,7 +137,7 @@ export interface ZoneIntelState { observedZombies:number|null; lastObservedDay:n
 export interface WorldState { minX:number; maxX:number; minY:number; maxY:number; zones:Record<string,WorldZone>; intel:Record<string,ZoneIntelState> }
 export interface ConstructionProjectState { id:ConstructionId; discovered:boolean; apContributed:number; completed:boolean }
 export interface TownWellState { water:number }
-export interface TownState { gateOpen:boolean; defense:number; bank:ItemInstance[]; construction:Record<ConstructionId,ConstructionProjectState>; well:TownWellState }
+export interface TownState { gateOpen:boolean; defense:number; bank:ItemInstance[]; construction:Record<ConstructionId,ConstructionProjectState>; well:TownWellState; devastated?:boolean }
 export interface HomeAttackOutcome { citizenId:string; zombies:number; defense:number; survived:boolean }
 export interface NightReport { day:number; attackStrength:number; defenseBeforeAttack:number; effectiveDefense:number; gateOpen:boolean; breached:boolean; outsideDeaths:number; campingSurvivors?:number; campingDeaths?:number; zombiesInside?:number; homeDeaths?:number; dehydrationDeaths?:number; infectionDeaths?:number; withdrawalDeaths?:number; corpseReanimations?:number; corpseAttackDeaths?:number; corpseWaterLost?:number; homeAttacks?:HomeAttackOutcome[] }
 export interface WorldZombieChange { zoneKey:string; before:number; after:number }
@@ -134,6 +152,8 @@ export type GameCommand =
   | {type:'MOVE';citizenId:string;direction:Direction}
   | {type:'RECAMOUFLAGE';citizenId:string}
   | {type:'MAP_WASTELAND';citizenId:string}
+  | {type:'SURVIVALIST_SEARCH_FOOD';citizenId:string}
+  | {type:'SURVIVALIST_SEARCH_WATER';citizenId:string}
   | {type:'SEARCH_ZONE';citizenId:string}
   | {type:'EXCAVATE_SPECIAL_SITE';citizenId:string}
   | {type:'SEARCH_SPECIAL_SITE';citizenId:string}
@@ -143,6 +163,7 @@ export type GameCommand =
   | {type:'USE_WEAPON';citizenId:string;itemId:string}
   | {type:'FLEE_ZOMBIES';citizenId:string}
   | {type:'IMPROVE_CAMP';citizenId:string}
+  | {type:'DIG_CAMPING_GRAVE';citizenId:string}
   | {type:'HIDE_FOR_NIGHT';citizenId:string}
   | {type:'LEAVE_HIDEOUT';citizenId:string}
   | {type:'DRUG_TAMER_DOG';citizenId:string;itemId:string}
@@ -179,12 +200,13 @@ export type GameEvent = (
   | {type:'SCOUT_CAMOUFLAGE_SET';day:number;citizenId:string;active:boolean;reason:'recamouflaged'|'detected'|'action'}
   | {type:'SCOUT_VISIT_RECORDED';day:number;citizenId:string;zoneKey:string}
   | {type:'SCOUT_DETECTION_RESOLVED';day:number;citizenId:string;zoneKey:string;chancePercent:number;spotted:boolean;rngStateAfter:number}
+  | {type:'SURVIVALIST_FORAGE_RESOLVED';day:number;citizenId:string;kind:SurvivalistForageKind;chancePercent:number;success:boolean;apAfter:number;statusAfter:CitizenStatusState;dailyAfter:CitizenDailyState;rngStateAfter:number}
   | {type:'GATE_SET';day:number;open:boolean;citizenId:string}
   | {type:'CITIZEN_LOCATION_CHANGED';day:number;citizenId:string;location:CitizenLocation;desertStep?:boolean}
   | {type:'CITIZEN_STATUS_CHANGED';day:number;citizenId:string;status:CitizenStatusState;reason:CitizenStatusChangeReason}
   | {type:'CAMP_IMPROVED';day:number;citizenId:string;zoneKey:string;amount:number}
   | {type:'CAMP_IMPROVEMENTS_DECAYED';day:number;zoneKey:string;amount:number}
-  | {type:'CITIZEN_HIDING_SET';day:number;citizenId:string;hidden:boolean;survivalChance:number|null}
+  | {type:'CITIZEN_HIDING_SET';day:number;citizenId:string;hidden:boolean;survivalChance:number|null;grave?:boolean;breakdown?:CampingChanceBreakdown|null}
   | {type:'CAMPING_RESOLVED';day:number;citizenId:string;survivalChance:number;roll:number;survived:boolean}
   | {type:'CAMPING_BLUEPRINT_DROPPED';day:number;citizenId:string;zoneKey:string;item:ItemInstance;distanceKm:number}
   | {type:'ZONE_DISCOVERED';day:number;zoneKey:string}
