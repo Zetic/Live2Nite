@@ -23,7 +23,7 @@ export function attackRangeForDay(day:number):AttackRange{const historical=HISTO
 function isolatedNightSeed(seed:number,day:number,salt:number):number{const mixed=((seed>>>0)^Math.imul(day+1,0x9e3779b1)^salt)>>>0;return mixed||1}
 export function attackStrengthForDay(seed:number,day:number):number{const range=attackRangeForDay(day);return randomInt(isolatedNightSeed(seed,day,0xa511e9b3),range.min,range.max).value}
 
-function estimationDayFactor(day:number):number{return day<=15?1:day<=20?.75:day<=30?.5:day<=40?.25:.15}
+function estimationDayFactor(day:number):number{return day<=15?1:day<=20?0.75:day<=30?0.5:day<=40?0.25:0.15}
 function reduceEstimationOffsets(seed:number,minimum:number,maximum:number,weightedContributions:number):{minimum:number;maximum:number}{
   let minOffset=Math.max(0,minimum);let maxOffset=Math.max(0,maximum);let rng=seed
   const rounds=Math.min(WATCHTOWER_ESTIMATION_TARGET,Math.max(0,Math.floor(weightedContributions)))
@@ -50,8 +50,8 @@ function estimateForDay(state:GameState,day:number,weightedContributions:number,
   const actual=attackStrengthForDay(state.seed,day)
   const factor=estimationDayFactor(day)
   const targetMargin=Math.max(2,Math.round(actual*.10*factor))
-  let targetMin=Math.max(range.min,actual-targetMargin)
-  let targetMax=Math.min(range.max,actual+targetMargin)
+  const targetMin=Math.max(range.min,actual-targetMargin)
+  const targetMax=Math.min(range.max,actual+targetMargin)
   let rng=isolatedNightSeed(state.seed,day,blocks?0x39ca21d7:0x4e35a9c1)
   const initialMin=randomInt(rng,5,26);rng=initialMin.state
   const offsetMin=initialMin.value*factor
@@ -60,8 +60,7 @@ function estimateForDay(state:GameState,day:number,weightedContributions:number,
   let min=Math.max(0,Math.floor(targetMin*(1-reduced.minimum/100)))
   let max=Math.max(min,Math.ceil(targetMax*(1+reduced.maximum/100)))
   if(blocks){const block=Math.max(5,Math.ceil(day/5)*5);min=Math.floor(min/block)*block;max=Math.ceil(max/block)*block}
-  targetMin=min;targetMax=max
-  return{day,min:targetMin,max:targetMax,quality:Math.min(1,weightedContributions/WATCHTOWER_ESTIMATION_TARGET),weightedContributions,basis:range.basis}
+  return{day,min,max,quality:Math.min(1,weightedContributions/WATCHTOWER_ESTIMATION_TARGET),weightedContributions,basis:range.basis}
 }
 /**
  * Public Watchtower information is derived only after the collaborative visibility threshold
