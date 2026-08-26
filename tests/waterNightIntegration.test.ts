@@ -40,7 +40,7 @@ describe('simple Well additions',()=>{
 
 describe('nightly water pipeline',()=>{
   it('funds upgraded Water Turrets, records consumption, and debits the Well through night resolution',()=>{
-    let state=createInitialGame('water-night',1)
+    let state=createInitialGame(9112,1)
     state=complete(state,'water_turrets')
     state={...state,town:{...state.town,gateOpen:false,well:{water:2},upgradeProjects:{...state.town.upgradeProjects,levels:{...state.town.upgradeProjects.levels,water_turrets:1}}}}
     const after=resolveNightAttack(state)
