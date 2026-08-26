@@ -16,6 +16,7 @@ import { getZone, moveCoordinates, zoneControl } from '../core/world'
 import { IndexedDbGameRepository } from '../persistence/IndexedDbGameRepository'
 import { advanceOneHour, advanceToHour, InvalidTimeAdvanceError } from '../simulation/advanceTime'
 import { BankView } from './components/BankView'
+import { BattlementsView } from './components/BattlementsView'
 import { CampingPanel } from './components/CampingPanel'
 import { CitizenRoster } from './components/CitizenRoster'
 import { CitizenStatusBar } from './components/CitizenStatusBar'
@@ -86,6 +87,8 @@ export function App() {
   const homeDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'home_breach').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const corpseDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'corpse_attack').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
   const dehydrationDeathNames = useMemo(() => lastNightDeaths.filter((event) => event.reason === 'dehydration').map((event) => citizenName(game,event.citizenId)), [lastNightDeaths, game])
+  const watchDeathNames = useMemo(() => (game.lastNight?.nightWatch?.outcomes??[]).filter((outcome)=>outcome.result==='dead').map((outcome)=>citizenName(game,outcome.citizenId)), [game])
+  const controlledWatchDeath=useMemo(()=>Boolean(game.lastNight?.nightWatch?.outcomes.some((outcome)=>outcome.citizenId===player.id&&outcome.result==='dead')),[game.lastNight,player.id])
   const controlledDeathReason = useMemo(() => [...game.events].reverse().find((event): event is Extract<GameEvent,{type:'CITIZEN_DIED'}> => event.type === 'CITIZEN_DIED' && event.citizenId === player.id)?.reason ?? null, [game.events, player.id])
 
   useEffect(() => {
@@ -95,6 +98,7 @@ export function App() {
     if (player.location.type === 'world' && isTownOnlyScreen(screen)) setScreen('world')
     if (screen === 'workshop' && !game.town.construction.workshop.completed) setScreen('construction')
     if (screen === 'watchtower' && !game.town.construction.watchtower.completed) setScreen('construction')
+    if (screen === 'battlements' && !game.town.construction.battlements.completed) setScreen('construction')
     if (screen === 'upgrade_projects' && !hasUpgradeProjectsFacility(game)) setScreen('construction')
   }, [player.location.type, screen, game])
 
@@ -158,16 +162,17 @@ export function App() {
         <div className="night-report-copy">
           <span>Night {game.lastNight.day} report</span>
           <strong>{game.lastNight.breached ? `${zombiesInside} zombie${zombiesInside === 1 ? '' : 's'} got inside.` : nightHadCorpseAttack ? 'Undisposed corpses struck inside town.' : 'The town held.'}</strong>
-          <p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}{(game.lastNight.campingSurvivors??0)>0&&` ${game.lastNight.campingSurvivors} citizen(s) survived camping outside.`}{(game.lastNight.corpseReanimations??0)>0&&` ${game.lastNight.corpseReanimations} undisposed corpse(s) reanimated; ${game.lastNight.corpseAttackDeaths??0} citizen(s) were killed and ${game.lastNight.corpseWaterLost??0} Well water was lost.`}</p>
-          {(outsideDeathNames.length > 0 || campingDeathNames.length > 0 || homeDeathNames.length > 0 || corpseDeathNames.length > 0 || dehydrationDeathNames.length > 0) && <div className="night-casualties">
+          <p>Attack {game.lastNight.attackStrength} · Effective defense {game.lastNight.effectiveDefense}.{game.lastNight.nightWatch&&` Night Watch ${game.lastNight.nightWatch.defense} (${game.lastNight.nightWatch.overflowBefore} overflow → ${game.lastNight.nightWatch.overflowAfter}).`}{game.lastNight.gateOpen && ' The gate was left open, so town defense did not apply.'}{(game.lastNight.campingSurvivors??0)>0&&` ${game.lastNight.campingSurvivors} citizen(s) survived camping outside.`}{(game.lastNight.corpseReanimations??0)>0&&` ${game.lastNight.corpseReanimations} undisposed corpse(s) reanimated; ${game.lastNight.corpseAttackDeaths??0} citizen(s) were killed and ${game.lastNight.corpseWaterLost??0} Well water was lost.`}</p>
+          {(outsideDeathNames.length > 0 || campingDeathNames.length > 0 || watchDeathNames.length > 0 || homeDeathNames.length > 0 || corpseDeathNames.length > 0 || dehydrationDeathNames.length > 0) && <div className="night-casualties">
             {outsideDeathNames.length > 0 && <span>Outside without shelter: {outsideDeathNames.join(', ')}</span>}
             {campingDeathNames.length > 0 && <span>Camping failed: {campingDeathNames.join(', ')}</span>}
+            {watchDeathNames.length > 0 && <span>Night Watch: {watchDeathNames.join(', ')}</span>}
             {homeDeathNames.length > 0 && <span>Homes breached: {homeDeathNames.join(', ')}</span>}{corpseDeathNames.length > 0 && <span>Reanimated corpses: {corpseDeathNames.join(', ')}</span>}
             {dehydrationDeathNames.length > 0 && <span>Dehydration: {dehydrationDeathNames.join(', ')}</span>}
           </div>}
         </div>
       </section>}
-      {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Controlled citizen is dead</span><strong>{controlledDeathReason === 'home_breach' ? `${player.name}'s home was overwhelmed.` : controlledDeathReason === 'dehydration' ? `${player.name} died of dehydration.` : controlledDeathReason === 'camping_failure' ? `${player.name}'s hiding place failed during the night.` : controlledDeathReason === 'corpse_attack' ? `${player.name} was killed by a reanimated corpse inside town.` : `${player.name} died outside without a prepared hiding place.`}</strong><p>Open Citizens and take control of another living citizen to continue testing this town.</p></div></section>}
+      {!player.alive && <section className="night-report danger"><div className="night-icon">†</div><div><span>Controlled citizen is dead</span><strong>{controlledWatchDeath?`${player.name} died while standing the Night Watch.`:controlledDeathReason === 'home_breach' ? `${player.name}'s home was overwhelmed.` : controlledDeathReason === 'dehydration' ? `${player.name} died of dehydration.` : controlledDeathReason === 'camping_failure' ? `${player.name}'s hiding place failed during the night.` : controlledDeathReason === 'corpse_attack' ? `${player.name} was killed by a reanimated corpse inside town.` : `${player.name} died outside without a prepared hiding place.`}</strong><p>Open Citizens and take control of another living citizen to continue testing this town.</p></div></section>}
 
       <GameNavigation game={game} screen={screen} outside={player.location.type === 'world'} onChange={changeScreen}/>
 
@@ -179,6 +184,7 @@ export function App() {
         {screen === 'construction' && <ConstructionView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'watchtower' && <WatchtowerView game={game}/>} 
+        {screen === 'battlements' && <BattlementsView game={game} citizenId={player.id} onChange={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
         {screen === 'upgrade_projects' && <UpgradeProjectsView game={game} citizenId={player.id} onVote={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
         {screen === 'world' && <div className="world-screen-layout">
           <div className="world-primary-column">
