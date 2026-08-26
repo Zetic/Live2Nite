@@ -59,7 +59,8 @@ export function executeCommandWithTechnician(state:GameState,command:GameCommand
     requireTechnicianLegal(state,command)
     const recipe=WORKSHOP_RECIPES[command.recipeId]
     const selected=workbenchOutput(command)
-    const cost=selected?technicianWorkbenchCost(citizen):workshopRecipeApCost(state,command.recipeId,citizen.id)
+    const ordinaryCost=workshopRecipeApCost(state,command.recipeId,citizen.id)
+    const cost=selected?technicianWorkbenchCost(citizen,ordinaryCost):ordinaryCost
     const payment=technicianPayment(citizen,cost)
     const inputItemIds=workshopRecipeInputItemIds(state,command.recipeId)
     const normal=selected?null:resolveWorkshopRecipeOutput(state.rngState,command.recipeId)
