@@ -27,7 +27,7 @@ function bankWith(game:GameState,types:ItemType[]):GameState{
 function repeat(type:ItemType,count:number):ItemType[]{return Array.from({length:count},()=>type)}
 function outsideWithTrestle(game:GameState,level?:number):GameState{
   const key=zoneKey(6,0);const zone=game.world.zones[key]
-  return{...game,world:{...game.world,zones:{...game.world.zones,[key]:{...zone,discovered:true,zombies:0,campImprovements:level===undefined?0:Math.floor(level/5),...(level===undefined?{}:{campImprovementLevel:level})}}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x:6,y:0},inventory:[createItemInstance('trestle-field','trestle')]}:citizen)}
+  return{...game,world:{...game.world,zones:{...game.world.zones,[key]:{...zone,discovered:true,zombies:0,specialSite:undefined,campImprovements:level===undefined?0:Math.floor(level/5),...(level===undefined?{}:{campImprovementLevel:level})}}},citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x:6,y:0},inventory:[createItemInstance('trestle-field','trestle')]}:citizen)}
 }
 function withWatch(game:GameState,swedish=false):GameState{
   const construction={...game.town.construction,
@@ -155,7 +155,7 @@ describe('complete Trestle source behavior',()=>{
     const neededActions=getLegalActions(needed,'c01')
     expect(campingAction(needed,needed.citizens[0],neededActions)?.type).not.toBe('IMPROVE_CAMP')
 
-    let spare={...needed,town:{...needed.town,construction:{...needed.town.construction,organized_dump:{...needed.town.construction.organized_dump,completed:true}}}}
+    const spare={...needed,town:{...needed.town,construction:{...needed.town.construction,organized_dump:{...needed.town.construction.organized_dump,completed:true}}}}
     const spareActions=getLegalActions(spare,'c01')
     const choice=campingAction(spare,spare.citizens[0],spareActions)
     expect(choice?.type).toBe('IMPROVE_CAMP')
