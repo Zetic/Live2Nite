@@ -17,6 +17,7 @@ export type ItemActionEffect =
   | {type:'inflict_wound';location?:WoundLocation}
   | {type:'set_daily';flag:DailyFlag;value:boolean}
   | {type:'drink_water'}
+  | {type:'hydrate_if_needed'}
   | {type:'chance';outcomes:readonly {weight:number;effects:readonly ItemActionEffect[]}[]}
 
 export interface ItemUseActionDefinition {
@@ -49,6 +50,14 @@ export const ITEM_USE_ACTIONS:Partial<Record<ItemType,readonly ItemUseActionDefi
   paracetoid:[action({id:'paracetoid',itemType:'paracetoid',label:'Take Paracetoid',sourceActionIds:['drug_par_1','drug_par_2','drug_par_3','drug_par_4'],requirements:[],effects:[{type:'drug_cycle'},{type:'remove_status',status:'infected'},{type:'apply_status',status:'immune'}],consume:true,allowWhenTerrorized:true})],
   anabolic_steroids:[action({id:'anabolic_steroids',itemType:'anabolic_steroids',label:'Take Anabolic Steroids',sourceActionIds:['drug_6ap_1','drug_6ap_2'],requirements:[],effects:[{type:'drug_cycle'},{type:'restore_ap_to',target:6}],consume:true,allowWhenTerrorized:true})],
   valium_shot:[action({id:'valium_shot',itemType:'valium_shot',label:'Use Valium Shot',sourceActionIds:['drug_xana1','drug_xana2','drug_xana3','drug_xana4'],requirements:[],effects:[{type:'drug_cycle'},{type:'remove_status',status:'terrorized'}],consume:true,allowWhenTerrorized:true})],
+  twinoid_500mg:[action({id:'twinoid_500mg',itemType:'twinoid_500mg',label:'Take Twinoid 500mg',sourceActionIds:['drug_8ap_1','drug_8ap_2'],requirements:[],effects:[{type:'drug_cycle'},{type:'restore_ap_to',target:8}],consume:true,allowWhenTerrorized:true})],
+  hydratone_100mg:[action({id:'hydratone_100mg',itemType:'hydratone_100mg',label:'Take Hydratone 100mg',sourceActionIds:['drug_hyd_1','drug_hyd_2','drug_hyd_3','drug_hyd_4','drug_hyd_5','drug_hyd_6'],requirements:[],effects:[{type:'drug_cycle'},{type:'hydrate_if_needed'}],consume:true,allowWhenTerrorized:true})],
+  unlabelled_drug:[action({id:'unlabelled_drug',itemType:'unlabelled_drug',label:'Take Unlabelled Drug',sourceActionIds:['drug_rand_1','drug_rand_2'],requirements:[],effects:[{type:'chance',outcomes:[
+    {weight:40,effects:[{type:'drug_cycle'},{type:'restore_ap_to',target:6}]},
+    {weight:20,effects:[{type:'drug_cycle'},{type:'apply_status',status:'terrorized'}]},
+    {weight:20,effects:[{type:'drug_cycle'},{type:'apply_status',status:'addicted'},{type:'restore_ap_to',target:7}]},
+    {weight:20,effects:[]},
+  ]}],consume:true,allowWhenTerrorized:true})],
   vodka_marinostov:[action({id:'drink_alcohol',itemType:'vodka_marinostov',label:'Drink Vodka Marinostov',sourceActionIds:['alcohol'],requirements:[{type:'status',status:'drunk',present:false},{type:'status',status:'hangover',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'apply_status',status:'drunk'}],consume:true})],
   wake_the_dead:[action({id:'drink_alcohol',itemType:'wake_the_dead',label:'Drink “Wake The Dead”',sourceActionIds:['alcohol'],requirements:[{type:'status',status:'drunk',present:false},{type:'status',status:'hangover',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'apply_status',status:'drunk'}],consume:true})],
   ems_system_charged:[action({id:'ems_system',itemType:'ems_system_charged',label:'Use EMS System',sourceActionIds:['emt'],requirements:[{type:'status',status:'wounded',present:false}],effects:[{type:'restore_ap_to',target:6},{type:'inflict_wound'}],consume:false,morphTo:'ems_system_empty'})],
@@ -91,6 +100,14 @@ function applyEffects(citizen:Citizen,effects:readonly ItemActionEffect[],rngSta
         }
         break
       }
+      case'hydrate_if_needed':{
+        if(status.hydration==='normal')break
+        const pseudo={...citizen,status,daily,ap}
+        const outcome=waterConsumptionOutcome(pseudo)
+        status=outcome.statusAfter
+        if(outcome.restoresAp){const target=woundAdjustedApTarget(status,6);ap=Math.max(ap,target);restoresAp=true;daily.drank=true}
+        break
+      }
       case'chance':{
         const total=effect.outcomes.reduce((sum,outcome)=>sum+Math.max(0,Math.trunc(outcome.weight)),0)
         if(total<=0)break
@@ -127,11 +144,11 @@ function effectLabel(effect:ItemActionEffect):string{
     case'inflict_wound':return effect.location?`inflict a ${effect.location} wound`:'inflict a random body-part wound'
     case'set_daily':return`${effect.flag.replaceAll('_',' ')} = ${effect.value}`
     case'drink_water':return'treat hydration and refresh AP when eligible'
+    case'hydrate_if_needed':return'treat Thirsty/Dehydrated using Hydratone hydration rules'
     case'chance':return'random weighted outcome'
   }
 }
 export function itemUseActionSummary(definition:ItemUseActionDefinition):string{return definition.effects.map(effectLabel).join(' · ')}
-
 
 export function statusRelationsForEffects(effects:readonly ItemActionEffect[]):StatusEffectRelation[]{
   const relations:StatusEffectRelation[]=[]
@@ -152,9 +169,10 @@ export function statusRelationsForEffects(effects:readonly ItemActionEffect[]):S
         if(effect.value&&effect.flag==='drank')add('satisfied_water','acquire','Marks the daily water refresh as used.')
         break
       case'drink_water':
+      case'hydrate_if_needed':
         add('dehydrated','clear','Improves Dehydrated to Thirsty without an AP refresh.')
         add('thirsty','clear','Clears Thirsty to normal hydration.')
-        add('satisfied_water','acquire','Applies Refreshed when this water qualifies for the daily AP refresh.')
+        add('satisfied_water','acquire','Applies Refreshed when this hydration treatment qualifies for the daily AP refresh.')
         break
       case'chance':for(const outcome of effect.outcomes)for(const nested of outcome.effects)inspect(nested);break
     }
