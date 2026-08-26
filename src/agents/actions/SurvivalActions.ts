@@ -1,4 +1,5 @@
-import { campingChancePercent } from '../../core/camping'
+import { campImproveCommandItemId, campingChancePercent } from '../../core/camping'
+import { missingMaterials } from '../../core/construction'
 import type { Citizen, GameCommand, GameState } from '../../core/types'
 import { AI_TUNING } from '../AiTuning'
 import { bankAction, pick } from './actionSelectors'
@@ -29,15 +30,21 @@ export function survivalistRecoveryAction(citizen:Citizen,actions:GameCommand[])
   if(actions.some((action)=>action.type==='EAT_ITEM'||action.type==='DRINK_ITEM'))return null
   return pick(actions,'SURVIVALIST_SEARCH_FOOD')??pick(actions,'SURVIVALIST_SEARCH_WATER')
 }
+function organizedDumpStillNeedsTrestles(state:GameState):boolean{return !state.town.construction.organized_dump?.completed&&(missingMaterials(state,'organized_dump').trestle??0)>0}
 export function campingAction(state:GameState,citizen:Citizen,actions:GameCommand[]):GameCommand|null{
   if(citizen.camping.hidden)return null
   const chance=campingChancePercent(state,citizen.id)
-  const improve=pick(actions,'IMPROVE_CAMP')
+  const ordinaryImprove=actions.find((action)=>action.type==='IMPROVE_CAMP'&&!campImproveCommandItemId(action))??null
+  const trestleImprove=actions.find((action)=>action.type==='IMPROVE_CAMP'&&Boolean(campImproveCommandItemId(action)))??null
   const grave=pick(actions,'DIG_CAMPING_GRAVE')
   const graveChance=grave?campingChancePercent(state,citizen.id,{grave:true}):chance
   if(chance<AI_TUNING.campingImproveTargetPercent){
     if(grave&&graveChance>=AI_TUNING.campingImproveTargetPercent)return grave
-    if(citizen.ap>1&&improve)return improve
+    // A Trestle is a scarce Organized Dump material. Preserve it until that two-item bill is
+    // satisfied; after that, a camper down to its last AP can trade it for the stronger +9 site gain.
+    if(citizen.ap===1&&trestleImprove&&!organizedDumpStillNeedsTrestles(state))return trestleImprove
+    if(citizen.ap>1&&ordinaryImprove)return ordinaryImprove
+    if(trestleImprove&&!organizedDumpStillNeedsTrestles(state))return trestleImprove
     if(grave)return grave
   }
   return pick(actions,'HIDE_FOR_NIGHT')
