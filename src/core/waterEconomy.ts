@@ -34,17 +34,11 @@ export function waterTurretTotalDefense(state:GameState):number{
 }
 
 /**
- * MyHordes treats Well consumers as all-or-nothing. Consumers are ordered before water is
- * assigned; a consumer whose complete requirement cannot be paid remains inactive and uses 0.
- * Water Turrets are the directly verified defensive consumer. Pool is retained as a dormant,
- * lower-priority consumer hook because its exact current requirement fixture was not exposed in
- * this source pass; the Pool itself remains WIP and is not activated by this PR.
+ * MyHordes treats verified Well consumers as all-or-nothing. Consumers are ordered before water
+ * is assigned; a consumer whose complete requirement cannot be paid remains inactive and uses 0.
+ * Water Turrets are the only current consumer activated here. Pool remains WIP until its exact
+ * current-source water requirement is verified; no placeholder Pool requirement is simulated.
  */
-export function poolNightlyRequirement(state:GameState):number{
-  if(!state.town.construction.pool?.completed)return 0
-  return Math.min(5,Math.max(1,Math.ceil(state.day/5)))
-}
-
 export function waterConsumerRequests(state:GameState):WaterConsumerRequest[]{
   const requests:WaterConsumerRequest[]=[]
   const turretRequired=waterTurretNightlyRequirement(state)
@@ -57,8 +51,6 @@ export function waterConsumerRequests(state:GameState):WaterConsumerRequest[]{
       label:'Water Turrets',
     })
   }
-  const poolRequired=poolNightlyRequirement(state)
-  if(poolRequired>0)requests.push({projectId:'pool',required:poolRequired,priority:50,defenseBonus:0,label:'Pool'})
   return requests.sort((left,right)=>left.priority-right.priority||right.defenseBonus-left.defenseBonus||left.required-right.required)
 }
 
