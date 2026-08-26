@@ -110,5 +110,9 @@ export function worldZombieEvolutionChanges(state:GameState):WorldZombieChange[]
 
 export function worldZombieEvolutionEvent(state:GameState):GameEvent|null{
   const changes=worldZombieEvolutionChanges(state)
-  return changes.length?{type:'WORLD_ZOMBIES_EVOLVED',day:state.day,hour:0,changes}:null
+  // Searchtower records the selected nightly recovery direction even when natural zombie
+  // evolution produced no changed zones, so retain a no-op world event as the chronicle hook.
+  return changes.length||state.town.construction.search_tower?.completed
+    ? {type:'WORLD_ZOMBIES_EVOLVED',day:state.day,hour:0,changes}
+    : null
 }
