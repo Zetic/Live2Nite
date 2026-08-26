@@ -1,5 +1,5 @@
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS } from './construction'
-import { CONSTRUCTION_CATALOG } from './constructionCatalog'
+import { CONSTRUCTION_CATALOG, type ConstructionImplementationStatus } from './constructionCatalog'
 import { MYHORDES_CURRENT_CONSTRUCTION_COSTS } from './constructionEconomy'
 import type { ConstructionId } from './constructionIds'
 
@@ -9,11 +9,12 @@ import type { ConstructionId } from './constructionIds'
  * inspectable instead of erasing the earlier reconstruction values.
  */
 export function applyCurrentConstructionEconomy():void{
-  // Battlements and Miniature Armory were previously catalogue-only WIP records. Their
-  // current source bills are now verified as part of the Night Watch implementation.
+  // Source bills verified by the focused Night Watch / Watchtower intelligence passes.
   Object.assign(MYHORDES_CURRENT_CONSTRUCTION_COSTS,{
     battlements:{referenceName:'Battlements',apCost:25,resources:{twisted_plank:6,patchwork_beam:2,metal_support:2,nuts_and_bolts:1}},
     miniature_armory:{referenceName:'Miniature Armory',apCost:40,resources:{nuts_and_bolts:1,twisted_plank:10,wrought_iron:8,sheet_metal:2,duct_tape:2}},
+    observation_platform:{referenceName:'Observation platform',apCost:30,resources:{twisted_plank:5,telescope:1,metal_support:1}},
+    upgraded_map:{referenceName:'Upgraded Map',apCost:25,resources:{battery:2,wrought_iron:5,sheet_metal:1,laser_diode:1,working_radio:2}},
   } satisfies Partial<Record<ConstructionId,NonNullable<(typeof MYHORDES_CURRENT_CONSTRUCTION_COSTS)[ConstructionId]>>>)
 
   for(const [id,snapshot] of Object.entries(MYHORDES_CURRENT_CONSTRUCTION_COSTS) as Array<[ConstructionId,NonNullable<(typeof MYHORDES_CURRENT_CONSTRUCTION_COSTS)[ConstructionId]>]>) {
@@ -27,10 +28,10 @@ export function applyCurrentConstructionEconomy():void{
   }
 
   const buildable=BUILDABLE_CONSTRUCTION_IDS as ConstructionId[]
-  const activate=(id:ConstructionId,effectLabel?:string):void=>{
-    CONSTRUCTION_CATALOG[id].implementation='implemented'
+  const activate=(id:ConstructionId,effectLabel?:string,status:ConstructionImplementationStatus='implemented'):void=>{
+    CONSTRUCTION_CATALOG[id].implementation=status
     CONSTRUCTION_CATALOG[id].wipReason=null
-    CONSTRUCTIONS[id].implementationStatus='implemented'
+    CONSTRUCTIONS[id].implementationStatus=status
     CONSTRUCTIONS[id].wipReason=undefined
     CONSTRUCTIONS[id].playable=true
     if(effectLabel)CONSTRUCTIONS[id].effectLabel=effectLabel
@@ -38,7 +39,6 @@ export function applyCurrentConstructionEconomy():void{
   }
 
   // Scout gameplay now supplies the source-backed daily mapping / next-day SP behavior.
-  // Keep both catalogue presentation metadata and runtime build-gating metadata aligned.
   activate('scouts_lair')
 
   // Technician gameplay supplies the retained Prime Workbench behavior: one controlled
@@ -49,6 +49,18 @@ export function applyCurrentConstructionEconomy():void{
   // carried watchpoint/watchimpact equipment; neither building adds normal town defense.
   activate('battlements','Unlocks voluntary Night Watch (10 Watchmen before upgrades)')
   activate('miniature_armory','Enables ordinary carried Night Watch equipment')
+
+  // Watchtower intelligence is collaborative in current MyHordes. Scanner doubles the
+  // contribution weight (the same condition as a Telescope in the Bank), while Predictor
+  // spends weighted contributions beyond today's 24-point target on tomorrow's estimate.
+  activate('scanner','Doubles Watchtower estimation contribution weight')
+  activate('upgraded_map','Nightly Observation Platform intelligence records exact zombie counts')
+  activate('search_tower','Reveals the nightly recovery direction; base depleted-zone recovery chance 25%')
+
+  // The directly verified Observation Platform radius progression is active. Source levels
+  // 4–5 also grant free-return distance; those two effects remain outside this pass, so the
+  // construction is intentionally Partial rather than claiming the complete upgrade track.
+  activate('observation_platform','Upgradeable nightly map-intelligence radius: 3 / 6 / 10 km','partial')
 
   // Current MyHordes camping calculation gives a completed Lighthouse +25 camping points.
   const lighthouse=CONSTRUCTIONS.lighthouse
