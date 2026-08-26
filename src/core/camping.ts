@@ -15,7 +15,8 @@ export const ORDINARY_CAMPING_CAP_PERCENT = 90
 export const SURVIVALIST_CAMPING_CAP_PERCENT = 100
 export const LIGHTHOUSE_CAMPING_BONUS = 25
 export const CAMPING_ITEM_BONUS = 5
-export const CAMPING_ITEM_TYPES = ['smelly_meat','sheet'] as const
+/** Source-confirmed carry bonuses: Smelly Meat (smelly_meat_#00) and Groundsheet (sheet_#00). Runtime item mappings are intentionally separate from the camping formula. */
+export const CAMPING_ITEM_TYPES:readonly string[] = ['smelly_meat','sheet']
 
 const PREVIOUS_CAMPING_POINTS = [80,60,35,15,0,-50,-100,-200,-400,-1000,-2000,-5000] as const
 const DISTANCE_POINTS = [-100,-75,-50,-25,-10,0,0,0,0,0,0,0,5,7,10,15,20] as const
@@ -27,7 +28,7 @@ function previousCampingPoints(nights:number):number{return PREVIOUS_CAMPING_POI
 function distanceCampingPoints(distance:number):number{return DISTANCE_POINTS[Math.min(Math.max(0,Math.floor(distance)),DISTANCE_POINTS.length-1)]}
 function crowdCampingPoints(previousCampers:number):number{return PREVIOUS_CAMPERS_POINTS[Math.min(Math.max(0,Math.floor(previousCampers)),PREVIOUS_CAMPERS_POINTS.length-1)]}
 function hiddenBeforeCitizen(state:GameState,citizen:Citizen,zone:WorldZone):number{return state.citizens.filter((other)=>other.id!==citizen.id&&other.alive&&other.location.type==='world'&&other.location.x===zone.x&&other.location.y===zone.y&&other.camping.hidden).length}
-function campingItemPoints(citizen:Citizen):number{return citizen.inventory.reduce((sum,item)=>sum+(CAMPING_ITEM_TYPES.includes(item.type as typeof CAMPING_ITEM_TYPES[number])?CAMPING_ITEM_BONUS:0),0)}
+function campingItemPoints(citizen:Citizen):number{return citizen.inventory.reduce((sum,item)=>sum+(CAMPING_ITEM_TYPES.includes(item.type)?CAMPING_ITEM_BONUS:0),0)}
 function ruinCampingPoints(zone:WorldZone,previousCampers:number):number{
   const site=zone.specialSite
   if(!site)return-25
@@ -58,11 +59,11 @@ export function campingChanceBreakdown(state:GameState,citizenId:string,options:
     zoneBuilding:ruinCampingPoints(zone,previousCampers),
     lighthouse:state.town.construction.lighthouse?.completed?LIGHTHOUSE_CAMPING_BONUS:0,
     campitems:campingItemPoints(citizen),
-    zombies:zone.zombies*campingZombiePenaltyPerZombie(citizen),
+    zombies:-zone.zombies*campingZombiePenaltyPerZombie(citizen),
     campers:crowdCampingPoints(previousCampers),
     // Live2Nite currently has no traversable nighttime World Beyond phase; source night-mode +10 is therefore not fabricated.
     night:0,
-    distance:distanceCampingPoints(distanceToTown(zone.x,zone.y)),
+    distance:distanceCampingPoints(distanceToTown(citizen.location.x,citizen.location.y)),
     devastated:state.town.devastated?-50:0,
   }
   const raw=Object.values(factors).reduce((sum,value)=>sum+value,0)
