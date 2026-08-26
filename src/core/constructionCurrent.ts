@@ -27,8 +27,8 @@ export function applyCurrentConstructionEconomy():void{
   CONSTRUCTIONS.scouts_lair.wipReason=undefined
   CONSTRUCTIONS.scouts_lair.playable=true
 
-  // Technician gameplay supplies the Prime/current-repository Workbench behavior: one
-  // controlled-output Workshop operation per citizen/day, with Technician-preferred cost.
+  // Technician gameplay supplies the retained Prime Workbench behavior: one controlled
+  // random-Workshop output per citizen/day, with its profession-specific cost surcharge.
   CONSTRUCTION_CATALOG.technicians_workbench.implementation='implemented'
   CONSTRUCTION_CATALOG.technicians_workbench.wipReason=null
   CONSTRUCTIONS.technicians_workbench.implementationStatus='implemented'
