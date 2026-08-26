@@ -2,7 +2,7 @@ import { scoutZombieEstimate } from '../core/scout'
 import type { GameState, SpecialSiteState, ZoneIntelFreshness } from '../core/types'
 import { getZone, zoneKey } from '../core/world'
 
-export type AgentZombieIntelKind='none'|'observed'|'scout_estimate'
+export type AgentZombieIntelKind='none'|'observed'|'map_estimate'|'scout_estimate'
 export interface AgentZoneKnowledge {
   x: number
   y: number
@@ -30,7 +30,7 @@ function freshnessFor(state:GameState,x:number,y:number):ZoneIntelFreshness{
 /**
  * Citizen-aware world knowledge remains a projection of legal information, never raw world state.
  * A Scout viewer may receive the current bounded adjacent-zone estimate supplied by Scout sense;
- * hidden resources, sites, and exact zombie counts remain suppressed until independently discovered.
+ * Observation Platform can also supply a coarse nightly map estimate until Upgraded Map exists.
  */
 export function createAgentWorldKnowledge(state: GameState,viewerCitizenId?:string): AgentWorldKnowledge {
   const viewer=viewerCitizenId?state.citizens.find((citizen)=>citizen.id===viewerCitizenId)??null:null
@@ -43,8 +43,9 @@ export function createAgentWorldKnowledge(state: GameState,viewerCitizenId?:stri
       const freshness=freshnessFor(state,x,y)
       const estimate=viewer?scoutZombieEstimate(state,viewer,zone):null
       const currentObservation=freshness==='fresh'&&intel?.observedZombies!==null&&intel?.observedZombies!==undefined
+      const mapEstimate=currentObservation&&intel?.lastObservedHour===-1
       const zombies=currentObservation?intel!.observedZombies:estimate!==null?estimate:intel?.observedZombies??null
-      const zombieIntel:AgentZombieIntelKind=currentObservation?'observed':estimate!==null?'scout_estimate':zombies!==null?'observed':'none'
+      const zombieIntel:AgentZombieIntelKind=currentObservation?(mapEstimate?'map_estimate':'observed'):estimate!==null?'scout_estimate':zombies!==null?(intel?.lastObservedHour===-1?'map_estimate':'observed'):'none'
       const effectiveFreshness:ZoneIntelFreshness=estimate!==null&&!currentObservation?'fresh':freshness
       const lastObservedDay=zombieIntel==='scout_estimate'?null:intel?.lastObservedDay??null
       const lastObservedHour=zombieIntel==='scout_estimate'?null:intel?.lastObservedHour??null
