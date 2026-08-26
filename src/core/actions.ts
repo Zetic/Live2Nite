@@ -1,5 +1,5 @@
 import { bankCount } from './bank'
-import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from './camping'
+import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, canImproveCamp, trestleCampImproveCommands } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
@@ -163,7 +163,10 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
       else if(zone.searchesRemaining===0&&!(zone.depletedSearchedBy??[]).includes(citizenId))actions.push({type:'SEARCH_ZONE',citizenId})
       if(canReplenishWithSpade(state,citizen,zone))actions.push({type:'SEARCH_ZONE',citizenId,replenishWithSpade:true} as unknown as ScavengerSearchCommand)
     }
-    if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone))actions.push({type:'IMPROVE_CAMP',citizenId})
+    if(citizen.ap>=CAMP_IMPROVEMENT_AP_COST&&canImproveCamp(zone)){
+      actions.push({type:'IMPROVE_CAMP',citizenId})
+      actions.push(...trestleCampImproveCommands(citizen,zone))
+    }
     if(citizen.ap>=CAMPING_GRAVE_AP_COST)actions.push({type:'DIG_CAMPING_GRAVE',citizenId})
     actions.push({type:'HIDE_FOR_NIGHT',citizenId})
   }
