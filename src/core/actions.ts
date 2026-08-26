@@ -3,6 +3,7 @@ import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, canImproveCamp } from 
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
 import { combinationCommandsForCitizen } from './combinations'
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
+import { homeLabCanUse } from './drugLab'
 import { HOME_IMPROVEMENTS, canBuildImprovementSource, foreignHomeStorageVisible, hasPersonalMaterials, homeImprovementLevel, homeLevelSourceReady, homePreventsTheft, homeTransferUsedToday, improvementNextLevel, nextHomeDefinition, siestaUsedToday } from './home'
 import { canCarryItem } from './inventory'
 import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
@@ -102,6 +103,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
         if(canBuildImprovementSource(definition,nextLevel)&&citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})
       }
       if(homeImprovementLevel(citizen,'siesta')>0&&citizen.ap<citizen.maxAp&&!siestaUsedToday(state,citizen.id))actions.push({type:'USE_HOME_SIESTA',citizenId})
+      if(homeLabCanUse(state,citizen))actions.push({type:'USE_HOME_LAB',citizenId})
     }
     if(citizen.ap>=CONSTRUCTION_AP_COST&&canContributeConstructionByStatus(citizen)){for(const projectId of constructionFrontier(state))if(hasProjectMaterials(state,projectId))actions.push({type:'CONTRIBUTE_CONSTRUCTION',citizenId,projectId})}
     if(state.town.construction.workshop.completed){for(const recipeId of WORKSHOP_RECIPE_ORDER)if((!hasHandWound(citizen)||WORKSHOP_RECIPES[recipeId].category!=='repair')&&citizen.ap>=workshopRecipeApCost(state,recipeId,citizen.id)&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})}
