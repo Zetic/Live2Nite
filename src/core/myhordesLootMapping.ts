@@ -24,6 +24,7 @@ export const MYHORDES_NORMAL_LOOT_MAPPING:Readonly<Partial<Record<string,MyHorde
   'pharma_#00':mapped('pharmaceutical_products'),
   'meca_parts_#00':mapped('nuts_and_bolts'),
   'rustine_#00':mapped('duct_tape'),
+  'jerrycan_#00':mapped('full_jerrycan'),
   'explo_#00':mapped('semtex'),
   'tube_#00':mapped('copper_pipe'),
   'electro_#00':mapped('electronic_component'),
