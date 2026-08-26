@@ -56,7 +56,7 @@ describe('item codex',()=>{
     expect(filterCodexItems('all','myhordes').length).toBeGreaterThan(0)
     expect(filterCodexItems('all','defensive wall').map((entry)=>entry.type)).toContain('twisted_plank')
     const marshmallows=filterCodexItems('all','dried marshmallows')
-    expect(marshmallows.some((entry)=>entry.name==='Dried Marshmallows'&&entry.implementation==='wip'&&entry.type===null)).toBe(true)
+    expect(marshmallows.some((entry)=>entry.name==='Dried Marshmallows'&&entry.runtimeTypes.includes('dried_marshmallows'))).toBe(true)
     expect(filterCodexItems('all','WIP').some((entry)=>entry.states.some((state)=>state.implementation==='wip'))).toBe(true)
   })
 
