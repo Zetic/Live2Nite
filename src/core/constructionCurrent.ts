@@ -24,6 +24,7 @@ export function applyCurrentConstructionEconomy():void{
     central_cafeteria:{referenceName:'Central Cafeteria',apCost:20,resources:{pharmaceutical_products:1,patchwork_beam:5,metal_support:1,table:1,bag_of_damp_grass:1,carcinogenic_oven:1}},
     garbage_dump:{referenceName:'Garbage Dump',apCost:50,resources:{twisted_plank:3,patchwork_beam:10,wrought_iron:5,metal_support:10,nuts_and_bolts:1,unshaped_concrete_block:2}},
     dump_upgrade:{referenceName:'Dump Upgrade',apCost:150,resources:{water_ration:20,patchwork_beam:15,metal_support:15,poison_gland:1,nuts_and_bolts:1}},
+    organized_dump:{referenceName:'Organized Dump',apCost:20,resources:{nuts_and_bolts:2,unshaped_concrete_block:1,patchwork_beam:5,metal_support:10,trestle:2}},
   } satisfies Partial<Record<ConstructionId,NonNullable<(typeof MYHORDES_CURRENT_CONSTRUCTION_COSTS)[ConstructionId]>>>)
 
   for(const [id,snapshot] of Object.entries(MYHORDES_CURRENT_CONSTRUCTION_COSTS) as Array<[ConstructionId,NonNullable<(typeof MYHORDES_CURRENT_CONSTRUCTION_COSTS)[ConstructionId]>]>) {
@@ -58,9 +59,8 @@ export function applyCurrentConstructionEconomy():void{
   activate('central_cafeteria','Doubles personal Kitchen daily cooking attempts')
 
   // Garbage Dump. Base dump accepts every supported source category at 4 defense for defensive
-  // objects and 1 for all other supported categories. Dump plans add category yield, and the
-  // wet Dump Upgrade adds +1 to every item. Organized Dump's 0-AP resolver is implemented in
-  // garbageDump.ts but its construction remains fail-closed until Trestle acquisition exists.
+  // objects and 1 for all other supported categories. Dump plans add category yield, the wet
+  // Dump Upgrade adds +1 to every item, and Organized Dump removes the normal 1 AP action cost.
   activate('garbage_dump','Destroy supported Bank items for temporary defense until the next attack')
   activate('dump_upgrade','Every Garbage Dump item grants +1 additional temporary defense')
   activate('defence_dump','Defensive objects grant +2 additional temporary defense')
@@ -69,6 +69,7 @@ export function applyCurrentConstructionEconomy():void{
   activate('wood_dump','Rotting Logs and Twisted Planks grant +1 additional temporary defense')
   activate('metal_dump','Scrap Metal and Wrought Iron grant +1 additional temporary defense')
   activate('animal_dump','Supported animals grant +6 additional temporary defense')
+  activate('organized_dump','Garbage Dump actions cost 0 AP')
 
   // Well / Pump economy. Existing current-source fidelity snapshots retain their verified
   // completion-water values for Pump, Drilling Rig, Hydraulic Network, Eden, Derrick and
