@@ -55,7 +55,7 @@ export function applyCurrentConstructionEconomy():void{
   // spends weighted contributions beyond today's 24-point target on tomorrow's estimate.
   activate('scanner','Doubles Watchtower estimation contribution weight')
   activate('upgraded_map','Nightly Observation Platform intelligence records exact zombie counts')
-  activate('search_tower','Reveals the nightly recovery direction; base depleted-zone recovery chance 25%')
+  activate('search_tower','Reveals the nightly recovery sector; upgrades natural 25% recovery chance')
 
   // The directly verified Observation Platform radius progression is active. Source levels
   // 4–5 also grant free-return distance; those two effects remain outside this pass, so the
