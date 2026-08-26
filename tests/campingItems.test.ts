@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { campingChanceBreakdown } from '../src/core/camping'
 import { createInitialGame } from '../src/core/game'
-import { createItemInstance } from '../src/core/items'
+import { createItemInstance, NORMAL_SCAVENGE_LOOT_POOL } from '../src/core/items'
+import { MYHORDES_NORMAL_LOOT_MAPPING } from '../src/core/myhordesLootMapping'
 import type { GameState } from '../src/core/types'
 import { zoneKey } from '../src/core/world'
 
@@ -15,9 +16,13 @@ function outside(game:GameState):GameState{
 }
 
 describe('carried camping items',()=>{
-  it('maps Groundsheet and Smelly Meat as ordinary runtime item identities',()=>{
+  it('maps source Groundsheet and Smelly Meat into ordinary runtime loot identities',()=>{
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['sheet_#00']?.type).toBe('groundsheet')
+    expect(MYHORDES_NORMAL_LOOT_MAPPING['smelly_meat_#00']?.type).toBe('smelly_meat')
     expect(createItemInstance('ground','groundsheet').type).toBe('groundsheet')
     expect(createItemInstance('meat','smelly_meat').type).toBe('smelly_meat')
+    expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('groundsheet')
+    expect(NORMAL_SCAVENGE_LOOT_POOL).toContain('smelly_meat')
   })
 
   it('adds +5 per carried source camping item and stacks both to +10',()=>{
