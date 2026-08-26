@@ -15,15 +15,17 @@ function stepCost(knowledge: AgentWorldKnowledge, zone: WorldZone | undefined, i
   if (!zone) return 999
   if (isTarget) return 1
   const known = knowledge.zone(zone.x, zone.y)
-  if (!known?.discovered) return 1.25
+  if (!known) return 999
+  if (!known.discovered&&known.zombies===null) return 1.25
   let cost=(known.zombies ?? 0)>=6?7:(known.zombies??0)>=3?3:1
+  if(!known.discovered)cost+=0.25
   if(known.freshness==='stale')cost+=AI_TUNING.staleIntelRoutePenalty
   return cost
 }
 
-export function routeBetween(state: GameState, from: Coord, target: Coord): Direction[] {
+export function routeBetween(state: GameState, from: Coord, target: Coord,viewerCitizenId?:string): Direction[] {
   if (same(from, target)) return []
-  const knowledge = createAgentWorldKnowledge(state)
+  const knowledge = createAgentWorldKnowledge(state,viewerCitizenId)
   const queue: Node[] = [{ ...from, cost: 0, path: [] }]
   const best = new Map<string, number>([[key(from), 0]])
 
@@ -46,8 +48,8 @@ export function routeBetween(state: GameState, from: Coord, target: Coord): Dire
   return []
 }
 
-export function nextDirectionToward(state: GameState, from: Coord, target: Coord): Direction | null {
-  return routeBetween(state, from, target)[0] ?? null
+export function nextDirectionToward(state: GameState, from: Coord, target: Coord,viewerCitizenId?:string): Direction | null {
+  return routeBetween(state, from, target,viewerCitizenId)[0] ?? null
 }
 
 export function frontierZones(state: GameState): WorldZone[] {
@@ -70,7 +72,7 @@ function sectorPenalty(citizenId: string, zone: WorldZone): number {
 function nearbyCrowd(state:GameState,zone:WorldZone):number{return state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world'&&Math.abs(citizen.location.x-zone.x)+Math.abs(citizen.location.y-zone.y)<=1).length}
 
 export function chooseReconTarget(state:GameState,citizenId:string,excluded=new Set<string>()):WorldZone|null{
-  const knowledge=createAgentWorldKnowledge(state)
+  const knowledge=createAgentWorldKnowledge(state,citizenId)
   const missionTargets=new Set(Object.values(state.botMissions).map((mission)=>`${mission.target.x},${mission.target.y}`))
   const candidates=Object.values(state.world.zones).filter((zone)=>{
     if(!zone.discovered||distanceToTown(zone.x,zone.y)===0||excluded.has(`${zone.x},${zone.y}`))return false
@@ -99,15 +101,15 @@ export function chooseFrontierTarget(
 ): WorldZone | null {
   const unknown = Object.values(state.world.zones).filter((zone) =>
     !zone.discovered
-    && distanceToTown(zone.x, zone.y) > 0
+    && distanceToTown(zone.x,zone.y) > 0
     && !excluded.has(`${zone.x},${zone.y}`))
   if (!unknown.length) return null
 
   const preferredRadius = 3 + (citizenNumber(citizenId) % 4)
   return [...unknown].sort((a, b) => {
-    const scoreA = Math.abs(distanceToTown(a.x, a.y) - preferredRadius) * 4 + sectorPenalty(citizenId, a) + nearbyCrowd(state,a) * 3
-    const scoreB = Math.abs(distanceToTown(b.x, b.y) - preferredRadius) * 4 + sectorPenalty(citizenId, b) + nearbyCrowd(state,b) * 3
-    return scoreA - scoreB
+    const scoreA = Math.abs(distanceToTown(a.x, a.y)-preferredRadius)*4+sectorPenalty(citizenId,a)+nearbyCrowd(state,a)*3
+    const scoreB = Math.abs(distanceToTown(b.x, b.y)-preferredRadius)*4+sectorPenalty(citizenId,b)+nearbyCrowd(state,b)*3
+    return scoreA-scoreB
   })[0]
 }
 
