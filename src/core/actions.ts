@@ -117,10 +117,11 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
         if((!hasHandWound(citizen)||recipe.category!=='repair')&&canPayTechnicalWork(citizen,workshopRecipeApCost(state,recipeId,citizen.id))&&canRunWorkshopRecipe(state,recipeId))actions.push({type:'WORKSHOP_CONVERT',citizenId,recipeId})
       }
       if(technicianWorkbenchAvailable(state,citizen)){
-        const specialCost=technicianWorkbenchCost(citizen)
-        if(canPayTechnicalWork(citizen,specialCost))for(const recipeId of WORKSHOP_RECIPE_ORDER){
+        for(const recipeId of WORKSHOP_RECIPE_ORDER){
           const recipe=WORKSHOP_RECIPES[recipeId]
           if(!recipe.outcomes?.length||!canRunWorkshopRecipe(state,recipeId))continue
+          const workbenchCost=technicianWorkbenchCost(citizen,workshopRecipeApCost(state,recipeId,citizen.id))
+          if(!canPayTechnicalWork(citizen,workbenchCost))continue
           for(const output of [...new Set(recipe.outcomes.map((outcome)=>outcome.output))])actions.push(workbenchCommand(citizenId,recipeId,output))
         }
       }
