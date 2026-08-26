@@ -3,7 +3,11 @@ import type { GameEvent, GameState } from '../../core/types'
 import { describeEvent } from '../eventText'
 import '../register.css'
 
-export function registerEntryTone(event:GameEvent):'suspicious'|null{return event.type==='ITEM_WITHDRAWN'?'suspicious':null}
+export function registerEntryTone(event:GameEvent):'suspicious'|null{
+  if(event.type==='ITEM_WITHDRAWN')return'suspicious'
+  if(event.type==='WATER_TAKEN'&&event.extra)return'suspicious'
+  return null
+}
 
 export function ContextRegister({game,title,matches}:{game:GameState;title:string;matches:(event:GameEvent)=>boolean}){
   const [day,setDay]=useState(game.day)
