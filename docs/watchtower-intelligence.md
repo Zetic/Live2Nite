@@ -14,7 +14,9 @@ The Watchtower no longer publishes an automatic fixed-margin forecast. Each livi
 - Predictor/Planner uses weighted contributions beyond today's 24-point target for tomorrow;
 - tomorrow is rounded outward into source-style day-scaled blocks.
 
-The hidden deterministic attack strength is used only inside the estimator. Public UI, autonomous planning, and Night Watch enrollment receive the resulting range, never the exact value.
+Autonomous citizens make this free contribution before their ordinary 08:00 movement/planning pass. A citizen that starts that hour in town therefore does not lose its valid daily contribution merely because it departs on a mission during the same simulated hour.
+
+The contribution thresholds and Scanner/Telescope condition above are source-backed. Live2Nite's exact numerical range-shaping function remains an adaptation: the existing deterministic hidden attack value is surrounded by uncertainty that narrows with contribution progress because the exact upstream estimation-error distribution is not represented as copied game code here. Public UI, autonomous planning, and Night Watch enrollment receive only the resulting range, never the hidden exact value.
 
 ## Observation Platform
 
@@ -29,7 +31,7 @@ Observation Platform is intentionally **Partial** in this pass. The directly sup
 
 Current-source levels 4 and 5 additionally alter free-return distance. Those effects remain deferred until the corresponding listener path is verified, so Live2Nite does not offer inert level-4/5 votes.
 
-After nightly zombie evolution, living occupied outside zones and zones within the active Observation Platform radius receive fresh shared intelligence for the new day. Without Upgraded Map, the town receives only the existing Live2Nite zombie bands (0, 1–2, 3–4, 5+). Upgraded Map records exact counts for the same refreshed zones.
+After nightly zombie evolution, living occupied outside zones and zones within the active Observation Platform radius receive fresh shared intelligence for the new day. Without Upgraded Map, the town receives only the existing Live2Nite zombie bands (0, 1–2, 3–4, 5+). Upgraded Map records exact counts for the same refreshed zones. Coarse map observations retain their band identity when they become stale, and stale observations are rendered with stale-intelligence styling rather than being presented as current.
 
 ## Searchtower
 
@@ -42,4 +44,4 @@ Searchtower recovery is no longer an independent roll over every discovered depl
 - the base recovery chance is 25%;
 - voted upgrades raise it to 37%, 49%, 61%, 73%, then 85%.
 
-Searchtower exposes the previous nightly recovery sector in the Watchtower facility. World truth and shared town intelligence remain separate throughout this process.
+The selected sector is stored on that night's world-evolution event and is shown in both the Chronicle and the Watchtower facility. Chronicle rendering uses the stored historical value, so constructing Searchtower later cannot retroactively add recovery directions to older nights. World truth and shared town intelligence remain separate throughout this process.
