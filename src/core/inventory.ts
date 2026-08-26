@@ -1,4 +1,4 @@
-import { ITEM_SOURCE_CATALOG } from './itemSourceCatalog'
+import { CURRENT_ITEM_SOURCE_CATALOG } from './itemSourceCurrent'
 import type { Citizen, ItemInstance, ItemType } from './types'
 
 /**
@@ -6,7 +6,7 @@ import type { Citizen, ItemInstance, ItemType } from './types'
  * Runtime inventory rules derive from that metadata rather than maintaining a second list.
  */
 const CUMBERSOME_RUNTIME_TYPES=new Set<ItemType>(
-  ITEM_SOURCE_CATALOG.flatMap((entry)=>entry.heavy&&entry.runtimeType?[entry.runtimeType]:[]),
+  CURRENT_ITEM_SOURCE_CATALOG.flatMap((entry)=>entry.heavy&&entry.runtimeType?[entry.runtimeType]:[]),
 )
 
 export function isCumbersomeItemType(type:ItemType):boolean{return CUMBERSOME_RUNTIME_TYPES.has(type)}
