@@ -28,13 +28,14 @@ export function ScoutPanel({game,citizenId,legalActions,act}:{game:GameState;cit
   }
   if(!scout)return null
 
-  const current=getZone(game.world,citizen.location.x,citizen.location.y)
+  const location=citizen.location
+  const current=getZone(game.world,location.x,location.y)
   const level=current?scoutLevel(current):0
   const visits=current?.scoutVisits??0
   const remaining=current?scoutVisitsUntilNextLevel(current):0
   const knowledge=createAgentWorldKnowledge(game,citizen.id)
   const estimates=ADJACENT.flatMap(({label,dx,dy})=>{
-    const zone=getZone(game.world,citizen.location.x+dx,citizen.location.y+dy);if(!zone)return[]
+    const zone=getZone(game.world,location.x+dx,location.y+dy);if(!zone)return[]
     const known=knowledge.zone(zone.x,zone.y);if(known?.zombies===null||known?.zombies===undefined)return[]
     return[{label,estimate:known.zombies,level:scoutLevel(zone),kind:known.zombieIntel}]
   })
