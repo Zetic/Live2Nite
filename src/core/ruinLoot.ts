@@ -1,4 +1,4 @@
-import { ITEM_SOURCE_CATALOG } from './itemSourceCatalog'
+import { CURRENT_ITEM_SOURCE_CATALOG } from './itemSourceCurrent'
 import { randomInt } from './rng'
 import type { ItemType } from './itemCatalog'
 import type { RuinId } from './ruinIds'
@@ -77,7 +77,7 @@ const RUIN_SOURCE_DROP_TEXT:Readonly<Record<RuinId,string>>={
   "strange_barn":"vagoul_#00:5 chest_xl_#00:15 chainsaw_part_#00:15 lpoint_#00:25 pocket_belt_#00:50 bagxl_#00:50 ryebag_#00:100 cadaver_#00:100 lawn_part_#00:150 quantum_#00:150 hmbrew_#00:160 vegetable_#00:185"
 }
 
-const ITEM_BY_SOURCE_REF=new Map(ITEM_SOURCE_CATALOG.map((entry)=>[entry.sourceRef,entry] as const))
+const ITEM_BY_SOURCE_REF=new Map(CURRENT_ITEM_SOURCE_CATALOG.map((entry)=>[entry.sourceRef,entry] as const))
 
 function parseDropText(text:string):readonly RuinSourceDrop[]{
   return text.split(' ').filter(Boolean).map((token)=>{
