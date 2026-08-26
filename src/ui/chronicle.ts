@@ -1,3 +1,4 @@
+import type { ReplenishmentEvent } from '../core/scavenging'
 import type { GameEvent } from '../core/types'
 import { isHighlightEvent } from './eventText'
 
@@ -45,5 +46,10 @@ export function eventCitizenId(event:GameEvent):string|null{
   if(event.type==='HOME_INTRUSION_ATTEMPTED'&&!event.alarmed)return null
   return'citizenId'in event&&typeof event.citizenId==='string'&&event.citizenId!=='system'?event.citizenId:null
 }
-export function filterChronicleEvents(events:readonly GameEvent[],filters:ChronicleFilters):GameEvent[]{const selectedCategories=new Set(filters.categories);return events.filter((event)=>{if(filters.mode==='highlights'&&!isHighlightEvent(event))return false;if(filters.day!==null&&event.day!==filters.day)return false;if(filters.citizenId!==null&&eventCitizenId(event)!==filters.citizenId)return false;if(selectedCategories.size>0&&!selectedCategories.has(chronicleCategory(event)))return false;return true})}
+function hiddenNaturalRecovery(event:GameEvent):boolean{
+  if(event.type!=='ZONE_REPLENISHED')return false
+  const replenishment=event as ReplenishmentEvent
+  return replenishment.source==='other'&&!replenishment.citizenId
+}
+export function filterChronicleEvents(events:readonly GameEvent[],filters:ChronicleFilters):GameEvent[]{const selectedCategories=new Set(filters.categories);return events.filter((event)=>{if(hiddenNaturalRecovery(event))return false;if(filters.mode==='highlights'&&!isHighlightEvent(event))return false;if(filters.day!==null&&event.day!==filters.day)return false;if(filters.citizenId!==null&&eventCitizenId(event)!==filters.citizenId)return false;if(selectedCategories.size>0&&!selectedCategories.has(chronicleCategory(event)))return false;return true})}
 export function availableChronicleDays(events:readonly GameEvent[]):number[]{return[...new Set(events.map((event)=>event.day))].sort((a,b)=>b-a)}

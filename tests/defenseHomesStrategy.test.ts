@@ -8,6 +8,7 @@ import { HOME_LEVEL_ORDER, HOME_LEVELS, personalDefense } from '../src/core/home
 import { createInitialGame } from '../src/core/game'
 import { watchtowerEstimate } from '../src/core/night'
 import type { GameState } from '../src/core/types'
+import { contributeWatchtowerEstimation } from '../src/core/watchtowerEstimation'
 
 function completed(game:GameState,projectId:keyof GameState['town']['construction']):GameState{
   return{...game,town:{...game.town,construction:{...game.town.construction,[projectId]:{...game.town.construction[projectId],discovered:true,completed:true,apContributed:CONSTRUCTIONS[projectId].apCost}}}}
@@ -60,10 +61,12 @@ describe('historical-style Home progression',()=>{
 })
 
 describe('public defense strategy',()=>{
-  it('does not expose the exact deterministic attack through Watchtower information',()=>{
-    let game=createInitialGame(2201,4)
+  it('does not expose the exact deterministic attack through contributed Watchtower information',()=>{
+    let game=createInitialGame(2201,8)
     expect(publicDefenseAssessment(game).source).toBe('none')
     game=completed(game,'watchtower')
+    expect(watchtowerEstimate(game)).toBeNull()
+    for(const citizen of game.citizens)game=contributeWatchtowerEstimation(game,citizen.id)
     const estimate=watchtowerEstimate(game)!
     const assessment=publicDefenseAssessment(game)
     expect('actual' in estimate).toBe(false)

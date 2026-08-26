@@ -1,6 +1,6 @@
 import { resolveCampingRoll } from './camping'
 import { ATTACK_HOUR, DAY_START_HOUR } from './clock'
-import { dailyConstructionOutputs, searchReplenishmentChance, temporaryCompletedProjects, watchtowerForecastDays, watchtowerMarginPercent } from './construction'
+import { dailyConstructionOutputs, temporaryCompletedProjects } from './construction'
 import { totalTownDefense } from './defense'
 import { applyEvents } from './events'
 import { personalDefense } from './home'
@@ -10,46 +10,77 @@ import { randomInt } from './rng'
 import { advanceExplorableRuinLifecycleForNewDay } from './ruinEvolution'
 import { nightlyStatusEvents } from './status'
 import type { GameEvent, GameState, HomeAttackOutcome, NightReport } from './types'
-import { isTownGateZone, zoneKey } from './world'
+import { WATCHTOWER_ESTIMATION_TARGET, watchtowerTodayComplete, watchtowerTodayVisible, watchtowerTodayWeightedContributions, watchtowerTomorrowVisible, watchtowerTomorrowWeightedContributions } from './watchtowerEstimation'
+import { zoneKey } from './world'
+import { nightlyObservationEvents, searchTowerReplenishmentEventsForNight } from './worldObservation'
 import { worldZombieEvolutionEvent } from './worldEvolution'
 
 export interface AttackRange { min:number; max:number; basis:'historical-sample'|'extrapolated' }
-export interface WatchtowerForecast { day:number; min:number; max:number; basis:AttackRange['basis'] }
-export interface WatchtowerEstimate { min:number; max:number; townDefense:number; basis:AttackRange['basis']; tomorrow?:WatchtowerForecast }
+export interface WatchtowerForecast { day:number; min:number; max:number; quality:number; weightedContributions:number; basis:AttackRange['basis'] }
+export interface WatchtowerEstimate extends WatchtowerForecast { townDefense:number; tomorrow?:WatchtowerForecast }
 const HISTORICAL_RANGES:Record<number,readonly[number,number]>={1:[21,29],2:[25,84],3:[57,124],4:[92,227],5:[160,300],6:[217,450],7:[290,493],8:[357,651],9:[468,801],10:[611,901]}
 export function attackRangeForDay(day:number):AttackRange{const historical=HISTORICAL_RANGES[Math.max(1,Math.floor(day))];if(historical)return{min:historical[0],max:historical[1],basis:'historical-sample'};const steps=Math.max(1,Math.floor(day)-10);const growth=Math.pow(1.15,steps);return{min:Math.round(611*growth),max:Math.round(901*growth),basis:'extrapolated'}}
 function isolatedNightSeed(seed:number,day:number,salt:number):number{const mixed=((seed>>>0)^Math.imul(day+1,0x9e3779b1)^salt)>>>0;return mixed||1}
 export function attackStrengthForDay(seed:number,day:number):number{const range=attackRangeForDay(day);return randomInt(isolatedNightSeed(seed,day,0xa511e9b3),range.min,range.max).value}
 
-function estimateForDay(state:GameState,day:number,marginPercent:number):WatchtowerForecast&{actual:number}{
+function estimationDayFactor(day:number):number{return day<=15?1:day<=20?0.75:day<=30?0.5:day<=40?0.25:0.15}
+function reduceEstimationOffsets(seed:number,minimum:number,maximum:number,weightedContributions:number):{minimum:number;maximum:number}{
+  let minOffset=Math.max(0,minimum);let maxOffset=Math.max(0,maximum);let rng=seed
+  const rounds=Math.min(WATCHTOWER_ESTIMATION_TARGET,Math.max(0,Math.floor(weightedContributions)))
+  for(let index=0;index<rounds;index+=1){
+    const total=minOffset+maxOffset;if(total<=0)break
+    const spendable=total/Math.max(1,WATCHTOWER_ESTIMATION_TARGET-index)
+    const scale=randomInt(rng,25,100);rng=scale.state
+    const reduction=spendable*(scale.value/100)
+    const mode=randomInt(rng,1,100);rng=mode.state
+    if(mode.value<=25){
+      const minShare=minOffset/total;const maxShare=maxOffset/total
+      minOffset=Math.max(0,minOffset-reduction*minShare)
+      maxOffset=Math.max(0,maxOffset-reduction*maxShare)
+      continue
+    }
+    const side=randomInt(rng,1,100);rng=side.state
+    if(side.value<=Math.round((minOffset/total)*100))minOffset=Math.max(0,minOffset-reduction)
+    else maxOffset=Math.max(0,maxOffset-reduction)
+  }
+  return{minimum:minOffset,maximum:maxOffset}
+}
+function estimateForDay(state:GameState,day:number,weightedContributions:number,blocks=false):WatchtowerForecast{
   const range=attackRangeForDay(day)
   const actual=attackStrengthForDay(state.seed,day)
-  const margin=Math.max(3,Math.round(actual*(marginPercent/100)))
-  return{day,min:Math.max(range.min,actual-margin),max:Math.min(range.max,actual+margin),actual,basis:range.basis}
+  const factor=estimationDayFactor(day)
+  const targetMargin=Math.max(2,Math.round(actual*.10*factor))
+  const targetMin=Math.max(range.min,actual-targetMargin)
+  const targetMax=Math.min(range.max,actual+targetMargin)
+  let rng=isolatedNightSeed(state.seed,day,blocks?0x39ca21d7:0x4e35a9c1)
+  const initialMin=randomInt(rng,5,26);rng=initialMin.state
+  const offsetMin=initialMin.value*factor
+  const offsetMax=Math.max(0,28*factor-offsetMin)
+  const reduced=reduceEstimationOffsets(rng,offsetMin,offsetMax,weightedContributions)
+  let min=Math.max(0,Math.floor(targetMin*(1-reduced.minimum/100)))
+  let max=Math.max(min,Math.ceil(targetMax*(1+reduced.maximum/100)))
+  if(blocks){const block=Math.max(5,Math.ceil(day/5)*5);min=Math.floor(min/block)*block;max=Math.ceil(max/block)*block}
+  return{day,min,max,quality:Math.min(1,weightedContributions/WATCHTOWER_ESTIMATION_TARGET),weightedContributions,basis:range.basis}
 }
 /**
- * Public Watchtower information deliberately omits the deterministic attack value used to
- * construct the estimate envelope. UI and autonomous citizens receive the same min/max range.
+ * Public Watchtower information is derived only after the collaborative visibility threshold
+ * is reached. The exact deterministic attack value used to form the estimate is never returned.
  */
 export function watchtowerEstimate(state:GameState):WatchtowerEstimate|null{
-  const margin=watchtowerMarginPercent(state)
-  if(margin===null)return null
-  const today=estimateForDay(state,state.day,margin)
-  const tomorrow=watchtowerForecastDays(state)>=2?estimateForDay(state,state.day+1,margin):null
-  return{min:today.min,max:today.max,townDefense:totalTownDefense(state),basis:today.basis,...(tomorrow?{tomorrow:{day:tomorrow.day,min:tomorrow.min,max:tomorrow.max,basis:tomorrow.basis}}:{})}
+  if(!state.town.construction.watchtower?.completed||!watchtowerTodayVisible(state))return null
+  const weighted=watchtowerTodayWeightedContributions(state)
+  const today=estimateForDay(state,state.day,weighted)
+  let tomorrow:WatchtowerForecast|undefined
+  if(state.town.construction.planner?.completed&&watchtowerTodayComplete(state)&&watchtowerTomorrowVisible(state)){
+    const tomorrowWeighted=watchtowerTomorrowWeightedContributions(state)
+    tomorrow=estimateForDay(state,state.day+1,tomorrowWeighted,true)
+  }
+  return{...today,townDefense:totalTownDefense(state),...(tomorrow?{tomorrow}:{})}
 }
 
 function distributeBreachedZombies(state:GameState,zombiesInside:number):HomeAttackOutcome[]{const citizens=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town');if(zombiesInside<=0||citizens.length===0)return[];const assigned=new Map<string,number>();let rngState=isolatedNightSeed(state.seed,state.day,0x63d83595);for(let zombie=0;zombie<zombiesInside;zombie+=1){const roll=randomInt(rngState,0,citizens.length-1);rngState=roll.state;const citizen=citizens[roll.value];assigned.set(citizen.id,(assigned.get(citizen.id)??0)+1)}return citizens.flatMap((citizen)=>{const zombies=assigned.get(citizen.id)??0;if(zombies===0)return[];const defense=personalDefense(citizen,state);return[{citizenId:citizen.id,zombies,defense,survived:zombies<=defense}]})}
 
-export function searchTowerReplenishmentEvents(state:GameState):GameEvent[]{
-  const percent=searchReplenishmentChance(state)
-  if(percent<=0)return[]
-  const candidates=Object.values(state.world.zones).filter((zone)=>zone.discovered&&!isTownGateZone(zone.x,zone.y)&&zone.searchesRemaining===0).sort((a,b)=>a.y-b.y||a.x-b.x)
-  let rng=isolatedNightSeed(state.seed,state.day,0x5ea2c4a1)
-  const events:GameEvent[]=[]
-  for(const zone of candidates){const chance=randomInt(rng,1,100);rng=chance.state;if(chance.value>percent)continue;const loot=randomInt(rng,0,NORMAL_SCAVENGE_LOOT_POOL.length-1);rng=loot.state;events.push({type:'ZONE_REPLENISHED',day:state.day,hour:ATTACK_HOUR,zoneKey:zoneKey(zone.x,zone.y),loot:NORMAL_SCAVENGE_LOOT_POOL[loot.value]})}
-  return events
-}
+export function searchTowerReplenishmentEvents(state:GameState):GameEvent[]{return searchTowerReplenishmentEventsForNight(state,NORMAL_SCAVENGE_LOOT_POOL)}
 
 function campingNightEvents(state:GameState):{events:GameEvent[];survivors:number;deaths:number;strandedDeaths:number}{
   const outside=state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world')
@@ -125,8 +156,8 @@ export function resolveNightAttack(state:GameState):GameState{
   const defenseBeforeAttack=totalTownDefense(afterCorpses)
   const effectiveDefense=afterCorpses.town.gateOpen?0:defenseBeforeAttack
 
-  // Autonomous citizens only use the public Watchtower envelope when deciding whether to
-  // volunteer. The hidden deterministic attack value is never fed into the planning step.
+  // Autonomous citizens receive only the public collaborative estimate. Hidden attack truth
+  // is never fed back into Night Watch enrollment.
   const estimate=watchtowerEstimate(afterCorpses)
   const expectedOverflow=Math.max(0,(estimate?.max??effectiveDefense)-effectiveDefense)
   const watchPrepared=enrollAutonomousNightWatch(afterCorpses,expectedOverflow)
@@ -142,17 +173,20 @@ export function resolveNightAttack(state:GameState):GameState{
   const infectionDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='infection').length
   const withdrawalDeaths=statusEvents.filter((event)=>event.type==='CITIZEN_DIED'&&event.reason==='drug_withdrawal').length
   const afterStatuses=applyEvents(afterHomeDeaths,statusEvents)
-  // A wound acquired during this Watch is source-exempt from the infection pass above.
   const afterWatchConditions=applyNightWatchConditions(afterStatuses,watchStage.report)
 
   const report:NightReport={day:state.day,attackStrength,defenseBeforeAttack,effectiveDefense,gateOpen:state.town.gateOpen,breached:zombiesInside>0,outsideDeaths:camping.strandedDeaths,campingSurvivors:camping.survivors,campingDeaths:camping.deaths,zombiesInside,homeDeaths:homeDeathEvents.length,dehydrationDeaths,infectionDeaths,withdrawalDeaths,corpseReanimations:corpseStage.reanimations,corpseAttackDeaths:corpseStage.attackDeaths,corpseWaterLost:corpseStage.waterLost,homeAttacks,nightWatch:watchStage.report}
-  const replenishment=searchTowerReplenishmentEvents(afterWatchConditions)
   const outputs=constructionOutputEvents(afterWatchConditions)
   const expiries=constructionExpiryEvents(afterWatchConditions)
-  const evolution=worldZombieEvolutionEvent(afterWatchConditions)
-  const rollover:GameEvent[]=[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...replenishment,...outputs,...expiries]
-  if(evolution)rollover.push(evolution)
-  const afterWorldRollover=applyEvents(afterWatchConditions,rollover)
+  const afterNightEvents=applyEvents(afterWatchConditions,[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...outputs,...expiries])
+
+  // World truth evolves first. Searchtower then recovers depleted zones in one deterministic
+  // compass sector, and Observation Platform writes only the permitted shared intelligence.
+  const evolution=worldZombieEvolutionEvent(afterNightEvents)
+  const afterEvolution=evolution?applyEvents(afterNightEvents,[evolution]):afterNightEvents
+  const replenishment=searchTowerReplenishmentEvents(afterEvolution)
+  const observations=nightlyObservationEvents(afterEvolution)
+  const afterWorldRollover=applyEvents(afterEvolution,[...replenishment,...observations])
   const afterRuinRollover=advanceExplorableRuinLifecycleForNewDay(afterWorldRollover,state.day+1)
   const withFreshWatch=resetNightWatchEnrollment(afterRuinRollover)
   return applyEvents(withFreshWatch,[{type:'DAY_STARTED',day:state.day+1,hour:DAY_START_HOUR}])

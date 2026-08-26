@@ -5,14 +5,13 @@ import {
   constructionUnlocked,
   homeContributionRatio,
   temporaryCompletedProjects,
-  watchtowerForecastDays,
-  watchtowerMarginPercent,
   wellDailyWithdrawals,
 } from '../src/core/construction'
 import { totalTownDefense } from '../src/core/defense'
 import { createInitialGame, resolveNight } from '../src/core/game'
 import { watchtowerEstimate } from '../src/core/night'
 import type { ConstructionId, GameState } from '../src/core/types'
+import { contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
 import { workshopRecipeApCost } from '../src/core/workshop'
 import { FACILITY_SLOT_COUNT, FACILITY_SLOT_ORDER, PRIMARY_SCREENS, facilitySlots } from '../src/ui/navigation'
 import { bankCount } from './bankFixtures'
@@ -28,6 +27,12 @@ function complete(game: GameState, ...projectIds: ConstructionId[]): GameState {
     }
   }
   return { ...game, town: { ...game.town, construction } }
+}
+
+function contribute(game:GameState,count:number):GameState{
+  let next=game
+  for(const citizen of game.citizens.slice(0,count))next=contributeWatchtowerEstimation(next,citizen.id)
+  return next
 }
 
 describe('expanded construction catalog', () => {
@@ -94,15 +99,25 @@ describe('construction effects', () => {
     expect(homeContributionRatio(game)).toBe(0.8)
   })
 
-  it('improves Watchtower accuracy and unlocks tomorrow forecasting through Scanner and Planner', () => {
-    let game = complete(createInitialGame(1904, 2), 'watchtower')
-    expect(watchtowerMarginPercent(game)).toBe(15)
-    expect(watchtowerForecastDays(game)).toBe(1)
+  it('improves collaborative Watchtower estimation and unlocks tomorrow forecasting through Scanner and Planner', () => {
+    let game = complete(createInitialGame(1904, 20), 'watchtower')
+    expect(watchtowerContributionWeight(game)).toBe(1)
+    expect(watchtowerEstimate(game)).toBeNull()
+
+    game=contribute(game,8)
+    expect(watchtowerTodayWeightedContributions(game)).toBe(8)
+    expect(watchtowerEstimate(game)).not.toBeNull()
     expect(watchtowerEstimate(game)?.tomorrow).toBeUndefined()
 
     game = complete(game, 'scanner', 'planner')
-    expect(watchtowerMarginPercent(game)).toBe(5)
-    expect(watchtowerForecastDays(game)).toBe(2)
+    expect(watchtowerContributionWeight(game)).toBe(2)
+    expect(watchtowerTodayWeightedContributions(game)).toBe(16)
+    expect(watchtowerTomorrowWeightedContributions(game)).toBe(0)
+    expect(watchtowerEstimate(game)?.tomorrow).toBeUndefined()
+
+    game=contribute(game,16)
+    expect(watchtowerTodayWeightedContributions(game)).toBe(24)
+    expect(watchtowerTomorrowWeightedContributions(game)).toBe(8)
     expect(watchtowerEstimate(game)?.tomorrow?.day).toBe(game.day + 1)
   })
 

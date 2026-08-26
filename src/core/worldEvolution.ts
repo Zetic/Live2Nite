@@ -1,6 +1,7 @@
 import { randomInt } from './rng'
 import type { GameEvent, GameState, WorldState, WorldZombieChange } from './types'
 import { distanceToTown, isTownGateZone, zoneKey } from './world'
+import { searchTowerWindDirectionForDay } from './worldObservation'
 
 /** Current default MyHordes rules expose these global respawn tuning values. */
 export const SOURCE_MASSIVE_RESPAWN_THRESHOLD=50
@@ -108,7 +109,14 @@ export function worldZombieEvolutionChanges(state:GameState):WorldZombieChange[]
   return changes
 }
 
+type WorldEvolutionEventMeta={searchTowerDirection?:ReturnType<typeof searchTowerWindDirectionForDay>}
 export function worldZombieEvolutionEvent(state:GameState):GameEvent|null{
   const changes=worldZombieEvolutionChanges(state)
-  return changes.length?{type:'WORLD_ZOMBIES_EVOLVED',day:state.day,hour:0,changes}:null
+  const searchTowerDirection=state.town.construction.search_tower?.completed?searchTowerWindDirectionForDay(state.seed,state.day):undefined
+  // Searchtower records the selected nightly recovery direction even when natural zombie
+  // evolution produced no changed zones. Store that direction on this historical event so
+  // later construction changes cannot rewrite what an older Chronicle entry says happened.
+  return changes.length||searchTowerDirection
+    ? ({type:'WORLD_ZOMBIES_EVOLVED',day:state.day,hour:0,changes,...(searchTowerDirection?{searchTowerDirection}:{})} as GameEvent&WorldEvolutionEventMeta)
+    : null
 }

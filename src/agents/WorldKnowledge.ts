@@ -2,7 +2,7 @@ import { scoutZombieEstimate } from '../core/scout'
 import type { GameState, SpecialSiteState, ZoneIntelFreshness } from '../core/types'
 import { getZone, zoneKey } from '../core/world'
 
-export type AgentZombieIntelKind='none'|'observed'|'scout_estimate'
+export type AgentZombieIntelKind='none'|'observed'|'map_estimate'|'scout_estimate'
 export interface AgentZoneKnowledge {
   x: number
   y: number
@@ -30,7 +30,8 @@ function freshnessFor(state:GameState,x:number,y:number):ZoneIntelFreshness{
 /**
  * Citizen-aware world knowledge remains a projection of legal information, never raw world state.
  * A Scout viewer may receive the current bounded adjacent-zone estimate supplied by Scout sense;
- * hidden resources, sites, and exact zombie counts remain suppressed until independently discovered.
+ * Observation Platform can supply zombie intelligence without turning the zone into a fully
+ * discovered zone or exposing its search state, ground items, or special-site metadata.
  */
 export function createAgentWorldKnowledge(state: GameState,viewerCitizenId?:string): AgentWorldKnowledge {
   const viewer=viewerCitizenId?state.citizens.find((citizen)=>citizen.id===viewerCitizenId)??null:null
@@ -43,36 +44,23 @@ export function createAgentWorldKnowledge(state: GameState,viewerCitizenId?:stri
       const freshness=freshnessFor(state,x,y)
       const estimate=viewer?scoutZombieEstimate(state,viewer,zone):null
       const currentObservation=freshness==='fresh'&&intel?.observedZombies!==null&&intel?.observedZombies!==undefined
+      const mapEstimate=currentObservation&&intel?.lastObservedHour===-1
       const zombies=currentObservation?intel!.observedZombies:estimate!==null?estimate:intel?.observedZombies??null
-      const zombieIntel:AgentZombieIntelKind=currentObservation?'observed':estimate!==null?'scout_estimate':zombies!==null?'observed':'none'
+      const zombieIntel:AgentZombieIntelKind=currentObservation?(mapEstimate?'map_estimate':'observed'):estimate!==null?'scout_estimate':zombies!==null?(intel?.lastObservedHour===-1?'map_estimate':'observed'):'none'
       const effectiveFreshness:ZoneIntelFreshness=estimate!==null&&!currentObservation?'fresh':freshness
       const lastObservedDay=zombieIntel==='scout_estimate'?null:intel?.lastObservedDay??null
       const lastObservedHour=zombieIntel==='scout_estimate'?null:intel?.lastObservedHour??null
-      if (!zone.discovered) {
-        return {
-          x: zone.x,
-          y: zone.y,
-          discovered: false,
-          zombies: estimate,
-          zombieIntel:estimate===null?'none':'scout_estimate',
-          freshness:estimate===null?'unknown':'fresh',
-          lastObservedDay:null,
-          lastObservedHour:null,
-          searchesRemaining: null,
-          specialSite: undefined,
-        }
-      }
       return {
         x: zone.x,
         y: zone.y,
-        discovered: true,
+        discovered: zone.discovered,
         zombies,
         zombieIntel,
         freshness:effectiveFreshness,
         lastObservedDay,
         lastObservedHour,
-        searchesRemaining: zone.searchesRemaining,
-        specialSite: zone.specialSite,
+        searchesRemaining: zone.discovered?zone.searchesRemaining:null,
+        specialSite: zone.discovered?zone.specialSite:undefined,
       }
     },
   }

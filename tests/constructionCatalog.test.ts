@@ -63,11 +63,15 @@ describe('complete current construction catalog',()=>{
   it('tracks the implementation backlog explicitly',()=>{
     const counts={implemented:0,partial:0,wip:0}
     for(const id of CONSTRUCTION_CATALOG_ORDER)counts[CONSTRUCTION_CATALOG[id].implementation]+=1
-    expect(counts).toEqual({implemented:59,partial:24,wip:83})
+    expect(counts).toEqual({implemented:62,partial:23,wip:81})
     expect(CONSTRUCTION_CATALOG.scouts_lair.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.technicians_workbench.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.battlements.implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.miniature_armory.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.scanner.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.upgraded_map.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.search_tower.implementation).toBe('implemented')
+    expect(CONSTRUCTION_CATALOG.observation_platform.implementation).toBe('partial')
     expect(CONSTRUCTION_CATALOG.henhouse.implementation).toBe('partial')
   })
 
@@ -100,6 +104,8 @@ describe('complete current construction catalog',()=>{
     expect(constructionPlayable('scouts_lair')).toBe(true)
     expect(constructionImplementationStatus('central_laboratory')).toBe('implemented')
     expect(constructionPlayable('central_laboratory')).toBe(true)
+    expect(constructionImplementationStatus('observation_platform')).toBe('partial')
+    expect(constructionPlayable('observation_platform')).toBe(true)
   })
 
   it('includes WIP projects in generic blueprint candidate pools while excluding special classes',()=>{

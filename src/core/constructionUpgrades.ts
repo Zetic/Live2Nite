@@ -3,7 +3,7 @@ import { randomInt } from './rng'
 import type { ConstructionId, GameState } from './types'
 import type { UpgradeProjectsState } from './upgradeProjectsState'
 
-export type ConstructionUpgradeKind='defense_total'|'well_once'|'construction_discount'|'night_watch'
+export type ConstructionUpgradeKind='defense_total'|'well_once'|'construction_discount'|'night_watch'|'observation_radius'|'search_recovery'
 export interface ConstructionUpgradeTrack {
   projectId:ConstructionId
   maxLevel:number
@@ -23,6 +23,8 @@ export const CONSTRUCTION_UPGRADE_TRACKS:Readonly<Partial<Record<ConstructionId,
   pump:{projectId:'pump',maxLevel:5,kind:'well_once',values:[0,20,20,30,30,40],benefits:['Immediately adds 20 Water Rations to the Well.','Immediately adds another 20 Water Rations to the Well.','Immediately adds 30 Water Rations to the Well.','Immediately adds another 30 Water Rations to the Well.','Immediately adds 40 Water Rations to the Well.'],sourceNote:'MyHordes Pump daily-upgrade one-time water additions.'},
   workshop:{projectId:'workshop',maxLevel:5,kind:'construction_discount',values:[0,6,12,18,24,30],benefits:['Reduces every unfinished construction AP requirement by 6% of its base cost.','Total construction AP reduction becomes 12% of base cost.','Total construction AP reduction becomes 18% of base cost.','Total construction AP reduction becomes 24% of base cost.','Total construction AP reduction becomes 30% of base cost.'],sourceNote:'Current MyHordes behavior: one Workshop upgrade removes 18 AP from a 300 AP project (6%).'},
   battlements:{projectId:'battlements',maxLevel:3,kind:'night_watch',values:[10,20,40,40],benefits:['Night Watch capacity rises from 10 to 20 citizens.','Night Watch capacity rises from 20 to 40 citizens.','Capacity remains 40 and every Watchman receives −1 percentage point death chance.'],sourceNote:'Current MyHordes Battlements daily-upgrade track: 10 → 20 → 40 Watchmen, then −1pp Watch death risk at level 3.'},
+  observation_platform:{projectId:'observation_platform',maxLevel:3,kind:'observation_radius',values:[0,3,6,10],benefits:['Nightly World Beyond intelligence refresh expands to 3 km from town.','Nightly intelligence refresh expands to 6 km from town.','Nightly intelligence refresh expands to 10 km from town.'],sourceNote:'Current Observation Platform radius behavior. Source levels 4–5 additionally grant free-return distance and remain deferred until that listener path is verified.'},
+  search_tower:{projectId:'search_tower',maxLevel:5,kind:'search_recovery',values:[25,37,49,61,73,85],benefits:['Affected-direction depleted-zone recovery chance rises from 25% to 37%.','Recovery chance rises from 37% to 49%.','Recovery chance rises from 49% to 61%.','Recovery chance rises from 61% to 73%.','Recovery chance rises from 73% to 85%.'],sourceNote:'Current Searchtower recovery progression: 25 / 37 / 49 / 61 / 73 / 85 percent.'},
 }
 export const ACTIVE_CONSTRUCTION_UPGRADE_IDS=Object.freeze(Object.keys(CONSTRUCTION_UPGRADE_TRACKS) as ConstructionId[])
 
@@ -56,6 +58,8 @@ export function botUpgradeProjectChoice(state:GameState,citizenId:string):Constr
   const candidates=availableConstructionUpgradeProjects(state);if(!candidates.length)return null
   if(candidates.includes('pump')&&state.town.well.water<80)return'pump'
   if(candidates.includes('battlements')&&(state.lastNight?.breached||state.day>=3))return'battlements'
+  if(candidates.includes('observation_platform')&&state.day>=2)return'observation_platform'
+  if(candidates.includes('search_tower')&&state.day>=3)return'search_tower'
   if(candidates.includes('workshop')){const unfinished=Object.values(state.town.construction).filter((project)=>project.discovered&&!project.completed).length;if(unfinished>=6)return'workshop'}
   const defenseCandidates=candidates.filter((id)=>constructionUpgradeTrack(id)?.kind==='defense_total');if(defenseCandidates.length&&state.lastNight?.breached)return defenseCandidates[0]
   const hash=[...citizenId].reduce((sum,char)=>sum+char.charCodeAt(0),0);return candidates[hash%candidates.length]??candidates[0]

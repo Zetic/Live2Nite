@@ -183,7 +183,7 @@ export function App() {
         {screen === 'bank' && <BankView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
         {screen === 'construction' && <ConstructionView game={game} legalActions={legalActions} act={act}/>} 
         {screen === 'workshop' && <WorkshopView game={game} legalActions={legalActions} act={act}/>} 
-        {screen === 'watchtower' && <WatchtowerView game={game}/>} 
+        {screen === 'watchtower' && <WatchtowerView game={game} citizenId={player.id} onContribute={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>} 
         {screen === 'battlements' && <BattlementsView game={game} citizenId={player.id} onChange={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
         {screen === 'upgrade_projects' && <UpgradeProjectsView game={game} citizenId={player.id} onVote={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
         {screen === 'world' && <div className="world-screen-layout">

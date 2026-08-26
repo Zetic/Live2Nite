@@ -52,6 +52,7 @@ export const CURRENT_CONSTRUCTION_FIDELITY: Partial<Record<ConstructionId, Const
   factory:{parentId:'workshop',blueprintTier:0,defense:0,temporary:false,playable:true},
 
   watchtower:{parentId:null,blueprintTier:0,defense:10,temporary:false,playable:true},
+  observation_platform:{parentId:'watchtower',blueprintTier:0,defense:0,temporary:false,playable:false},
   search_tower:{parentId:'watchtower',blueprintTier:0,defense:0,temporary:false,playable:true},
   cannon_mounds:{parentId:'watchtower',blueprintTier:0,defense:30,temporary:false,playable:true,category:'watchtower'},
 
@@ -80,6 +81,8 @@ export const CURRENT_CONSTRUCTION_FIDELITY: Partial<Record<ConstructionId, Const
   perforator:{parentId:'cannon_mounds',blueprintTier:2,defense:50,temporary:false,playable:true,category:'watchtower'},
   shrapnel_launcher:{parentId:'cannon_mounds',blueprintTier:1,defense:60,temporary:false,playable:true,category:'watchtower'},
   brutal_cannon:{parentId:'cannon_mounds',blueprintTier:1,defense:50,temporary:true,playable:true,category:'watchtower'},
+  scanner:{parentId:'observation_platform',blueprintTier:1,defense:0,temporary:false,playable:true},
+  upgraded_map:{parentId:'observation_platform',blueprintTier:1,defense:0,temporary:false,playable:false},
   planner:{parentId:'watchtower',blueprintTier:1,defense:0,temporary:false,playable:true},
   henhouse:{parentId:'workshop',blueprintTier:2,defense:0,temporary:false,playable:false},
   derrick:{parentId:'eden_project',blueprintTier:3,defense:0,temporary:false,playable:true,completionWater:75},
