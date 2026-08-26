@@ -80,8 +80,8 @@ function siestaResources(nextLevel:number):Partial<Record<ItemType,number>>{retu
 function siestaMissing(nextLevel:number):readonly string[]{return nextLevel===3?['Mattress × 1']:[]}
 function kitchenResources(nextLevel:number):Partial<Record<ItemType,number>>{return nextLevel===2?{pathetic_penknife:1}:{}}
 function kitchenMissing(nextLevel:number):readonly string[]{return nextLevel===3?['Microwave × 1']:nextLevel===4?['Refrigerator × 1']:[]}
-function laboratoryResources(nextLevel:number):Partial<Record<ItemType,number>>{if(nextLevel===2)return{electronic_component:1};if(nextLevel===3)return{copper_pipe:1};if(nextLevel===4)return{engine:1};return{}}
-function laboratoryMissing(nextLevel:number):readonly string[]{return nextLevel===1?['Washing Machine × 1']:[]}
+function laboratoryResources(nextLevel:number):Partial<Record<ItemType,number>>{if(nextLevel===1)return{old_washing_machine:1};if(nextLevel===2)return{electronic_component:1};if(nextLevel===3)return{copper_pipe:1};if(nextLevel===4)return{engine:1};return{}}
+function laboratoryMissing():readonly string[]{return[]}
 
 export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefinition> = {
   reinforcements:{
@@ -137,12 +137,12 @@ export const HOME_IMPROVEMENTS: Record<HomeImprovementId,HomeImprovementDefiniti
     status:'wip',effectReady:false,
   },
   laboratory:{
-    id:'laboratory',name:'Laboratory',maxLevel:4,
-    description:'MyHordes home laboratory progression. Listed now; drug-production actions remain unavailable until that subsystem exists.',
+    id:'laboratory',name:'Home Laboratory',maxLevel:4,
+    description:'Consumes 2 Pharmaceutical Products per experiment. Levels 1–4 have a 25/50/75/100% chance to produce Twinoid 500mg; other results are lesser pharmaceutical products.',
     defensePerLevel:0,storagePerLevel:0,
     apCost:(nextLevel)=>nextLevel===1?6:nextLevel===2||nextLevel===3?4:6,
     resources:laboratoryResources,unmodeledResources:laboratoryMissing,
-    status:'wip',effectReady:false,
+    status:'implemented',effectReady:true,
   },
 }
 

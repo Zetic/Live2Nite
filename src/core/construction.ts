@@ -84,7 +84,7 @@ const EXISTING_CONSTRUCTIONS: Partial<Record<ConstructionId, ConstructionDefinit
   uberwall: { id:'uberwall', name:'Überwall', category:'wall', parentId:'spiked_wall', description:'An excessive but highly effective late defensive wall.', apCost:80, resources:c(10,9,2), prerequisites:['spiked_wall'], effects:def(80), effectLabel:'+80 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   second_layer: { id:'second_layer', name:'Second Layer', category:'wall', parentId:'advanced_ramparts', description:'A second independent defensive shell surrounds the town.', apCost:75, resources:c(9,7,1), prerequisites:['advanced_ramparts'], effects:def(75), effectLabel:'+75 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   third_layer: { id:'third_layer', name:'Third Layer', category:'wall', parentId:'second_layer', description:'A third defensive ring for towns expecting extreme attacks.', apCost:95, resources:c(11,9,2), prerequisites:['second_layer'], effects:def(95), effectLabel:'+95 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
-  upgradeable_wall: { id:'upgradeable_wall', name:'Upgradeable Wall', category:'wall', parentId:'wall_upgrade', description:'A modular barrier designed to accept stronger reinforcement.', apCost:55, resources:c(7,5,1), prerequisites:['wall_upgrade'], effects:def(55), effectLabel:'+55 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
+  upgradeable_wall: { id:'upgradeable_wall', name:'Upgradeable Wall', category:'wall', parentId:'advanced_ramparts', description:'A modular barrier designed to accept stronger reinforcement.', apCost:55, resources:c(7,5,1), prerequisites:['advanced_ramparts'], effects:def(55), effectLabel:'+55 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   concrete_wall: { id:'concrete_wall', name:'Concrete Wall', category:'wall', parentId:'upgradeable_wall', description:'Concrete sections replace weaker portions of the perimeter.', apCost:70, resources:c(4,5,5), prerequisites:['upgradeable_wall'], effects:def(50), effectLabel:'+50 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   zombie_grater: { id:'zombie_grater', name:'Zombie Grater', category:'wall', parentId:'upgradeable_wall', description:'A vicious mechanical wall attachment intended to shred attackers.', apCost:65, resources:c(5,8), prerequisites:['upgradeable_wall'], effects:def(55), effectLabel:'+55 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   oubliettes: { id:'oubliettes', name:'Oubliettes', category:'wall', parentId:'great_pit', description:'Hidden pits swallow attackers approaching the defenses.', apCost:50, resources:c(4,4), prerequisites:['great_pit'], effects:def(35), effectLabel:'+35 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
@@ -114,6 +114,7 @@ const EXISTING_CONSTRUCTIONS: Partial<Record<ConstructionId, ConstructionDefinit
   water_detector: { id:'water_detector', name:'Water Detector', category:'pump', parentId:'drilling_rig', description:'Survey equipment identifies a substantial hidden reserve.', apCost:75, resources:{...c(5,5), battery:2}, prerequisites:['drilling_rig'], effects:[{type:'well_water_on_complete',amount:100}], effectLabel:'+100 Well water on completion', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
 
   workshop: { id:'workshop', name:'Workshop', category:'workshop', description:'Processes raw scavenged materials and repairs damaged field weapons.', apCost:25, resources:c(10,8), prerequisites:[], effects:[], effectLabel:'Unlocks Workshop processing and repairs', facilityScreen:'workshop', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'confirmed' },
+  central_laboratory: { id:'central_laboratory', name:'Central Laboratory', category:'workshop', parentId:'workshop', description:'A town laboratory expands every citizen Home Laboratory by five experiments per day.', apCost:20, resources:{nuts_and_bolts:1,pharmaceutical_products:4,patchwork_beam:5,metal_support:5,bag_of_damp_grass:2,convex_lens:1,old_washing_machine:1}, prerequisites:['workshop'], effects:[], effectLabel:'+5 daily Home Laboratory uses for every citizen', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'confirmed' },
   defense_mounts: { id:'defense_mounts', name:'Defense Mounts', category:'workshop', parentId:'workshop', description:'Dedicated mounting points increase the defensive value of Bank objects.', apCost:45, resources:c(4,6), prerequisites:['workshop'], effects:[{type:'bank_defense_multiplier',multiplier:1.5}], effectLabel:'Bank defensive items ×1.5', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   cannon_mounds: { id:'cannon_mounds', name:'Cannon Mounds', category:'workshop', parentId:'workshop', description:'Prepared firing positions add substantial static defense.', apCost:40, resources:c(5,5), prerequisites:['workshop'], effects:def(30), effectLabel:'+30 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
   brick_cannon: { id:'brick_cannon', name:'Brick Cannon', category:'workshop', parentId:'cannon_mounds', description:'A crude but effective improvised artillery emplacement.', apCost:55, resources:c(3,6,3), prerequisites:['cannon_mounds'], effects:def(50), effectLabel:'+50 town defense', source:H, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
@@ -163,11 +164,11 @@ const EXISTING_CONSTRUCTIONS: Partial<Record<ConstructionId, ConstructionDefinit
   hammam: { id:'hammam', name:'Hammam', category:'sanctuary', parentId:'sanctuary', description:'A substantial communal building whose future status effects are deferred.', apCost:50, resources:c(5,4,1), prerequisites:['sanctuary'], effects:def(20), effectLabel:'+20 town defense; status effects deferred', source:M, sourceConfidence:'confirmed', historicalCostConfidence:'adapted' },
 }
 
-
 export const CONSTRUCTIONS:Record<ConstructionId,ConstructionDefinition>=Object.fromEntries(
   CONSTRUCTION_IDS.map((id)=>{
     const meta=CONSTRUCTION_CATALOG[id]
     const existing=EXISTING_CONSTRUCTIONS[id]
+    const runtimeImplemented=meta.implementation!=='wip'||id==='central_laboratory'
     const project:ConstructionDefinition=existing
       ? {...existing,resources:{...existing.resources},effects:[...existing.effects]}
       : {
@@ -192,12 +193,12 @@ export const CONSTRUCTIONS:Record<ConstructionId,ConstructionDefinition>=Object.
     project.apCost=meta.apCost
     project.blueprintTier=meta.blueprintClass
     project.expiresAfterAttack=meta.temporary
-    project.implementationStatus=meta.implementation
-    project.wipReason=meta.wipReason??undefined
-    project.playable=meta.implementation!=='wip'
+    project.implementationStatus=runtimeImplemented?'implemented':meta.implementation
+    project.wipReason=runtimeImplemented?undefined:(meta.wipReason??undefined)
+    project.playable=runtimeImplemented
     project.source='MYHORDES_CURRENT'
     project.sourceConfidence='confirmed'
-    if(meta.implementation==='wip'){
+    if(!runtimeImplemented){
       project.resources={}
       project.effects=[]
       project.effectLabel=`WIP — ${meta.wipReason??'mechanics not implemented'}`

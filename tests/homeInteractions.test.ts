@@ -156,13 +156,18 @@ describe('citizen home progression and works',()=>{
     expect(getLegalActions(result.state,'c01').some((candidate)=>candidate.type==='USE_HOME_SIESTA')).toBe(false)
   })
 
-  it('catalogues Kitchen and Laboratory while their missing subsystems fail closed',()=>{
+  it('keeps Kitchen WIP while Home Laboratory is buildable from its source level-1 component',()=>{
     expect(HOME_IMPROVEMENTS.kitchen.effectReady).toBe(false)
-    expect(HOME_IMPROVEMENTS.laboratory.effectReady).toBe(false)
+    expect(HOME_IMPROVEMENTS.laboratory.effectReady).toBe(true)
     let game=createInitialGame(5205,1)
-    game=updateCitizen(game,'c01',(citizen)=>({...citizen,ap:6,home:{...citizen.home,level:'tent',defense:1}}))
+    game=updateCitizen(game,'c01',(citizen)=>({...citizen,ap:6,inventory:[{id:'washer',type:'old_washing_machine'}],home:{...citizen.home,level:'tent',defense:1}}))
     const actions=getLegalActions(game,'c01')
     expect(actions.some((candidate)=>candidate.type==='BUILD_HOME_IMPROVEMENT'&&candidate.improvementId==='kitchen')).toBe(false)
-    expect(actions.some((candidate)=>candidate.type==='BUILD_HOME_IMPROVEMENT'&&candidate.improvementId==='laboratory')).toBe(false)
+    const lab=actions.find((candidate)=>candidate.type==='BUILD_HOME_IMPROVEMENT'&&candidate.improvementId==='laboratory')
+    expect(lab).toBeTruthy()
+    game=executeCommand(game,lab!).state
+    expect(game.citizens[0].home.improvements.laboratory).toBe(1)
+    expect(game.citizens[0].inventory.some((item)=>item.id==='washer')).toBe(false)
+    expect(game.citizens[0].ap).toBe(0)
   })
 })

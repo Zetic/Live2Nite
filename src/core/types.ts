@@ -83,7 +83,7 @@ export type CitizenStatusId =
   | 'exhausted' | 'satisfied_food' | 'satisfied_water' | 'thirsty' | 'dehydrated'
   | 'wounded' | 'infected' | 'terrorized' | 'drugged' | 'addicted' | 'drunk' | 'hangover' | 'immune'
 export type CitizenStatusChangeReason = 'desert_travel' | 'drank_water' | 'nightly_progression' | 'item_effect'
-export type ItemUseActionId = 'bandage' | 'paracetoid' | 'anabolic_steroids' | 'valium_shot' | 'drink_alcohol' | 'ems_system'
+export type ItemUseActionId = 'bandage' | 'paracetoid' | 'anabolic_steroids' | 'valium_shot' | 'twinoid_500mg' | 'hydratone_100mg' | 'unlabelled_drug' | 'drink_alcohol' | 'ems_system'
 export type CampingOutlook = 'suicidal' | 'very_poor' | 'poor' | 'limited' | 'satisfactory' | 'decent'
 export type SurvivalistForageKind = 'food' | 'water'
 export interface CampingChanceBreakdown {
@@ -185,6 +185,7 @@ export type GameCommand =
   | {type:'UPGRADE_HOME';citizenId:string}
   | {type:'BUILD_HOME_IMPROVEMENT';citizenId:string;improvementId:HomeImprovementId}
   | {type:'USE_HOME_SIESTA';citizenId:string}
+  | {type:'USE_HOME_LAB';citizenId:string}
   | {type:'DISPOSE_CORPSE_OUTSIDE';citizenId:string;targetCitizenId:string}
   | {type:'DISPOSE_CORPSE_WATER';citizenId:string;targetCitizenId:string}
   | {type:'CONTRIBUTE_CONSTRUCTION';citizenId:string;projectId:ConstructionId}
@@ -243,6 +244,7 @@ export type GameEvent = (
   | {type:'HOME_UPGRADED';day:number;citizenId:string;from:HomeLevel;to:HomeLevel;defenseAfter:number;consumed:Partial<Record<ItemType,number>>}
   | {type:'HOME_IMPROVEMENT_BUILT';day:number;citizenId:string;improvementId:HomeImprovementId;level:number;consumed:Partial<Record<ItemType,number>>;defenseAfter:number;storageCapacityAfter:number}
   | {type:'HOME_SIESTA_USED';day:number;citizenId:string;chance:number;roll:number;success:boolean;apAfter:number;rngStateAfter:number}
+  | {type:'HOME_LAB_USED';day:number;citizenId:string;labLevel:number;successChance:number;success:boolean;consumedItemIds:string[];output:ItemInstance;outputStorage:PersonalItemStorage;rngStateAfter:number}
   | {type:'CORPSE_DISPOSED';day:number;citizenId:string;targetCitizenId:string;method:CorpseDisposition;waterItemId?:string}
   | {type:'CORPSE_REANIMATED';day:number;corpseCitizenId:string;outcome:'well'|'citizen'|'nothing';victimCitizenId?:string;waterLost:number}
   | {type:'BLUEPRINT_READ';day:number;citizenId:string;item:ItemInstance;source:PersonalItemStorage;projectId:ConstructionId|null;rngStateAfter:number}

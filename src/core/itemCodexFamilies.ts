@@ -73,6 +73,20 @@ const RUNTIME_FAMILY_OVERRIDES:Partial<Record<ItemType,string>>={
   battery_launcher:'battery_launcher',
 }
 
+/** Runtime reconciliation for source entries activated by focused gameplay PRs.
+ * The 383-entry source snapshot remains immutable; the player Codex projects the
+ * current runtime identity/status on top so it does not show duplicate WIP rows. */
+const SOURCE_RUNTIME_OVERRIDES:Readonly<Record<string,{runtimeType:ItemType;implementation:ItemImplementationStatus}>>={
+  'drug_hero_#00':{runtimeType:'twinoid_500mg',implementation:'implemented'},
+  'drug_water_#00':{runtimeType:'hydratone_100mg',implementation:'implemented'},
+  'drug_random_#00':{runtimeType:'unlabelled_drug',implementation:'implemented'},
+  'water_cleaner_#00':{runtimeType:'water_purifying_tablets',implementation:'partial'},
+  'machine_1_#00':{runtimeType:'old_washing_machine',implementation:'implemented'},
+}
+
+function sourceRuntimeType(entry:ItemSourceCatalogEntry):ItemType|null{return SOURCE_RUNTIME_OVERRIDES[entry.sourceRef]?.runtimeType??entry.runtimeType}
+function sourceImplementation(entry:ItemSourceCatalogEntry):ItemImplementationStatus{return SOURCE_RUNTIME_OVERRIDES[entry.sourceRef]?.implementation??entry.implementation}
+
 function slug(value:string):string{
   return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'item'
 }
@@ -115,7 +129,8 @@ function baseStateName(name:string):string{
 }
 
 function sourceFamilyId(entry:ItemSourceCatalogEntry):string{
-  if(entry.runtimeType)return runtimeFamilyId(entry.runtimeType)
+  const runtimeType=sourceRuntimeType(entry)
+  if(runtimeType)return runtimeFamilyId(runtimeType)
   if(isBlueprintRef(entry.sourceRef))return entry.id
   return sourceFamilyOverride(entry.sourceRef)??slug(baseStateName(entry.name))
 }
@@ -161,8 +176,8 @@ function sourceState(entry:ItemSourceCatalogEntry):ItemCodexFamilyState{
     sourceCatalog:true,
     sourceRefs:[entry.sourceRef],
     sourceCategories:[entry.category],
-    runtimeType:entry.runtimeType,
-    implementation:entry.implementation,
+    runtimeType:sourceRuntimeType(entry),
+    implementation:sourceImplementation(entry),
     heavy:entry.heavy,
     decoration:entry.decoration,
     watchPoints:entry.watchPoints,
@@ -180,10 +195,11 @@ for(const source of ITEM_SOURCE_CATALOG){
   const id=sourceFamilyId(source)
   const target=bucket(id)
   target.states.push(sourceState(source))
-  if(source.runtimeType)target.runtimeTypes.add(source.runtimeType)
+  const runtimeType=sourceRuntimeType(source)
+  if(runtimeType)target.runtimeTypes.add(runtimeType)
 }
 
-const mappedRuntimeTypes=new Set<ItemType>(ITEM_SOURCE_CATALOG.flatMap((entry)=>entry.runtimeType?[entry.runtimeType]:[]))
+const mappedRuntimeTypes=new Set<ItemType>(ITEM_SOURCE_CATALOG.flatMap((entry)=>{const runtimeType=sourceRuntimeType(entry);return runtimeType?[runtimeType]:[]}))
 for(const type of ITEM_TYPE_IDS){
   if(mappedRuntimeTypes.has(type))continue
   const id=runtimeFamilyId(type)

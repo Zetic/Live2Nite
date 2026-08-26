@@ -91,10 +91,12 @@ describe('complete current construction catalog',()=>{
     expect(constructionPlayable('sanctuary')).toBe(false)
     expect(constructionUnlocked(game,'sanctuary')).toBe(false)
 
-    expect(constructionImplementationStatus('defensive_supports')).toBe('partial')
+    expect(constructionImplementationStatus('defensive_supports')).toBe('implemented')
     expect(constructionPlayable('defensive_supports')).toBe(true)
     expect(constructionImplementationStatus('scouts_lair')).toBe('implemented')
     expect(constructionPlayable('scouts_lair')).toBe(true)
+    expect(constructionImplementationStatus('central_laboratory')).toBe('implemented')
+    expect(constructionPlayable('central_laboratory')).toBe(true)
   })
 
   it('includes WIP projects in generic blueprint candidate pools while excluding special classes',()=>{

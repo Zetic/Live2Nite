@@ -8,7 +8,9 @@ export const ITEM_TYPE_IDS = [
   'mouldy_twinkies','half_eaten_chicken_wings','rancid_shortbread_pack','out_of_date_jaffa_cakes','dried_chewing_gum','stale_tart','soft_crisps','can','open_can','vegetable','tasty_looking_steak','chinese_noodles','spicy_chinese_noodles',
   'doggy_bag','citizen_welcome_pack','battery','box_of_matches','pharmaceutical_products','strong_spices','radio_cassette_player_off',
   // Citizen-condition proof items. Their actions are defined by the shared item-effect engine.
-  'bandage','paracetoid','anabolic_steroids','valium_shot','vodka_marinostov','wake_the_dead','ems_system_empty','ems_system_charged',
+  'bandage','paracetoid','anabolic_steroids','valium_shot','twinoid_500mg','hydratone_100mg','unlabelled_drug','water_purifying_tablets','vodka_marinostov','wake_the_dead','ems_system_empty','ems_system_charged',
+  // Home Laboratory construction component / source furniture.
+  'old_washing_machine',
   // Camping-support items whose source benefit applies while carried outside.
   'groundsheet','smelly_meat',
   // Construction economy: advanced materials, supplies, and unprocessed salvage.

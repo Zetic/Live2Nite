@@ -158,6 +158,15 @@ function reduceSingleEvent(state:GameState,event:GameEvent):GameState{
     case 'CORPSE_REANIMATED':return{...state,town:{...state.town,well:{water:Math.max(0,state.town.well.water-event.waterLost)}},citizens:replaceCitizen(state,event.corpseCitizenId,(citizen)=>({...citizen,home:{...citizen.home,corpseAttacked:true}}))}
     case 'HOME_IMPROVEMENT_BUILT':return{...state,citizens:replaceCitizen(state,event.citizenId,(citizen)=>{const paid=consumePersonalResources(citizen,event.consumed);return{...paid,home:{...paid.home,storageCapacity:event.storageCapacityAfter,improvements:{...paid.home.improvements,[event.improvementId]:event.level}}}})}
     case 'HOME_SIESTA_USED':return{...state,rngState:event.rngStateAfter,citizens:replaceCitizen(state,event.citizenId,(citizen)=>({...citizen,ap:event.apAfter}))}
+    case 'HOME_LAB_USED':{
+      const consumed=new Set(event.consumedItemIds)
+      const citizens=replaceCitizen(state,event.citizenId,(citizen)=>{
+        const paid=removePersonalIds(citizen,consumed)
+        if(event.outputStorage==='inventory')return{...paid,inventory:[...paid.inventory,event.output]}
+        return{...paid,home:{...paid.home,storage:[...paid.home.storage,event.output]}}
+      })
+      return{...state,rngState:event.rngStateAfter,nextItemId:state.nextItemId+1,citizens}
+    }
     case 'BLUEPRINT_READ':return{...state,rngState:event.rngStateAfter,citizens:replaceCitizen(state,event.citizenId,(citizen)=>removeStoredItem(citizen,event.item.id,event.source))}
     case 'CONSTRUCTION_DISCOVERED':{const ids=constructionDiscoveryCascade(event.projectId);let construction=state.town.construction;for(const id of ids){const project=construction[id];if(project&&!project.discovered)construction={...construction,[id]:{...project,discovered:true}}}return construction===state.town.construction?state:{...state,town:{...state.town,construction}}}
     case 'CONSTRUCTION_AP_CONTRIBUTED':{const project=state.town.construction[event.projectId];if(!project)return state;return{...state,town:{...state.town,construction:{...state.town.construction,[event.projectId]:{...project,apContributed:project.apContributed+event.amount}}}}}

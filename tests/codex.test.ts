@@ -105,6 +105,12 @@ describe('item codex',()=>{
     expect(paracetoid.facts.some((fact)=>fact.value.includes('remove infected')&&fact.value.includes('apply immune'))).toBe(true)
     const valium=codexItemEntry('valium_shot')
     expect(valium.facts.some((fact)=>fact.value.includes('remove terrorized'))).toBe(true)
+    const twinoid=codexItemEntry('twinoid_500mg')
+    expect(twinoid.facts.some((fact)=>fact.label.includes('Take Twinoid 500mg')&&fact.value.includes('restore AP toward 8'))).toBe(true)
+    const hydratone=codexItemEntry('hydratone_100mg')
+    expect(hydratone.facts.some((fact)=>fact.value.includes('Thirsty/Dehydrated'))).toBe(true)
+    const randomDrug=codexItemEntry('unlabelled_drug')
+    expect(randomDrug.facts.some((fact)=>fact.value.includes('random weighted outcome'))).toBe(true)
     expect(filterCodexItems('all','addiction').flatMap((entry)=>entry.runtimeTypes)).toContain('anabolic_steroids')
   })
 
@@ -142,7 +148,7 @@ describe('status effects codex',()=>{
     expect(infected.obtainedFrom.find((group)=>group.id==='system')?.entries.some((entry)=>entry.label.includes('Untreated wound'))).toBe(true)
     expect(infected.clearedBy.find((group)=>group.id==='items')?.entries.some((entry)=>entry.label==='Paracetoid 7g')).toBe(true)
     const terror=codexStatusEntry('terrorized')
-    expect(terror.obtainedFrom).toHaveLength(0)
+    expect(terror.obtainedFrom.find((group)=>group.id==='items')?.entries.some((entry)=>entry.label==='Unlabelled Drug')).toBe(true)
     expect(terror.clearedBy.find((group)=>group.id==='items')?.entries.some((entry)=>entry.label==='Valium Shot')).toBe(true)
   })
 
