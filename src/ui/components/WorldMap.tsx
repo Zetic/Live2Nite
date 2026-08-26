@@ -17,6 +17,7 @@ export function mapZombieBand(zombies:number|null|undefined):MapZombieBand{
 
 /** Never-seen zones deliberately suppress ordinary horde information. Scout sense is handled separately by the viewer-aware knowledge layer. */
 export function mapZombieBandForIntel(discovered:boolean,zombies:number|null|undefined):MapZombieBand{return discovered?mapZombieBand(zombies):'unknown'}
+function mapEstimateLabel(zombies:number|null|undefined):string{if(zombies===0)return'0';if(zombies===2)return'1–2';if(zombies===4)return'3–4';return'5+'}
 
 function stackedGroundLabel(items:readonly {type:ItemType}[]):string{
   const counts=new Map<ItemType,number>()
@@ -47,17 +48,19 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
       const controlState=humanCount>0?zoneControlState(game,x,y,isPlayer?player.id:undefined):null
       const known=knowledge.zone(x,y)
       const scoutEstimate=known?.zombieIntel==='scout_estimate'
+      const mapEstimate=known?.zombieIntel==='map_estimate'
       const siteLabel=site?specialSiteCode(site.type):null
       const zombieBand=scoutEstimate?mapZombieBand(known?.zombies):mapZombieBandForIntel(zone.discovered,known?.zombies)
-      const intelClass=scoutEstimate?'intel-current':!zone.discovered?'intel-unknown':known?.freshness==='fresh'?'intel-current':known?.freshness==='stale'?'intel-stale':'intel-visited-unknown'
+      const intelClass=scoutEstimate||mapEstimate?'intel-current':!zone.discovered?'intel-unknown':known?.freshness==='fresh'?'intel-current':known?.freshness==='stale'?'intel-stale':'intel-visited-unknown'
       const depleted=zone.discovered&&zone.searchesRemaining===0
       const marking=showScoutMarkings&&zone.discovered?scoutLevel(zone):0
       const titleParts=[`[${x},${y}]`]
       if(scoutEstimate)titleParts.push(`Scout estimate: ~${known?.zombies??0} zombie${known?.zombies===1?'':'s'}`)
+      else if(mapEstimate)titleParts.push(`Observation Platform estimate: ${mapEstimateLabel(known?.zombies)} zombies`)
       else if(!zone.discovered)titleParts.push('unexplored · zombie count unknown')
       else if(known?.zombies===null||known?.zombies===undefined)titleParts.push('visited · zombie count unknown')
       else if(known.freshness==='fresh')titleParts.push(`${known.zombies} zombies observed today${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
-      else titleParts.push(`last known: ${known.zombies} zombies · Day ${known.lastObservedDay??'?'}${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
+      else titleParts.push(`last known: ${known.zombies} zombies · Day ${known.lastObservedDay??'?'}${known.lastObservedHour!==null&&known.lastObservedHour>=0?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
       if(zone.discovered){
         titleParts.push(depleted?'search: depleted':'search: available')
         titleParts.push(zone.groundItems.length?`ground: ${stackedGroundLabel(zone.groundItems)}`:'ground: empty')
