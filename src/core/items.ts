@@ -98,6 +98,8 @@ export const ITEMS:Record<ItemType,ItemDefinition>={
   wake_the_dead:def({type:'wake_the_dead',name:'“Wake The Dead”',purpose:'Source rhum_#00 cocktail. Restores AP to the normal source target and makes the citizen Drunk; unusable while Drunk or Hungover.',category:'consumable',displayCategory:'food',capabilities:['consumable'],source:'MYHORDES_CURRENT'}),
   ems_system_empty:def({type:'ems_system_empty',name:'EMS System (incomplete)',purpose:'Source sport_elec_empty_#00. Ordinary scavenged EMS unit without power. Combine it with one Battery at 0 AP to charge it.',category:'misc',displayCategory:'miscellaneous',capabilities:['component'],source:'MYHORDES_CURRENT'}),
   ems_system_charged:def({type:'ems_system_charged',name:'EMS System (charged)',purpose:'Source sport_elec_#00. Using it while unwounded restores AP toward 6, guarantees a random body-part wound, and discharges the unit.',category:'misc',displayCategory:'miscellaneous',capabilities:[],source:'MYHORDES_CURRENT'}),
+  groundsheet:def({type:'groundsheet',name:'Groundsheet',purpose:'Source sheet_#00 camping equipment. While carried outside it adds +5 camping points.',category:'misc',displayCategory:'miscellaneous',capabilities:[],source:'MYHORDES_CURRENT'}),
+  smelly_meat:def({type:'smelly_meat',name:'Smelly Meat',purpose:'Source smelly_meat_#00 camping item. Its odor masks the carrier from zombies and adds +5 camping points while carried outside.',category:'misc',displayCategory:'miscellaneous',capabilities:[],source:'MYHORDES_CURRENT'}),
   old_door:def({type:'old_door',name:'Old Door',purpose:'Defensive object: +2 town defense in the Bank, or +1 personal defense when stored at Home.',category:'defense',displayCategory:'defences',capabilities:['defense'],source:'DIE2NITE_ARCHIVE',bankDefense:2,homeDefense:1}),
   water_bomb:def({type:'water_bomb',name:'Water Bomb',purpose:'Single-use MyHordes weapon. While outside and not exhausted, it kills 2–4 zombies without spending AP. It can be made from a Plastic Bag and Water Ration.',category:'weapon',displayCategory:'armoury',capabilities:['weapon'],source:'MYHORDES_CURRENT'}),
   human_bone:def({type:'human_bone',name:'Human Bone',purpose:'Breakable improvised weapon and a source-valid opener for some containers.',category:'weapon',displayCategory:'armoury',capabilities:['weapon','repairable'],source:'MYHORDES_CURRENT'}),
@@ -161,7 +163,7 @@ export const NORMAL_SCAVENGE_LOOT_POOL:ItemType[]=[
   'wrought_iron','wrought_iron','wrought_iron','wrought_iron','wrought_iron',
   'resource_pack','unshaped_concrete_block','water_ration','water_ration','food','food','old_door',
   'human_bone','human_bone','pathetic_penknife','staff','serrated_knife','water_bomb','battery','box_of_matches','pharmaceutical_products',
-  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag','toolbox','ems_system_empty',
+  'duct_tape','wire_reel','copper_pipe','nuts_and_bolts','broken_electronic_device','mechanism','empty_oil_can','belt','bag_of_damp_grass','bag_of_cement','human_flesh','plastic_bag','toolbox','ems_system_empty','groundsheet','smelly_meat',
 ]
 export const DEPLETED_SCAVENGE_LOOT_POOL:ItemType[]=['rotten_log','rotten_log','rotten_log','scrap_metal','scrap_metal','scrap_metal']
 
