@@ -39,16 +39,16 @@ export function planMission(state: GameState, citizenId: string, mission: BotMis
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || !citizen.alive || state.clock.phase !== 'day') return null
   const from = citizenCoord(citizen)
-  const route = routeBetween(state, from, mission.target)
+  const route = routeBetween(state, from, mission.target,citizenId)
   const expectedTaskAp = taskCost(state, mission)
   const returnAp = distanceToTown(mission.target.x, mission.target.y)
   const gateCost = citizen.location.type === 'town' && !state.town.gateOpen ? 1 : 0
   const roundTripRequiredAp = route.length + returnAp + expectedTaskAp + gateCost + mission.safetyReserve
 
-  // Unknown frontier zones are budgeted as a modest four-zombie risk. All known
-  // zombie reads go through WorldKnowledge so future stale-intel rules do not require
-  // auditing every expedition calculation for authoritative-world leaks.
-  const targetZombies = knownZombieCount(state, mission.target.x, mission.target.y) ?? 4
+  // Unknown frontier zones are budgeted as a modest four-zombie risk. Known values and
+  // Scout estimates both come through the citizen-aware WorldKnowledge projection, never
+  // directly from authoritative hidden zombie state.
+  const targetZombies = knownZombieCount(state, mission.target.x, mission.target.y,citizenId) ?? 4
   const roundTripLoadout = planLoadout(state, citizen, mission.purpose, roundTripRequiredAp, targetZombies, {
     desertStepsPlanned: route.length + returnAp,
   })
@@ -107,6 +107,6 @@ export function planExpedition(state: GameState, citizenId: string): ExpeditionP
 export function remainingReturnRequirement(state: GameState, citizenId: string): number {
   const citizen = state.citizens.find((candidate) => candidate.id === citizenId)
   if (!citizen || citizen.location.type !== 'world') return 0
-  return routeBetween(state, { x: citizen.location.x, y: citizen.location.y }, { x: 0, y: 0 }).length
+  return routeBetween(state, { x: citizen.location.x, y: citizen.location.y }, { x: 0, y: 0 },citizenId).length
     || distanceToTown(citizen.location.x, citizen.location.y)
 }
