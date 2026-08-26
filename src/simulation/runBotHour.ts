@@ -41,7 +41,7 @@ export function chooseHourlyObjective(state: GameState, citizenId: string): Hour
 }
 
 function meaningfulTownWork(event: GameEvent): boolean {
-  return ['CONSTRUCTION_AP_CONTRIBUTED','WORKSHOP_CONVERTED','ITEMS_COMBINED','HOME_UPGRADED','HOME_IMPROVEMENT_BUILT','ITEM_WITHDRAWN'].includes(event.type)
+  return ['CONSTRUCTION_AP_CONTRIBUTED','WORKSHOP_CONVERTED','ITEMS_COMBINED','HOME_UPGRADED','HOME_IMPROVEMENT_BUILT','HOME_LAB_USED','ITEM_WITHDRAWN'].includes(event.type)
 }
 
 function runTemporaryExtractionPass(state:GameState,controller:AgentController,controlledCitizenId?:string):GameState{
