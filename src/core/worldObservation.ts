@@ -60,7 +60,7 @@ function estimatedZombieBand(zombies:number):number{
 export function nightlyObservationEvents(state:GameState):GameEvent[]{
   const radius=observationPlatformRadius(state)
   const exact=upgradedMapExact(state)
-  const occupied=new Set(state.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world').map((citizen)=>zoneKey(citizen.location.x,citizen.location.y)))
+  const occupied=new Set(state.citizens.flatMap((citizen)=>citizen.alive&&citizen.location.type==='world'?[zoneKey(citizen.location.x,citizen.location.y)]:[]))
   const events:GameEvent[]=[]
   const nextDay=state.day+1
   for(const [key,zone] of Object.entries(state.world.zones)){
