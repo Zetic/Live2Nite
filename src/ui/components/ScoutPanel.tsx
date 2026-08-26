@@ -1,4 +1,5 @@
-import { isScout, movementPointLabel, scoutCamouflageActive, scoutLevel, scoutPointsAvailable, scoutVisitsUntilNextLevel, scoutZombieEstimate, scoutsLairComplete } from '../../core/scout'
+import { createAgentWorldKnowledge } from '../../agents/WorldKnowledge'
+import { isScout, movementPointLabel, scoutCamouflageActive, scoutLevel, scoutPointsAvailable, scoutVisitsUntilNextLevel, scoutsLairComplete } from '../../core/scout'
 import type { GameCommand, GameState } from '../../core/types'
 import { getZone } from '../../core/world'
 
@@ -31,15 +32,17 @@ export function ScoutPanel({game,citizenId,legalActions,act}:{game:GameState;cit
   const level=current?scoutLevel(current):0
   const visits=current?.scoutVisits??0
   const remaining=current?scoutVisitsUntilNextLevel(current):0
+  const knowledge=createAgentWorldKnowledge(game,citizen.id)
   const estimates=ADJACENT.flatMap(({label,dx,dy})=>{
     const zone=getZone(game.world,citizen.location.x+dx,citizen.location.y+dy);if(!zone)return[]
-    const estimate=scoutZombieEstimate(game,citizen,zone);return estimate===null?[]:[{label,estimate,level:scoutLevel(zone)}]
+    const known=knowledge.zone(zone.x,zone.y);if(known?.zombies===null||known?.zombies===undefined)return[]
+    return[{label,estimate:known.zombies,level:scoutLevel(zone),kind:known.zombieIntel}]
   })
 
   return <section className="special-site-card status-accessible" aria-label="Scout reconnaissance">
     <div className="special-site-heading"><div><p className="section-kicker">Scout reconnaissance</p><h3>{scoutCamouflageActive(citizen)?'Camouflaged':'Exposed'} · {scoutPointsAvailable(citizen)} SP</h3><p>Next move: {movementPointLabel(citizen)}. Entering this zone recorded a persistent Scout visit.</p></div><span>LEVEL {level}</span></div>
     <p>{level>=3?`This zone is at maximum Scout Level after ${visits} visits.`:`${visits} Scout visits recorded here · ${remaining} more visit${remaining===1?'':'s'} to the next Scout Level.`}</p>
-    <div className="item-action-menu">{estimates.map((entry)=><button type="button" className="static-item" key={entry.label} disabled><span>{entry.label}: ~{entry.estimate} zombie{entry.estimate===1?'':'s'}</span><small>Scout estimate · zone Scout Level {entry.level}</small></button>)}</div>
+    <div className="item-action-menu">{estimates.map((entry)=><button type="button" className="static-item" key={entry.label} disabled><span>{entry.label}: {entry.kind==='scout_estimate'?'~':''}{entry.estimate} zombie{entry.estimate===1?'':'s'}</span><small>{entry.kind==='scout_estimate'?'Scout estimate':'Observed intel'} · zone Scout Level {entry.level}</small></button>)}</div>
     {recamouflage&&<div className="feature-actions"><button className="primary" onClick={()=>act(recamouflage)}>Re-camouflage <small>0 AP</small></button></div>}
   </section>
 }
