@@ -104,6 +104,17 @@ describe('nightly Well consumers',()=>{
     expect(allocation.consumed).toBe(2)
     expect(next.town.well.water).toBe(0)
   })
+
+  it('does not invent Pool water consumption while its current-source requirement is unverified',()=>{
+    let state=createInitialGame(9112,1)
+    state=complete(state,'pool')
+    state={...state,town:{...state.town,well:{water:10}}}
+    const allocation=townWaterAllocation(state)
+    expect(allocation.consumers.some((consumer)=>consumer.projectId==='pool')).toBe(false)
+    expect(allocation.required).toBe(0)
+    expect(allocation.consumed).toBe(0)
+    expect(allocation.remaining).toBe(10)
+  })
 })
 
 describe('agriculture',()=>{
