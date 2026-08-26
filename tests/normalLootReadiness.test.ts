@@ -6,7 +6,7 @@ describe('normal MyHordes loot activation gate',()=>{
     const unresolved=unresolvedMyHordesNormalLootIds()
     expect(myHordesNormalLootReady()).toBe(false)
     expect(unresolved).toContain('drug_#00')
-    expect(unresolved).toContain('jerrycan_#00')
+    expect(unresolved).not.toContain('jerrycan_#00')
     expect(unresolved).toContain('bag_#00')
     expect(unresolved).toContain('chama_#00')
     expect(unresolved).not.toContain('grenade_empty_#00')
