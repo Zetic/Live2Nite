@@ -48,7 +48,7 @@ describe('Home Laboratory progression',()=>{
     const rows=[1,2,3,4].map((level)=>{
       const state=withLab(game,level)
       const citizen=state.citizens[0]
-      return[chanceOrZero(homeLabSuccessChance(citizen)),homeLabBaseDailyUses(citizen)]
+      return[homeLabSuccessChance(citizen),homeLabBaseDailyUses(citizen)]
     })
     expect(rows).toEqual([[25,1],[50,1],[75,1],[100,4]])
   })
@@ -81,14 +81,15 @@ describe('Home Laboratory progression',()=>{
 
   it('uses only the five source lesser-drug outputs on failed experiments',()=>{
     expect(HOME_LAB_FAILURE_OUTPUTS).toEqual(['anabolic_steroids','valium_shot','unlabelled_drug','hydratone_100mg','water_purifying_tablets'])
-    const allowed=new Set(HOME_LAB_FAILURE_OUTPUTS)
-    const observed=new Set<string>()
-    for(let rngState=1;rngState<=500;rngState+=1){
+    const failureStates=[4096,4103,4115,4128,4141]
+    const observed=failureStates.map((rngState)=>{
       const game={...withLab(createInitialGame(9304,1),1,2),rngState}
       const event=resolveHomeLabUse(game,game.citizens[0])
-      if(!event.success){expect(allowed.has(event.output.type)).toBe(true);observed.add(event.output.type)}
-    }
-    expect(observed.size).toBeGreaterThan(1)
+      expect(event.success).toBe(false)
+      expect(HOME_LAB_FAILURE_OUTPUTS).toContain(event.output.type)
+      return event.output.type
+    })
+    expect(new Set(observed)).toEqual(new Set(HOME_LAB_FAILURE_OUTPUTS))
   })
 
   it('adds five daily uses from Central Laboratory without changing the success chance',()=>{
@@ -139,5 +140,3 @@ describe('Home Laboratory player and bot parity',()=>{
     expect(result.events.some((event)=>event.type==='HOME_LAB_USED')).toBe(true)
   })
 })
-
-function chanceOrZero(value:number):number{return value||0}
