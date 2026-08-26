@@ -21,6 +21,7 @@ export function applyCurrentConstructionEconomy():void{
     divining_rocket:{referenceName:'Divining Rocket',apCost:80,resources:{semtex:1,copper_pipe:1,compact_detonator:1,nuts_and_bolts:1,patchwork_beam:5,metal_support:5}},
     fertilizer:{referenceName:'Fertilizer',apCost:30,resources:{water_ration:10,anabolic_steroids:2,wrought_iron:5,pharmaceutical_products:8,bag_of_damp_grass:3}},
     grapeboom:{referenceName:'Grapeboom',apCost:40,resources:{water_ration:10,twisted_plank:5,semtex:5,empty_oil_can:1}},
+    central_cafeteria:{referenceName:'Central Cafeteria',apCost:20,resources:{pharmaceutical_products:1,patchwork_beam:5,metal_support:1,table:1,bag_of_damp_grass:1,carcinogenic_oven:1}},
   } satisfies Partial<Record<ConstructionId,NonNullable<(typeof MYHORDES_CURRENT_CONSTRUCTION_COSTS)[ConstructionId]>>>)
 
   for(const [id,snapshot] of Object.entries(MYHORDES_CURRENT_CONSTRUCTION_COSTS) as Array<[ConstructionId,NonNullable<(typeof MYHORDES_CURRENT_CONSTRUCTION_COSTS)[ConstructionId]>]>) {
@@ -52,6 +53,7 @@ export function applyCurrentConstructionEconomy():void{
   activate('upgraded_map','Nightly Observation Platform intelligence records exact zombie counts')
   activate('search_tower','Reveals the nightly recovery sector; upgrades natural 25% recovery chance')
   activate('observation_platform','Upgradeable nightly map-intelligence radius: 3 / 6 / 10 km','partial')
+  activate('central_cafeteria','Doubles personal Kitchen daily cooking attempts')
 
   // Well / Pump economy. Existing current-source fidelity snapshots retain their verified
   // completion-water values for Pump, Drilling Rig, Hydraulic Network, Eden, Derrick and

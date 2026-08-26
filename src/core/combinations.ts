@@ -7,6 +7,8 @@ export interface CombinationInputRule {
   count?:number
   condition?:ItemState['condition']
   chargesBelow?:number
+  /** Source recipe input is required but not consumed. */
+  keep?:boolean
 }
 export interface CombinationRecipe {
   id:CombinationRecipeId
@@ -39,6 +41,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
   assemble_torch:recipe({id:'assemble_torch',name:'Make Torch',category:'assemble',apCost:0,inputs:[{type:'box_of_matches'},{type:'rotten_log'}],outputType:'torch',summary:'Box of Matches + Rotting Log → Torch',source:'MYHORDES_CURRENT'}),
   assemble_hacksaw:recipe({id:'assemble_hacksaw',name:'Repair Hacksaw',category:'assemble',apCost:0,inputs:[{type:'saw_tool_part'},{type:'kwik_fix'},{type:'nuts_and_bolts'}],outputType:'saw_tool',summary:'Damaged Hacksaw + Kwik-Fix + Nuts & Bolts → Hacksaw',source:'MYHORDES_CURRENT'}),
   prepare_spicy_noodles:recipe({id:'prepare_spicy_noodles',name:'Prepare Spicy Chinese Noodles',category:'assemble',apCost:0,inputs:[{type:'chinese_noodles'},{type:'strong_spices'},{type:'water_ration'}],outputType:'spicy_chinese_noodles',summary:'Chinese Noodles + Strong Spices + Water Ration → Spicy Chinese Noodles',source:'MYHORDES_CURRENT'}),
+  toast_marshmallows:recipe({id:'toast_marshmallows',name:'Toast Marshmallows',category:'assemble',apCost:0,inputs:[{type:'dried_marshmallows'},{type:'torch',keep:true}],outputType:'burnt_marshmallows',summary:'Dried Marshmallows + Torch → Burnt Marshmallows (Torch kept)',source:'MYHORDES_CURRENT'}),
   mix_concrete:recipe({id:'mix_concrete',name:'Mix Concrete Block',category:'assemble',apCost:0,inputs:[{type:'bag_of_cement'},{type:'water_ration'}],outputType:'unshaped_concrete_block',summary:'Bag of Cement + Water Ration → Unshaped Concrete Block',source:'MYHORDES_CURRENT'}),
   fill_water_bomb:recipe({id:'fill_water_bomb',name:'Fill Water Bomb',category:'assemble',apCost:0,inputs:[{type:'plastic_bag'},{type:'water_ration'}],outputType:'water_bomb',summary:'Plastic Bag + Water Ration → Water Bomb',source:'MYHORDES_CURRENT'}),
 
@@ -78,7 +81,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
 }
 
 export const COMBINATION_RECIPE_ORDER:CombinationRecipeId[]=[
-  'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','assemble_hacksaw','prepare_spicy_noodles','mix_concrete','fill_water_bomb',
+  'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','assemble_hacksaw','prepare_spicy_noodles','toast_marshmallows','mix_concrete','fill_water_bomb',
   'reload_water_pistol','refill_water_cooler','reload_battery_launcher','load_radio_battery','load_ems_battery',
   'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete','repair_adjustable_spanner','repair_screwdriver','repair_swiss_army_knife','repair_box_cutter','repair_chain','repair_can_opener','repair_ektorp_gluten_chair','repair_pc_base_unit',
   'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete','kwik_fix_adjustable_spanner','kwik_fix_screwdriver','kwik_fix_swiss_army_knife','kwik_fix_box_cutter','kwik_fix_chain','kwik_fix_can_opener','kwik_fix_ektorp_gluten_chair','kwik_fix_pc_base_unit',
@@ -134,17 +137,20 @@ function assembledDestination(citizen:Citizen,refs:PersonalRef[]):PersonalItemSt
   return refs.some((entry)=>entry.storage==='inventory')?'inventory':'home'
 }
 function createdItem(state:GameState,type:ItemType,offset=0,stateOverride?:ItemState):ItemInstance{return createItemInstance(`i${String(state.nextItemId+offset).padStart(6,'0')}`,type,stateOverride)}
-function repairedType(recipeId:CombinationRecipeId):ItemType{
-  return COMBINATION_RECIPES[recipeId].outputType
-}
+function repairedType(recipeId:CombinationRecipeId):ItemType{return COMBINATION_RECIPES[recipeId].outputType}
 function isRepairKitRecipe(recipeId:CombinationRecipeId):boolean{return recipeId.startsWith('repair_')}
 function isKwikFixRecipe(recipeId:CombinationRecipeId):boolean{return recipeId.startsWith('kwik_fix_')}
+function consumedAssembleIds(recipe:CombinationRecipe,refs:PersonalRef[]):string[]{
+  const consumed:string[]=[];let offset=0
+  for(const rule of recipe.inputs){for(let index=0;index<(rule.count??1);index+=1){const ref=refs[offset++];if(ref&&!rule.keep)consumed.push(ref.item.id)}}
+  return consumed
+}
 
 export function resolveCombination(state:GameState,citizen:Citizen,recipeId:CombinationRecipeId,itemIds:string[]):{consumedItemIds:string[];outputs:CombinationEventOutput[];createdCount:number}{
   const recipe=COMBINATION_RECIPES[recipeId]
   const refs=refsForCommand(citizen,itemIds)
   if(recipe.category==='assemble'){
-    return{consumedItemIds:itemIds,outputs:[{item:createdItem(state,recipe.outputType),storage:assembledDestination(citizen,refs)}],createdCount:1}
+    return{consumedItemIds:consumedAssembleIds(recipe,refs),outputs:[{item:createdItem(state,recipe.outputType),storage:assembledDestination(citizen,refs)}],createdCount:1}
   }
   if(recipeId==='reload_water_pistol'){
     const target=refs[0];const stateAfter={...normalizeItemState(target.item.type,target.item.state),charges:3}

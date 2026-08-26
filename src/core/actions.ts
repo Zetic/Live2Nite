@@ -8,6 +8,7 @@ import { HOME_IMPROVEMENTS, canBuildImprovementSource, foreignHomeStorageVisible
 import { canCarryItem } from './inventory'
 import { itemUseActionAvailable, itemUseActionsForType } from './itemEffects'
 import { consumableKind, containerPool, isContainer, itemHasCapability, normalizeItemState } from './items'
+import { kitchenCommandsForCitizen } from './kitchen'
 import { canToolOpen, openableDefinition } from './openables'
 import { RUIN_CATALOG } from './ruinCatalog'
 import { canReplenishWithSpade, type ScavengerSearchCommand } from './scavenging'
@@ -119,6 +120,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
         if(canBuildImprovementSource(definition,nextLevel)&&citizen.ap>=definition.apCost(nextLevel)&&hasPersonalMaterials(citizen,definition.resources(nextLevel)))actions.push({type:'BUILD_HOME_IMPROVEMENT',citizenId,improvementId})
       }
       if(homeImprovementLevel(citizen,'siesta')>0&&citizen.ap<citizen.maxAp&&!siestaUsedToday(state,citizen.id))actions.push({type:'USE_HOME_SIESTA',citizenId})
+      actions.push(...kitchenCommandsForCitizen(state,citizen))
       if(homeLabCanUse(state,citizen))actions.push({type:'USE_HOME_LAB',citizenId})
     }
     if(canPayTechnicalWork(citizen,CONSTRUCTION_AP_COST)&&canContributeConstructionByStatus(citizen)){for(const projectId of constructionFrontier(state))if(hasProjectMaterials(state,projectId))actions.push({type:'CONTRIBUTE_CONSTRUCTION',citizenId,projectId})}
