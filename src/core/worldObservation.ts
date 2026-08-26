@@ -9,6 +9,11 @@ const OBSERVATION_RADIUS_BY_LEVEL:readonly number[]=[0,3,6,10]
 const SEARCH_RECOVERY_BY_LEVEL:readonly number[]=[25,37,49,61,73,85]
 export const SEARCHTOWER_MINIMUM_DISTANCE=2
 
+// Current MyHordes world regeneration exists independently of the Searchtower. The
+// unbuilt/level-0 recovery chance is 25%; constructing Searchtower reveals the selected
+// nightly sector, while its voted upgrades raise the recovery chance above that baseline.
+export const BASE_WORLD_RECOVERY_CHANCE=SEARCH_RECOVERY_BY_LEVEL[0]
+
 type WorldEvolutionEventWithSearchtower=Extract<GameEvent,{type:'WORLD_ZOMBIES_EVOLVED'}>&{searchTowerDirection?:NightWindDirection}
 
 function isolatedWorldSeed(seed:number,day:number,salt:number):number{const mixed=((seed>>>0)^Math.imul(day+1,0x85ebca6b)^salt)>>>0;return mixed||1}
@@ -19,9 +24,9 @@ export function observationPlatformRadius(state:GameState):number{
 }
 export function upgradedMapExact(state:GameState):boolean{return state.town.construction.upgraded_map?.completed===true}
 export function searchTowerRecoveryChance(state:GameState):number{
-  if(!state.town.construction.search_tower?.completed)return 0
+  if(!state.town.construction.search_tower?.completed)return BASE_WORLD_RECOVERY_CHANCE
   const level=Math.min(5,constructionUpgradeLevel(state,'search_tower'))
-  return SEARCH_RECOVERY_BY_LEVEL[level]??SEARCH_RECOVERY_BY_LEVEL[0]
+  return SEARCH_RECOVERY_BY_LEVEL[level]??BASE_WORLD_RECOVERY_CHANCE
 }
 export function searchTowerWindDirectionForDay(seed:number,day:number):NightWindDirection{
   const roll=randomInt(isolatedWorldSeed(seed,day,0x51ea7e11),0,WIND_DIRECTIONS.length-1)
@@ -84,9 +89,14 @@ export function nightlyObservationEvents(state:GameState):GameEvent[]{
   return events
 }
 
+/**
+ * Natural nightly recovery always chooses a sector and rolls eligible depleted zones. The
+ * Searchtower is not required for the base 25% recovery; it only makes that sector public and
+ * its voted levels increase the chance to 37/49/61/73/85%.
+ */
 export function searchTowerReplenishmentEventsForNight(state:GameState,lootPool:readonly import('./types').ItemType[]):GameEvent[]{
   const percent=searchTowerRecoveryChance(state)
-  if(percent<=0||lootPool.length===0)return[]
+  if(lootPool.length===0)return[]
   const wind=searchTowerWindDirectionForDay(state.seed,state.day)
   const candidates=Object.values(state.world.zones)
     .filter((zone)=>!isTownGateZone(zone.x,zone.y)&&zone.searchesRemaining===0&&zoneDistance(zone.x,zone.y)>SEARCHTOWER_MINIMUM_DISTANCE&&zoneWindDirection(zone.x,zone.y)===wind)
