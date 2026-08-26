@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { asAgentDecisionContext } from '../src/agents/AgentDecisionContext'
+import type { AgentController } from '../src/agents/AgentController'
+import { getLegalActions } from '../src/core/actions'
 import { CONSTRUCTIONS } from '../src/core/construction'
 import { applyEvents } from '../src/core/events'
 import { createInitialGame } from '../src/core/game'
 import { watchtowerEstimate } from '../src/core/night'
 import type { ConstructionId, GameState } from '../src/core/types'
-import { canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
+import { canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerContributors, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
 import { nightlyObservationEvents, observationPlatformRadius, searchTowerRecoveryChance, searchTowerReplenishmentEventsForNight, searchTowerWindDirectionForDay, zoneWindDirection } from '../src/core/worldObservation'
 import { worldZombieEvolutionEvent } from '../src/core/worldEvolution'
+import { advanceOneHour } from '../src/simulation/advanceTime'
 import { describeEvent } from '../src/ui/eventText'
 
 function complete(game:GameState,...ids:ConstructionId[]):GameState{
@@ -15,6 +19,10 @@ function complete(game:GameState,...ids:ConstructionId[]):GameState{
   return{...game,town:{...game.town,construction}}
 }
 function upgrade(game:GameState,id:ConstructionId,level:number):GameState{return{...game,town:{...game.town,upgradeProjects:{...game.town.upgradeProjects,levels:{...game.town.upgradeProjects.levels,[id]:level}}}}}
+const departureController:AgentController={
+  kind:'watchtower-departure-test',
+  decide(input,citizenId){const state=asAgentDecisionContext(input,citizenId).state;return getLegalActions(state,citizenId).find((action)=>action.type==='EXIT_TOWN')??null},
+}
 
 describe('current MyHordes Watchtower estimation',()=>{
   it('allows one free contribution per living citizen in town',()=>{
@@ -54,6 +62,14 @@ describe('current MyHordes Watchtower estimation',()=>{
     const estimate=watchtowerEstimate(game)
     expect(estimate?.tomorrow?.weightedContributions).toBe(16)
     expect(estimate?.tomorrow?.quality).toBeCloseTo(16/24)
+  })
+
+  it('records an autonomous 08:00 contribution before that bot departs town',()=>{
+    let game=complete(createInitialGame(7005,2),'watchtower')
+    game={...game,clock:{hour:8,phase:'day'},town:{...game.town,gateOpen:true}}
+    const next=advanceOneHour(game,departureController,'c01')
+    expect(watchtowerContributors(next)).toContain('c02')
+    expect(next.citizens.find((citizen)=>citizen.id==='c02')?.location.type).toBe('world')
   })
 })
 
