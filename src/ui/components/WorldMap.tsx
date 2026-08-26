@@ -15,7 +15,7 @@ export function mapZombieBand(zombies:number|null|undefined):MapZombieBand{
   return'high'
 }
 
-/** Never-seen zones deliberately suppress ordinary horde information. Scout sense is handled separately by the viewer-aware knowledge layer. */
+/** Ordinary never-seen zones suppress horde information; legal Scout/Platform projections are handled separately. */
 export function mapZombieBandForIntel(discovered:boolean,zombies:number|null|undefined):MapZombieBand{return discovered?mapZombieBand(zombies):'unknown'}
 export function mapIntelClass(discovered:boolean,freshness:ZoneIntelFreshness):string{
   if(freshness==='fresh')return'intel-current'
@@ -55,8 +55,9 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
       const known=knowledge.zone(x,y)
       const scoutEstimate=known?.zombieIntel==='scout_estimate'
       const mapEstimate=known?.zombieIntel==='map_estimate'
+      const unseenExactMapObservation=!zone.discovered&&known?.zombieIntel==='observed'&&known.zombies!==null
       const siteLabel=site?specialSiteCode(site.type):null
-      const zombieBand=scoutEstimate?mapZombieBand(known?.zombies):mapZombieBandForIntel(zone.discovered,known?.zombies)
+      const zombieBand=known&&known.zombieIntel!=='none'?mapZombieBand(known.zombies):mapZombieBandForIntel(zone.discovered,known?.zombies)
       const intelClass=mapIntelClass(zone.discovered,known?.freshness??'unknown')
       const depleted=zone.discovered&&zone.searchesRemaining===0
       const marking=showScoutMarkings&&zone.discovered?scoutLevel(zone):0
@@ -64,6 +65,8 @@ export function WorldMap({game,citizenId}:{game:GameState;citizenId:string}){
       if(scoutEstimate)titleParts.push(`Scout estimate: ~${known?.zombies??0} zombie${known?.zombies===1?'':'s'}`)
       else if(mapEstimate&&known?.freshness==='fresh')titleParts.push(`Observation Platform estimate: ${mapEstimateLabel(known?.zombies)} zombies`)
       else if(mapEstimate)titleParts.push(`last known Observation Platform estimate: ${mapEstimateLabel(known?.zombies)} zombies · Day ${known?.lastObservedDay??'?'}`)
+      else if(unseenExactMapObservation&&known?.freshness==='fresh')titleParts.push(`Upgraded Map observation: ${known.zombies} zombies`)
+      else if(unseenExactMapObservation)titleParts.push(`last known Upgraded Map observation: ${known.zombies} zombies · Day ${known.lastObservedDay??'?'}`)
       else if(!zone.discovered)titleParts.push('unexplored · zombie count unknown')
       else if(known?.zombies===null||known?.zombies===undefined)titleParts.push('visited · zombie count unknown')
       else if(known.freshness==='fresh')titleParts.push(`${known.zombies} zombies observed today${known.lastObservedHour!==null?` at ${String(known.lastObservedHour).padStart(2,'0')}:00`:''}`)
