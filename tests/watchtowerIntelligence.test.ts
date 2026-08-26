@@ -6,6 +6,8 @@ import { watchtowerEstimate } from '../src/core/night'
 import type { ConstructionId, GameState } from '../src/core/types'
 import { canContributeWatchtower, contributeWatchtowerEstimation, watchtowerContributionWeight, watchtowerTodayWeightedContributions, watchtowerTomorrowWeightedContributions } from '../src/core/watchtowerEstimation'
 import { nightlyObservationEvents, observationPlatformRadius, searchTowerRecoveryChance, searchTowerReplenishmentEventsForNight, searchTowerWindDirectionForDay, zoneWindDirection } from '../src/core/worldObservation'
+import { worldZombieEvolutionEvent } from '../src/core/worldEvolution'
+import { describeEvent } from '../src/ui/eventText'
 
 function complete(game:GameState,...ids:ConstructionId[]):GameState{
   const construction={...game.town.construction}
@@ -116,5 +118,12 @@ describe('Searchtower nightly recovery',()=>{
     const applied=applyEvents(game,events)
     expect(events.some((event)=>event.type==='ZONE_REPLENISHED'&&!game.world.zones[event.zoneKey].discovered)).toBe(true)
     expect(events.every((event)=>event.type!=='ZONE_REPLENISHED'||applied.world.zones[event.zoneKey].searchesRemaining===1)).toBe(true)
+  })
+
+  it('keeps a nightly Chronicle hook and records the selected recovery sector',()=>{
+    const game=complete(createInitialGame(7203,2),'watchtower','search_tower')
+    const event=worldZombieEvolutionEvent(game)
+    expect(event?.type).toBe('WORLD_ZOMBIES_EVOLVED')
+    expect(describeEvent(event!,game)).toContain(`Searchtower recorded the recovery sector as ${searchTowerWindDirectionForDay(game.seed,game.day)}.`)
   })
 })
