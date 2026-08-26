@@ -81,6 +81,9 @@ export function runBotHour(state: GameState, controller: AgentController, contro
   if (state.clock.phase !== 'day') return state
   let nextState = state
 
+  // Forum-like public commitments are posted first. Mission planning then sees which
+  // citizens already volunteered for gate/construction duties instead of relying on a
+  // hidden fixed reserve or treating all possible town work as mandatory.
   const coordination=planTownCoordination(nextState,controlledCitizenId)
   if(coordination.length)nextState=applyEvents(nextState,coordination)
 
@@ -103,6 +106,8 @@ export function runBotHour(state: GameState, controller: AgentController, contro
       const objective = chooseHourlyObjective(nextState, startingCitizen.id)
       if (objective === 'idle') break
 
+      // A reserved AP floor limits AP-consuming work; it must not terminate the citizen's
+      // turn before zero-AP survival/inventory actions such as drinking water can run.
       const beforeEvents = nextState.events.length
       const command = controller.decide(createAgentDecisionContext(nextState), startingCitizen.id)
       if (!command) {
@@ -111,7 +116,14 @@ export function runBotHour(state: GameState, controller: AgentController, contro
           const complete = missionCompleteAtTown(nextState, startingCitizen.id)
           if (complete) nextState = applyEvents(nextState, [complete])
         } else if (mission?.phase === 'prepare' && !planExpedition(nextState, startingCitizen.id)?.feasible && !mission.emergency) {
-          nextState = applyEvents(nextState, [{type:'BOT_MISSION_CLEARED',day:nextState.day,hour:nextState.clock.hour,citizenId:startingCitizen.id,missionId:mission.missionId,outcome:'aborted'}])
+          nextState = applyEvents(nextState, [{
+            type: 'BOT_MISSION_CLEARED',
+            day: nextState.day,
+            hour: nextState.clock.hour,
+            citizenId: startingCitizen.id,
+            missionId: mission.missionId,
+            outcome: 'aborted',
+          }])
         }
         break
       }
@@ -122,6 +134,9 @@ export function runBotHour(state: GameState, controller: AgentController, contro
         const citizen=nextState.citizens.find((candidate)=>candidate.id===startingCitizen.id)
         const reserved=reservedApForCitizen(nextState,startingCitizen.id)
         const aggressive=nextState.clock.hour>=AI_TUNING.aggressiveTownApDumpHour
+        // Before the late window, one meaningful town action per hour preserves flexibility
+        // for later rescues/scouting. Once field dispatch is winding down, keep spending safe
+        // AP until the citizen reaches a real reserve instead of carrying it into midnight.
         if(!aggressive||!citizen||citizen.ap<=reserved)break
         continue
       }
@@ -132,9 +147,15 @@ export function runBotHour(state: GameState, controller: AgentController, contro
     }
   }
 
+  // A departure late in the sequential bot order can grant grace to a citizen who
+  // already took its ordinary turn. Revisit those citizens before the hour closes so
+  // temporary control functions as a real coordinated extraction window.
   nextState=runTemporaryExtractionPass(nextState,controller,controlledCitizenId)
 
   if (state.clock.hour === 23 && nextState.town.gateOpen) {
+    // Automatic Piston Lock closes at the start of 23:00 in advanceTime. A late return or
+    // other bot action can reopen the gate later in the same simulated hour, so reassert
+    // the automatic effect after all bot movement before falling back to a human closer.
     if(gateAutoCloseAtHour(nextState,23)){
       nextState=applyEvents(nextState,[{type:'GATE_SET',day:nextState.day,hour:23,open:false,citizenId:'system'}])
     }else{
