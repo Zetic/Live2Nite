@@ -1,5 +1,5 @@
 import { getLegalActions } from '../core/actions'
-import { isScout, scoutCamouflageActive } from '../core/scout'
+import { scoutCamouflageActive } from '../core/scout'
 import type { GameCommand } from '../core/types'
 import { relativeControlActive, temporaryControlActive, zoneControl, zoneControlState } from '../core/world'
 import { asAgentDecisionContext, type AgentDecisionInput } from './AgentDecisionContext'
@@ -20,7 +20,7 @@ import { chooseTownWork, townWorkApCost } from './townWork'
 export class BasicBotController implements AgentController {
   readonly kind='basic-bot'
   decide(input:AgentDecisionInput,citizenId:string):GameCommand|null{
-    const{state:game}=asAgentDecisionContext(input);const citizen=game.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen||!citizen.alive||game.clock.phase!=='day')return null
+    const{state:game}=asAgentDecisionContext(input,citizenId);const citizen=game.citizens.find((candidate)=>candidate.id===citizenId);if(!citizen||!citizen.alive||game.clock.phase!=='day')return null
     const actions=getLegalActions(game,citizenId);if(!actions.length)return null;const mission=game.botMissions[citizenId]??null;if(citizen.camping.hidden)return null
     const hydration=hydrationAction(game,citizen,actions);if(hydration)return hydration
     const treatment=conditionTreatmentAction(game,citizen,actions);if(treatment)return treatment
@@ -29,7 +29,7 @@ export class BasicBotController implements AgentController {
       const blueprint=actions.find((action)=>action.type==='READ_BLUEPRINT')??null;if(blueprint)return blueprint
       const plan=planExpedition(game,citizenId);const unload=unloadAction(citizen,actions,plan,mission?.phase==='unload');if(unload)return unload;if(mission?.phase==='unload')return null
       const commitment=commitmentForCitizen(game,citizenId);const reservedAp=reservedApForCitizen(game,citizenId)
-      if(!mission&&isScout(citizen)){const mapping=pick(actions,'MAP_WASTELAND');if(mapping&&citizen.ap-1>=reservedAp)return mapping}
+      if(!mission){const mapping=pick(actions,'MAP_WASTELAND');if(mapping&&citizen.ap-1>=reservedAp)return mapping}
       if(!mission&&reservedAp>=citizen.ap){const packages=packageSharingAction(citizen,actions,null,game.clock.hour);if(packages)return packages;const reservedHydration=hydrationAction(game,citizen,actions,{forceThirstTreatment:game.clock.hour>=AI_TUNING.lateHydrationTreatmentHour});if(reservedHydration)return reservedHydration;return null}
       if(!mission){
         const committedProject=committedConstructionProject(game,citizenId)
@@ -51,7 +51,7 @@ export class BasicBotController implements AgentController {
     if(control.trapped&&scoutCamouflageActive(citizen)){
       if(mission?.phase==='camp')return campingAction(game,citizen,actions)
       if(mission?.phase==='outbound'){
-        const direction=nextDirectionToward(game,{x:citizen.location.x,y:citizen.location.y},mission.target)
+        const direction=nextDirectionToward(game,{x:citizen.location.x,y:citizen.location.y},mission.target,citizen.id)
         if(direction){const move=controlAwareMove(game,citizen,actions,direction,false);if(move)return move}
       }
       return controlAwareStepTowardTown(game,citizen,actions)
@@ -65,6 +65,6 @@ export class BasicBotController implements AgentController {
     if(mission.phase==='return'){const safety=missionSafety(game,citizenId);const refill=refillAction(citizen,actions,safety.returnAp);if(refill)return refill;return controlAwareStepTowardTown(game,citizen,actions)}
     const plan=planExpedition(game,citizenId);if(!plan)return controlAwareStepTowardTown(game,citizen,actions);const refill=refillAction(citizen,actions,plan.route.length+plan.expectedTaskAp+mission.safetyReserve+(plan.campingPlanned?0:plan.returnAp));if(refill)return refill
     if(mission.phase==='operate'){if(mission.role==='rescue')return null;if(mission.role==='excavator'){const excavate=pick(actions,'EXCAVATE_SPECIAL_SITE');if(excavate)return excavate}return null}
-    const direction=nextDirectionToward(game,{x:citizen.location.x,y:citizen.location.y},mission.target);if(direction){const action=controlAwareMove(game,citizen,actions,direction,false);if(action)return action}return controlAwareStepTowardTown(game,citizen,actions)
+    const direction=nextDirectionToward(game,{x:citizen.location.x,y:citizen.location.y},mission.target,citizen.id);if(direction){const action=controlAwareMove(game,citizen,actions,direction,false);if(action)return action}return controlAwareStepTowardTown(game,citizen,actions)
   }
 }
