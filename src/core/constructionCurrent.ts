@@ -26,6 +26,11 @@ export function applyCurrentConstructionEconomy():void{
   CONSTRUCTIONS.scouts_lair.implementationStatus='implemented'
   CONSTRUCTIONS.scouts_lair.wipReason=undefined
   CONSTRUCTIONS.scouts_lair.playable=true
+
+  // Current MyHordes camping calculation gives a completed Lighthouse +25 camping points.
+  const lighthouse=CONSTRUCTIONS.lighthouse
+  lighthouse.effects=lighthouse.effects.map((effect)=>effect.type==='camping_survival_bonus'?{...effect,amount:25}:effect)
+  lighthouse.effectLabel='+25 camping points'
 }
 
 applyCurrentConstructionEconomy()
