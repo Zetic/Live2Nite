@@ -29,18 +29,28 @@ Live2Nite derives supported Wrench-repair targets from its existing source-backe
 
 The **Technicians Workbench** construction is sourced from the MyHordes Prime/seasonal layer retained in the current repository. Its existing Live2Nite construction entry is now active at the source-backed cost already present in the construction catalogue.
 
-Once built, every citizen can use the Workbench **once per day** on a Workshop recipe that normally has multiple random outcomes. Instead of rolling randomly, that citizen chooses one supported outcome directly.
+Once built, every citizen can use the Workbench **once per day** on a Workshop recipe that normally has multiple random outcomes. Instead of rolling randomly, that citizen chooses one supported outcome directly. The Prime fixture creates one deterministic Technician-specific recipe for each ordinary random result.
 
-- Technician cost: **4 work points**, paid CP first and AP as fallback.
-- Other profession cost: **6 AP**.
-- The once-per-day use belongs to the citizen, not the town, so different citizens can each use the Workbench once that day.
-- Current Live2Nite controlled-output candidates are the existing random dismantling recipes for Broken Electronic Devices and Mechanisms.
+The Workbench price is a **surcharge on top of the ordinary Workshop recipe cost**, not a replacement cost:
 
-The Workbench does not change the ordinary Workshop recipe. A citizen may still use the normal random conversion path instead of spending the day's controlled-output use.
+- first calculate the ordinary Workshop base: **3 work points**, reduced by **−1 for Factory** and **−1 for a carried Hacksaw**, with Live2Nite's existing 1-point floor;
+- then add **+4 work points for a Technician** or **+6 work points for another profession**;
+- the completed total uses the ordinary CP-first/AP-fallback payment rule, so a Technician spends CP before AP while a non-Technician has no CP and therefore pays AP.
+
+Examples:
+
+- no discounts: Technician Workbench = **3 + 4 = 7** total work points → a fresh Technician spends 6 CP + 1 AP;
+- no discounts: ordinary citizen Workbench = **3 + 6 = 9 AP**;
+- Factory + Hacksaw: Technician Workbench = **1 + 4 = 5** total work points;
+- Factory + Hacksaw: ordinary citizen Workbench = **1 + 6 = 7 AP**.
+
+The once-per-day use belongs to the citizen, not the town, so different citizens can each use the Workbench once that day. Current Live2Nite controlled-output candidates are the existing random dismantling recipes for Broken Electronic Devices and Mechanisms.
+
+The Workbench does not replace the ordinary Workshop recipe. A citizen may still use the normal random conversion path instead of spending the day's controlled-output use.
 
 ## Bot parity
 
-Autonomous Technicians use the same legal command and payment paths as the controlled citizen. Their town-work reserve calculation treats CP-funded work as zero-AP work, allowing a Technician to contribute technical labor without falsely consuming AP reserved for gate or expedition obligations. The town material planner can use the Workbench to target a missing technical construction component rather than taking a random dismantle result when the once-daily option is available.
+Autonomous Technicians use the same legal command and payment paths as the controlled citizen. Their town-work reserve calculation uses the real AP remainder after CP has paid as much of the total as possible, allowing a Technician to contribute technical labor without falsely consuming AP reserved for gate or expedition obligations. The town material planner can use the Workbench to target a missing technical construction component rather than taking a random dismantle result when the once-daily option is available and affordable.
 
 ## Scope boundaries
 
