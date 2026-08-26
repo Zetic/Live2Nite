@@ -30,7 +30,8 @@ function freshnessFor(state:GameState,x:number,y:number):ZoneIntelFreshness{
 /**
  * Citizen-aware world knowledge remains a projection of legal information, never raw world state.
  * A Scout viewer may receive the current bounded adjacent-zone estimate supplied by Scout sense;
- * Observation Platform can also supply a coarse nightly map estimate until Upgraded Map exists.
+ * Observation Platform can supply zombie intelligence without turning the zone into a fully
+ * discovered zone or exposing its search state, ground items, or special-site metadata.
  */
 export function createAgentWorldKnowledge(state: GameState,viewerCitizenId?:string): AgentWorldKnowledge {
   const viewer=viewerCitizenId?state.citizens.find((citizen)=>citizen.id===viewerCitizenId)??null:null
@@ -49,31 +50,17 @@ export function createAgentWorldKnowledge(state: GameState,viewerCitizenId?:stri
       const effectiveFreshness:ZoneIntelFreshness=estimate!==null&&!currentObservation?'fresh':freshness
       const lastObservedDay=zombieIntel==='scout_estimate'?null:intel?.lastObservedDay??null
       const lastObservedHour=zombieIntel==='scout_estimate'?null:intel?.lastObservedHour??null
-      if (!zone.discovered) {
-        return {
-          x: zone.x,
-          y: zone.y,
-          discovered: false,
-          zombies: estimate,
-          zombieIntel:estimate===null?'none':'scout_estimate',
-          freshness:estimate===null?'unknown':'fresh',
-          lastObservedDay:null,
-          lastObservedHour:null,
-          searchesRemaining: null,
-          specialSite: undefined,
-        }
-      }
       return {
         x: zone.x,
         y: zone.y,
-        discovered: true,
+        discovered: zone.discovered,
         zombies,
         zombieIntel,
         freshness:effectiveFreshness,
         lastObservedDay,
         lastObservedHour,
-        searchesRemaining: zone.searchesRemaining,
-        specialSite: zone.specialSite,
+        searchesRemaining: zone.discovered?zone.searchesRemaining:null,
+        specialSite: zone.discovered?zone.specialSite:undefined,
       }
     },
   }
