@@ -1,5 +1,5 @@
 import { CONSTRUCTION_AP_COST, GATE_AP_COST, SPECIAL_EXCAVATION_AP_COST, getLegalActions } from './actions'
-import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, campingChanceBreakdown } from './camping'
+import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, CAMP_IMPROVEMENT_POINTS, TRESTLE_CAMP_IMPROVEMENT_POINTS, campImproveCommandItemId, campingChanceBreakdown } from './camping'
 import { BAREHANDED_AP_COST, resolveBarehandedAttack, resolveWeaponAttack } from './combat'
 import { COMBINATION_RECIPES, resolveCombination } from './combinations'
 import { CONSTRUCTIONS, blueprintEligibleProjects } from './construction'
@@ -38,6 +38,7 @@ function sameCommand(left:GameCommand,right:GameCommand):boolean{
   if(left.type==='DRUG_TAMER_DOG'&&right.type==='DRUG_TAMER_DOG')return left.itemId===right.itemId
   if(left.type==='SEND_TAMER_DOG'&&right.type==='SEND_TAMER_DOG')return left.destination===right.destination
   if(left.type==='USE_WEAPON'&&right.type==='USE_WEAPON')return left.itemId===right.itemId
+  if(left.type==='IMPROVE_CAMP'&&right.type==='IMPROVE_CAMP')return campImproveCommandItemId(left)===campImproveCommandItemId(right)
   if(left.type==='DEPOSIT_ITEM'&&right.type==='DEPOSIT_ITEM')return left.itemId===right.itemId
   if(left.type==='WITHDRAW_BANK_ITEM'&&right.type==='WITHDRAW_BANK_ITEM')return left.itemId===right.itemId
   if(left.type==='DUMP_BANK_ITEM'&&right.type==='DUMP_BANK_ITEM')return left.itemId===right.itemId
@@ -125,7 +126,16 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     case 'ATTACK_BAREHANDED':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveBarehandedAttack(state);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:BAREHANDED_AP_COST},{type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:'fists',kills:outcome.kills,item:null,consumed:false,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills));break}
     case 'USE_WEAPON':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const zone=state.world.zones[key];const located=locateItem(state,command.citizenId,command.itemId);const outcome=resolveWeaponAttack(state,located.item,zone.zombies);events.push({type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:located.item.type,item:located.item,source:located.source,kills:outcome.kills,consumed:outcome.consumed,brokenInto:outcome.brokenInto,chargesAfter:outcome.chargesAfter,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills));break}
     case 'FLEE_ZOMBIES':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveCitizenEffects(citizen,WORLD_STATUS_ACTIONS.flee_zombies.effects,state.rngState);events.push({type:'FLEE_ZOMBIES_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,statusAfter:outcome.status,rngStateAfter:outcome.rng});break}
-    case 'IMPROVE_CAMP':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMP_IMPROVEMENT_AP_COST},{type:'CAMP_IMPROVED',day:state.day,citizenId:command.citizenId,zoneKey:key,amount:1});break}
+    case 'IMPROVE_CAMP':{
+      if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
+      const key=zoneKey(citizen.location.x,citizen.location.y)
+      const itemId=campImproveCommandItemId(command)
+      const trestle=itemId?citizen.inventory.find((item)=>item.id===itemId&&item.type==='trestle'):null
+      if(itemId&&!trestle)throw new InvalidCommandError('A carried Trestle is required')
+      events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMP_IMPROVEMENT_AP_COST})
+      events.push({type:'CAMP_IMPROVED',day:state.day,citizenId:command.citizenId,zoneKey:key,amount:trestle?TRESTLE_CAMP_IMPROVEMENT_POINTS:CAMP_IMPROVEMENT_POINTS,...(trestle?{item:trestle}:{} as {})} as GameEvent)
+      break
+    }
     case 'DIG_CAMPING_GRAVE':{const breakdown=campingChanceBreakdown(state,command.citizenId,{grave:true});events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMPING_GRAVE_AP_COST},{type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:true,grave:true,survivalChance:breakdown.final,breakdown});break}
     case 'HIDE_FOR_NIGHT':{const breakdown=campingChanceBreakdown(state,command.citizenId,{grave:false});events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:true,grave:false,survivalChance:breakdown.final,breakdown});break}
     case 'LEAVE_HIDEOUT':events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:false,grave:false,survivalChance:null,breakdown:null});break
