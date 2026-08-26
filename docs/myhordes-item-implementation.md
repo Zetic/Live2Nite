@@ -90,7 +90,7 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `door_#00` | `old_door` |
 | `concrete_#00` | `bag_of_cement` |
 | `table_#00` | `table` |
-| `trestle_#00` | `trestle` (Partial: runtime/acquisition/defense active; Watch/outside-install actions deferred) |
+| `trestle_#00` | `trestle` (Implemented: heavy defense furniture, verified acquisition, +9 outside install, and 15-point IKEA Night Watch behavior) |
 | `lights_#00` | `box_of_matches` |
 | `wire_#00` | `wire_reel` |
 | `oilcan_#00` | `empty_oil_can` |
@@ -120,9 +120,11 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 
 ### Trestle coverage
 
-`trestle_#00` is no longer an unresolved ordinary-loot dependency. Live2Nite now models it as a heavy/cumbersome defensive furniture item with +1 Bank defense and +1 Home defense. It is mapped in the source normal-loot table and resolves from the exact source ruin rows already represented by Live2Nite: Home Depot, Construction Site Shelter, PI-KEYA Furniture, Disused Car Park, Abandoned Construction Site, and Blocked Road. Two Trestles are required by the now-buildable Organized Dump.
+`trestle_#00` is no longer an unresolved ordinary-loot dependency. Live2Nite models it as a heavy/cumbersome defensive furniture item with +1 Bank defense and +1 Home defense. It is mapped in the source normal-loot table and resolves from the exact source ruin rows already represented by Live2Nite: Home Depot, Construction Site Shelter, PI-KEYA Furniture, Disused Car Park, Abandoned Construction Site, and Blocked Road. Two Trestles are required by the now-buildable Organized Dump.
 
-The source registry also records 15 Watch points. That Night Watch behavior and the source outside-install/camping action remain deferred until their exact interaction path is verified, so the current item implementation status remains **Partial** rather than Implemented. Flatpacked Furniture is a known source route, but its exact current output weights are not guessed in this pass.
+The source outside action costs 1 AP, consumes the exact carried Trestle, and adds +9 permanent campsite improvement points up to the 50-point source cap. The campsite representation remains compatible with older schema-19 saves by interpreting legacy `campImprovements` values as +5-point steps while retaining an exact level for current non-multiple-of-five effects.
+
+The source registry's 15 Watch points are active as IKEA-family Night Watch equipment. A Trestle is destroyed when the Watch actually uses it, and the Swedish Workshop furniture specialist bonus raises its contribution by 30% (15 to 19 after integer flooring). The current Trestle implementation status is therefore **Implemented**. Flatpacked Furniture remains a known source route, but its exact current output weights are not guessed because verified normal and ruin acquisition already provide an active runtime path.
 
 ## Ordinary normal-loot backlog
 
