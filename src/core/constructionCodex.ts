@@ -1,3 +1,4 @@
+import { constructionImplementationStatus, constructionWipReason } from './construction'
 import { CONSTRUCTION_BRANCHES, CONSTRUCTION_CATALOG, CONSTRUCTION_CATALOG_ORDER, blueprintClassLabel, constructionCatalogChildren, constructionCatalogRoots, type ConstructionBlueprintClass, type ConstructionBranchId, type ConstructionImplementationStatus } from './constructionCatalog'
 import type { ConstructionId } from './constructionIds'
 import { EXPLORABLE_BLUEPRINT_SOURCE_WEIGHTS, explorableBlueprintPool, type ExplorableBlueprintTier } from './explorableBlueprints'
@@ -53,8 +54,8 @@ export function constructionCodexEntry(id:ConstructionId):ConstructionCodexEntry
     temporary:source.temporary,
     hasUpgrade:source.hasUpgrade,
     resources:source.resources,
-    implementation:source.implementation,
-    wipReason:source.wipReason,
+    implementation:constructionImplementationStatus(id),
+    wipReason:constructionWipReason(id),
     depth:depthOf(id),
   }
 }
