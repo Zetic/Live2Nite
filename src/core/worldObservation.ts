@@ -1,5 +1,6 @@
 import { constructionUpgradeLevel } from './constructionUpgrades'
 import { randomInt } from './rng'
+import type { ReplenishmentEvent } from './scavenging'
 import type { GameEvent, GameState } from './types'
 import { distanceToTown, isTownGateZone, zoneKey } from './world'
 
@@ -98,6 +99,7 @@ export function searchTowerReplenishmentEventsForNight(state:GameState,lootPool:
   const percent=searchTowerRecoveryChance(state)
   if(lootPool.length===0)return[]
   const wind=searchTowerWindDirectionForDay(state.seed,state.day)
+  const searchtowerBuilt=state.town.construction.search_tower?.completed===true
   const candidates=Object.values(state.world.zones)
     .filter((zone)=>!isTownGateZone(zone.x,zone.y)&&zone.searchesRemaining===0&&zoneDistance(zone.x,zone.y)>SEARCHTOWER_MINIMUM_DISTANCE&&zoneWindDirection(zone.x,zone.y)===wind)
     .sort((a,b)=>a.y-b.y||a.x-b.x)
@@ -107,7 +109,8 @@ export function searchTowerReplenishmentEventsForNight(state:GameState,lootPool:
     const chance=randomInt(rng,1,100);rng=chance.state
     if(chance.value>percent)continue
     const loot=randomInt(rng,0,lootPool.length-1);rng=loot.state
-    events.push({type:'ZONE_REPLENISHED',day:state.day,hour:0,zoneKey:zoneKey(zone.x,zone.y),loot:lootPool[loot.value]!})
+    const event:ReplenishmentEvent={type:'ZONE_REPLENISHED',day:state.day,hour:0,zoneKey:zoneKey(zone.x,zone.y),loot:lootPool[loot.value]!,source:searchtowerBuilt?'search_tower':'other'}
+    events.push(event)
   }
   return events
 }
