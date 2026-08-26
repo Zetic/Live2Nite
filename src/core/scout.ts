@@ -99,7 +99,7 @@ export function canRecamouflage(state:GameState,citizen:Citizen):boolean{
 export function scoutCanIgnoreZombieControl(citizen:Citizen):boolean{return scoutCamouflageActive(citizen)}
 
 const COVER_BREAKING_COMMANDS=new Set<GameCommand['type']>([
-  'SEARCH_ZONE','EXCAVATE_SPECIAL_SITE','SEARCH_SPECIAL_SITE','PICK_UP_ITEM','DROP_ITEM','ATTACK_BAREHANDED','USE_WEAPON','IMPROVE_CAMP',
+  'SEARCH_ZONE','EXCAVATE_SPECIAL_SITE','SEARCH_SPECIAL_SITE','PICK_UP_ITEM','DROP_ITEM','ATTACK_BAREHANDED','USE_WEAPON','IMPROVE_CAMP','DIG_CAMPING_GRAVE','SURVIVALIST_SEARCH_FOOD','SURVIVALIST_SEARCH_WATER',
 ])
 export function scoutExposureEvent(state:GameState,citizen:Citizen,command:GameCommand):GameEvent|null{
   if(!scoutCamouflageActive(citizen)||citizen.location.type!=='world'||!COVER_BREAKING_COMMANDS.has(command.type))return null

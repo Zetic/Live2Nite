@@ -1,5 +1,5 @@
 import { CONSTRUCTION_AP_COST, GATE_AP_COST, SPECIAL_EXCAVATION_AP_COST, getLegalActions } from './actions'
-import { CAMP_IMPROVEMENT_AP_COST, campingChancePercent } from './camping'
+import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, campingChanceBreakdown } from './camping'
 import { BAREHANDED_AP_COST, resolveBarehandedAttack, resolveWeaponAttack } from './combat'
 import { COMBINATION_RECIPES, resolveCombination } from './combinations'
 import { CONSTRUCTIONS, blueprintEligibleProjects } from './construction'
@@ -16,6 +16,7 @@ import { mappingEvents, movementPointEvent, scoutArrivalEvents, scoutExposureEve
 import { normalizeRuinId } from './specialSites'
 import { LEG_WOUND_MOVE_FAILURE_PERCENT, citizenControlPoints, travelHydrationTransition } from './status'
 import { WORLD_STATUS_ACTIONS } from './statusSources'
+import { survivalistForageEvent } from './survivalist'
 import { tamerDogTransportableItems } from './tamer'
 import type { Citizen, GameCommand, GameEvent, GameState, ItemInstance, ItemStorage, ItemType, SearchMode } from './types'
 import { citizensInZone, getZone, moveCoordinates, zoneControl, zoneKey } from './world'
@@ -76,6 +77,8 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     case 'ENTER_TOWN':events.push({type:'CITIZEN_LOCATION_CHANGED',day:state.day,citizenId:command.citizenId,location:{type:'town'}});break
     case 'RECAMOUFLAGE':events.push({type:'SCOUT_CAMOUFLAGE_SET',day:state.day,citizenId:command.citizenId,active:true,reason:'recamouflaged'});break
     case 'MAP_WASTELAND':events.push(...mappingEvents(state,citizen));break
+    case 'SURVIVALIST_SEARCH_FOOD':events.push(survivalistForageEvent(state,citizen,'food'));break
+    case 'SURVIVALIST_SEARCH_WATER':events.push(survivalistForageEvent(state,citizen,'water'));break
     case 'MOVE':{
       if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside')
       const target=moveCoordinates(citizen.location.x,citizen.location.y,command.direction);const key=zoneKey(target.x,target.y);const targetZone=getZone(state.world,target.x,target.y);if(!targetZone)throw new InvalidCommandError('Target zone does not exist')
@@ -113,8 +116,9 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
     case 'USE_WEAPON':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const zone=state.world.zones[key];const located=locateItem(state,command.citizenId,command.itemId);const outcome=resolveWeaponAttack(state,located.item,zone.zombies);events.push({type:'COMBAT_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,method:located.item.type,item:located.item,source:located.source,kills:outcome.kills,consumed:outcome.consumed,brokenInto:outcome.brokenInto,chargesAfter:outcome.chargesAfter,rngStateAfter:outcome.rngStateAfter},...combatObservationEvents(state,citizen,key,outcome.kills));break}
     case 'FLEE_ZOMBIES':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);const outcome=resolveCitizenEffects(citizen,WORLD_STATUS_ACTIONS.flee_zombies.effects,state.rngState);events.push({type:'FLEE_ZOMBIES_RESOLVED',day:state.day,citizenId:command.citizenId,zoneKey:key,statusAfter:outcome.status,rngStateAfter:outcome.rng});break}
     case 'IMPROVE_CAMP':{if(citizen.location.type!=='world')throw new InvalidCommandError('Citizen is not outside');const key=zoneKey(citizen.location.x,citizen.location.y);events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMP_IMPROVEMENT_AP_COST},{type:'CAMP_IMPROVED',day:state.day,citizenId:command.citizenId,zoneKey:key,amount:1});break}
-    case 'HIDE_FOR_NIGHT':events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:true,survivalChance:campingChancePercent(state,command.citizenId)});break
-    case 'LEAVE_HIDEOUT':events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:false,survivalChance:null});break
+    case 'DIG_CAMPING_GRAVE':{const breakdown=campingChanceBreakdown(state,command.citizenId,{grave:true});events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMPING_GRAVE_AP_COST},{type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:true,grave:true,survivalChance:breakdown.final,breakdown});break}
+    case 'HIDE_FOR_NIGHT':{const breakdown=campingChanceBreakdown(state,command.citizenId,{grave:false});events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:true,grave:false,survivalChance:breakdown.final,breakdown});break}
+    case 'LEAVE_HIDEOUT':events.push({type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:false,grave:false,survivalChance:null,breakdown:null});break
     case 'DEPOSIT_ITEM':{const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_DEPOSITED',day:state.day,citizenId:command.citizenId,item});break}
     case 'WITHDRAW_BANK_ITEM':{const item=state.town.bank.find((candidate)=>candidate.id===command.itemId);if(!item)throw new InvalidCommandError(`Missing Bank item ${command.itemId}`);events.push({type:'ITEM_WITHDRAWN',day:state.day,citizenId:command.citizenId,item});break}
     case 'MOVE_ITEM_TO_HOME':{const item=citizen.inventory.find((candidate)=>candidate.id===command.itemId)!;events.push({type:'ITEM_MOVED_TO_HOME',day:state.day,citizenId:command.citizenId,item});break}

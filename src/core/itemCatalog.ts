@@ -9,6 +9,8 @@ export const ITEM_TYPE_IDS = [
   'doggy_bag','citizen_welcome_pack','battery','box_of_matches','pharmaceutical_products','strong_spices','radio_cassette_player_off',
   // Citizen-condition proof items. Their actions are defined by the shared item-effect engine.
   'bandage','paracetoid','anabolic_steroids','valium_shot','vodka_marinostov','wake_the_dead','ems_system_empty','ems_system_charged',
+  // Camping-support items whose source benefit applies while carried outside.
+  'groundsheet','smelly_meat',
   // Construction economy: advanced materials, supplies, and unprocessed salvage.
   'metal_support','patchwork_beam','sheet_metal','bag_of_damp_grass','bag_of_cement','belt','compact_detonator','convex_lens','copper_pipe','duct_tape','earplugs','electronic_component','empty_oil_can','nuts_and_bolts','laser_diode','semtex','telescope','wire_reel','broken_electronic_device','mechanism',
   // Additional current-MyHordes construction inputs used by direct equivalents in the town tree.

@@ -7,7 +7,7 @@ Live2Nite treats professions as ordinary citizen roles, not as a paid or Hero-st
 | Scavenger | Small Shovel | search, depletion-intel, replenishment, and ruin-oxygen perks implemented |
 | Scout | Camouflage Suit | SP movement, camouflage, reconnaissance, Scout Levels, camping, ruin-entry, and Scouts Lair perks implemented |
 | Guardian | Riot Shield | control and defense perks implemented |
-| Survivalist | Survival Manual | equipment present; gameplay perks deferred |
+| Survivalist | Survival Manual | forage, hydration, camping-cap, and bot endurance perks implemented |
 | Tamer | Three-Legged Maltese | dog logistics and ruin-exit guidance implemented |
 | Technician | Technician's Wrench | equipment present; gameplay perks deferred |
 
@@ -104,6 +104,45 @@ Implemented source behavior:
 
 Source-bound omissions are explicit rather than invented. MyHordes' nighttime camouflage modifier is deferred because Live2Nite has no traversable World Beyond night phase, and the source re-camouflage follower restriction cannot apply until Live2Nite has an escort/follower subsystem. Hero-only systems and Night Watch behavior remain outside the current profession scope.
 
+## Survivalist
+
+The **Survival Manual** is the sole capability token for Survivalist mechanics. There is no separate authoritative Survivalist flag, and the Manual is locked equipment rather than ordinary cargo.
+
+Implemented source behavior:
+
+- At a radial distance of **3 km or more**, a Survivalist can use the Manual once per town day for either **Search for Food** or **Search for Water**. Both choices share the same daily use.
+- The source success chance is **100% on days 1–4, 85% from day 5, 80% from day 10, 70% from day 13, 60% from day 15, and 50% from day 20 onward**.
+- A devastated town reduces that chance by **20 percentage points**, with the source 10% floor preserved by the resolver.
+- A failed attempt still consumes the day's Survival Manual use.
+- Food search is offered only when the citizen can benefit from the ordinary daily food refresh. On success it applies the refresh directly; it does not create a hidden or virtual food item.
+- Water search follows the same hydration rules as an ordinary water use. Normal/Thirsty citizens can receive the daily AP refresh when eligible; a Dehydrated citizen is improved only to **Thirsty** and receives no AP from that use.
+- Successful water resets desert walking-distance hydration progress just like the source action.
+- Live2Nite preserves deterministic RNG/event replay for both successful and failed Manual attempts.
+- Bot-controlled Survivalists use the same legal actions. The Manual is treated as emergency field endurance, but ordinary food/water already packed in the rucksack is used first rather than being wasted in favor of the profession action.
+
+### Standard camping model
+
+Camping is a shared citizen system; Survivalist modifies the ceiling rather than receiving an invented flat bonus. Live2Nite now uses the current standard-town factor model:
+
+- previous successful camps use the source progression `+80, +60, +35, +15, 0, -50, -100, -200, -400, -1000, -2000, -5000`, clamped at the final entry;
+- source distance bands are applied from the citizen's radial zone distance;
+- an ordinary 1 AP campsite improvement adds **+5 permanent camping points** and does not decay overnight;
+- **Dig a Grave** costs 1 AP, adds **+8** for that camping attempt, and immediately commits the citizen to hiding;
+- an empty outdoor zone contributes the source **-25** building/shelter factor;
+- a buried ruin with available shelter contributes **+15**; accessible ruins use their source-backed camping level and capacity from the ruin catalogue;
+- shelter capacity and the separate hide-order crowd penalty are based on citizens who hid earlier in the same zone; the crowd sequence is `0, 0, -10, -30, -50, -70`, clamped at -70;
+- each zombie contributes **-7** camping points, or **-3** for an actively camouflaged Scout;
+- a completed **Lighthouse** contributes **+25** camping points;
+- a devastated town contributes **-50**;
+- ordinary citizens are capped at **90%** while Survivalists are capped at **100%**;
+- the complete factor breakdown is frozen when the citizen hides, so later changes in the zone cannot retroactively alter that night's committed chance.
+
+Two current MyHordes carry items are also represented directly: **Groundsheet** (`sheet_#00`) and **Smelly Meat** (`smelly_meat_#00`). Each adds **+5 camping points while carried outside**, and carrying both stacks to +10. Their Live2Nite runtime identities are source-mapped into the normal-loot dependency table and are present at low frequency in the current legacy normal-scavenge pool while the complete weighted normal-zone source table is still being finished.
+
+Autonomous citizens evaluate the same camping chance. Bots can invest AP into a permanent +5 site improvement, use a +8 grave when that is the better immediate overnight choice, or hide normally; they do not receive hidden camping bonuses.
+
+Source-bound omissions remain explicit. Hero Pro Camper, Panda/Chaos/special-mode modifiers are outside current scope. The source traversable-night camping modifier is not applied because Live2Nite has no nighttime World Beyond traversal phase. The Survival Manual's generic SP-extension restoration is deferred until Live2Nite has a generic non-Scout SP-extension system. The current Nature Area of the Survivalists A/B/C water-output table remains unresolved in the public base fixture data, so Live2Nite deliberately does not substitute the obsolete historical 6/4 AP Fill-the-Well action. Source +9 consumable campsite-improvement items are also deferred until camping improvement state can represent raw source points instead of only permanent +5 AP improvements.
+
 ## Tamer
 
 The **Three-Legged Maltese** is the sole capability token for Tamer mechanics. There is no independent `isTamer` state. Replacing the Profession Item immediately removes the dog logistics controls and ruin-exit guidance.
@@ -135,4 +174,4 @@ A valid profession-era local save resumes normally. Debug **New Town** and the r
 
 ## Deferred professions
 
-Survivalist survival mechanics and Technician construction points/actions remain for individual follow-up PRs. Those implementations should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.
+Technician construction points/actions remain for a dedicated follow-up PR. That implementation should query the equipped profession item through the profession helpers so replacing that item remains the single source of profession identity.

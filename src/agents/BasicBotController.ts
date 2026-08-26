@@ -7,7 +7,7 @@ import type { AgentController } from './AgentController'
 import { AI_TUNING } from './AiTuning'
 import { bestWeaponAction, controlAwareMove, controlAwareStepTowardTown } from './actions/FieldActions'
 import { packageSharingAction, prepareLoadout, refillAction, unloadAction } from './actions/InventoryActions'
-import { campingAction, conditionTreatmentAction, hydrationAction } from './actions/SurvivalActions'
+import { campingAction, conditionTreatmentAction, hydrationAction, survivalistRecoveryAction } from './actions/SurvivalActions'
 import { carried, pick } from './actions/actionSelectors'
 import { commitmentForCitizen, committedConstructionProject, reservedApForCitizen } from './coordination/TownCoordination'
 import { publicDefenseAssessment } from './planning/TownDefenseStrategy'
@@ -25,6 +25,7 @@ export class BasicBotController implements AgentController {
     const hydration=hydrationAction(game,citizen,actions);if(hydration)return hydration
     const treatment=conditionTreatmentAction(game,citizen,actions);if(treatment)return treatment
     const recamouflage=pick(actions,'RECAMOUFLAGE');if(recamouflage)return recamouflage
+    const recovery=survivalistRecoveryAction(citizen,actions);if(recovery)return recovery
     if(citizen.location.type==='town'){
       const blueprint=actions.find((action)=>action.type==='READ_BLUEPRINT')??null;if(blueprint)return blueprint
       const plan=planExpedition(game,citizenId);const unload=unloadAction(citizen,actions,plan,mission?.phase==='unload');if(unload)return unload;if(mission?.phase==='unload')return null
