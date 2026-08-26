@@ -9,7 +9,6 @@ import type { ConstructionId } from './constructionIds'
  * inspectable instead of erasing the earlier reconstruction values.
  */
 export function applyCurrentConstructionEconomy():void{
-  // Source bills verified by the focused Night Watch / Watchtower intelligence passes.
   Object.assign(MYHORDES_CURRENT_CONSTRUCTION_COSTS,{
     battlements:{referenceName:'Battlements',apCost:25,resources:{twisted_plank:6,patchwork_beam:2,metal_support:2,nuts_and_bolts:1}},
     miniature_armory:{referenceName:'Miniature Armory',apCost:40,resources:{nuts_and_bolts:1,twisted_plank:10,wrought_iron:8,sheet_metal:2,duct_tape:2}},
@@ -38,31 +37,47 @@ export function applyCurrentConstructionEconomy():void{
     if(!buildable.includes(id))buildable.push(id)
   }
 
-  // Scout gameplay now supplies the source-backed daily mapping / next-day SP behavior.
   activate('scouts_lair')
-
-  // Technician gameplay supplies the retained Prime Workbench behavior: one controlled
-  // random-Workshop output per citizen/day, with its profession-specific cost surcharge.
   activate('technicians_workbench')
-
-  // Battlements gates voluntary Night Watch. Miniature Armory then enables ordinary
-  // carried watchpoint/watchimpact equipment; neither building adds normal town defense.
   activate('battlements','Unlocks voluntary Night Watch (10 Watchmen before upgrades)')
   activate('miniature_armory','Enables ordinary carried Night Watch equipment')
-
-  // Watchtower intelligence is collaborative in current MyHordes. Scanner doubles the
-  // contribution weight (the same condition as a Telescope in the Bank), while Predictor
-  // spends weighted contributions beyond today's 24-point target on tomorrow's estimate.
   activate('scanner','Doubles Watchtower estimation contribution weight')
   activate('upgraded_map','Nightly Observation Platform intelligence records exact zombie counts')
   activate('search_tower','Reveals the nightly recovery sector; upgrades natural 25% recovery chance')
-
-  // The directly verified Observation Platform radius progression is active. Source levels
-  // 4–5 also grant free-return distance; those two effects remain outside this pass, so the
-  // construction is intentionally Partial rather than claiming the complete upgrade track.
   activate('observation_platform','Upgradeable nightly map-intelligence radius: 3 / 6 / 10 km','partial')
 
-  // Current MyHordes camping calculation gives a completed Lighthouse +25 camping points.
+  // Well / Pump economy. Existing current-source fidelity snapshots retain their verified
+  // completion-water values for Pump, Drilling Rig, Hydraulic Network, Eden, Derrick and
+  // Water Detector. These activations fill the missing interactive/simple-addition mechanics.
+  activate('water_purifier','Converts a Full Jerrycan into 1–3 Well rations')
+  activate('water_filter','Raises Water Purifier output to 4–9 Well rations')
+  activate('faucet','Refills supported water weapons/containers for free without using Well water')
+  activate('water_turrets','70 base defense; voted bonus requires the full nightly Well-water allocation')
+  activate('water_catcher','Rebuildable +2 Well water')
+  activate('divining_rocket','+60 Well water on completion')
+  activate('drilling_rig')
+  activate('eden_project')
+  activate('hydraulic_network')
+  activate('water_detector')
+  activate('derrick')
+
+  CONSTRUCTIONS.water_catcher.effects=[{type:'well_water_on_complete',amount:2}]
+  CONSTRUCTIONS.water_catcher.effectLabel='+2 Well water; rebuildable after each attack'
+  CONSTRUCTIONS.water_catcher.expiresAfterAttack=true
+  CONSTRUCTIONS.divining_rocket.effects=[{type:'well_water_on_complete',amount:60}]
+  CONSTRUCTIONS.divining_rocket.effectLabel='+60 Well water on completion'
+
+  // Agriculture uses the randomized nightly production resolver instead of the legacy generic
+  // daily-bank-item shortcut, preventing duplicate output and preserving the documented ranges.
+  activate('vegetable_plot','Produces 4–7 vegetables + 0–2 high-value fruit after each attack')
+  activate('fertilizer','Raises Vegetable Plot output to 6–8 vegetables + 3–5 high-value fruit')
+  activate('grapeboom','Produces 3–7 Exploding Grapefruits after each attack','partial')
+  activate('outer_world_apple_tree','Produces 3–5 Blue Apples after each attack')
+  CONSTRUCTIONS.vegetable_plot.effects=[]
+  CONSTRUCTIONS.fertilizer.effects=[]
+  CONSTRUCTIONS.grapeboom.effects=[]
+  CONSTRUCTIONS.outer_world_apple_tree.effects=[]
+
   const lighthouse=CONSTRUCTIONS.lighthouse
   lighthouse.effects=lighthouse.effects.map((effect)=>effect.type==='camping_survival_bonus'?{...effect,amount:25}:effect)
   lighthouse.effectLabel='+25 camping points'
