@@ -20,6 +20,7 @@ function survivalistOutside(seed=201,x=3,y=0):GameState{
     citizens:base.citizens.map((citizen)=>({...equipCitizenProfession(citizen,'survivalist'),location:{type:'world' as const,x,y}})),
   }
 }
+function withAp(game:GameState,ap:number):GameState{return{...game,citizens:game.citizens.map((citizen)=>({...citizen,ap}))}}
 function rngStateForRollAbove(percent:number):number{for(let state=1;state<10000;state+=1)if(randomInt(state,1,100).value>percent)return state;throw new Error('No deterministic failure seed found')}
 
 describe('Survivalist profession',()=>{
@@ -35,9 +36,9 @@ describe('Survivalist profession',()=>{
   })
 
   it('requires radial distance 3 and shares one daily Manual use between food and water',()=>{
-    const near=survivalistOutside(220,2,0)
+    const near=withAp(survivalistOutside(220,2,0),2)
     expect(canSurvivalistForage(near,near.citizens[0],'food')).toBe(false)
-    let game=survivalistOutside(221,3,0)
+    let game=withAp(survivalistOutside(221,3,0),2)
     const types=getLegalActions(game,'c01').map((action)=>action.type)
     expect(types).toContain('SURVIVALIST_SEARCH_FOOD')
     expect(types).toContain('SURVIVALIST_SEARCH_WATER')
@@ -48,7 +49,7 @@ describe('Survivalist profession',()=>{
   })
 
   it('consumes the Manual use even when the forage roll fails',()=>{
-    let game={...survivalistOutside(230),day:20,rngState:rngStateForRollAbove(50)}
+    let game={...withAp(survivalistOutside(230),2),day:20,rngState:rngStateForRollAbove(50)}
     const food=getLegalActions(game,'c01').find((action)=>action.type==='SURVIVALIST_SEARCH_FOOD')!
     const result=executeCommand(game,food)
     const event=result.events.find((candidate)=>candidate.type==='SURVIVALIST_FORAGE_RESOLVED')!
