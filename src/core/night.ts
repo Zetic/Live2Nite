@@ -105,7 +105,6 @@ function corpseReanimationEvents(state:GameState):{events:GameEvent[];reanimatio
   }
   return{events,reanimations:events.filter((event)=>event.type==='CORPSE_REANIMATED').length,attackDeaths,waterLost}
 }
-function campDecayEvents(state:GameState):GameEvent[]{return Object.entries(state.world.zones).flatMap(([key,zone])=>(zone.campImprovements??0)>0?[{type:'CAMP_IMPROVEMENTS_DECAYED',day:state.day,hour:ATTACK_HOUR,zoneKey:key,amount:1} as GameEvent]:[])}
 function constructionExpiryEvents(state:GameState):GameEvent[]{return temporaryCompletedProjects(state).map((projectId)=>({type:'CONSTRUCTION_EXPIRED',day:state.day,hour:ATTACK_HOUR,projectId}))}
 function stableStringSalt(value:string):number{let hash=2166136261;for(let index=0;index<value.length;index+=1){hash^=value.charCodeAt(index);hash=Math.imul(hash,16777619)}return hash>>>0}
 function constructionOutputEvents(state:GameState):GameEvent[]{
@@ -137,9 +136,8 @@ export function resolveNightAttack(state:GameState):GameState{
   const replenishment=searchTowerReplenishmentEvents(afterStatuses)
   const outputs=constructionOutputEvents(afterStatuses)
   const expiries=constructionExpiryEvents(afterStatuses)
-  const decay=campDecayEvents(afterStatuses)
   const evolution=worldZombieEvolutionEvent(afterStatuses)
-  const rollover:GameEvent[]=[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...replenishment,...outputs,...expiries,...decay]
+  const rollover:GameEvent[]=[{type:'NIGHT_RESOLVED',day:state.day,hour:ATTACK_HOUR,report},...replenishment,...outputs,...expiries]
   if(evolution)rollover.push(evolution)
   const afterWorldRollover=applyEvents(afterStatuses,rollover)
   const afterRuinRollover=advanceExplorableRuinLifecycleForNewDay(afterWorldRollover,state.day+1)
