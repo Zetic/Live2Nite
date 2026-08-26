@@ -3,7 +3,7 @@ import { randomInt } from './rng'
 import type { ConstructionId, GameState } from './types'
 import type { UpgradeProjectsState } from './upgradeProjectsState'
 
-export type ConstructionUpgradeKind='defense_total'|'well_once'|'construction_discount'
+export type ConstructionUpgradeKind='defense_total'|'well_once'|'construction_discount'|'night_watch'
 export interface ConstructionUpgradeTrack {
   projectId:ConstructionId
   maxLevel:number
@@ -22,6 +22,7 @@ export const CONSTRUCTION_UPGRADE_TRACKS:Readonly<Partial<Record<ConstructionId,
   upgradeable_wall:{projectId:'upgradeable_wall',maxLevel:5,kind:'defense_total',values:[55,85,120,170,235,315],benefits:['Evolutive Wall defense rises from 55 to 85 (+30).','Evolutive Wall defense rises from 85 to 120 (+35).','Evolutive Wall defense rises from 120 to 170 (+50).','Evolutive Wall defense rises from 170 to 235 (+65).','Evolutive Wall defense rises from 235 to 315 (+80).'],sourceNote:'MyHordes daily-upgrade defense track.'},
   pump:{projectId:'pump',maxLevel:5,kind:'well_once',values:[0,20,20,30,30,40],benefits:['Immediately adds 20 Water Rations to the Well.','Immediately adds another 20 Water Rations to the Well.','Immediately adds 30 Water Rations to the Well.','Immediately adds another 30 Water Rations to the Well.','Immediately adds 40 Water Rations to the Well.'],sourceNote:'MyHordes Pump daily-upgrade one-time water additions.'},
   workshop:{projectId:'workshop',maxLevel:5,kind:'construction_discount',values:[0,6,12,18,24,30],benefits:['Reduces every unfinished construction AP requirement by 6% of its base cost.','Total construction AP reduction becomes 12% of base cost.','Total construction AP reduction becomes 18% of base cost.','Total construction AP reduction becomes 24% of base cost.','Total construction AP reduction becomes 30% of base cost.'],sourceNote:'Current MyHordes behavior: one Workshop upgrade removes 18 AP from a 300 AP project (6%).'},
+  battlements:{projectId:'battlements',maxLevel:3,kind:'night_watch',values:[10,20,40,40],benefits:['Night Watch capacity rises from 10 to 20 citizens.','Night Watch capacity rises from 20 to 40 citizens.','Capacity remains 40 and every Watchman receives −1 percentage point death chance.'],sourceNote:'Current MyHordes Battlements daily-upgrade track: 10 → 20 → 40 Watchmen, then −1pp Watch death risk at level 3.'},
 }
 export const ACTIVE_CONSTRUCTION_UPGRADE_IDS=Object.freeze(Object.keys(CONSTRUCTION_UPGRADE_TRACKS) as ConstructionId[])
 
@@ -54,6 +55,7 @@ export function castConstructionUpgradeVote(state:GameState,citizenId:string,pro
 export function botUpgradeProjectChoice(state:GameState,citizenId:string):ConstructionId|null{
   const candidates=availableConstructionUpgradeProjects(state);if(!candidates.length)return null
   if(candidates.includes('pump')&&state.town.well.water<80)return'pump'
+  if(candidates.includes('battlements')&&(state.lastNight?.breached||state.day>=3))return'battlements'
   if(candidates.includes('workshop')){const unfinished=Object.values(state.town.construction).filter((project)=>project.discovered&&!project.completed).length;if(unfinished>=6)return'workshop'}
   const defenseCandidates=candidates.filter((id)=>constructionUpgradeTrack(id)?.kind==='defense_total');if(defenseCandidates.length&&state.lastNight?.breached)return defenseCandidates[0]
   const hash=[...citizenId].reduce((sum,char)=>sum+char.charCodeAt(0),0);return candidates[hash%candidates.length]??candidates[0]
