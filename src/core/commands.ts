@@ -133,7 +133,7 @@ export function executeCommand(state:GameState,command:GameCommand):CommandResul
       const trestle=itemId?citizen.inventory.find((item)=>item.id===itemId&&item.type==='trestle'):null
       if(itemId&&!trestle)throw new InvalidCommandError('A carried Trestle is required')
       events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMP_IMPROVEMENT_AP_COST})
-      events.push({type:'CAMP_IMPROVED',day:state.day,citizenId:command.citizenId,zoneKey:key,amount:trestle?TRESTLE_CAMP_IMPROVEMENT_POINTS:CAMP_IMPROVEMENT_POINTS,...(trestle?{item:trestle}:{} as {})} as GameEvent)
+      events.push({type:'CAMP_IMPROVED',day:state.day,citizenId:command.citizenId,zoneKey:key,amount:CAMP_IMPROVEMENT_AP_COST,improvementPoints:trestle?TRESTLE_CAMP_IMPROVEMENT_POINTS:CAMP_IMPROVEMENT_POINTS,...(trestle?{item:trestle}:{} as {})} as GameEvent)
       break
     }
     case 'DIG_CAMPING_GRAVE':{const breakdown=campingChanceBreakdown(state,command.citizenId,{grave:true});events.push({type:'AP_SPENT',day:state.day,citizenId:command.citizenId,amount:CAMPING_GRAVE_AP_COST},{type:'CITIZEN_HIDING_SET',day:state.day,citizenId:command.citizenId,hidden:true,grave:true,survivalChance:breakdown.final,breakdown});break}
