@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { getLegalActions } from '../src/core/actions'
 import { executeCommand } from '../src/core/commands'
 import { constructionImplementationStatus, constructionPlayable } from '../src/core/construction'
+import { totalTownDefense } from '../src/core/defense'
 import { garbageDumpActionCost, garbageDumpCategory, garbageDumpDefenseForItem, garbageDumpTemporaryDefense } from '../src/core/garbageDump'
 import { createInitialGame } from '../src/core/game'
 import { createItemInstance } from '../src/core/items'
 import type { ConstructionId, GameState, ItemType } from '../src/core/types'
+import { chronicleCategory } from '../src/ui/chronicle'
 import { GarbageDumpView } from '../src/ui/components/GarbageDumpView'
 import { availableScreens } from '../src/ui/navigation'
 
@@ -28,7 +30,7 @@ describe('Garbage Dump source rules',()=>{
   })
 
   it('classifies only supported categories and uses base 4/1 yields',()=>{
-    let game=completed(createInitialGame(9801,1),'garbage_dump')
+    const game=completed(createInitialGame(9801,1),'garbage_dump')
     const cases:[ItemType,string|null,number][]=[
       ['old_door','defense',4],['human_bone','weapon',1],['vegetable','food',1],['rotten_log','wood',1],['twisted_plank','wood',1],['scrap_metal','metal',1],['wrought_iron','metal',1],['chicken','animal',1],
       ['water_ration',null,0],['patchwork_beam',null,0],['metal_support',null,0],['broken_human_bone',null,0],
@@ -36,18 +38,24 @@ describe('Garbage Dump source rules',()=>{
     for(const[type,category,defense]of cases){const item=createItemInstance(`case-${type}`,type);expect(garbageDumpCategory(item)).toBe(category);expect(garbageDumpDefenseForItem(game,item)).toBe(defense)}
   })
 
-  it('spends 1 AP, destroys the exact Bank item, and records one-night temporary defense',()=>{
+  it('spends 1 AP, destroys the exact Bank item, and contributes defense for the current night only',()=>{
     let game=withBank(completed(createInitialGame(9802,1),'garbage_dump'),'old_door')
     const beforeAp=game.citizens[0].ap
+    const beforeDefense=totalTownDefense(game)
     const action=getLegalActions(game,'c01').find((candidate)=>candidate.type==='DUMP_BANK_ITEM'&&candidate.itemId==='dump-0')
     expect(action).toBeTruthy()
     const result=executeCommand(game,action!)
     game=result.state
+    const dumped=result.events.find((event)=>event.type==='BANK_ITEM_DUMPED')
     expect(game.citizens[0].ap).toBe(beforeAp-1)
     expect(game.town.bank).toHaveLength(0)
-    expect(result.events.some((event)=>event.type==='BANK_ITEM_DUMPED'&&event.defenseGained===4&&event.category==='defense')).toBe(true)
+    expect(dumped).toMatchObject({type:'BANK_ITEM_DUMPED',defenseGained:4,category:'defense'})
+    expect(dumped&&chronicleCategory(dumped)).toBe('bank')
     expect(garbageDumpTemporaryDefense(game)).toBe(4)
+    // The Old Door's normal +2 Bank defense disappears when destroyed, then +4 Dump defense replaces it.
+    expect(totalTownDefense(game)).toBe(beforeDefense+2)
     expect(garbageDumpTemporaryDefense({...game,day:game.day+1})).toBe(0)
+    expect(totalTownDefense({...game,day:game.day+1})).toBe(beforeDefense-2)
   })
 
   it('stacks category specialization and wet Dump Upgrade bonuses',()=>{
@@ -59,7 +67,7 @@ describe('Garbage Dump source rules',()=>{
   })
 
   it('implements Organized Dump zero-AP behavior without making its unresolved construction falsely playable',()=>{
-    let game=withBank(completed(createInitialGame(9804,1),'garbage_dump','organized_dump'),'vegetable')
+    const game=withBank(completed(createInitialGame(9804,1),'garbage_dump','organized_dump'),'vegetable')
     const before=game.citizens[0].ap
     expect(garbageDumpActionCost(game)).toBe(0)
     const action=getLegalActions(game,'c01').find((candidate)=>candidate.type==='DUMP_BANK_ITEM')
