@@ -8,6 +8,9 @@ import { CITIZEN_STATUS_DEFINITIONS } from '../core/status'
 import { specialSiteName } from '../core/specialSites'
 import type { GameEvent, GameState } from '../core/types'
 
+type TechnicianEventTextMeta={technicianPointsSpent?:number;technicianWrenchRepair?:boolean;technicianWorkbenchUsed?:boolean}
+function technicianMeta(event:GameEvent):TechnicianEventTextMeta{return event as GameEvent&TechnicianEventTextMeta}
+
 export function citizenName(game:GameState,citizenId:string):string{return game.citizens.find((citizen)=>citizen.id===citizenId)?.name??citizenId}
 
 export function describeEvent(event:GameEvent,game:GameState):string{
@@ -66,12 +69,12 @@ export function describeEvent(event:GameEvent,game:GameState):string{
     case 'CORPSE_REANIMATED':return event.outcome==='well'?`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated and spoiled ${event.waterLost} Well water.`:event.outcome==='citizen'&&event.victimCitizenId?`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated and killed ${citizenName(game,event.victimCitizenId)} inside town.`:`${citizenName(game,event.corpseCitizenId)}'s corpse reanimated but found no target.`
     case 'BLUEPRINT_READ':return event.projectId?`${citizenName(game,event.citizenId)} studied ${itemName(event.item.type)} and identified ${CONSTRUCTIONS[event.projectId].name}.`:`${citizenName(game,event.citizenId)} studied ${itemName(event.item.type)}, but no eligible new construction could be identified.`
     case 'CONSTRUCTION_DISCOVERED':return`A new construction plan is now known: ${CONSTRUCTIONS[event.projectId].name}.`
-    case 'CONSTRUCTION_AP_CONTRIBUTED':return`${citizenName(game,event.citizenId)} contributed ${event.amount} AP to ${CONSTRUCTIONS[event.projectId].name}.`
+    case 'CONSTRUCTION_AP_CONTRIBUTED':{const cp=technicianMeta(event).technicianPointsSpent??0;return cp>0?`${citizenName(game,event.citizenId)} contributed ${event.amount} labor to ${CONSTRUCTIONS[event.projectId].name} using ${cp} CP.`:`${citizenName(game,event.citizenId)} contributed ${event.amount} AP to ${CONSTRUCTIONS[event.projectId].name}.`}
     case 'CONSTRUCTION_COMPLETED':return`${CONSTRUCTIONS[event.projectId].name} was completed by ${citizenName(game,event.citizenId)}.`
     case 'CONSTRUCTION_EXPIRED':return`${CONSTRUCTIONS[event.projectId].name} was consumed during the attack and can be rebuilt.`
     case 'CONSTRUCTION_GENERATED_ITEM':return`${CONSTRUCTIONS[event.projectId].name} produced ${event.amount} ${itemName(event.itemType)}${event.amount===1?'':'s'} for the Bank.`
-    case 'WORKSHOP_CONVERTED':return`${citizenName(game,event.citizenId)} used the Workshop: ${event.inputCount} ${itemName(event.input)} → ${event.outputCount} ${itemName(event.output)}.`
-    case 'ITEMS_COMBINED':return`${citizenName(game,event.citizenId)} used a portable item action: ${COMBINATION_RECIPES[event.recipeId].name}.`
+    case 'WORKSHOP_CONVERTED':{const meta=technicianMeta(event);const cp=meta.technicianPointsSpent??0;if(meta.technicianWorkbenchUsed)return`${citizenName(game,event.citizenId)} used the Technicians Workbench to choose ${event.outputCount} ${itemName(event.output)}${cp>0?` using ${cp} CP before any AP fallback`:''}.`;return`${citizenName(game,event.citizenId)} used the Workshop: ${event.inputCount} ${itemName(event.input)} → ${event.outputCount} ${itemName(event.output)}${cp>0?` (${cp} CP used before any AP fallback)`:''}.`}
+    case 'ITEMS_COMBINED':{const meta=technicianMeta(event);if(meta.technicianWrenchRepair)return`${citizenName(game,event.citizenId)} used the Technician's Wrench to repair equipment for ${meta.technicianPointsSpent??3} CP.`;return`${citizenName(game,event.citizenId)} used a portable item action: ${COMBINATION_RECIPES[event.recipeId].name}.`}
     case 'COORDINATION_COMMITMENT_POSTED':return`${citizenName(game,event.commitment.citizenId)} posted to town coordination: ${event.commitment.label}`
     case 'COORDINATION_COMMITMENT_CLEARED':return`A town coordination commitment ended (${event.reason.replace('_',' ')}).`
     case 'BOT_MISSION_ASSIGNED':return`${citizenName(game,event.citizenId)} volunteered for ${event.mission.role} duty toward ${event.mission.targetLabel}${event.mission.allowsCamping?' with an overnight option':''}.`
