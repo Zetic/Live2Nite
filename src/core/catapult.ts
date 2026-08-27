@@ -1,4 +1,4 @@
-import { itemName, createItemInstance } from './items'
+import { createItemInstance, itemName, normalizeItemState } from './items'
 import { randomInt } from './rng'
 import type { Citizen, GameState, ItemInstance, ItemType, WorldZone } from './types'
 import { zoneKey } from './world'
@@ -88,7 +88,8 @@ export function catapultProfile(type:ItemType):CatapultPayloadProfile|null{
   if(MOLDY_PAYLOADS.has(type))return{landing:'moldy'}
   return null
 }
-export function catapultEligibleItems(citizen:Citizen):ItemInstance[]{return citizen.inventory.filter((item)=>catapultProfile(item.type)!==null)}
+function itemIsBroken(item:ItemInstance):boolean{return normalizeItemState(item.type,item.state).condition==='broken'}
+export function catapultEligibleItems(citizen:Citizen):ItemInstance[]{return citizen.inventory.filter((item)=>!itemIsBroken(item)&&catapultProfile(item.type)!==null)}
 export function catapultActionCost(state:GameState):number{return state.town.construction.upgraded_catapult?.completed?2:4}
 export function catapultMissChancePercent(state:GameState):number{return state.town.construction.upgraded_catapult?.completed?5:25}
 export function provisionalCatapultOperator(state:GameState):Citizen|null{
@@ -101,15 +102,16 @@ export function canUseCatapult(state:GameState,citizenId:string):boolean{
   const operator=provisionalCatapultOperator(state)
   return Boolean(citizen&&operator?.id===citizen.id&&citizen.alive&&citizen.location.type==='town'&&state.clock.phase==='day'&&state.town.construction.catapult?.completed&&citizen.ap>=catapultActionCost(state))
 }
+function sourceZoneOrder(zones:WorldZone[]):WorldZone[]{return zones.sort((a,b)=>(a.x+a.y)-(b.x+b.y))}
 function adjacentCardinalZones(state:GameState,x:number,y:number):WorldZone[]{
-  return [[x,y+1],[x+1,y],[x,y-1],[x-1,y]].map(([cx,cy])=>state.world.zones[zoneKey(cx,cy)]).filter((zone):zone is WorldZone=>Boolean(zone))
+  return sourceZoneOrder([[x,y+1],[x+1,y],[x,y-1],[x-1,y]].map(([cx,cy])=>state.world.zones[zoneKey(cx,cy)]).filter((zone):zone is WorldZone=>Boolean(zone)))
 }
 function blastZones(state:GameState,x:number,y:number,shape:CatapultBlastShape):WorldZone[]{
   if(shape==='zone'){const zone=state.world.zones[zoneKey(x,y)];return zone?[zone]:[]}
-  if(shape==='cross')return [[x,y],[x,y+1],[x+1,y],[x,y-1],[x-1,y]].map(([cx,cy])=>state.world.zones[zoneKey(cx,cy)]).filter((zone):zone is WorldZone=>Boolean(zone))
+  if(shape==='cross')return sourceZoneOrder([[x,y],[x,y+1],[x+1,y],[x,y-1],[x-1,y]].map(([cx,cy])=>state.world.zones[zoneKey(cx,cy)]).filter((zone):zone is WorldZone=>Boolean(zone)))
   const zones:WorldZone[]=[]
   for(let dy=-1;dy<=1;dy+=1)for(let dx=-1;dx<=1;dx+=1){const zone=state.world.zones[zoneKey(x+dx,y+dy)];if(zone)zones.push(zone)}
-  return zones
+  return sourceZoneOrder(zones)
 }
 function resolveKillTotal(state:GameState,profile:CatapultPayloadProfile,x:number,y:number,rngState:number):{zones:WorldZone[];kills:number;rngState:number}{
   if(!profile.damage)return{zones:[],kills:0,rngState}
@@ -155,6 +157,7 @@ export function fireCatapult(state:GameState,citizenId:string,itemId:string,targ
   if(!intended)throw new Error('Target zone does not exist')
   const item=citizen.inventory.find((candidate)=>candidate.id===itemId)
   if(!item)throw new Error('The Catapult payload must be carried by the operator')
+  if(itemIsBroken(item))throw new Error('Broken items cannot be launched by the Catapult')
   const profile=catapultProfile(item.type)
   if(!profile)throw new Error(`${itemName(item.type)} is not a verified Catapult payload`)
   if(profile.requiresSmallTrebuchet&&!state.town.construction.small_trebuchet?.completed)throw new Error('Small Trebuchet is required to launch animals')
