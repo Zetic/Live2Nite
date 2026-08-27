@@ -80,6 +80,7 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `food_noodles_hot_#00` | `spicy_chinese_noodles` |
 | `spices_#00` | `strong_spices` |
 | `can_#00` / `can_open_#00` | `can` / `open_can` |
+| `undef_#00` | `unspecified_meat` (Implemented Butcher output; ordinary food, 2 Watch) |
 | `meat_#00` | `tasty_looking_steak` |
 | `vegetable_#00` | `vegetable` |
 | `hmeat_#00` | `human_flesh` |
@@ -125,9 +126,30 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 
 ### Animal foundation coverage
 
-The six ordinary source pets are now real Live2Nite inventory objects: Chicken, Stinking Pig, Giant Rat, Guard Dog, Fat Cat, and Huge Snake. Their current-source `heavy` metadata feeds the shared cumbersome-item system, so Stinking Pig and Huge Snake are cumbersome without adding animal-specific carry rules. Fat Cat retains its source 5-decoration-point metadata in the current source catalogue.
+The six ordinary source pets are real Live2Nite inventory objects: Chicken, Stinking Pig, Giant Rat, Guard Dog, Fat Cat, and Huge Snake. Their current-source `heavy` metadata feeds the shared cumbersome-item system, so Stinking Pig and Huge Snake are cumbersome without adding animal-specific carry rules. Fat Cat retains its source 5-decoration-point metadata in the current source catalogue.
 
-All six use their source Night Watch values (8 / 25 / 12 / 25 / 12 / 25), can receive the Pet Shop 30% Watch multiplier, classify through Animal Dump, and use the Small Trebuchet animal payload path. Existing ruin source tables become playable for these identities without adding speculative normal-zone spawn tables. They remain **Partial** because the exact current-source Butcher conversions, Pigsty production behavior, and Tamer's Trap System effect have not yet been recovered. No deployable/overnight trap behavior is assumed.
+All six use their source Night Watch values (8 / 25 / 12 / 25 / 12 / 25), are destroyed by their source Night Watch action when used, can receive the Pet Shop 30% Watch multiplier, classify through Animal Dump, and use the Small Trebuchet animal payload path. Existing ruin source tables become playable for these identities. The ordinary normal-loot source mappings are also present for Chicken, Pig, Rat, Cat, and Snake; Guard Dog has no ordinary normal-loot row in the pinned table. The full normal-zone source table remains fail-closed until unrelated unresolved source IDs are implemented.
+
+### Butcher coverage
+
+Butcher is now buildable from the current source bill: **40 AP, 9 Twisted Planks, and 4 Wrought Iron**. Its source slaughter actions have no AP-spend effect, require the citizen to be inside town with Butcher complete, consume the selected animal, and deterministically generate meat:
+
+| Animal | Source slaughter action | Output |
+| --- | --- | --- |
+| Chicken | `slaughter_2x` | 2 × Unspecified Meat (`undef_#00`) |
+| Giant Rat | `slaughter_2x` | 2 × Unspecified Meat |
+| Stinking Pig | `slaughter_4x` | 4 × Unspecified Meat |
+| Fat Cat | `slaughter_2xs` | 2 × Tasty-looking Steak (`meat_#00`) |
+| Guard Dog | `slaughter_2xs` | 2 × Tasty-looking Steak |
+| Huge Snake | `slaughter_4xs` | 4 × Tasty-looking Steak |
+
+`undef_#00` is represented separately as **Unspecified Meat** rather than being collapsed into another food. It follows its source ordinary 6-AP food quality and 2-point destructive Night Watch behavior. Kitchen eligibility is not assumed because the recovered source slaughter/eating data does not establish a Kitchen action for this item.
+
+The animals themselves remain **Partial** because their broader ecosystem still has unresolved production/acquisition effects—not because Butcher is missing.
+
+### Tamer's Trap System boundary
+
+The source construction is a town building, not a deployable zone trap. Its source description says it uses food to lure animals into town and provides training that makes them more effective in combat. The construction remains WIP because the exact spawn cadence/pool and combat modifier have not yet been extracted. No overnight placement/collection mechanic is invented.
 
 ### Trestle coverage
 
