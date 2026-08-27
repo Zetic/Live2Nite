@@ -9,6 +9,7 @@ import { createInitialGame } from '../src/core/game'
 import { isCumbersomeItemType } from '../src/core/inventory'
 import { CURRENT_ITEM_SOURCE_CATALOG_BY_REF } from '../src/core/itemSourceCurrent'
 import { createItemInstance, itemHasCapability } from '../src/core/items'
+import { MYHORDES_NORMAL_LOOT_MAPPING, unmappedOrdinarySourceLootIds } from '../src/core/myhordesLootMapping'
 import { nightWatchEquipment } from '../src/core/nightWatch'
 import { playableRuinSourceDrops } from '../src/core/ruinLoot'
 import { tamerDogTransportableItems } from '../src/core/tamer'
@@ -96,6 +97,22 @@ describe('current MyHordes animal foundation',()=>{
     expect(constructionImplementationStatus('tamer_s_trap_system')).toBe('wip')
     expect(constructionImplementationStatus('butcher')).toBe('wip')
     expect(constructionImplementationStatus('pigsty')).toBe('wip')
+  })
+
+  it('maps the ordinary normal-source pet identities while preserving the global loot gate',()=>{
+    const normalPets:Readonly<Record<string,ItemType>>={
+      'pet_chick_#00':'chicken',
+      'pet_pig_#00':'stinking_pig',
+      'pet_rat_#00':'giant_rat',
+      'pet_cat_#00':'fat_cat',
+      'pet_snake_#00':'huge_snake',
+    }
+    const unresolved=unmappedOrdinarySourceLootIds()
+    for(const[sourceRef,runtimeType]of Object.entries(normalPets)){
+      expect(MYHORDES_NORMAL_LOOT_MAPPING[sourceRef]).toEqual({type:runtimeType})
+      expect(unresolved).not.toContain(sourceRef)
+    }
+    expect(unresolved).toContain('bag_#00')
   })
 
   it('enables source ruin acquisition paths without inventing new spawn tables',()=>{
