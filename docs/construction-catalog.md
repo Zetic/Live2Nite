@@ -38,7 +38,7 @@ Upstream numeric/prototype IDs and upstream implementation code are deliberately
 
 Every catalogue entry has one of three statuses.
 
-Current catalogue status: **80 Implemented / 24 Partial / 62 WIP**.
+Current catalogue status: **82 Implemented / 25 Partial / 59 WIP**.
 
 ### Implemented
 
@@ -101,6 +101,12 @@ The Codex is intentionally complete even when the current town has not discovere
 ## Garbage Dump boundary
 
 The Garbage Dump, Dump Upgrade, Organized Dump, and all six class-6 category specialization effects are active. Organized Dump is now normally buildable because Trestle has a runtime identity and exact source ruin acquisition paths; its completed effect reduces Garbage Dump actions from 1 AP to 0 AP. See `docs/garbage-dump.md` for the interaction and Trestle dependency details.
+
+## Catapult boundary
+
+Upgraded Catapult and Small Trebuchet are fully active. The base Catapult is **Partial** because current MyHordes assigns its operator through a voted town role and Live2Nite does not yet have the generic town-role election system. The complete firing interaction is otherwise active: personal-inventory payloads, map targeting, 4 AP base shots, 2 AP upgraded shots, 25%/5% cardinal scatter, item-specific landing transformations, remote zombie damage footprints, Small Trebuchet animal gating, and a persistent Catapult Register.
+
+Until town-role voting is implemented, the sole ordinary human citizen is explicitly treated as the provisional Catapult operator. The obsolete historical random/hero-priority operator-selection behavior is not reproduced. Generic source debris produced by some impacts also lacks a runtime item identity; those payloads record the correct debris outcome but do not currently spawn a debris object. See `docs/catapult.md` for the complete boundary.
 
 ## Legacy cleanup
 

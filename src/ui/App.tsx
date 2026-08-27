@@ -18,6 +18,7 @@ import { advanceOneHour, advanceToHour, InvalidTimeAdvanceError } from '../simul
 import { BankView } from './components/BankView'
 import { BattlementsView } from './components/BattlementsView'
 import { CampingPanel } from './components/CampingPanel'
+import { CatapultView } from './components/CatapultView'
 import { CitizenRoster } from './components/CitizenRoster'
 import { CitizenStatusBar } from './components/CitizenStatusBar'
 import { CodexView } from './components/CodexView'
@@ -101,6 +102,7 @@ export function App() {
     if (screen === 'watchtower' && !game.town.construction.watchtower.completed) setScreen('construction')
     if (screen === 'battlements' && !game.town.construction.battlements.completed) setScreen('construction')
     if (screen === 'garbage_dump' && !game.town.construction.garbage_dump.completed) setScreen('construction')
+    if (screen === 'catapult' && !game.town.construction.catapult.completed) setScreen('construction')
     if (screen === 'upgrade_projects' && !hasUpgradeProjectsFacility(game)) setScreen('construction')
   }, [player.location.type, screen, game])
 
@@ -188,6 +190,7 @@ export function App() {
         {screen === 'watchtower' && <WatchtowerView game={game} citizenId={player.id} onContribute={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>} 
         {screen === 'battlements' && <BattlementsView game={game} citizenId={player.id} onChange={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
         {screen === 'garbage_dump' && <GarbageDumpView game={game} citizenId={player.id} legalActions={legalActions} act={act}/>} 
+        {screen === 'catapult' && <CatapultView game={game} citizenId={player.id} onChange={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>} 
         {screen === 'upgrade_projects' && <UpgradeProjectsView game={game} citizenId={player.id} onVote={(next)=>{setGame(enforceGodMode(next));setError(null)}}/>}
         {screen === 'world' && <div className="world-screen-layout">
           <div className="world-primary-column">
