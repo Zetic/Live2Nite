@@ -5,7 +5,7 @@ export const ITEM_TYPE_IDS = [
   // Source utility opener/tool family. Hacksaw is assembled from the damaged source item.
   'saw_tool_part','saw_tool',
   // Ordinary and prepared source food outcomes. food itself maps to food_sandw_#00 (Mouldy Ham Sandwich).
-  'mouldy_twinkies','half_eaten_chicken_wings','rancid_shortbread_pack','out_of_date_jaffa_cakes','dried_chewing_gum','stale_tart','soft_crisps','can','open_can','vegetable','tasty_looking_steak','chinese_noodles','spicy_chinese_noodles','blue_apple','dried_marshmallows','burnt_marshmallows','good_home_made_meal','dubious_home_made_meal',
+  'mouldy_twinkies','half_eaten_chicken_wings','rancid_shortbread_pack','out_of_date_jaffa_cakes','dried_chewing_gum','stale_tart','soft_crisps','can','open_can','vegetable','unspecified_meat','tasty_looking_steak','chinese_noodles','spicy_chinese_noodles','blue_apple','dried_marshmallows','burnt_marshmallows','good_home_made_meal','dubious_home_made_meal',
   'doggy_bag','citizen_welcome_pack','battery','box_of_matches','pharmaceutical_products','strong_spices','radio_cassette_player_off',
   // Citizen-condition proof items. Their actions are defined by the shared item-effect engine.
   'bandage','paracetoid','anabolic_steroids','valium_shot','twinoid_500mg','hydratone_100mg','unlabelled_drug','water_purifying_tablets','vodka_marinostov','wake_the_dead','ems_system_empty','ems_system_charged',
