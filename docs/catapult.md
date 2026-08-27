@@ -14,7 +14,7 @@ The built Catapult exposes a dedicated town facility screen. The operator:
 6. applies the landing transformation and any remote zombie effect;
 7. records the shot in the Catapult Register.
 
-The Bank is not fired directly. A payload must first be carried by the operator.
+The Bank is not fired directly. A payload must first be carried by the operator. Broken stateful items are rejected, matching the current source controller.
 
 ## Cost and accuracy
 
@@ -42,7 +42,7 @@ Until that framework exists:
 
 Payload behavior is data-driven by runtime item type. Each supported payload defines:
 
-- landing result: intact, broken, debris, scrap, mouldy, or destroyed;
+- landing result: intact, broken, debris, scrap, mouldy remains, or destroyed;
 - optional broken replacement runtime item;
 - optional zombie damage tier;
 - optional blast footprint;
@@ -57,7 +57,7 @@ Damage tiers are current-source values:
 | High | 11–20 |
 | Important | 21–30 |
 
-The random kill total is capped by zombies actually present in the footprint. Kills are distributed across still-populated affected zones and permanently reduce their World Beyond zombie counts.
+The random kill total is capped by zombies actually present in the footprint. Kills are distributed across still-populated affected zones using the same ordered/repeated allocation shape as the current source processor and permanently reduce their World Beyond zombie counts.
 
 Footprints:
 
@@ -77,17 +77,17 @@ The table below lists the source-verified effects currently expressible with exi
 | Mechanism | Scrap Metal | none |
 | Radio Cassette Player (off) | Scrap Metal | none |
 | Telescope | Scrap Metal | none |
-| Convex Lens | debris | none |
-| Working Radio | debris | none |
+| Convex Lens | debris result | none |
+| Working Radio | debris result | none |
 | Staff | Broken Staff | none |
-| Ordinary source food represented by Mouldy Ham Sandwich / Vegetable / Blue Apple / Meaty Bone / steak / prepared meal families | mouldy-food result | none |
+| Ordinary source food represented by Mouldy Ham Sandwich / Vegetable / Blue Apple / Meaty Bone / steak / prepared meal families | mouldy-remains result | none |
 | Quality Log | destroyed | 4–10, zone |
 | Unshaped Concrete Block | destroyed | 0–3, zone |
-| Patchwork Beam / Metal Support | debris | 0–3, zone |
+| Patchwork Beam / Metal Support | debris result | 0–3, zone |
 | Human Bone / Pathetic Penknife / Serrated Knife / supported small repairable tools | broken equivalent | 0–3, zone |
 | Machete | Broken Machete | 4–10, zone |
-| Torch | debris | 0–3, zone |
-| Old Door / Järpen Table / Trestle / Sheet Metal | debris | 4–10, cross |
+| Torch | debris result | 0–3, zone |
+| Old Door / Järpen Table / Trestle / Sheet Metal | debris result | 4–10, cross |
 | Engine | Scrap Metal | 4–10, cross |
 | PC Base Unit | Broken PC Base Unit | 4–10, cross |
 | Water Bomb | destroyed | 4–10, cross |
@@ -102,18 +102,22 @@ Unsupported source items remain absent rather than being assigned guessed effect
 
 Small Trebuchet is implemented as the source Catapult gate for animal/pet payloads. A Chicken is currently the only Live2Nite runtime animal with a source-verified Catapult profile. Attempting to launch it before Small Trebuchet is complete is rejected.
 
-## Impact debris boundary
+## Impact-remains boundary
 
-Current MyHordes has a generic debris/remains output used by several Catapult impacts. Live2Nite does not yet have a canonical runtime identity for that generic debris object. For those profiles:
+Current MyHordes has generic debris/remains and mouldy-remains outputs used by several Catapult impacts. Live2Nite does not yet have canonical runtime identities for those exact source outputs. For those profiles:
 
-- the payload's Catapult Register result correctly records `debris`;
+- the Catapult Register records the correct `debris` or `moldy` outcome;
 - the source item is consumed;
 - the correct zombie damage still resolves;
-- no substitute Scrap Metal is spawned.
+- no unrelated substitute item is spawned.
 
-This avoids silently changing source debris into a different resource.
+This deliberately fails closed rather than silently changing source remains into Scrap Metal or a different food item.
 
 The Season 19 **Ball of Debris** recipe (three generic debris objects + Duct Tape) is therefore intentionally deferred until generic debris becomes a proper runtime item. Its source Catapult effect is already known: destruction on impact with 11–20 total kills over a 3×3 footprint.
+
+## Map intelligence
+
+The Catapult targeting grid never reads hidden raw zombie counts. Zone tooltips use the same `WorldKnowledge` layer as autonomous planning and the ordinary World Beyond map, preserving unknown, estimated, stale and exact intelligence boundaries. Firing still changes the true persistent zone population; it does not magically refresh unrelated reconnaissance.
 
 ## Automation boundary
 
