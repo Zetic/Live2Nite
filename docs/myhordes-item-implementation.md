@@ -83,7 +83,12 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `meat_#00` | `tasty_looking_steak` |
 | `vegetable_#00` | `vegetable` |
 | `hmeat_#00` | `human_flesh` |
-| `pet_chick_#00` | `chicken` |
+| `pet_chick_#00` | `chicken` (Partial animal ecosystem) |
+| `pet_pig_#00` | `stinking_pig` (Partial; heavy) |
+| `pet_rat_#00` | `giant_rat` (Partial) |
+| `pet_dog_#00` | `guard_dog` (Partial) |
+| `pet_cat_#00` | `fat_cat` (Partial; 5 decoration points in source metadata) |
+| `pet_snake_#00` | `huge_snake` (Partial; heavy) |
 | `bone_meat_#00` | `meaty_bone` |
 | `poison_part_#00` | `poison_gland` (semantic ID; displays as Corrosive Liquid) |
 | `ryebag_#00` | `bag_of_damp_grass` |
@@ -118,6 +123,12 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `rhum_#00` | `wake_the_dead` |
 | `sport_elec_empty_#00` / `sport_elec_#00` | `ems_system_empty` / `ems_system_charged` |
 
+### Animal foundation coverage
+
+The six ordinary source pets are now real Live2Nite inventory objects: Chicken, Stinking Pig, Giant Rat, Guard Dog, Fat Cat, and Huge Snake. Their current-source `heavy` metadata feeds the shared cumbersome-item system, so Stinking Pig and Huge Snake are cumbersome without adding animal-specific carry rules. Fat Cat retains its source 5-decoration-point metadata in the current source catalogue.
+
+All six use their source Night Watch values (8 / 25 / 12 / 25 / 12 / 25), can receive the Pet Shop 30% Watch multiplier, classify through Animal Dump, and use the Small Trebuchet animal payload path. Existing ruin source tables become playable for these identities without adding speculative normal-zone spawn tables. They remain **Partial** because the exact current-source Butcher conversions, Pigsty production behavior, and Tamer's Trap System effect have not yet been recovered. No deployable/overnight trap behavior is assumed.
+
 ### Trestle coverage
 
 `trestle_#00` is no longer an unresolved ordinary-loot dependency. Live2Nite models it as a heavy/cumbersome defensive furniture item with +1 Bank defense and +1 Home defense. It is mapped in the source normal-loot table and resolves from the exact source ruin rows already represented by Live2Nite: Home Depot, Construction Site Shelter, PI-KEYA Furniture, Disused Car Park, Abandoned Construction Site, and Blocked Road. Two Trestles are required by the now-buildable Organized Dump.
@@ -138,10 +149,6 @@ These source IDs remain unresolved in the current ordinary normal-loot dependenc
 - [ ] `iphone_#00`
 - [ ] `drug_hero_#00`
 - [ ] `drug_random_#00`
-- [ ] `pet_rat_#00`
-- [ ] `pet_pig_#00`
-- [ ] `pet_snake_#00`
-- [ ] `pet_cat_#00`
 - [ ] `water_cleaner_#00`
 - [ ] `beta_drug_bad_#00`
 - [ ] `chama_#00`
