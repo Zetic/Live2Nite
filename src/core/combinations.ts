@@ -1,7 +1,7 @@
 import { createItemInstance, normalizeItemState } from './items'
-import type { Citizen, CombinationEventOutput, CombinationRecipeId, GameCommand, GameState, ItemInstance, ItemState, ItemType, PersonalItemStorage } from './types'
+import type { Citizen, CombinationEventOutput, CombinationRecipeId, ConstructionId, GameCommand, GameState, ItemInstance, ItemState, ItemType, PersonalItemStorage } from './types'
 
-export type CombinationCategory='assemble'|'reload'|'repair'
+export type CombinationCategory='assemble'|'reload'|'repair'|'butcher'
 export interface CombinationInputRule {
   type:ItemType
   count?:number
@@ -17,6 +17,9 @@ export interface CombinationRecipe {
   apCost:number
   inputs:CombinationInputRule[]
   outputType:ItemType
+  outputCount?:number
+  townOnly?:boolean
+  requiresConstruction?:ConstructionId
   summary:string
   source:'MYHORDES_CURRENT'
 }
@@ -29,6 +32,11 @@ const repairRecipe=(id:CombinationRecipeId,name:string,broken:ItemType,repaired:
   inputs:[{type:broken},{type:tool,...(tool==='repair_kit'?{condition:'intact' as const}:{})}],
   outputType:repaired,
   summary:`${broken} + ${tool} → ${repaired}`,
+  source:'MYHORDES_CURRENT',
+})
+const butcherRecipe=(id:CombinationRecipeId,animal:ItemType,animalName:string,outputType:'unspecified_meat'|'tasty_looking_steak',outputName:string,outputCount:number):CombinationRecipe=>recipe({
+  id,name:`Butcher ${animalName}`,category:'butcher',apCost:0,inputs:[{type:animal}],outputType,outputCount,townOnly:true,requiresConstruction:'butcher',
+  summary:`${animalName} → ${outputCount} × ${outputName}`,
   source:'MYHORDES_CURRENT',
 })
 
@@ -44,6 +52,13 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
   toast_marshmallows:recipe({id:'toast_marshmallows',name:'Toast Marshmallows',category:'assemble',apCost:0,inputs:[{type:'dried_marshmallows'},{type:'torch',keep:true}],outputType:'burnt_marshmallows',summary:'Dried Marshmallows + Torch → Burnt Marshmallows (Torch kept)',source:'MYHORDES_CURRENT'}),
   mix_concrete:recipe({id:'mix_concrete',name:'Mix Concrete Block',category:'assemble',apCost:0,inputs:[{type:'bag_of_cement'},{type:'water_ration'}],outputType:'unshaped_concrete_block',summary:'Bag of Cement + Water Ration → Unshaped Concrete Block',source:'MYHORDES_CURRENT'}),
   fill_water_bomb:recipe({id:'fill_water_bomb',name:'Fill Water Bomb',category:'assemble',apCost:0,inputs:[{type:'plastic_bag'},{type:'water_ration'}],outputType:'water_bomb',summary:'Plastic Bag + Water Ration → Water Bomb',source:'MYHORDES_CURRENT'}),
+
+  butcher_chicken:butcherRecipe('butcher_chicken','chicken','Chicken','unspecified_meat','Unspecified Meat',2),
+  butcher_stinking_pig:butcherRecipe('butcher_stinking_pig','stinking_pig','Stinking Pig','unspecified_meat','Unspecified Meat',4),
+  butcher_giant_rat:butcherRecipe('butcher_giant_rat','giant_rat','Giant Rat','unspecified_meat','Unspecified Meat',2),
+  butcher_guard_dog:butcherRecipe('butcher_guard_dog','guard_dog','Guard Dog','tasty_looking_steak','Tasty-looking Steak',2),
+  butcher_fat_cat:butcherRecipe('butcher_fat_cat','fat_cat','Fat Cat','tasty_looking_steak','Tasty-looking Steak',2),
+  butcher_huge_snake:butcherRecipe('butcher_huge_snake','huge_snake','Huge Snake','tasty_looking_steak','Tasty-looking Steak',4),
 
   reload_water_pistol:recipe({id:'reload_water_pistol',name:'Reload Water Pistol',category:'reload',apCost:0,inputs:[{type:'water_pistol',chargesBelow:3},{type:'water_ration'}],outputType:'water_pistol',summary:'Water Pistol + Water Ration → 3 shots',source:'MYHORDES_CURRENT'}),
   refill_water_cooler:recipe({id:'refill_water_cooler',name:'Refill Water Cooler Bottle',category:'reload',apCost:0,inputs:[{type:'water_cooler_bottle',chargesBelow:3},{type:'water_ration'}],outputType:'water_cooler_bottle',summary:'Water Cooler Bottle + Water Ration → +1 ration',source:'MYHORDES_CURRENT'}),
@@ -82,6 +97,7 @@ export const COMBINATION_RECIPES:Record<CombinationRecipeId,CombinationRecipe>={
 
 export const COMBINATION_RECIPE_ORDER:CombinationRecipeId[]=[
   'assemble_telescope','assemble_guitar','assemble_repair_kit','assemble_engine','assemble_claymore','assemble_torch','assemble_hacksaw','prepare_spicy_noodles','toast_marshmallows','mix_concrete','fill_water_bomb',
+  'butcher_chicken','butcher_stinking_pig','butcher_giant_rat','butcher_guard_dog','butcher_fat_cat','butcher_huge_snake',
   'reload_water_pistol','refill_water_cooler','reload_battery_launcher','load_radio_battery','load_ems_battery',
   'repair_human_bone','repair_penknife','repair_staff','repair_serrated_knife','repair_machete','repair_adjustable_spanner','repair_screwdriver','repair_swiss_army_knife','repair_box_cutter','repair_chain','repair_can_opener','repair_ektorp_gluten_chair','repair_pc_base_unit',
   'kwik_fix_human_bone','kwik_fix_penknife','kwik_fix_staff','kwik_fix_serrated_knife','kwik_fix_machete','kwik_fix_adjustable_spanner','kwik_fix_screwdriver','kwik_fix_swiss_army_knife','kwik_fix_box_cutter','kwik_fix_chain','kwik_fix_can_opener','kwik_fix_ektorp_gluten_chair','kwik_fix_pc_base_unit',
@@ -117,6 +133,8 @@ export function combinationCommandsForCitizen(state:GameState,citizen:Citizen):A
   const actions:Array<Extract<GameCommand,{type:'COMBINE_ITEMS'}>>=[]
   for(const recipeId of COMBINATION_RECIPE_ORDER){
     const recipe=COMBINATION_RECIPES[recipeId]
+    if(recipe.townOnly&&citizen.location.type!=='town')continue
+    if(recipe.requiresConstruction&&!state.town.construction[recipe.requiresConstruction]?.completed)continue
     if(citizen.ap<recipe.apCost)continue
     const selected=selectInputs(citizen,recipeId)
     if(selected)actions.push({type:'COMBINE_ITEMS',citizenId:citizen.id,recipeId,itemIds:selected.map((entry)=>entry.item.id)})
@@ -149,8 +167,10 @@ function consumedAssembleIds(recipe:CombinationRecipe,refs:PersonalRef[]):string
 export function resolveCombination(state:GameState,citizen:Citizen,recipeId:CombinationRecipeId,itemIds:string[]):{consumedItemIds:string[];outputs:CombinationEventOutput[];createdCount:number}{
   const recipe=COMBINATION_RECIPES[recipeId]
   const refs=refsForCommand(citizen,itemIds)
-  if(recipe.category==='assemble'){
-    return{consumedItemIds:consumedAssembleIds(recipe,refs),outputs:[{item:createdItem(state,recipe.outputType),storage:assembledDestination(citizen,refs)}],createdCount:1}
+  if(recipe.category==='assemble'||recipe.category==='butcher'){
+    const count=recipe.outputCount??1
+    const storage=assembledDestination(citizen,refs)
+    return{consumedItemIds:consumedAssembleIds(recipe,refs),outputs:Array.from({length:count},(_,offset)=>({item:createdItem(state,recipe.outputType,offset),storage})),createdCount:count}
   }
   if(recipeId==='reload_water_pistol'){
     const target=refs[0];const stateAfter={...normalizeItemState(target.item.type,target.item.state),charges:3}
