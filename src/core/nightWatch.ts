@@ -85,6 +85,7 @@ const WATCH_ITEMS:Readonly<Partial<Record<ItemType,NightWatchItemDefinition>>>={
   groundsheet:{watchpoint:10,use:'destroy'},
   water_bomb:{watchpoint:8,family:'shooting',use:'destroy'},
   water_cooler_bottle:{watchpoint:(item)=>Math.max(0,normalizeItemState(item.type,item.state).charges??0)*8,family:'shooting',use:'decrement_charge'},
+  unspecified_meat:{watchpoint:2,use:'destroy'},
   chicken:{watchpoint:8,family:'trebuchet',use:'destroy'},
   stinking_pig:{watchpoint:25,family:'trebuchet',use:'destroy'},
   giant_rat:{watchpoint:12,family:'trebuchet',use:'destroy'},
