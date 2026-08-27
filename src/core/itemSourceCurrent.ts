@@ -14,8 +14,9 @@ interface CurrentItemSourceOverride {
  */
 export const CURRENT_ITEM_SOURCE_OVERRIDES:Readonly<Partial<Record<string,CurrentItemSourceOverride>>>={
   'trestle_#00':{runtimeType:'trestle',implementation:'implemented'},
+  'undef_#00':{runtimeType:'unspecified_meat',implementation:'implemented'},
   // The ordinary source pet family is now represented by real inventory items. They remain
-  // Partial until Butcher and Tamer's Trap System are source-audited and implemented.
+  // Partial while Tamer's Trap System and animal-production dependencies are still unresolved.
   'pet_chick_#00':{runtimeType:'chicken',implementation:'partial'},
   'pet_pig_#00':{runtimeType:'stinking_pig',implementation:'partial'},
   'pet_rat_#00':{runtimeType:'giant_rat',implementation:'partial'},
