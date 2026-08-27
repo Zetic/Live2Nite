@@ -1,7 +1,7 @@
 import { bankCount } from './bank'
 import { CAMPING_GRAVE_AP_COST, CAMP_IMPROVEMENT_AP_COST, canImproveCamp, trestleCampImproveCommands } from './camping'
 import { BAREHANDED_AP_COST, isWeapon, weaponDefinition } from './combat'
-import { combinationCommandsForCitizen } from './combinations'
+import { COMBINATION_RECIPES, combinationCommandsForCitizen } from './combinations'
 import { BUILDABLE_CONSTRUCTION_IDS, CONSTRUCTIONS, constructionUnlocked, gateLockedAtHour, wellDailyWithdrawals } from './construction'
 import { homeLabCanUse } from './drugLab'
 import { garbageDumpCommandsForCitizen } from './garbageDump'
@@ -80,7 +80,7 @@ function addForeignHomeActions(state:GameState,actions:GameCommand[],citizen:Cit
       if(transferAvailable)for(const item of target.home.storage)if(canCarryItem(citizen,item))actions.push({type:'STEAL_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
       continue
     }
-    if(transferAvailable)for(const item of target.home.storage)if(canCarryItem(citizen,item))actions.push({type:'PILLAGE_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
+    if(transferAvailable)for(const item of target.home.storage)if(canCarryItem(citizen,item))actions.push({type:'PILLAGE_HOME_ITEM',citizenId,targetCitizenId:target.id,itemId:item.id})
   }
 }
 
@@ -92,7 +92,7 @@ export function getLegalActions(state:GameState,citizenId:string):GameCommand[]{
   addConsumableActions(state,actions,citizen,citizen.inventory,'inventory')
   if(!terrorBlocksOrdinaryItems(state,citizen)){
     const combinations=combinationCommandsForCitizen(state,citizen)
-    actions.push(...combinations.filter((action)=>!hasHandWound(citizen)||action.recipeId==='load_ems_battery'))
+    actions.push(...combinations.filter((action)=>!hasHandWound(citizen)||action.recipeId==='load_ems_battery'||COMBINATION_RECIPES[action.recipeId].category==='butcher'))
     if(!hasHandWound(citizen))actions.push(...technicianRepairCommands(citizen))
   }
 
