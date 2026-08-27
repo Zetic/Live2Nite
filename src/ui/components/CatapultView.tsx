@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { createAgentWorldKnowledge } from '../../agents/WorldKnowledge'
+import { createAgentWorldKnowledge, type AgentZoneKnowledge } from '../../agents/WorldKnowledge'
 import { canUseCatapult, catapultActionCost, catapultEligibleItems, catapultMissChancePercent, catapultProfile, fireCatapult, provisionalCatapultOperator } from '../../core/catapult'
 import { itemName } from '../../core/items'
 import type { GameState } from '../../core/types'
@@ -13,7 +13,7 @@ function impactLabel(type:Parameters<typeof catapultProfile>[0]):string{
   const area=profile.shape==='square3x3'?'3×3 area':profile.shape==='cross'?'target + cardinal neighbors':'target zone'
   return`${landing} · ${tier} zombies · ${area}`
 }
-function intelLabel(known:ReturnType<typeof createAgentWorldKnowledge>['zone'] extends (...args:any[])=>infer T?T:never):string{
+function intelLabel(known:AgentZoneKnowledge|null):string{
   if(!known||known.zombieIntel==='none'||known.zombies===null)return'no zombie intel'
   if(known.zombieIntel==='map_estimate')return known.zombies===0?'estimate 0':known.zombies===2?'estimate 1–2':known.zombies===4?'estimate 3–4':'estimate 5+'
   if(known.zombieIntel==='scout_estimate')return`Scout estimate ~${known.zombies}`
