@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { lootScore } from '../src/agents/planning/LootPolicy'
+import { getLegalActions } from '../src/core/actions'
 import { catapultProfile } from '../src/core/catapult'
+import { executeCommand } from '../src/core/commands'
 import { constructionImplementationStatus, constructionPlayable } from '../src/core/construction'
 import { garbageDumpCategory } from '../src/core/garbageDump'
 import { createInitialGame } from '../src/core/game'
@@ -9,6 +11,7 @@ import { CURRENT_ITEM_SOURCE_CATALOG_BY_REF } from '../src/core/itemSourceCurren
 import { createItemInstance, itemHasCapability } from '../src/core/items'
 import { nightWatchEquipment } from '../src/core/nightWatch'
 import { playableRuinSourceDrops } from '../src/core/ruinLoot'
+import { tamerDogTransportableItems } from '../src/core/tamer'
 import type { ConstructionId, GameState, ItemType } from '../src/core/types'
 
 const ANIMALS:readonly ItemType[]=['chicken','stinking_pig','giant_rat','guard_dog','fat_cat','huge_snake']
@@ -17,6 +20,9 @@ function completed(game:GameState,...ids:ConstructionId[]):GameState{
   let construction=game.town.construction
   for(const id of ids)construction={...construction,[id]:{...construction[id],discovered:true,completed:true}}
   return{...game,town:{...game.town,construction}}
+}
+function outsideTamer(game:GameState,types:ItemType[]):GameState{
+  return{...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x:1,y:0},inventory:types.map((type,index)=>createItemInstance(`tamer-${index}`,type))}:citizen)}
 }
 
 describe('current MyHordes animal foundation',()=>{
@@ -45,6 +51,21 @@ describe('current MyHordes animal foundation',()=>{
     expect(isCumbersomeItemType('giant_rat')).toBe(false)
     expect(isCumbersomeItemType('guard_dog')).toBe(false)
     expect(isCumbersomeItemType('fat_cat')).toBe(false)
+  })
+
+  it('routes animals through the existing Maltese whole-rucksack and steroid rules',()=>{
+    const light=outsideTamer(createInitialGame(9903,1,'tamer'),['fat_cat'])
+    expect(tamerDogTransportableItems(light,light.citizens[0]).map((item)=>item.type)).toEqual(['fat_cat'])
+    expect(getLegalActions(light,'c01').some((action)=>action.type==='SEND_TAMER_DOG'&&action.destination==='bank')).toBe(true)
+
+    let heavy=outsideTamer(createInitialGame(9904,1,'tamer'),['stinking_pig','anabolic_steroids'])
+    expect(tamerDogTransportableItems(heavy,heavy.citizens[0])).toEqual([])
+    expect(getLegalActions(heavy,'c01').some((action)=>action.type==='SEND_TAMER_DOG')).toBe(false)
+    const drug=getLegalActions(heavy,'c01').find((action)=>action.type==='DRUG_TAMER_DOG')
+    expect(drug).toBeDefined()
+    heavy=executeCommand(heavy,drug!).state
+    expect(tamerDogTransportableItems(heavy,heavy.citizens[0]).map((item)=>item.type)).toEqual(['stinking_pig'])
+    expect(getLegalActions(heavy,'c01').some((action)=>action.type==='SEND_TAMER_DOG'&&action.destination==='bank')).toBe(true)
   })
 
   it('makes every ordinary pet an Animal Dump and Small Trebuchet payload',()=>{
