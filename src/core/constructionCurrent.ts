@@ -14,7 +14,7 @@ export function applyCurrentConstructionEconomy():void{
     miniature_armory:{referenceName:'Miniature Armory',apCost:40,resources:{nuts_and_bolts:1,twisted_plank:10,wrought_iron:8,sheet_metal:2,duct_tape:2}},
     observation_platform:{referenceName:'Observation platform',apCost:30,resources:{twisted_plank:5,telescope:1,metal_support:1}},
     upgraded_map:{referenceName:'Upgraded Map',apCost:25,resources:{battery:2,wrought_iron:5,sheet_metal:1,laser_diode:1,working_radio:2}},
-    water_purifier:{referenceName:'Water Purifier',apCost:75,resources:{nuts_and_bolts:1,twisted_plank:5,wrought_iron:5,copper_pipe:2,empty_oil_can:2}},
+    water_purifier:{referenceName:'Water Purifier',apCost:75,resources:{twisted_plank:5,wrought_iron:5,nuts_and_bolts:1,copper_pipe:2,empty_oil_can:2}},
     water_filter:{referenceName:'Water Filter',apCost:50,resources:{wrought_iron:10,electronic_component:2,wire_reel:1,empty_oil_can:1,wire_mesh:1}},
     faucet:{referenceName:'Faucet',apCost:130,resources:{engine:1,nuts_and_bolts:4,wrought_iron:10,patchwork_beam:6,metal_support:3,empty_oil_can:3}},
     water_catcher:{referenceName:'Water Catcher',apCost:10,resources:{twisted_plank:2,wrought_iron:2}},
@@ -22,6 +22,7 @@ export function applyCurrentConstructionEconomy():void{
     fertilizer:{referenceName:'Fertilizer',apCost:30,resources:{water_ration:10,anabolic_steroids:2,wrought_iron:5,pharmaceutical_products:8,bag_of_damp_grass:3}},
     grapeboom:{referenceName:'Grapeboom',apCost:40,resources:{water_ration:10,twisted_plank:5,semtex:5,empty_oil_can:1}},
     central_cafeteria:{referenceName:'Central Cafeteria',apCost:20,resources:{pharmaceutical_products:1,patchwork_beam:5,metal_support:1,table:1,bag_of_damp_grass:1,carcinogenic_oven:1}},
+    butcher:{referenceName:'Butcher',apCost:40,resources:{twisted_plank:9,wrought_iron:4}},
     garbage_dump:{referenceName:'Garbage Dump',apCost:50,resources:{twisted_plank:3,patchwork_beam:10,wrought_iron:5,metal_support:10,nuts_and_bolts:1,unshaped_concrete_block:2}},
     dump_upgrade:{referenceName:'Dump Upgrade',apCost:150,resources:{water_ration:20,patchwork_beam:15,metal_support:15,poison_gland:1,nuts_and_bolts:1}},
     organized_dump:{referenceName:'Organized Dump',apCost:20,resources:{nuts_and_bolts:2,unshaped_concrete_block:1,patchwork_beam:5,metal_support:10,trestle:2}},
@@ -58,6 +59,7 @@ export function applyCurrentConstructionEconomy():void{
   activate('search_tower','Reveals the nightly recovery sector; upgrades natural 25% recovery chance')
   activate('observation_platform','Upgradeable nightly map-intelligence radius: 3 / 6 / 10 km','partial')
   activate('central_cafeteria','Doubles personal Kitchen daily cooking attempts')
+  activate('butcher','Converts supported animals into their deterministic source meat outputs for 0 AP')
 
   // Current Catapult mechanics. The firing model is active, including remote supply delivery,
   // impact damage, 25%/5% scatter and the 4 AP/2 AP upgrade. The base facility stays Partial
