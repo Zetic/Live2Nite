@@ -47,11 +47,11 @@ Eligibility follows Live2Nite runtime behavior rather than a copied upstream num
 - food uses the runtime food-consumable definition;
 - current wood coverage is Rotting Log and Twisted Plank;
 - current metal coverage is Scrap Metal and Wrought Iron;
-- current runtime animal coverage is Chicken.
+- runtime animals use the shared animal capability: Chicken, Stinking Pig, Giant Rat, Guard Dog, Fat Cat, and Huge Snake.
 
 Water Rations are not treated as food for the Dump. Broken weapons are not treated as weapons unless their runtime item definition itself supports the weapon capability.
 
-Additional source animals or material identities should be added only when their actual Live2Nite runtime items are implemented. Source-only Codex rows are not enough to make an object destructible.
+Source-only animal rows do not become Dump objects merely by existing in the source catalogue. The six ordinary pet identities above are eligible because they are now real Live2Nite runtime items.
 
 ## Trestle dependency and gameplay
 
@@ -97,6 +97,6 @@ Dump Upgrade remains an ordinary class-4 construction. Organized Dump remains an
 
 ## Autonomous citizens
 
-Bots do not automatically destroy shared Bank items in this pass. Dumping is irreversible communal-resource destruction, and the existing autonomous planning system does not yet provide a sufficiently strong reservation/consensus rule for deciding when shared food, weapons, or construction resources should be sacrificed.
+Bots do not automatically destroy shared Bank items in this pass. Dumping is irreversible communal-resource destruction, and the existing autonomous planning system does not yet provide a sufficiently strong reservation/consensus rule for deciding when shared food, weapons, animals, or construction resources should be sacrificed.
 
 Trestle field use is resource-aware. Autonomous campers preserve carried Trestles while Organized Dump still requires them; once that dependency is satisfied, a low-AP camper may consume a spare Trestle for the stronger +9 campsite improvement when needed.
