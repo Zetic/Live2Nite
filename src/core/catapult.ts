@@ -139,11 +139,12 @@ function distributeKills(zones:WorldZone[],kills:number,rngState:number):{killed
   return{killed,rngState:state}
 }
 function landingItem(item:ItemInstance,profile:CatapultPayloadProfile):ItemInstance|null{
-  if(profile.landing==='destroyed'||profile.landing==='debris')return null
+  // Generic source debris and mouldy-remains outputs do not yet have canonical Live2Nite runtime
+  // identities. Fail closed rather than silently substituting a different item/resource.
+  if(profile.landing==='destroyed'||profile.landing==='debris'||profile.landing==='moldy')return null
   if(profile.landing==='intact')return item
   if(profile.landing==='broken'&&profile.brokenInto)return createItemInstance(item.id,profile.brokenInto)
   if(profile.landing==='scrap')return createItemInstance(item.id,'scrap_metal')
-  if(profile.landing==='moldy')return createItemInstance(item.id,'food')
   return null
 }
 export function fireCatapult(state:GameState,citizenId:string,itemId:string,targetX:number,targetY:number):CatapultFireResult{
