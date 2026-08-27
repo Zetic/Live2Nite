@@ -23,8 +23,8 @@ describe('complete current construction catalog',()=>{
     for(const branch of CONSTRUCTION_BRANCHES)expect(allRows.find((row)=>CONSTRUCTION_CATALOG[row.id].branchId===branch.id&&CONSTRUCTION_CATALOG[row.id].parentId===null)?.depth).toBe(0)
   })
   it('tracks the implementation backlog explicitly',()=>{
-    const counts={implemented:0,partial:0,wip:0};for(const id of CONSTRUCTION_CATALOG_ORDER)counts[CONSTRUCTION_CATALOG[id].implementation]+=1;expect(counts).toEqual({implemented:82,partial:25,wip:59})
-    for(const id of ['scouts_lair','technicians_workbench','battlements','miniature_armory','scanner','upgraded_map','search_tower','water_purifier','water_filter','faucet','water_turrets','vegetable_plot','fertilizer','outer_world_apple_tree','central_cafeteria','garbage_dump','dump_upgrade','defence_dump','weapons_dump','food_dump','wood_dump','metal_dump','animal_dump','organized_dump','upgraded_catapult','small_trebuchet'] as const)expect(CONSTRUCTION_CATALOG[id].implementation).toBe('implemented')
+    const counts={implemented:0,partial:0,wip:0};for(const id of CONSTRUCTION_CATALOG_ORDER)counts[CONSTRUCTION_CATALOG[id].implementation]+=1;expect(counts).toEqual({implemented:83,partial:25,wip:58})
+    for(const id of ['scouts_lair','technicians_workbench','battlements','miniature_armory','pet_shop','scanner','upgraded_map','search_tower','water_purifier','water_filter','faucet','water_turrets','vegetable_plot','fertilizer','outer_world_apple_tree','central_cafeteria','garbage_dump','dump_upgrade','defence_dump','weapons_dump','food_dump','wood_dump','metal_dump','animal_dump','organized_dump','upgraded_catapult','small_trebuchet'] as const)expect(CONSTRUCTION_CATALOG[id].implementation).toBe('implemented')
     expect(CONSTRUCTION_CATALOG.catapult.implementation).toBe('partial');expect(CONSTRUCTION_CATALOG.grapeboom.implementation).toBe('partial');expect(CONSTRUCTION_CATALOG.observation_platform.implementation).toBe('partial');expect(CONSTRUCTION_CATALOG.henhouse.implementation).toBe('partial')
   })
   it('keeps every parent inside the same complete Live2Nite tree',()=>{
@@ -32,7 +32,7 @@ describe('complete current construction catalog',()=>{
   })
   it('uses implementation status as a build gate rather than as a discovery gate',()=>{
     const game=createInitialGame(8801,2);expect(game.town.construction.sanctuary.discovered).toBe(true);expect(constructionImplementationStatus('sanctuary')).toBe('wip');expect(constructionPlayable('sanctuary')).toBe(false);expect(constructionUnlocked(game,'sanctuary')).toBe(false)
-    for(const id of ['defensive_supports','scouts_lair','central_laboratory','central_cafeteria','garbage_dump','dump_upgrade','organized_dump','upgraded_catapult','small_trebuchet'] as const){expect(constructionImplementationStatus(id)).toBe('implemented');expect(constructionPlayable(id)).toBe(true)}
+    for(const id of ['defensive_supports','scouts_lair','central_laboratory','central_cafeteria','garbage_dump','dump_upgrade','organized_dump','upgraded_catapult','small_trebuchet','pet_shop'] as const){expect(constructionImplementationStatus(id)).toBe('implemented');expect(constructionPlayable(id)).toBe(true)}
     for(const id of ['observation_platform','catapult'] as const){expect(constructionImplementationStatus(id)).toBe('partial');expect(constructionPlayable(id)).toBe(true)}
   })
   it('includes WIP projects in generic blueprint candidate pools while excluding special classes',()=>{
