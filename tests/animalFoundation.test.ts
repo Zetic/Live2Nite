@@ -3,7 +3,9 @@ import { lootScore } from '../src/agents/planning/LootPolicy'
 import { getLegalActions } from '../src/core/actions'
 import { catapultProfile } from '../src/core/catapult'
 import { executeCommand } from '../src/core/commands'
+import { COMBINATION_RECIPES } from '../src/core/combinations'
 import { constructionImplementationStatus, constructionPlayable } from '../src/core/construction'
+import { foodApTarget, isKitchenCookable } from '../src/core/food'
 import { garbageDumpCategory } from '../src/core/garbageDump'
 import { createInitialGame } from '../src/core/game'
 import { isCumbersomeItemType } from '../src/core/inventory'
@@ -13,7 +15,7 @@ import { MYHORDES_NORMAL_LOOT_MAPPING, unmappedOrdinarySourceLootIds } from '../
 import { nightWatchEquipment } from '../src/core/nightWatch'
 import { playableRuinSourceDrops } from '../src/core/ruinLoot'
 import { tamerDogTransportableItems } from '../src/core/tamer'
-import type { ConstructionId, GameState, ItemType } from '../src/core/types'
+import type { CombinationRecipeId, ConstructionId, GameState, ItemType } from '../src/core/types'
 
 const ANIMALS:readonly ItemType[]=['chicken','stinking_pig','giant_rat','guard_dog','fat_cat','huge_snake']
 
@@ -25,9 +27,12 @@ function completed(game:GameState,...ids:ConstructionId[]):GameState{
 function outsideTamer(game:GameState,types:ItemType[]):GameState{
   return{...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x:1,y:0},inventory:types.map((type,index)=>createItemInstance(`tamer-${index}`,type))}:citizen)}
 }
+function withAnimal(game:GameState,type:ItemType,woundedHands=false):GameState{
+  return{...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:[createItemInstance(`butcher-${type}`,type)],status:{...citizen.status,wound:woundedHands?'hands':citizen.status.wound}}:citizen)}
+}
 
 describe('current MyHordes animal foundation',()=>{
-  it('activates all six ordinary source pets without promoting unresolved animal actions',()=>{
+  it('activates all six ordinary source pets without promoting unresolved acquisition/production effects',()=>{
     const expected:Record<string,ItemType>={
       'pet_chick_#00':'chicken',
       'pet_pig_#00':'stinking_pig',
@@ -91,12 +96,57 @@ describe('current MyHordes animal foundation',()=>{
     })
   })
 
-  it('activates Pet Shop now that its pet dependency is playable',()=>{
+  it('activates Pet Shop and Butcher while keeping Trap and Pigsty production WIP',()=>{
     expect(constructionImplementationStatus('pet_shop')).toBe('implemented')
     expect(constructionPlayable('pet_shop')).toBe(true)
+    expect(constructionImplementationStatus('butcher')).toBe('implemented')
+    expect(constructionPlayable('butcher')).toBe(true)
     expect(constructionImplementationStatus('tamer_s_trap_system')).toBe('wip')
-    expect(constructionImplementationStatus('butcher')).toBe('wip')
     expect(constructionImplementationStatus('pigsty')).toBe('wip')
+  })
+
+  it('implements the exact deterministic zero-AP Butcher conversion table',()=>{
+    const expected:Readonly<Record<ItemType,{recipe:CombinationRecipeId;output:ItemType;count:number}>>={
+      chicken:{recipe:'butcher_chicken',output:'unspecified_meat',count:2},
+      stinking_pig:{recipe:'butcher_stinking_pig',output:'unspecified_meat',count:4},
+      giant_rat:{recipe:'butcher_giant_rat',output:'unspecified_meat',count:2},
+      guard_dog:{recipe:'butcher_guard_dog',output:'tasty_looking_steak',count:2},
+      fat_cat:{recipe:'butcher_fat_cat',output:'tasty_looking_steak',count:2},
+      huge_snake:{recipe:'butcher_huge_snake',output:'tasty_looking_steak',count:4},
+    } as const
+    for(const type of ANIMALS){
+      const rule=expected[type]
+      expect(COMBINATION_RECIPES[rule.recipe]).toMatchObject({category:'butcher',apCost:0,townOnly:true,requiresConstruction:'butcher',outputType:rule.output,outputCount:rule.count})
+      let game=withAnimal(completed(createInitialGame(9910,1),'butcher'),type)
+      const beforeAp=game.citizens[0].ap
+      const action=getLegalActions(game,'c01').find((candidate)=>candidate.type==='COMBINE_ITEMS'&&candidate.recipeId===rule.recipe)
+      expect(action,type).toBeDefined()
+      const result=executeCommand(game,action!)
+      game=result.state
+      expect(game.citizens[0].ap,type).toBe(beforeAp)
+      expect(result.events.some((event)=>event.type==='AP_SPENT')).toBe(false)
+      expect(game.citizens[0].inventory.some((item)=>item.id===`butcher-${type}`)).toBe(false)
+      expect(game.citizens[0].inventory.filter((item)=>item.type===rule.output)).toHaveLength(rule.count)
+    }
+  })
+
+  it('requires town and the Butcher but not unwounded hands for slaughter actions',()=>{
+    let game=withAnimal(createInitialGame(9911,1),'chicken')
+    expect(getLegalActions(game,'c01').some((action)=>action.type==='COMBINE_ITEMS'&&action.recipeId==='butcher_chicken')).toBe(false)
+    game=withAnimal(completed(createInitialGame(9912,1),'butcher'),'chicken',true)
+    expect(getLegalActions(game,'c01').some((action)=>action.type==='COMBINE_ITEMS'&&action.recipeId==='butcher_chicken')).toBe(true)
+    game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x:1,y:0}}:citizen)}
+    expect(getLegalActions(game,'c01').some((action)=>action.type==='COMBINE_ITEMS'&&action.recipeId==='butcher_chicken')).toBe(false)
+  })
+
+  it('models source undef_#00 as ordinary Unspecified Meat with its 2-point destructive Watch use',()=>{
+    const source=CURRENT_ITEM_SOURCE_CATALOG_BY_REF.get('undef_#00')
+    expect(source).toMatchObject({runtimeType:'unspecified_meat',implementation:'implemented',watchPoints:2})
+    expect(foodApTarget('unspecified_meat',6)).toBe(6)
+    expect(isKitchenCookable(createItemInstance('meat','unspecified_meat'))).toBe(false)
+    let game=completed(createInitialGame(9913,1),'battlements','miniature_armory')
+    game={...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:[createItemInstance('meat-watch','unspecified_meat')]}:citizen)}
+    expect(nightWatchEquipment(game,game.citizens[0])[0]).toMatchObject({type:'unspecified_meat',baseDefense:2,defense:2})
   })
 
   it('maps the ordinary normal-source pet identities while preserving the global loot gate',()=>{
@@ -125,10 +175,11 @@ describe('current MyHordes animal foundation',()=>{
     expect(cosmetics.get('pet_snake_#00')).toBe('huge_snake')
   })
 
-  it('gives autonomous scavengers explicit value for every runtime animal',()=>{
+  it('gives autonomous scavengers explicit value for every runtime animal and Butcher meat',()=>{
     const game=createInitialGame(9902,1)
     const citizen=game.citizens[1]
     for(const type of ANIMALS)expect(lootScore(game,citizen,type)).toBeGreaterThan(0)
+    expect(lootScore(game,citizen,'unspecified_meat')).toBeGreaterThan(0)
     expect(lootScore(game,citizen,'stinking_pig')).toBeGreaterThan(lootScore(game,citizen,'giant_rat'))
   })
 })
