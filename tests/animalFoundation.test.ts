@@ -17,7 +17,8 @@ import { playableRuinSourceDrops } from '../src/core/ruinLoot'
 import { tamerDogTransportableItems } from '../src/core/tamer'
 import type { CombinationRecipeId, ConstructionId, GameState, ItemType } from '../src/core/types'
 
-const ANIMALS:readonly ItemType[]=['chicken','stinking_pig','giant_rat','guard_dog','fat_cat','huge_snake']
+const ANIMALS=['chicken','stinking_pig','giant_rat','guard_dog','fat_cat','huge_snake'] as const satisfies readonly ItemType[]
+type AnimalType=typeof ANIMALS[number]
 
 function completed(game:GameState,...ids:ConstructionId[]):GameState{
   let construction=game.town.construction
@@ -27,7 +28,7 @@ function completed(game:GameState,...ids:ConstructionId[]):GameState{
 function outsideTamer(game:GameState,types:ItemType[]):GameState{
   return{...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,location:{type:'world' as const,x:1,y:0},inventory:types.map((type,index)=>createItemInstance(`tamer-${index}`,type))}:citizen)}
 }
-function withAnimal(game:GameState,type:ItemType,woundedHands=false):GameState{
+function withAnimal(game:GameState,type:AnimalType,woundedHands=false):GameState{
   return{...game,citizens:game.citizens.map((citizen)=>citizen.id==='c01'?{...citizen,inventory:[createItemInstance(`butcher-${type}`,type)],status:{...citizen.status,wound:woundedHands?'hands':citizen.status.wound}}:citizen)}
 }
 
@@ -106,14 +107,14 @@ describe('current MyHordes animal foundation',()=>{
   })
 
   it('implements the exact deterministic zero-AP Butcher conversion table',()=>{
-    const expected:Readonly<Record<ItemType,{recipe:CombinationRecipeId;output:ItemType;count:number}>>={
+    const expected:Readonly<Record<AnimalType,{recipe:CombinationRecipeId;output:ItemType;count:number}>>={
       chicken:{recipe:'butcher_chicken',output:'unspecified_meat',count:2},
       stinking_pig:{recipe:'butcher_stinking_pig',output:'unspecified_meat',count:4},
       giant_rat:{recipe:'butcher_giant_rat',output:'unspecified_meat',count:2},
       guard_dog:{recipe:'butcher_guard_dog',output:'tasty_looking_steak',count:2},
       fat_cat:{recipe:'butcher_fat_cat',output:'tasty_looking_steak',count:2},
       huge_snake:{recipe:'butcher_huge_snake',output:'tasty_looking_steak',count:4},
-    } as const
+    }
     for(const type of ANIMALS){
       const rule=expected[type]
       expect(COMBINATION_RECIPES[rule.recipe]).toMatchObject({category:'butcher',apCost:0,townOnly:true,requiresConstruction:'butcher',outputType:rule.output,outputCount:rule.count})
