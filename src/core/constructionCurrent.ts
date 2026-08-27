@@ -52,6 +52,7 @@ export function applyCurrentConstructionEconomy():void{
   activate('technicians_workbench')
   activate('battlements','Unlocks voluntary Night Watch (10 Watchmen before upgrades)')
   activate('miniature_armory','Enables ordinary carried Night Watch equipment')
+  activate('pet_shop','Pets carried on Night Watch are 30% more effective')
   activate('scanner','Doubles Watchtower estimation contribution weight')
   activate('upgraded_map','Nightly Observation Platform intelligence records exact zombie counts')
   activate('search_tower','Reveals the nightly recovery sector; upgrades natural 25% recovery chance')
@@ -96,7 +97,6 @@ export function applyCurrentConstructionEconomy():void{
 
   CONSTRUCTIONS.water_catcher.effects=[{type:'well_water_on_complete',amount:2}]
   CONSTRUCTIONS.water_catcher.effectLabel='+2 Well water; rebuildable after each attack'
-  CONSTRUCTIONS.water_catcher.expiresAfterAttack=true
   CONSTRUCTIONS.divining_rocket.effects=[{type:'well_water_on_complete',amount:60}]
   CONSTRUCTIONS.divining_rocket.effectLabel='+60 Well water on completion'
 
