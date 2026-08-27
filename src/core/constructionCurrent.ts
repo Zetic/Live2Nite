@@ -58,6 +58,14 @@ export function applyCurrentConstructionEconomy():void{
   activate('observation_platform','Upgradeable nightly map-intelligence radius: 3 / 6 / 10 km','partial')
   activate('central_cafeteria','Doubles personal Kitchen daily cooking attempts')
 
+  // Current Catapult mechanics. The firing model is active, including remote supply delivery,
+  // impact damage, 25%/5% scatter and the 4 AP/2 AP upgrade. The base facility stays Partial
+  // only because current MyHordes elects a Catapultist and Live2Nite has no generic town-role
+  // voting system yet; the human-controlled citizen is explicitly provisional until that lands.
+  activate('catapult','4 AP remote item delivery/bombardment; current Catapultist vote still pending','partial')
+  activate('upgraded_catapult','Reduces Catapult cost to 2 AP and miss chance from 25% to 5%')
+  activate('small_trebuchet','Allows pet/animal payloads to be launched by the Catapult')
+
   // Garbage Dump. Base dump accepts every supported source category at 4 defense for defensive
   // objects and 1 for all other supported categories. Dump plans add category yield, the wet
   // Dump Upgrade adds +1 to every item, and Organized Dump removes the normal 1 AP action cost.
