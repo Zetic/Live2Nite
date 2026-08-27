@@ -3,9 +3,6 @@ import type { Citizen, DumpCategory, GameCommand, GameEvent, GameState, ItemInst
 
 const WOOD_DUMP_ITEMS:ReadonlySet<ItemType>=new Set(['rotten_log','twisted_plank'])
 const METAL_DUMP_ITEMS:ReadonlySet<ItemType>=new Set(['scrap_metal','wrought_iron'])
-// Current runtime animal coverage is intentionally narrow. New animal identities should be
-// added here only when they become real Live2Nite creature items rather than source-only Codex rows.
-const ANIMAL_DUMP_ITEMS:ReadonlySet<ItemType>=new Set(['chicken'])
 
 const CATEGORY_BONUS:Readonly<Record<DumpCategory,{projectId:'defence_dump'|'weapons_dump'|'food_dump'|'wood_dump'|'metal_dump'|'animal_dump';bonus:number}>>={
   defense:{projectId:'defence_dump',bonus:2},
@@ -22,7 +19,7 @@ export function garbageDumpCategory(item:ItemInstance):DumpCategory|null{
   if(consumableKind(item.type)==='food')return'food'
   if(WOOD_DUMP_ITEMS.has(item.type))return'wood'
   if(METAL_DUMP_ITEMS.has(item.type))return'metal'
-  if(ANIMAL_DUMP_ITEMS.has(item.type))return'animal'
+  if(itemHasCapability(item.type,'animal'))return'animal'
   return null
 }
 
