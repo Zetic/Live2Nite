@@ -14,7 +14,7 @@ export function applyCurrentConstructionEconomy():void{
     miniature_armory:{referenceName:'Miniature Armory',apCost:40,resources:{nuts_and_bolts:1,twisted_plank:10,wrought_iron:8,sheet_metal:2,duct_tape:2}},
     observation_platform:{referenceName:'Observation platform',apCost:30,resources:{twisted_plank:5,telescope:1,metal_support:1}},
     upgraded_map:{referenceName:'Upgraded Map',apCost:25,resources:{battery:2,wrought_iron:5,sheet_metal:1,laser_diode:1,working_radio:2}},
-    water_purifier:{referenceName:'Water Purifier',apCost:75,resources:{twisted_plank:5,wrought_iron:5,nuts_and_bolts:1,copper_pipe:2,empty_oil_can:2}},
+    water_purifier:{referenceName:'Water Purifier',apCost:75,resources:{nuts_and_bolts:1,twisted_plank:5,wrought_iron:5,copper_pipe:2,empty_oil_can:2}},
     water_filter:{referenceName:'Water Filter',apCost:50,resources:{wrought_iron:10,electronic_component:2,wire_reel:1,empty_oil_can:1,wire_mesh:1}},
     faucet:{referenceName:'Faucet',apCost:130,resources:{engine:1,nuts_and_bolts:4,wrought_iron:10,patchwork_beam:6,metal_support:3,empty_oil_can:3}},
     water_catcher:{referenceName:'Water Catcher',apCost:10,resources:{twisted_plank:2,wrought_iron:2}},
