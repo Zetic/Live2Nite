@@ -80,7 +80,7 @@ function addForeignHomeActions(state:GameState,actions:GameCommand[],citizen:Cit
       if(transferAvailable)for(const item of target.home.storage)if(canCarryItem(citizen,item))actions.push({type:'STEAL_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
       continue
     }
-    if(transferAvailable)for(const item of target.home.storage)if(canCarryItem(citizen,item))actions.push({type:'PILLAGE_HOME_ITEM',citizenId,targetCitizenId:target.id,itemId:item.id})
+    if(transferAvailable)for(const item of target.home.storage)if(canCarryItem(citizen,item))actions.push({type:'PILLAGE_HOME_ITEM',citizenId:citizen.id,targetCitizenId:target.id,itemId:item.id})
   }
 }
 
