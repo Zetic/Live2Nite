@@ -25,6 +25,7 @@ export const FOOD_DEFINITIONS:Partial<Record<ItemType,FoodDefinition>>={
   chinese_noodles:ordinary,
   dried_marshmallows:ordinary,
   meaty_bone:ordinary,
+  unspecified_meat:ordinary,
   dubious_home_made_meal:ordinary,
   tasty_looking_steak:good,
   spicy_chinese_noodles:good,
