@@ -13,7 +13,7 @@ const BASE_LOOT_VALUE:Record<ItemType,number>={
   magnetic_key:95,bump_key:95,bottle_opener:95,
   twisted_plank:72,wrought_iron:72,patchwork_beam:82,metal_support:86,sheet_metal:80,unshaped_concrete_block:76,rotten_log:38,scrap_metal:38,quality_log:66,sheet_metal_bits:74,
   nuts_and_bolts:92,copper_pipe:86,wire_reel:82,duct_tape:78,compact_detonator:96,semtex:100,electronic_component:90,laser_diode:96,telescope:94,convex_lens:72,battery:70,empty_oil_can:64,
-  mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,radio_cassette_player_off:68,guitar:66,table:70,trestle:86,chicken:62,wire_mesh:72,grain_sack:58,full_jerrycan:76,
+  mechanism:78,broken_electronic_device:82,belt:68,bag_of_damp_grass:46,bag_of_cement:72,earplugs:34,meaty_bone:62,human_flesh:60,poison_gland:82,working_radio:80,radio_cassette_player_off:68,guitar:66,table:70,trestle:86,chicken:62,stinking_pig:88,giant_rat:68,guard_dog:86,fat_cat:72,huge_snake:84,wire_mesh:72,grain_sack:58,full_jerrycan:76,
   tool_bag:78,kwik_fix:82,plastic_bag:36,engine_incomplete:86,engine:90,claymore:94,torch:48,battery_launcher:74,strong_spices:44,exploding_grapefruit:70,
   water_ration:62,food:52,mouldy_twinkies:52,half_eaten_chicken_wings:52,rancid_shortbread_pack:52,out_of_date_jaffa_cakes:52,dried_chewing_gum:52,stale_tart:52,soft_crisps:52,can:58,open_can:52,vegetable:52,blue_apple:64,tasty_looking_steak:64,chinese_noodles:52,spicy_chinese_noodles:64,dried_marshmallows:52,burnt_marshmallows:64,good_home_made_meal:64,dubious_home_made_meal:52,
   groundsheet:66,smelly_meat:66,
