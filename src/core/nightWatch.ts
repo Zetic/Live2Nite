@@ -92,6 +92,8 @@ const WATCH_ITEMS:Readonly<Partial<Record<ItemType,NightWatchItemDefinition>>>={
   guard_dog:{watchpoint:25,family:'trebuchet',use:'destroy'},
   fat_cat:{watchpoint:12,family:'trebuchet',use:'destroy'},
   huge_snake:{watchpoint:25,family:'trebuchet',use:'destroy'},
+  mangy_dachshund:{watchpoint:18,family:'trebuchet',use:'destroy'},
+  furious_kitten_partially_digested:{watchpoint:18,family:'trebuchet',use:'destroy'},
   chain:{watchpoint:7,family:'armory',use:'break',breaksInto:'broken_chain'},
   screwdriver:{watchpoint:5,family:'armory',use:'break',breaksInto:'broken_screwdriver'},
   can_opener:{watchpoint:5,family:'armory',use:'break',breaksInto:'broken_can_opener'},
