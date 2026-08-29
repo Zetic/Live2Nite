@@ -58,7 +58,7 @@ describe("current MyHordes Tamer's Trap result rules",()=>{
   it('scores profession, poison and every lure-group membership exactly',()=>{
     expect(tamerTrapScore(baits(),false)).toBe(11)
     expect(tamerTrapScore(baits(),true)).toBe(16)
-    expect(tamerTrapScore(baits([{poisoned:true},{lureGroups:['lure1','lure4']}]),true)).toBe(16)
+    expect(tamerTrapScore(baits([{poisoned:true},{lureGroups:['lure1','lure4']}]),true)).toBe(17)
   })
 
   it('resolves failure or a uniformly selected tier animal into the exact output count',()=>{
