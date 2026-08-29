@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { TAMER_TRAP_BAIT_SCORES, TAMER_TRAP_FAILURE_ITEM, TAMER_TRAP_POISON_PENALTY, TAMER_TRAP_PROFESSION_BONUS, TAMER_TRAP_TIERS, rollTamerTrapAnimal, rollTamerTrapFailure, tamerTrapFailureRate, tamerTrapTier } from '../src/core/tamerTrap'
+import { TAMER_TRAP_BAIT_SCORES, TAMER_TRAP_FAILURE_ITEM, TAMER_TRAP_POISON_PENALTY, TAMER_TRAP_PROFESSION_BONUS, TAMER_TRAP_TIERS, resolveTamerTrap, rollTamerTrapAnimal, rollTamerTrapFailure, tamerTrapBaitsValid, tamerTrapFailureRate, tamerTrapScore, tamerTrapTier, type TamerTrapBaitSelection } from '../src/core/tamerTrap'
+
+const baits=(overrides:Partial<TamerTrapBaitSelection>[]=[]):TamerTrapBaitSelection[]=>[
+  {itemId:'bait-1',prototype:'bait_a',lureGroups:['lure2'],poisoned:false,...overrides[0]},
+  {itemId:'bait-2',prototype:'bait_b',lureGroups:['lure3'],poisoned:false,...overrides[1]},
+  {itemId:'bait-3',prototype:'bait_c',lureGroups:['lure5'],poisoned:false,...overrides[2]},
+]
 
 describe("current MyHordes Tamer's Trap result rules",()=>{
   it('pins the current score constants and five result tiers',()=>{
@@ -40,5 +46,35 @@ describe("current MyHordes Tamer's Trap result rules",()=>{
     expect(result.count).toBe(3)
     expect(['huge_snake','furious_kitten_partially_digested','mangy_dachshund','guard_dog']).toContain(result.animal)
     expect(result.rngStateAfter).not.toBe(12345)
+  })
+
+  it('requires exactly three distinct source bait prototypes and instances',()=>{
+    expect(tamerTrapBaitsValid(baits())).toBe(true)
+    expect(tamerTrapBaitsValid(baits().slice(0,2))).toBe(false)
+    expect(tamerTrapBaitsValid(baits([{prototype:'bait_a'},{prototype:'bait_a'}]))).toBe(false)
+    expect(tamerTrapBaitsValid(baits([{itemId:'bait-1'},{itemId:'bait-1'}]))).toBe(false)
+  })
+
+  it('scores profession, poison and every lure-group membership exactly',()=>{
+    expect(tamerTrapScore(baits(),false)).toBe(11)
+    expect(tamerTrapScore(baits(),true)).toBe(16)
+    expect(tamerTrapScore(baits([{poisoned:true},{lureGroups:['lure1','lure4']}]),true)).toBe(16)
+  })
+
+  it('resolves failure or a uniformly selected tier animal into the exact output count',()=>{
+    const success=resolveTamerTrap(12345,0,baits(),false)
+    expect(success.failed).toBe(false)
+    expect(success.score).toBe(11)
+    expect(success.outputCount).toBe(3)
+    expect(['giant_rat','chicken','stinking_pig','fat_cat']).toContain(success.outputType)
+    expect(success.rngStateAfter).not.toBe(12345)
+
+    let seed=1
+    let failure=resolveTamerTrap(seed,301,baits(),true)
+    while(!failure.failed&&seed<10000){seed+=1;failure=resolveTamerTrap(seed,301,baits(),true)}
+    expect(failure.failed).toBe(true)
+    expect(failure.failureRate).toBe(39)
+    expect(failure.outputType).toBe('fistful_of_insects')
+    expect(failure.outputCount).toBe(1)
   })
 })
