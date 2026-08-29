@@ -44,7 +44,7 @@ describe('complete Trestle source behavior',()=>{
     expect(CURRENT_ITEM_SOURCE_CATALOG_BY_REF.get('trestle_#00')).toMatchObject({
       id:'trestle',name:'Trestle',runtimeType:'trestle',implementation:'implemented',heavy:true,decoration:1,watchPoints:15,
     })
-    expect(currentItemSourceCatalogStatusCounts()).toEqual({implemented:102,partial:14,wip:267})
+    expect(currentItemSourceCatalogStatusCounts()).toEqual({implemented:104,partial:22,wip:257})
   })
 
   it('implements its defensive furniture and cumbersome behavior',()=>{

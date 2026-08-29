@@ -80,10 +80,16 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `food_noodles_hot_#00` | `spicy_chinese_noodles` |
 | `spices_#00` | `strong_spices` |
 | `can_#00` / `can_open_#00` | `can` / `open_can` |
+| `undef_#00` | `unspecified_meat` (Implemented Butcher output; ordinary food, 2 Watch) |
 | `meat_#00` | `tasty_looking_steak` |
 | `vegetable_#00` | `vegetable` |
 | `hmeat_#00` | `human_flesh` |
-| `pet_chick_#00` | `chicken` |
+| `pet_chick_#00` | `chicken` (Partial animal ecosystem) |
+| `pet_pig_#00` | `stinking_pig` (Partial; heavy) |
+| `pet_rat_#00` | `giant_rat` (Partial) |
+| `pet_dog_#00` | `guard_dog` (Partial) |
+| `pet_cat_#00` | `fat_cat` (Partial; 5 decoration points in source metadata) |
+| `pet_snake_#00` | `huge_snake` (Partial; heavy) |
 | `bone_meat_#00` | `meaty_bone` |
 | `poison_part_#00` | `poison_gland` (semantic ID; displays as Corrosive Liquid) |
 | `ryebag_#00` | `bag_of_damp_grass` |
@@ -118,6 +124,33 @@ These source IDs currently have explicit high-confidence Live2Nite identities in
 | `rhum_#00` | `wake_the_dead` |
 | `sport_elec_empty_#00` / `sport_elec_#00` | `ems_system_empty` / `ems_system_charged` |
 
+### Animal foundation coverage
+
+The six ordinary source pets are real Live2Nite inventory objects: Chicken, Stinking Pig, Giant Rat, Guard Dog, Fat Cat, and Huge Snake. Their current-source `heavy` metadata feeds the shared cumbersome-item system, so Stinking Pig and Huge Snake are cumbersome without adding animal-specific carry rules. Fat Cat retains its source 5-decoration-point metadata in the current source catalogue.
+
+All six use their source Night Watch values (8 / 25 / 12 / 25 / 12 / 25), are destroyed by their source Night Watch action when used, can receive the Pet Shop 30% Watch multiplier, classify through Animal Dump, and use the Small Trebuchet animal payload path. Existing ruin source tables become playable for these identities. The ordinary normal-loot source mappings are also present for Chicken, Pig, Rat, Cat, and Snake; Guard Dog has no ordinary normal-loot row in the pinned table. The full normal-zone source table remains fail-closed until unrelated unresolved source IDs are implemented.
+
+### Butcher coverage
+
+Butcher is now buildable from the current source bill: **40 AP, 9 Twisted Planks, and 4 Wrought Iron**. Its source slaughter actions have no AP-spend effect, require the citizen to be inside town with Butcher complete, consume the selected animal, and deterministically generate meat:
+
+| Animal | Source slaughter action | Output |
+| --- | --- | --- |
+| Chicken | `slaughter_2x` | 2 × Unspecified Meat (`undef_#00`) |
+| Giant Rat | `slaughter_2x` | 2 × Unspecified Meat |
+| Stinking Pig | `slaughter_4x` | 4 × Unspecified Meat |
+| Fat Cat | `slaughter_2xs` | 2 × Tasty-looking Steak (`meat_#00`) |
+| Guard Dog | `slaughter_2xs` | 2 × Tasty-looking Steak |
+| Huge Snake | `slaughter_4xs` | 4 × Tasty-looking Steak |
+
+`undef_#00` is represented separately as **Unspecified Meat** rather than being collapsed into another food. It follows its source ordinary 6-AP food quality and 2-point destructive Night Watch behavior. Kitchen eligibility is not assumed because the recovered source slaughter/eating data does not establish a Kitchen action for this item.
+
+The animals themselves remain **Partial** because their broader ecosystem still has unresolved production/acquisition effects—not because Butcher is missing.
+
+### Tamer's Trap System boundary
+
+The source construction is a town building, not a deployable zone trap. Its source description says it uses food to lure animals into town and provides training that makes them more effective in combat. The construction remains WIP because the exact spawn cadence/pool and combat modifier have not yet been extracted. No overnight placement/collection mechanic is invented.
+
 ### Trestle coverage
 
 `trestle_#00` is no longer an unresolved ordinary-loot dependency. Live2Nite models it as a heavy/cumbersome defensive furniture item with +1 Bank defense and +1 Home defense. It is mapped in the source normal-loot table and resolves from the exact source ruin rows already represented by Live2Nite: Home Depot, Construction Site Shelter, PI-KEYA Furniture, Disused Car Park, Abandoned Construction Site, and Blocked Road. Two Trestles are required by the now-buildable Organized Dump.
@@ -138,10 +171,6 @@ These source IDs remain unresolved in the current ordinary normal-loot dependenc
 - [ ] `iphone_#00`
 - [ ] `drug_hero_#00`
 - [ ] `drug_random_#00`
-- [ ] `pet_rat_#00`
-- [ ] `pet_pig_#00`
-- [ ] `pet_snake_#00`
-- [ ] `pet_cat_#00`
 - [ ] `water_cleaner_#00`
 - [ ] `beta_drug_bad_#00`
 - [ ] `chama_#00`

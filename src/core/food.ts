@@ -2,7 +2,7 @@ import { itemHasCapability, normalizeItemState } from './items'
 import type { ItemInstance, ItemType } from './types'
 
 export type FoodQuality='ordinary'|'good'
-export interface FoodDefinition { quality:FoodQuality }
+export interface FoodDefinition { quality:FoodQuality; apTarget?:number }
 
 const ordinary:FoodDefinition={quality:'ordinary'}
 const good:FoodDefinition={quality:'good'}
@@ -25,6 +25,8 @@ export const FOOD_DEFINITIONS:Partial<Record<ItemType,FoodDefinition>>={
   chinese_noodles:ordinary,
   dried_marshmallows:ordinary,
   meaty_bone:ordinary,
+  unspecified_meat:ordinary,
+  fistful_of_insects:{quality:'ordinary',apTarget:4},
   dubious_home_made_meal:ordinary,
   tasty_looking_steak:good,
   spicy_chinese_noodles:good,
@@ -36,7 +38,7 @@ export const FOOD_DEFINITIONS:Partial<Record<ItemType,FoodDefinition>>={
 export function foodDefinition(type:ItemType):FoodDefinition|null{return FOOD_DEFINITIONS[type]??null}
 export function foodQuality(type:ItemType):FoodQuality{return foodDefinition(type)?.quality??'ordinary'}
 export function foodApBonus(type:ItemType):number{return foodQuality(type)==='good'?1:0}
-export function foodApTarget(type:ItemType,normalMaxAp:number):number{return normalMaxAp+foodApBonus(type)}
+export function foodApTarget(type:ItemType,normalMaxAp:number):number{const definition=foodDefinition(type);return definition?.apTarget??normalMaxAp+foodApBonus(type)}
 export function isKitchenCookable(item:ItemInstance):boolean{
   return itemHasCapability(item.type,'cookable')&&normalizeItemState(item.type,item.state).contamination!=='poisoned'
 }

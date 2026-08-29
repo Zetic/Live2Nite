@@ -94,13 +94,15 @@ The table below lists the source-verified effects currently expressible with exi
 | Sheet Metal (parts) | destroyed | 4–10, 3×3 |
 | Exploding Grapefruit | destroyed | 11–20, 3×3 |
 | Claymore Mine | destroyed | 21–30, 3×3 |
-| Chicken | destroyed | 0–3, zone; Small Trebuchet required |
+| Chicken / Stinking Pig / Giant Rat / Guard Dog / Fat Cat / Huge Snake | destroyed | 0–3, zone; Small Trebuchet required |
 
 Unsupported source items remain absent rather than being assigned guessed effects.
 
 ## Small Trebuchet
 
-Small Trebuchet is implemented as the source Catapult gate for animal/pet payloads. A Chicken is currently the only Live2Nite runtime animal with a source-verified Catapult profile. Attempting to launch it before Small Trebuchet is complete is rejected.
+Small Trebuchet is implemented as the source Catapult gate for animal/pet payloads. The six ordinary runtime pets—Chicken, Stinking Pig, Giant Rat, Guard Dog, Fat Cat, and Huge Snake—share the existing animal payload class. Attempting to launch any of them before Small Trebuchet is complete is rejected.
+
+Animals are not stored in a separate town subsystem. The payload is the same `ItemInstance` that can be carried, banked, used on Night Watch, or destroyed in Animal Dump.
 
 ## Impact-remains boundary
 
@@ -138,3 +140,5 @@ Basic bots do not autonomously fire the Catapult in this pass. Current MyHordes 
 - Small Trebuchet animal gating;
 - town-target rejection;
 - facility navigation and rendering.
+
+`tests/animalFoundation.test.ts` additionally verifies that all six ordinary runtime pets resolve through the shared Small Trebuchet payload profile.

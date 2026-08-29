@@ -1,4 +1,4 @@
-import { createItemInstance, itemName, normalizeItemState } from './items'
+import { createItemInstance, itemHasCapability, itemName, normalizeItemState } from './items'
 import { randomInt } from './rng'
 import type { Citizen, GameState, ItemInstance, ItemType, WorldZone } from './types'
 import { zoneKey } from './world'
@@ -36,6 +36,7 @@ const SAFE_PAYLOADS:ReadonlySet<ItemType>=new Set([
 const MOLDY_PAYLOADS:ReadonlySet<ItemType>=new Set([
   'food','vegetable','blue_apple','meaty_bone','tasty_looking_steak','spicy_chinese_noodles','good_home_made_meal','dubious_home_made_meal','human_flesh',
 ])
+const ANIMAL_PAYLOAD_PROFILE:CatapultPayloadProfile={landing:'destroyed',damage:'ridiculous',shape:'zone',requiresSmallTrebuchet:true}
 const IMPACT_PAYLOADS:Readonly<Partial<Record<ItemType,CatapultPayloadProfile>>>={
   // Resource/furniture impact transformations without zombie damage.
   mechanism:{landing:'scrap'},
@@ -61,7 +62,6 @@ const IMPACT_PAYLOADS:Readonly<Partial<Record<ItemType,CatapultPayloadProfile>>>
   can_opener:{landing:'broken',brokenInto:'broken_can_opener',damage:'ridiculous',shape:'zone'},
   ektorp_gluten_chair:{landing:'destroyed',damage:'ridiculous',shape:'zone'},
   torch:{landing:'debris',damage:'ridiculous',shape:'zone'},
-  chicken:{landing:'destroyed',damage:'ridiculous',shape:'zone',requiresSmallTrebuchet:true},
 
   // Cross-area impact weapons.
   old_door:{landing:'debris',damage:'low',shape:'cross'},
@@ -82,6 +82,7 @@ const DAMAGE_RANGES:Readonly<Record<CatapultDamageTier,readonly [number,number]>
 }
 
 export function catapultProfile(type:ItemType):CatapultPayloadProfile|null{
+  if(itemHasCapability(type,'animal'))return ANIMAL_PAYLOAD_PROFILE
   const impact=IMPACT_PAYLOADS[type]
   if(impact)return impact
   if(SAFE_PAYLOADS.has(type))return{landing:'intact'}
