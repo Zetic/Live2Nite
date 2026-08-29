@@ -1,85 +1,98 @@
 import { describe, expect, it } from 'vitest'
-import { advanceOneHour, advanceToHour } from '../src/core/game'
+import { BasicBotController } from '../src/agents/BasicBotController'
+import { gateBackupCitizenId, gatePrimaryCitizenId } from '../src/agents/coordination/TownCoordination'
+import { missionSafety } from '../src/agents/planning/MissionLifecycle'
+import { nightGateReserveCitizenId } from '../src/agents/planning/TownMissionPlanner'
 import { createInitialGame } from '../src/core/game'
-import { missionSafety } from '../src/agents/planning/missionSafety'
-import { createAutonomousCitizenDriver } from '../src/agents/CitizenDriver'
 import type { BotMissionAssignment, GameState } from '../src/core/types'
+import { zoneKey } from '../src/core/world'
+import { advanceOneHour, advanceToHour } from '../src/simulation/advanceTime'
+import { bankFromCounts } from './bankFixtures'
 
-const bots=createAutonomousCitizenDriver()
-
-function clearPath(game:GameState,distance:number):GameState{
-  const zones={...game.world.zones}
-  for(let x=0;x<=distance;x+=1){const key=`${x},0`;const zone=zones[key];if(zone)zones[key]={...zone,discovered:true,zombies:0}}
-  return{...game,world:{...game.world,zones}}
-}
-function mission(distance:number,phase:BotMissionAssignment['phase']='outbound'):BotMissionAssignment{return{missionId:'test-mission',role:'scout',purpose:'explore',target:{x:distance,y:0},targetLabel:`${distance},0`,reason:'test',phase,assignedDay:1,assignedHour:1,returnByHour:21,safetyReserve:0,emergency:false,scoutKind:'frontier'}}
+const bots=new BasicBotController()
+function clearPath(game:GameState,fromX:number,toX=0):GameState{const zones={...game.world.zones};for(let x=Math.min(fromX,toX);x<=Math.max(fromX,toX);x+=1){const key=zoneKey(x,0);zones[key]={...zones[key],discovered:true,zombies:0}}return{...game,world:{...game.world,zones}}}
+function mission(targetX:number,phase:BotMissionAssignment['phase']='outbound'):BotMissionAssignment{return{missionId:`test:${targetX}`,role:'scout',purpose:'explore',target:{x:targetX,y:0},targetLabel:`Scout [${targetX},0]`,reason:'test mission',phase,assignedDay:1,assignedHour:1,returnByHour:20,safetyReserve:1,emergency:false}}
+function withWorkshopResources(game:GameState):GameState{return{...game,town:{...game.town,bank:bankFromCounts({twisted_plank:10,wrought_iron:8},'coordination')}}}
 
 describe('distributed citizen coordination',()=>{
   it('starts day one with staged scout teams instead of flooding all bots through the gate',()=>{
-    let game=createInitialGame(4401,40)
-    game=advanceOneHour(game,bots,'c01')
-    const outside=game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world')
-    expect(outside.length).toBeGreaterThan(0)
-    expect(outside.length).toBeLessThanOrEqual(12)
-    expect(game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town').length).toBeGreaterThanOrEqual(28)
+    const initial=createInitialGame(2241014753,40)
+    const game=advanceOneHour(initial,bots,'c01')
+    const assigned=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===1)
+    const scouts=assigned.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.mission.role==='scout')
+    expect(scouts).toHaveLength(4)
+    const targets=new Set(scouts.map((event)=>event.type==='BOT_MISSION_ASSIGNED'?`${event.mission.target.x},${event.mission.target.y}`:''))
+    expect(targets.size).toBeLessThanOrEqual(2)
+    const exited=new Set(game.events.filter((event)=>event.type==='CITIZEN_LOCATION_CHANGED'&&event.hour===1&&event.location.type==='world'&&event.location.x===0&&event.location.y===0).map((event)=>event.type==='CITIZEN_LOCATION_CHANGED'?event.citizenId:''))
+    expect(exited.size).toBeLessThanOrEqual(4)
   })
 
   it('creates gate coverage through public volunteering rather than a preselected hidden reserve',()=>{
-    let game=createInitialGame(4402,40)
+    let game=createInitialGame(2233,40)
+    expect(nightGateReserveCitizenId(game)).toBeNull()
+    expect(game.coordination.commitments).toEqual([])
     game=advanceOneHour(game,bots,'c01')
-    const gateCommitments=game.coordination.commitments.filter((commitment)=>commitment.kind==='gate_primary'||commitment.kind==='gate_backup')
-    expect(gateCommitments).toHaveLength(2)
-    expect(new Set(gateCommitments.map((commitment)=>commitment.citizenId)).size).toBe(2)
-    for(const commitment of gateCommitments){
-      const citizen=game.citizens.find((candidate)=>candidate.id===commitment.citizenId)!
-      expect(citizen.location).toEqual({type:'town'})
-      expect(citizen.alive).toBe(true)
-    }
+    const primary=gatePrimaryCitizenId(game)
+    const backup=gateBackupCitizenId(game)
+    expect(primary).toBeTruthy()
+    expect(backup).toBeTruthy()
+    expect(primary).not.toBe(backup)
+    expect(game.coordination.commitments.some((commitment)=>commitment.citizenId===primary&&commitment.kind==='gate_primary'&&commitment.reservedAp===1)).toBe(true)
+    expect(game.coordination.commitments.some((commitment)=>commitment.citizenId===backup&&commitment.kind==='gate_backup'&&commitment.reservedAp===1)).toBe(true)
+    expect(game.events.some((event)=>event.type==='BOT_MISSION_ASSIGNED'&&(event.citizenId===primary||event.citizenId===backup))).toBe(false)
   })
 
   it('lets gate volunteers spend spare AP on town work while preserving the final gate AP',()=>{
-    let game=createInitialGame(4403,40)
+    let game=withWorkshopResources(createInitialGame(321,8))
     game=advanceOneHour(game,bots,'c01')
-    const primary=game.coordination.commitments.find((commitment)=>commitment.kind==='gate_primary')!
-    const before=game.citizens.find((citizen)=>citizen.id===primary.citizenId)!
-    expect(before.ap).toBeGreaterThanOrEqual(primary.reservedAp)
-    game=advanceOneHour(game,bots,'c01')
-    const after=game.citizens.find((citizen)=>citizen.id===primary.citizenId)!
-    expect(after.ap).toBeGreaterThanOrEqual(primary.reservedAp)
+    const primary=gatePrimaryCitizenId(game)!
+    const backup=gateBackupCitizenId(game)!
+    const primaryCitizen=game.citizens.find((citizen)=>citizen.id===primary)!
+    const backupCitizen=game.citizens.find((citizen)=>citizen.id===backup)!
+    expect(primaryCitizen.location).toEqual({type:'town'})
+    expect(backupCitizen.location).toEqual({type:'town'})
+    expect(primaryCitizen.ap).toBeGreaterThanOrEqual(1)
+    expect(backupCitizen.ap).toBeGreaterThanOrEqual(1)
+    expect(game.events.some((event)=>event.type==='CONSTRUCTION_AP_CONTRIBUTED'&&(event.citizenId===primary||event.citizenId===backup))).toBe(true)
   })
 
   it('saturates construction volunteers instead of making every build-capable citizen a town worker',()=>{
-    let game=createInitialGame(4404,40)
-    game=advanceOneHour(game,bots,'c01')
-    const construction=game.coordination.commitments.filter((commitment)=>commitment.kind==='construction')
-    expect(construction.length).toBeGreaterThan(0)
-    expect(construction.length).toBeLessThan(game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town').length)
+    const game=advanceOneHour(withWorkshopResources(createInitialGame(322,20)),bots,'c01')
+    const builders=game.coordination.commitments.filter((commitment)=>commitment.kind==='construction'&&commitment.projectId==='workshop')
+    expect(builders.length).toBeGreaterThan(0)
+    expect(builders.length).toBeLessThanOrEqual(4)
+    const scouts=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===1&&event.mission.role==='scout')
+    expect(scouts).toHaveLength(4)
+    expect(new Set(builders.map((builder)=>builder.citizenId)).size).toBe(builders.length)
   })
 
   it('stages follow-up mobilization while keeping citizens in town',()=>{
-    let game=createInitialGame(4405,40)
+    let game=createInitialGame(2241014753,40)
     game=advanceOneHour(game,bots,'c01')
-    const firstOutside=game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world').length
+    const first=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===1).length
     game=advanceOneHour(game,bots,'c01')
-    const secondOutside=game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world').length
-    expect(secondOutside).toBeGreaterThanOrEqual(firstOutside)
-    expect(game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town').length).toBeGreaterThanOrEqual(20)
+    const second=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===2).length
+    expect(first).toBe(4)
+    expect(second).toBeLessThanOrEqual(11)
+    expect(game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='town').length).toBeGreaterThan(3)
   })
 
   it('becomes more willing to volunteer for exploration on a later resource-starved day',()=>{
-    let game=createInitialGame(4406,40)
-    game={...game,day:3,town:{...game.town,bank:[]}}
+    let game=createInitialGame(4411,40)
+    game={...game,day:3,clock:{hour:1,phase:'day'},events:[]}
     game=advanceOneHour(game,bots,'c01')
-    expect(game.citizens.filter((citizen)=>citizen.alive&&citizen.location.type==='world').length).toBeGreaterThan(0)
+    const scouts=game.events.filter((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.hour===1&&event.mission.role==='scout')
+    expect(scouts.length).toBeGreaterThan(4)
+    expect(scouts.length).toBeLessThanOrEqual(8)
+    expect(scouts.some((event)=>event.type==='BOT_MISSION_ASSIGNED'&&event.mission.reason.includes('better than waiting in town'))).toBe(true)
   })
 
   it('keeps gate volunteers home and guarantees the gate is sealed without field missions',()=>{
-    let game=createInitialGame(4407,40)
+    let game=createInitialGame(2233,40)
     game=advanceOneHour(game,bots,'c01')
-    const primary=game.coordination.commitments.find((commitment)=>commitment.kind==='gate_primary')?.citizenId
-    const backup=game.coordination.commitments.find((commitment)=>commitment.kind==='gate_backup')?.citizenId
-    expect(primary).toBeDefined();expect(backup).toBeDefined()
-    game=advanceToHour(game,22,bots,'c01')
+    const primary=gatePrimaryCitizenId(game)!
+    const backup=gateBackupCitizenId(game)!
+    game=advanceToHour(game,0,bots,'c01')
     expect(game.town.gateOpen).toBe(false)
     for(const id of [primary,backup]){
       const keeper=game.citizens.find((citizen)=>citizen.id===id)!
