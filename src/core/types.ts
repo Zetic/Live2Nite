@@ -66,6 +66,8 @@ export type CombinationRecipeId =
   | 'butcher_guard_dog'
   | 'butcher_fat_cat'
   | 'butcher_huge_snake'
+  | 'butcher_mangy_dachshund'
+  | 'butcher_furious_kitten'
 export type HomeLevel = 'camp_bed' | 'tent' | 'hovel' | 'shack' | 'house' | 'fenced_house' | 'fortified_shelter' | 'bunker' | 'castle'
 export type HomeImprovementId = 'reinforcements' | 'fence' | 'storage' | 'alarm' | 'curtain' | 'lock' | 'siesta' | 'kitchen' | 'laboratory'
 export type CorpseDisposition = 'dragged_out' | 'watered'
